@@ -348,7 +348,13 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap max-w-[220px]">
                       <div className="truncate" title={it.client ? `${it.client.code} ${it.client.name}` : ''}>
-                        {it.client ? `${it.client.code} ${it.client.name}` : '-'}
+                        {it.client ? (
+                          <Link className="text-[#2f7bdc] hover:underline" href={`/clients/${it.client.id}`}>
+                            {it.client.code} {it.client.name}
+                          </Link>
+                        ) : (
+                          '-'
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap max-w-[340px]">

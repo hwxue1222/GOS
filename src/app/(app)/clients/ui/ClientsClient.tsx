@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { usePersistedState } from '@/lib/usePersistedState';
 
 type Client = {
@@ -113,9 +114,9 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-black/5 hover:bg-black/[0.02]">
                   <td className="px-4 py-3 whitespace-nowrap max-w-[320px]">
-                    <div className="truncate text-[#2f7bdc]" title={`${c.code} ${c.name}`}>
+                    <Link className="truncate text-[#2f7bdc] hover:underline block" href={`/clients/${c.id}`} title={`${c.code} ${c.name}`}>
                       {c.code}_{c.name}
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{c.phone ?? '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap max-w-[260px]">

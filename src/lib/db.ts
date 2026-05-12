@@ -284,6 +284,25 @@ export async function listClients() {
   return db.clients;
 }
 
+export async function findClientById(id: string) {
+  const db = await readDb();
+  return db.clients.find((c) => c.id === id) ?? null;
+}
+
+export async function updateClient(
+  clientId: string,
+  patch: Partial<Pick<Client, 'code' | 'name' | 'phone' | 'email' | 'tags'>>,
+) {
+  const db = await readDb();
+  const idx = db.clients.findIndex((c) => c.id === clientId);
+  if (idx < 0) return null;
+  const current = db.clients[idx];
+  const next: Client = { ...current, ...patch };
+  db.clients[idx] = next;
+  await writeDb(db);
+  return next;
+}
+
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {
   const db = await readDb();
   const job: Job = { ...input, id: newId('job'), createdAt: nowIso() };
