@@ -4,6 +4,8 @@ import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
 import type { Client, Db, Job, JobTask, Permissions, Role, Session, User } from '@/lib/types';
 
+const KV_DB_KEY = process.env.GOS_KV_DB_KEY?.trim() || 'gos:db';
+
 function getDbFilePath() {
   const fromEnv = process.env.GOS_DB_PATH?.trim();
   if (fromEnv) return fromEnv;
@@ -25,60 +27,78 @@ function emptyDb(): Db {
   return { users: [], sessions: [], clients: [], jobs: [], tasks: [] };
 }
 
+function normalizeDb(parsed: Db): Db {
+  const users = (parsed.users ?? []).map((u) => ({
+    ...u,
+    position: (u as User).position,
+    permissions: (u as User).permissions,
+  }));
+  const jobs = (parsed.jobs ?? []).map((j) => ({
+    ...j,
+    repeat: (j as Job).repeat ?? 'none',
+    status: (j as Job).status ?? 'Pending',
+    createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
+  }));
+
+  const tasks = (parsed.tasks ?? []).map((t) => ({
+    ...t,
+    seq: (t as JobTask).seq,
+    sortOrder: (t as JobTask).sortOrder,
+    createdByUserId: (t as JobTask).createdByUserId,
+  }));
+
+  const byJob = new Map<string, Array<JobTask & { createdAt: string }>>();
+  for (const t of tasks as Array<JobTask & { createdAt: string }>) {
+    if (!byJob.has(t.jobId)) byJob.set(t.jobId, []);
+    byJob.get(t.jobId)!.push(t);
+  }
+  for (const [jobId, list] of byJob) {
+    const needs = list.some((t) => typeof t.seq !== 'number' || typeof t.sortOrder !== 'number');
+    if (!needs) continue;
+    const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const idToSeq = new Map(sorted.map((t, i) => [t.id, i + 1]));
+    for (const t of list) {
+      const seq = idToSeq.get(t.id) ?? 1;
+      if (typeof t.seq !== 'number') (t as unknown as { seq: number }).seq = seq;
+      if (typeof t.sortOrder !== 'number') (t as unknown as { sortOrder: number }).sortOrder = seq;
+    }
+    byJob.set(jobId, list);
+  }
+  return {
+    users,
+    sessions: parsed.sessions ?? [],
+    clients: parsed.clients ?? [],
+    jobs,
+    tasks: tasks as unknown as JobTask[],
+  };
+}
+
+async function hasKv(): Promise<boolean> {
+  return !!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN;
+}
+
 async function readDbRaw(): Promise<Db> {
   try {
+    if (await hasKv()) {
+      const mod = (await import('@vercel/kv')) as unknown as { kv: { get: (key: string) => Promise<unknown> } };
+      const raw = await mod.kv.get(KV_DB_KEY);
+      if (!raw) return emptyDb();
+      if (typeof raw === 'string') return normalizeDb(JSON.parse(raw) as Db);
+      return normalizeDb(raw as Db);
+    }
     const content = await fs.readFile(DB_FILE, 'utf-8');
-    const parsed = JSON.parse(content) as Db;
-    const users = (parsed.users ?? []).map((u) => ({
-      ...u,
-      position: (u as User).position,
-      permissions: (u as User).permissions,
-    }));
-    const jobs = (parsed.jobs ?? []).map((j) => ({
-      ...j,
-      repeat: (j as Job).repeat ?? 'none',
-      status: (j as Job).status ?? 'Pending',
-      createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
-    }));
-
-    const tasks = (parsed.tasks ?? []).map((t) => ({
-      ...t,
-      seq: (t as JobTask).seq,
-      sortOrder: (t as JobTask).sortOrder,
-      createdByUserId: (t as JobTask).createdByUserId,
-    }));
-
-    const byJob = new Map<string, Array<JobTask & { createdAt: string }>>();
-    for (const t of tasks as Array<JobTask & { createdAt: string }>) {
-      if (!byJob.has(t.jobId)) byJob.set(t.jobId, []);
-      byJob.get(t.jobId)!.push(t);
-    }
-    for (const [jobId, list] of byJob) {
-      const needs = list.some((t) => typeof t.seq !== 'number' || typeof t.sortOrder !== 'number');
-      if (!needs) continue;
-      const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      const idToSeq = new Map(sorted.map((t, i) => [t.id, i + 1]));
-      for (const t of list) {
-        const seq = idToSeq.get(t.id) ?? 1;
-        if (typeof t.seq !== 'number') (t as unknown as { seq: number }).seq = seq;
-        if (typeof t.sortOrder !== 'number') (t as unknown as { sortOrder: number }).sortOrder = seq;
-      }
-      byJob.set(jobId, list);
-    }
-    return {
-      users,
-      sessions: parsed.sessions ?? [],
-      clients: parsed.clients ?? [],
-      jobs,
-      tasks: tasks as unknown as JobTask[],
-    };
+    return normalizeDb(JSON.parse(content) as Db);
   } catch {
     return emptyDb();
   }
 }
 
-
 async function writeDbRaw(db: Db) {
+  if (await hasKv()) {
+    const mod = (await import('@vercel/kv')) as unknown as { kv: { set: (key: string, value: unknown) => Promise<unknown> } };
+    await mod.kv.set(KV_DB_KEY, db);
+    return;
+  }
   await ensureDir();
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
 }
