@@ -53,6 +53,8 @@ function normalizeDb(parsed: Db): Db {
     companyRegistrationNo: (c as Client).companyRegistrationNo,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
+    phone: (c as Client).phone,
+    email: (c as Client).email,
     deletedAt: (c as Client).deletedAt,
   }));
   const jobs = (parsed.jobs ?? []).map((j) => ({
