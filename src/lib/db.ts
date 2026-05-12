@@ -563,35 +563,6 @@ export async function updateJob(
   return db.jobs[idx];
 }
 
-export async function migrateJobsManagerUserId(input: {
-  fromUserIds: string[];
-  toUserId: string;
-  dryRun?: boolean;
-}) {
-  const db = await readDb();
-  const fromSet = new Set(input.fromUserIds);
-  if (!input.toUserId || fromSet.size === 0) {
-    return { ok: true as const, migratedJobIds: [] as string[] };
-  }
-
-  const now = nowIso();
-  const migratedJobIds: string[] = [];
-  const nextJobs = db.jobs.map((j) => {
-    if (!j.managerUserId || !fromSet.has(j.managerUserId)) return j;
-    migratedJobIds.push(j.id);
-    const oldCreatedByUserId = (j as unknown as { createdByUserId?: string }).createdByUserId;
-    const createdByUserId = oldCreatedByUserId && fromSet.has(oldCreatedByUserId) ? input.toUserId : oldCreatedByUserId;
-    return { ...j, managerUserId: input.toUserId, createdByUserId, updatedAt: now };
-  });
-
-  if (!input.dryRun && migratedJobIds.length > 0) {
-    db.jobs = nextJobs;
-    await writeDb(db);
-  }
-
-  return { ok: true as const, migratedJobIds };
-}
-
 export async function deleteJob(jobId: string) {
   const db = await readDb();
   const job = db.jobs.find((j) => j.id === jobId) ?? null;
