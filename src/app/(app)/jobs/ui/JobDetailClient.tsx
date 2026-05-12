@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { formatDateDMY } from '@/lib/date';
 
 type Job = {
   id: string;
@@ -123,7 +124,7 @@ export default function JobDetailClient({
           <div>
             <h1 className="text-2xl font-semibold">{job?.name ?? 'Job'}</h1>
             <div className="text-sm text-black/60 mt-1">
-              {client ? `${client.code} ${client.name}` : '-'} · Due {job?.dueDate ?? '-'} ·{' '}
+              {client ? `${client.code} ${client.name}` : '-'} · Due {formatDateDMY(job?.dueDate)} ·{' '}
               {doneCount}/{tasks.length} tasks done
             </div>
           </div>
@@ -207,9 +208,9 @@ export default function JobDetailClient({
                           {t.title}
                         </div>
                         <div className="text-xs text-black/50">
-                          Created {new Date(t.createdAt).toLocaleString()}
+                          Created {formatDateDMY(t.createdAt)}
                           {t.createdByName ? ` · by ${t.createdByName}` : ''}
-                          {t.dueDate ? ` · Due ${t.dueDate}` : ''}
+                          {t.dueDate ? ` · Due ${formatDateDMY(t.dueDate)}` : ''}
                         </div>
                       </div>
                     </label>

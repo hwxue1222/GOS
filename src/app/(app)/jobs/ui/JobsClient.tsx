@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
 import type { Permissions } from '@/lib/types';
+import { formatDateDMY } from '@/lib/date';
 
 type JobListItem = {
   job: {
@@ -288,7 +289,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.tasks.done}/{it.tasks.total}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-red-600">{it.job.dueDate ?? '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-red-600">{formatDateDMY(it.job.dueDate)}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">{it.job.status}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.manager ? (
@@ -347,6 +348,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     <div className="text-black/70">Due date</div>
                     <input
                       type="date"
+                      lang="en-GB"
                       value={newJob.dueDate}
                       onChange={(e) => setNewJob((v) => ({ ...v, dueDate: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
@@ -497,6 +499,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         />
                         <input
                           type="date"
+                          lang="en-GB"
                           value={t.dueDate}
                           onChange={(e) =>
                             setDraftTasks((prev) =>
