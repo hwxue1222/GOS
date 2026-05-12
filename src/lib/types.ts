@@ -38,6 +38,9 @@ export type Client = {
   id: string;
   code: string;
   name: string;
+  companyRegistrationNo?: string;
+  contactPerson?: string;
+  address?: string;
   phone?: string;
   email?: string;
   tags: string[];

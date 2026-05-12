@@ -54,11 +54,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   if (!client) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
   const body = (await req.json().catch(() => null)) as
-    | { code?: string; name?: string; phone?: string; email?: string; tags?: string[] }
+    | {
+        code?: string;
+        name?: string;
+        companyRegistrationNo?: string;
+        contactPerson?: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        tags?: string[];
+      }
     | null;
 
   const code = typeof body?.code === 'string' ? body.code.trim() : undefined;
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
+  const hasCompanyRegistrationNo = typeof body?.companyRegistrationNo === 'string';
+  const companyRegistrationNo = hasCompanyRegistrationNo ? body!.companyRegistrationNo!.trim() || undefined : undefined;
+  const hasContactPerson = typeof body?.contactPerson === 'string';
+  const contactPerson = hasContactPerson ? body!.contactPerson!.trim() || undefined : undefined;
+  const hasAddress = typeof body?.address === 'string';
+  const address = hasAddress ? body!.address!.trim() || undefined : undefined;
   const phone = typeof body?.phone === 'string' ? body.phone.trim() || undefined : undefined;
   const email = typeof body?.email === 'string' ? body.email.trim() || undefined : undefined;
   const tags = Array.isArray(body?.tags) ? body?.tags.filter(Boolean) : undefined;
@@ -66,8 +81,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   if (typeof body?.code === 'string' && !code) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   if (typeof body?.name === 'string' && !name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
-  const updated = await updateClient(clientId, { ...(code !== undefined ? { code } : {}), ...(name !== undefined ? { name } : {}), phone, email, ...(tags ? { tags } : {}) });
+  const updated = await updateClient(clientId, {
+    ...(code !== undefined ? { code } : {}),
+    ...(name !== undefined ? { name } : {}),
+    ...(hasCompanyRegistrationNo ? { companyRegistrationNo } : {}),
+    ...(hasContactPerson ? { contactPerson } : {}),
+    ...(hasAddress ? { address } : {}),
+    phone,
+    email,
+    ...(tags ? { tags } : {}),
+  });
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, client: updated });
 }
-

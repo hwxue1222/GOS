@@ -8,6 +8,9 @@ type Client = {
   id: string;
   code: string;
   name: string;
+  companyRegistrationNo?: string;
+  contactPerson?: string;
+  address?: string;
   phone?: string;
   email?: string;
   tags: string[];
@@ -35,13 +38,21 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const [form, setForm] = useState({
     code: '',
     name: '',
+    companyRegistrationNo: '',
+    contactPerson: '',
+    address: '',
     phone: '',
     email: '',
   });
 
   const filtered = useMemo(() => {
     if (!search.trim()) return clients;
-    return clients.filter((c) => textMatch(`${c.code} ${c.name} ${c.phone ?? ''} ${c.email ?? ''}`, search));
+    return clients.filter((c) =>
+      textMatch(
+        `${c.code} ${c.name} ${c.companyRegistrationNo ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
+        search,
+      ),
+    );
   }, [clients, search]);
 
   const canCreate = me?.role === 'owner' || me?.role === 'manager';
@@ -60,6 +71,9 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
         body: JSON.stringify({
           code: form.code,
           name: form.name,
+          companyRegistrationNo: form.companyRegistrationNo || undefined,
+          contactPerson: form.contactPerson || undefined,
+          address: form.address || undefined,
           phone: form.phone || undefined,
           email: form.email || undefined,
         }),
@@ -72,7 +86,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
       const j = (await res.json().catch(() => null)) as { ok?: boolean; client?: Client } | null;
       if (j?.client) setClients((prev) => [j.client!, ...prev]);
       setShowAdd(false);
-      setForm({ code: '', name: '', phone: '', email: '' });
+      setForm({ code: '', name: '', companyRegistrationNo: '', contactPerson: '', address: '', phone: '', email: '' });
     } finally {
       setCreating(false);
     }
@@ -114,8 +128,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-black/5 hover:bg-black/[0.02]">
                   <td className="px-4 py-3 whitespace-nowrap max-w-[320px]">
-                    <Link className="truncate text-[#2f7bdc] hover:underline block" href={`/clients/${c.id}`} title={`${c.code} ${c.name}`}>
-                      {c.code}_{c.name}
+                    <Link className="truncate text-[#2f7bdc] hover:underline block" href={`/clients/${c.id}`} title={`Code: ${c.code}`}>
+                      {c.name}
                     </Link>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{c.phone ?? '-'}</td>
@@ -170,6 +184,34 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                       onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                       placeholder="Client name"
+                    />
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">Company registration no.</div>
+                    <input
+                      value={form.companyRegistrationNo}
+                      onChange={(e) => setForm((v) => ({ ...v, companyRegistrationNo: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="Company registration no."
+                    />
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">Contact person</div>
+                    <input
+                      value={form.contactPerson}
+                      onChange={(e) => setForm((v) => ({ ...v, contactPerson: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="Contact person"
+                    />
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">Address</div>
+                    <textarea
+                      value={form.address}
+                      onChange={(e) => setForm((v) => ({ ...v, address: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      rows={3}
+                      placeholder="Address"
                     />
                   </label>
                   <label className="text-sm">

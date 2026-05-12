@@ -8,6 +8,9 @@ type Client = {
   id: string;
   code: string;
   name: string;
+  companyRegistrationNo?: string;
+  contactPerson?: string;
+  address?: string;
   phone?: string;
   email?: string;
   tags: string[];
@@ -45,8 +48,10 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [error, setError] = useState<string | null>(null);
 
   const [draft, setDraft] = useState({
-    code: initialClient.code,
     name: initialClient.name,
+    companyRegistrationNo: initialClient.companyRegistrationNo ?? '',
+    contactPerson: initialClient.contactPerson ?? '',
+    address: initialClient.address ?? '',
     phone: initialClient.phone ?? '',
     email: initialClient.email ?? '',
   });
@@ -61,7 +66,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
 
   async function update() {
     setError(null);
-    if (!draft.code.trim() || !draft.name.trim()) {
+    if (!draft.name.trim()) {
       setError('INVALID_INPUT');
       return;
     }
@@ -71,8 +76,10 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          code: draft.code,
           name: draft.name,
+          companyRegistrationNo: draft.companyRegistrationNo,
+          contactPerson: draft.contactPerson,
+          address: draft.address,
           phone: draft.phone || undefined,
           email: draft.email || undefined,
         }),
@@ -86,8 +93,10 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
       if (j?.client) {
         setClient(j.client);
         setDraft({
-          code: j.client.code,
           name: j.client.name,
+          companyRegistrationNo: j.client.companyRegistrationNo ?? '',
+          contactPerson: j.client.contactPerson ?? '',
+          address: j.client.address ?? '',
           phone: j.client.phone ?? '',
           email: j.client.email ?? '',
         });
@@ -102,19 +111,11 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           <div className="rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-lg font-semibold break-words">{client.code}_{client.name}</div>
+            <div className="text-lg font-semibold break-words">{client.name}</div>
+            <div className="mt-1 text-sm text-black/60 break-words">{`Code: ${client.code}`}</div>
 
             <div className="mt-5 rounded-lg bg-black/[0.02] border border-black/5 p-3">
               <div className="grid grid-cols-1 gap-3">
-                <label className="text-sm">
-                  <div className="text-black/70">Code</div>
-                  <input
-                    disabled={!canUpdateClient}
-                    value={draft.code}
-                    onChange={(e) => setDraft((v) => ({ ...v, code: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  />
-                </label>
                 <label className="text-sm">
                   <div className="text-black/70">Name</div>
                   <input
@@ -122,6 +123,34 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                     value={draft.name}
                     onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Company registration no.</div>
+                  <input
+                    disabled={!canUpdateClient}
+                    value={draft.companyRegistrationNo}
+                    onChange={(e) => setDraft((v) => ({ ...v, companyRegistrationNo: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Contact person</div>
+                  <input
+                    disabled={!canUpdateClient}
+                    value={draft.contactPerson}
+                    onChange={(e) => setDraft((v) => ({ ...v, contactPerson: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Address</div>
+                  <textarea
+                    disabled={!canUpdateClient}
+                    value={draft.address}
+                    onChange={(e) => setDraft((v) => ({ ...v, address: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    rows={3}
                   />
                 </label>
                 <label className="text-sm">

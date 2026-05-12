@@ -33,6 +33,13 @@ function normalizeDb(parsed: Db): Db {
     position: (u as User).position,
     permissions: (u as User).permissions,
   }));
+  const clients = (parsed.clients ?? []).map((c) => ({
+    ...c,
+    tags: (c as Client).tags ?? [],
+    companyRegistrationNo: (c as Client).companyRegistrationNo,
+    contactPerson: (c as Client).contactPerson,
+    address: (c as Client).address,
+  }));
   const jobs = (parsed.jobs ?? []).map((j) => ({
     ...j,
     repeat: (j as Job).repeat ?? 'none',
@@ -69,7 +76,7 @@ function normalizeDb(parsed: Db): Db {
   return {
     users,
     sessions: parsed.sessions ?? [],
-    clients: parsed.clients ?? [],
+    clients,
     jobs,
     tasks: tasks as unknown as JobTask[],
   };
@@ -260,6 +267,9 @@ export async function listUsers() {
 export async function createClient(input: {
   code: string;
   name: string;
+  companyRegistrationNo?: string;
+  contactPerson?: string;
+  address?: string;
   phone?: string;
   email?: string;
   tags?: string[];
@@ -269,6 +279,9 @@ export async function createClient(input: {
     id: newId('cli'),
     code: input.code,
     name: input.name,
+    companyRegistrationNo: input.companyRegistrationNo,
+    contactPerson: input.contactPerson,
+    address: input.address,
     phone: input.phone,
     email: input.email,
     tags: input.tags ?? [],
@@ -291,7 +304,7 @@ export async function findClientById(id: string) {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<Pick<Client, 'code' | 'name' | 'phone' | 'email' | 'tags'>>,
+  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
 ) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);

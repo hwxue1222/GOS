@@ -35,10 +35,22 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => null)) as
-    | { code?: string; name?: string; phone?: string; email?: string; tags?: string[] }
+    | {
+        code?: string;
+        name?: string;
+        companyRegistrationNo?: string;
+        contactPerson?: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        tags?: string[];
+      }
     | null;
   const code = body?.code?.trim() ?? '';
   const name = body?.name?.trim() ?? '';
+  const companyRegistrationNo = body?.companyRegistrationNo?.trim() || undefined;
+  const contactPerson = body?.contactPerson?.trim() || undefined;
+  const address = body?.address?.trim() || undefined;
   const phone = body?.phone?.trim() || undefined;
   const email = body?.email?.trim() || undefined;
   const tags = Array.isArray(body?.tags) ? body?.tags.filter(Boolean) : [];
@@ -47,6 +59,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
-  const client = await createClient({ code, name, phone, email, tags });
+  const client = await createClient({ code, name, companyRegistrationNo, contactPerson, address, phone, email, tags });
   return NextResponse.json({ ok: true, client });
 }
