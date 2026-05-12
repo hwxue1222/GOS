@@ -113,6 +113,15 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     await reloadJobsOnly();
   }
 
+  async function deleteJobFromList(jobId: string) {
+    if (me.role !== 'owner') return;
+    const ok = window.confirm('Delete this job? It will appear in the Delete list.');
+    if (!ok) return;
+    const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) return;
+    await reloadJobsOnly();
+  }
+
   const filtered = useMemo(() => {
     return items.filter((it) => {
       const isDeleted = !!it.job.deletedAt;
@@ -350,6 +359,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <th className="px-4 py-3 font-medium">Due Date</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Manager</th>
+                  <th className="px-4 py-3 font-medium w-24"></th>
                 </tr>
               </thead>
               <tbody>
@@ -409,11 +419,23 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         '-'
                       )}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      {me.role === 'owner' && !it.job.deletedAt && view !== 'delete' ? (
+                        <button
+                          onClick={() => void deleteJobFromList(it.job.id)}
+                          className="rounded-md border border-red-200 bg-white text-red-600 px-3 py-1.5 text-sm hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="text-black/30">-</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-black/50">
+                    <td colSpan={8} className="px-4 py-10 text-center text-black/50">
                       No jobs
                     </td>
                   </tr>
