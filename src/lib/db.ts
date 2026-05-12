@@ -24,15 +24,38 @@ async function ensureDir() {
 }
 
 function emptyDb(): Db {
-  return { users: [], sessions: [], clients: [], jobs: [], tasks: [] };
+  return { users: [], sessions: [], clients: [], jobs: [], tasks: [], reservedNames: [] };
 }
 
 function normalizeDb(parsed: Db): Db {
-  const users = (parsed.users ?? []).map((u) => ({
+  const keyOfName = (name: string) => name.trim().toLowerCase();
+  const rawUsers = (parsed.users ?? []).map((u) => ({
     ...u,
     position: (u as User).position,
     permissions: (u as User).permissions,
   }));
+  const seenNameKey = new Map<string, number>();
+  const users = rawUsers.map((u) => {
+    const k = keyOfName(u.name);
+    if (!k) return u;
+    const n = (seenNameKey.get(k) ?? 0) + 1;
+    seenNameKey.set(k, n);
+    if (n === 1) return u;
+    return { ...u, name: `${u.name} (${u.id.slice(-4)})` };
+  });
+
+  const reservedFromDb = Array.isArray((parsed as unknown as { reservedNames?: unknown }).reservedNames)
+    ? ((parsed as unknown as { reservedNames?: string[] }).reservedNames ?? [])
+    : [];
+  const reservedSet = new Set<string>();
+  for (const rn of reservedFromDb) {
+    const k = keyOfName(rn ?? '');
+    if (k) reservedSet.add(k);
+  }
+  for (const u of users) {
+    const k = keyOfName(u.name);
+    if (k) reservedSet.add(k);
+  }
   const clients = (parsed.clients ?? []).map((c) => ({
     ...c,
     tags: (c as Client).tags ?? [],
@@ -82,6 +105,7 @@ function normalizeDb(parsed: Db): Db {
     clients,
     jobs,
     tasks: tasks as unknown as JobTask[],
+    reservedNames: [...reservedSet],
   };
 }
 
@@ -178,7 +202,7 @@ export async function readDb(): Promise<Db> {
     createdAt: nowIso(),
   };
 
-  const seeded = { ...db, users: [luke] };
+  const seeded = { ...db, users: [luke], reservedNames: ['luke'] };
   await writeDbRaw(seeded);
   return seeded;
 }
@@ -199,8 +223,38 @@ export async function findUserByName(name: string) {
 
 export async function findUserByEmailOrName(identifier: string) {
   const db = await readDb();
-  const needle = identifier.toLowerCase();
-  return db.users.find((u) => u.email.toLowerCase() === needle || u.name.toLowerCase() === needle) ?? null;
+  const needle = identifier.trim().toLowerCase();
+  if (!needle) return null;
+
+  const emailHit = db.users.find((u) => u.email.toLowerCase() === needle) ?? null;
+  if (emailHit) return emailHit;
+
+  const nameMatches = db.users.filter((u) => u.name.toLowerCase() === needle);
+  if (nameMatches.length <= 1) return nameMatches[0] ?? null;
+
+  const scoreByUserId = new Map<string, number>();
+  const addScore = (userId: string | undefined, delta: number) => {
+    if (!userId) return;
+    scoreByUserId.set(userId, (scoreByUserId.get(userId) ?? 0) + delta);
+  };
+
+  for (const j of db.jobs) {
+    addScore(j.managerUserId, 5);
+    addScore((j as unknown as { createdByUserId?: string }).createdByUserId, 2);
+    addScore((j as unknown as { staffUserId?: string }).staffUserId, 1);
+  }
+  for (const t of db.tasks) {
+    addScore((t as unknown as { assigneeUserId?: string }).assigneeUserId, 1);
+    addScore((t as unknown as { createdByUserId?: string }).createdByUserId, 1);
+  }
+
+  const ranked = [...nameMatches].sort((a, b) => {
+    const sa = scoreByUserId.get(a.id) ?? 0;
+    const sb = scoreByUserId.get(b.id) ?? 0;
+    if (sb !== sa) return sb - sa;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+  return ranked[0] ?? null;
 }
 
 export async function findUserById(id: string) {
@@ -242,9 +296,11 @@ export async function createUser(input: {
   password: string;
 }) {
   const db = await readDb();
+  const nameKey = input.name.trim().toLowerCase();
+  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
   const emailTaken = db.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase());
   if (emailTaken) return { ok: false as const, error: 'EMAIL_TAKEN' as const };
-  const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase());
+  const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase()) || reserved.has(nameKey);
   if (nameTaken) return { ok: false as const, error: 'NAME_TAKEN' as const };
   const user: User = {
     id: newId('usr'),
@@ -257,6 +313,10 @@ export async function createUser(input: {
     createdAt: nowIso(),
   };
   db.users.unshift(user);
+  if (nameKey) {
+    reserved.add(nameKey);
+    db.reservedNames = [...reserved];
+  }
   await writeDb(db);
   return { ok: true as const, user };
 }
@@ -264,15 +324,36 @@ export async function createUser(input: {
 export async function updateUser(
   userId: string,
   patch: Partial<Pick<User, 'name' | 'email' | 'position' | 'role' | 'permissions'>>,
-) {
+): Promise<{ ok: true; user: User } | { ok: false; error: 'NOT_FOUND' | 'NAME_TAKEN' | 'EMAIL_TAKEN' }> {
   const db = await readDb();
   const idx = db.users.findIndex((u) => u.id === userId);
-  if (idx < 0) return null;
+  if (idx < 0) return { ok: false, error: 'NOT_FOUND' };
   const current = db.users[idx];
+  const nextNameKey = typeof patch.name === 'string' ? patch.name.trim().toLowerCase() : current.name.trim().toLowerCase();
+  const currentNameKey = current.name.trim().toLowerCase();
+
+  if (typeof patch.email === 'string') {
+    const emailKey = patch.email.trim().toLowerCase();
+    const emailTaken = db.users.some((u) => u.id !== userId && u.email.toLowerCase() === emailKey);
+    if (emailTaken) return { ok: false, error: 'EMAIL_TAKEN' };
+  }
+  if (typeof patch.name === 'string') {
+    const inUseByOther = db.users.some((u) => u.id !== userId && u.name.trim().toLowerCase() === nextNameKey);
+    if (inUseByOther) return { ok: false, error: 'NAME_TAKEN' };
+    const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+    if (nextNameKey && nextNameKey !== currentNameKey && reserved.has(nextNameKey)) {
+      return { ok: false, error: 'NAME_TAKEN' };
+    }
+  }
+
   const next: User = { ...current, ...patch };
   db.users[idx] = next;
+  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+  if (currentNameKey) reserved.add(currentNameKey);
+  if (nextNameKey) reserved.add(nextNameKey);
+  db.reservedNames = [...reserved];
   await writeDb(db);
-  return next;
+  return { ok: true, user: next };
 }
 
 export async function setUserPassword(userId: string, newPassword: string) {

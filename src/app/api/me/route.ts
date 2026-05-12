@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findUserByEmail, findUserById, findUserByName, setUserPassword, updateUser } from '@/lib/db';
+import { findUserByEmail, findUserById, setUserPassword, updateUser } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 
 export async function GET() {
@@ -34,10 +34,6 @@ export async function PATCH(req: Request) {
     const hit = await findUserByEmail(patch.email);
     if (hit && hit.id !== me.id) return NextResponse.json({ ok: false, error: 'EMAIL_TAKEN' }, { status: 409 });
   }
-  if (patch.name) {
-    const hit = await findUserByName(patch.name);
-    if (hit && hit.id !== me.id) return NextResponse.json({ ok: false, error: 'NAME_TAKEN' }, { status: 409 });
-  }
 
   const full = await findUserById(me.id);
   if (!full) return NextResponse.json({ ok: false }, { status: 401 });
@@ -55,8 +51,8 @@ export async function PATCH(req: Request) {
   let updatedUser = full;
   if (patch.name || patch.email) {
     const u = await updateUser(me.id, patch);
-    if (!u) return NextResponse.json({ ok: false }, { status: 401 });
-    updatedUser = u;
+    if (!u.ok) return NextResponse.json({ ok: false, error: u.error }, { status: 409 });
+    updatedUser = u.user;
   }
   if (wantsPassword) {
     const u = await setUserPassword(me.id, body!.newPassword!);

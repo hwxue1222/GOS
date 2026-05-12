@@ -91,4 +91,5 @@ export type Db = {
   clients: Client[];
   jobs: Job[];
   tasks: JobTask[];
+  reservedNames?: string[];
 };

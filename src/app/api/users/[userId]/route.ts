@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findUserByEmail, findUserByName, updateUser } from '@/lib/db';
+import { findUserByEmail, updateUser } from '@/lib/db';
 import type { Permissions, Role } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
 
@@ -37,25 +37,21 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: 'EMAIL_TAKEN' }, { status: 409 });
     }
   }
-  if (patch.name) {
-    const hit = await findUserByName(patch.name);
-    if (hit && hit.id !== userId) {
-      return NextResponse.json({ ok: false, error: 'NAME_TAKEN' }, { status: 409 });
-    }
-  }
-
   const updated = await updateUser(userId, patch);
-  if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!updated.ok) {
+    const status = updated.error === 'NOT_FOUND' ? 404 : 409;
+    return NextResponse.json({ ok: false, error: updated.error }, { status });
+  }
 
   return NextResponse.json({
     ok: true,
     user: {
-      id: updated.id,
-      name: updated.name,
-      email: updated.email,
-      position: updated.position,
-      role: updated.role,
-      permissions: updated.permissions,
+      id: updated.user.id,
+      name: updated.user.name,
+      email: updated.user.email,
+      position: updated.user.position,
+      role: updated.user.role,
+      permissions: updated.user.permissions,
     },
   });
 }
