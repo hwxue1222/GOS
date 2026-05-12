@@ -62,6 +62,7 @@ export async function POST(
     requestedAssignee && userIdSet.has(requestedAssignee) ? requestedAssignee : undefined;
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (!assigneeUserId) return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
 
   const task = await createTask({
     jobId,

@@ -108,6 +108,21 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       setError('INVALID_INPUT');
       return;
     }
+    const tasksToSend = draftTasks
+      .map((t, idx) => ({
+        title: t.title,
+        dueDate: t.dueDate || undefined,
+        assigneeUserId: t.assigneeUserId || undefined,
+        status: t.done && hasPermission(me, 'tasks', 'complete') ? 'Done' : 'Todo',
+        seq: idx + 1,
+        sortOrder: idx + 1,
+      }))
+      .filter((t) => t.title.trim());
+    const hasUnassigned = tasksToSend.some((t) => !t.assigneeUserId);
+    if (hasUnassigned) {
+      setError('TASK_UNASSIGNED');
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch('/api/jobs', {
@@ -119,16 +134,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           dueDate: newJob.dueDate || undefined,
           repeat: newJob.repeat,
           managerUserId: newJob.managerUserId || undefined,
-          tasks: draftTasks
-            .map((t, idx) => ({
-              title: t.title,
-              dueDate: t.dueDate || undefined,
-              assigneeUserId: t.assigneeUserId || undefined,
-              status: t.done && hasPermission(me, 'tasks', 'complete') ? 'Done' : 'Todo',
-              seq: idx + 1,
-              sortOrder: idx + 1,
-            }))
-            .filter((t) => t.title.trim()),
+          tasks: tasksToSend,
         }),
       });
       if (!res.ok) {
@@ -158,6 +164,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const canCreate = hasPermission(me, 'jobs', 'create');
   const canCreateTasks = hasPermission(me, 'tasks', 'create');
   const canCompleteTasks = hasPermission(me, 'tasks', 'complete');
+  const hasUnassignedDraftTask = useMemo(
+    () => draftTasks.some((t) => t.title.trim() && !t.assigneeUserId),
+    [draftTasks],
+  );
 
   function newTempId() {
     return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
@@ -452,7 +462,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       <div
                         key={t.id}
                         className={[
-                          'py-2 flex items-center gap-3',
+                          'py-2 flex flex-wrap items-center gap-2',
                           draggingTaskId === t.id ? 'opacity-60' : '',
                         ].join(' ')}
                         draggable={canCreateTasks}
@@ -496,7 +506,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                             )
                           }
                           className={[
-                            'flex-1 rounded-md border border-black/10 px-3 py-2 text-sm',
+                            'flex-1 min-w-44 rounded-md border border-black/10 px-3 py-2 text-sm',
                             t.done ? 'line-through text-black/40' : '',
                           ].join(' ')}
                           placeholder="Task title"
@@ -509,7 +519,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                               prev.map((x) => (x.id === t.id ? { ...x, assigneeUserId: e.target.value } : x)),
                             )
                           }
-                          className="w-44 rounded-md border border-black/10 px-3 py-2 text-sm bg-white"
+                          className={[
+                            'w-44 rounded-md border px-3 py-2 text-sm bg-white',
+                            !t.assigneeUserId && t.title.trim() ? 'border-red-400' : 'border-black/10',
+                          ].join(' ')}
                           disabled={!canCreateTasks}
                         >
                           <option value="">(unassigned)</option>
@@ -519,7 +532,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                             </option>
                           ))}
                         </select>
-                        <div className="w-28 text-sm text-black/60">{formatDateDMY(t.dueDate)}</div>
+                        <div className="w-full sm:w-28 text-sm text-black/60 whitespace-nowrap sm:text-right">
+                          {formatDateDMY(t.dueDate)}
+                        </div>
                         <button
                           onClick={() => setDraftTasks((prev) => prev.filter((x) => x.id !== t.id))}
                           className="text-black/40 hover:text-black"
@@ -545,7 +560,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     Cancel
                   </button>
                   <button
-                    disabled={creating}
+                    disabled={creating || hasUnassignedDraftTask}
                     onClick={createJob}
                     className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
                   >

@@ -106,6 +106,10 @@ export async function POST(req: Request) {
   if (hasDoneTasks && !hasPermission(user, 'tasks', 'complete')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
+  const hasUnassignedTask = tasks.some((t) => (t.title?.trim() ?? '') !== '' && !(t.assigneeUserId?.trim() ?? ''));
+  if (hasUnassignedTask) {
+    return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
+  }
 
   const job = await createJob({
     clientId,
@@ -128,7 +132,8 @@ export async function POST(req: Request) {
           .map((t) => ({
             title: t.title?.trim() ?? '',
             dueDate: t.dueDate?.trim() || today,
-            assigneeUserId: t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
+            assigneeUserId:
+              t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
             status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
             seq: typeof t.seq === 'number' ? t.seq : undefined,
             sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : undefined,

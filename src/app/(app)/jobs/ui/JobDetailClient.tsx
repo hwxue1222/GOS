@@ -135,6 +135,10 @@ export default function JobDetailClient({
       return;
     }
     if (!newTitle.trim()) return;
+    if (!newAssigneeUserId) {
+      setError('TASK_UNASSIGNED');
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch(`/api/jobs/${jobId}/tasks`, {
@@ -336,7 +340,7 @@ export default function JobDetailClient({
                 className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
                 disabled={!canCreateTask}
               >
-                <option value="">(unassigned)</option>
+                <option value="">(assign required)</option>
                 {assigneeUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name} ({u.role})
