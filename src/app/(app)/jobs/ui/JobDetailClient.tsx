@@ -608,9 +608,7 @@ export default function JobDetailClient({
                         </div>
                         <div className="text-xs text-black/50">
                           {t.createdByName ? `created by ${t.createdByName}` : 'created'}
-                          {t.createdAt ? ` · ${formatDateDMY(t.createdAt)}` : ''}
                           {t.assigneeName ? ` · Assigned to ${t.assigneeName}` : ''}
-                          {t.dueDate ? ` · Due ${formatDateDMY(t.dueDate)}` : ''}
                         </div>
                       </div>
                     </label>
@@ -629,15 +627,9 @@ export default function JobDetailClient({
                           </option>
                         ))}
                       </select>
-                      <DateInputDMY
-                        value={t.dueDate ?? ''}
-                        onChange={(dueDate) => void patchTask(t.id, { dueDate: dueDate || undefined })}
-                        className="w-36"
-                        inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
-                      />
                     </div>
                   ) : (
-                    <div className="text-xs text-black/50">{t.dueDate ? formatDateDMY(t.dueDate) : '-'}</div>
+                    <div className="text-xs text-black/50">-</div>
                   )}
                 </div>
               ))}
