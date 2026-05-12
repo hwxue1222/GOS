@@ -77,6 +77,8 @@ export default function JobDetailClient({
   const [users] = useState(initialUsers);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingTasks, setSavingTasks] = useState(false);
+  const [tasksError, setTasksError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>('');
   const [creating, setCreating] = useState(false);
@@ -122,6 +124,11 @@ export default function JobDetailClient({
   const [dupTasks, setDupTasks] = useState<
     Array<{ key: string; title: string; createdAt: string; assigneeUserId: string }>
   >([]);
+  const [tasksSnapshot, setTasksSnapshot] = useState(() => {
+    const orderIds = initialTasks.map((t) => t.id);
+    const titlesById = Object.fromEntries(initialTasks.map((t) => [t.id, t.title]));
+    return { orderIds, titlesById };
+  });
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
   const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
@@ -315,7 +322,14 @@ export default function JobDetailClient({
       });
       if (res.ok) {
         const j = (await res.json().catch(() => null)) as { ok?: boolean; task?: JobTask } | null;
-        if (j?.task) setTasks((prev) => [...prev, j.task!].sort((a, b) => a.sortOrder - b.sortOrder));
+        if (j?.task) {
+          const next = [...tasks, j.task!].sort((a, b) => a.sortOrder - b.sortOrder);
+          setTasks(next);
+          setTasksSnapshot({
+            orderIds: next.map((t) => t.id),
+            titlesById: Object.fromEntries(next.map((t) => [t.id, t.title])),
+          });
+        }
         setNewTitle('');
       } else {
         const j = await res.json().catch(() => null);
@@ -374,29 +388,82 @@ export default function JobDetailClient({
     );
   }
 
-  async function persistOrder(next: JobTask[]) {
-    if (!canReorderTask) return;
-    const orderedIds = next.map((t) => t.id);
-    const res = await fetch(`/api/jobs/${jobId}/tasks/order`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ orderedIds }),
-    }).catch(() => null);
-    if (!res?.ok) return;
-    const j = (await res.json().catch(() => null)) as { ok?: boolean; tasks?: Array<JobTask> } | null;
-    const tasksFromServer = j?.tasks;
-    if (!tasksFromServer) return;
-    setTasks((prev) => {
-      const createdByNameById = new Map(prev.map((t) => [t.id, t.createdByName]));
-      const assigneeNameById = new Map(prev.map((t) => [t.id, t.assigneeName]));
-      return tasksFromServer
+  const hasUnsavedTaskChanges = useMemo(() => {
+    const currentOrder = tasks.map((t) => t.id);
+    if (currentOrder.length !== tasksSnapshot.orderIds.length) return true;
+    for (let i = 0; i < currentOrder.length; i++) {
+      if (currentOrder[i] !== tasksSnapshot.orderIds[i]) return true;
+    }
+    for (const t of tasks) {
+      const savedTitle = tasksSnapshot.titlesById[t.id];
+      if (typeof savedTitle === 'string' && savedTitle !== t.title) return true;
+    }
+    return false;
+  }, [tasks, tasksSnapshot.orderIds, tasksSnapshot.titlesById]);
+
+  async function saveTasks() {
+    if (!canUpdateTask) return;
+    setTasksError(null);
+    const titlesById: Record<string, string> = {};
+    for (const t of tasks) {
+      const title = t.title.trim();
+      if (!title) {
+        setTasksError('Task title is required.');
+        return;
+      }
+      const savedTitle = tasksSnapshot.titlesById[t.id];
+      if (typeof savedTitle === 'string' && savedTitle !== title) {
+        titlesById[t.id] = title;
+      }
+    }
+    const currentOrderIds = tasks.map((t) => t.id);
+    let orderChanged = currentOrderIds.length !== tasksSnapshot.orderIds.length;
+    if (!orderChanged) {
+      for (let i = 0; i < currentOrderIds.length; i++) {
+        if (currentOrderIds[i] !== tasksSnapshot.orderIds[i]) {
+          orderChanged = true;
+          break;
+        }
+      }
+    }
+    const hasTitles = Object.keys(titlesById).length > 0;
+    if (!orderChanged && !hasTitles) return;
+
+    setSavingTasks(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/tasks/order`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ...(orderChanged ? { orderedIds: currentOrderIds } : {}),
+          ...(hasTitles ? { titlesById } : {}),
+        }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setTasksError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; tasks?: Array<JobTask> } | null;
+      const tasksFromServer = j?.tasks;
+      if (!tasksFromServer) return;
+      const createdByNameById = new Map(tasks.map((t) => [t.id, t.createdByName]));
+      const assigneeNameById = new Map(tasks.map((t) => [t.id, t.assigneeName]));
+      const next = tasksFromServer
         .map((t) => ({
           ...t,
           createdByName: createdByNameById.get(t.id) ?? t.createdByName,
           assigneeName: assigneeNameById.get(t.id) ?? t.assigneeName,
         }))
         .sort((a, b) => a.sortOrder - b.sortOrder);
-    });
+      setTasks(next);
+      setTasksSnapshot({
+        orderIds: next.map((t) => t.id),
+        titlesById: Object.fromEntries(next.map((t) => [t.id, t.title])),
+      });
+    } finally {
+      setSavingTasks(false);
+    }
   }
 
   return (
@@ -515,7 +582,19 @@ export default function JobDetailClient({
         <div className="mt-6 rounded-xl bg-white border border-black/5">
           <div className="p-4 border-b border-black/5 flex items-center justify-between">
             <div className="font-medium">Tasks</div>
-            <div className="text-sm text-black/60">{doneCount}/{tasks.length}</div>
+            <div className="flex items-center gap-3">
+              {tasksError ? <div className="text-sm text-red-600">{tasksError}</div> : null}
+              {canUpdateTask ? (
+                <button
+                  disabled={!hasUnsavedTaskChanges || savingTasks}
+                  onClick={saveTasks}
+                  className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+                >
+                  {savingTasks ? 'Saving...' : 'Save'}
+                </button>
+              ) : null}
+              <div className="text-sm text-black/60">{doneCount}/{tasks.length}</div>
+            </div>
           </div>
 
           <div className="p-4">
@@ -581,7 +660,6 @@ export default function JobDetailClient({
                     next.splice(toIdx, 0, moved);
                     const withOrder = next.map((x, idx) => ({ ...x, sortOrder: idx + 1, seq: idx + 1 }));
                     setTasks(withOrder);
-                    void persistOrder(withOrder);
                   }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -597,17 +675,32 @@ export default function JobDetailClient({
                         onChange={() => toggleTask(t)}
                       />
                       <div className="min-w-0">
-                        <div
-                          className={[
-                            'truncate',
-                            t.status === 'Done' ? 'line-through text-black/40' : '',
-                          ].join(' ')}
-                          title={t.title}
-                        >
-                          {t.title}
-                        </div>
+                        {canUpdateTask ? (
+                          <input
+                            value={t.title}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, title: v } : x)));
+                            }}
+                            className={[
+                              'w-full bg-transparent rounded-md border border-black/10 px-2 py-1 text-sm',
+                              t.status === 'Done' ? 'line-through text-black/40' : '',
+                            ].join(' ')}
+                          />
+                        ) : (
+                          <div
+                            className={[
+                              'truncate',
+                              t.status === 'Done' ? 'line-through text-black/40' : '',
+                            ].join(' ')}
+                            title={t.title}
+                          >
+                            {t.title}
+                          </div>
+                        )}
                         <div className="text-xs text-black/50">
                           {t.createdByName ? `created by ${t.createdByName}` : 'created'}
+                          {t.createdAt ? ` · Creation ${formatDateDMY(t.createdAt)}` : ''}
                           {t.assigneeName ? ` · Assigned to ${t.assigneeName}` : ''}
                         </div>
                       </div>

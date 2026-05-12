@@ -534,6 +534,48 @@ export async function reorderTasks(jobId: string, orderedIds: string[]) {
   return db.tasks.filter((t) => t.jobId === jobId).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+export async function updateTasksInJob(input: {
+  jobId: string;
+  orderedIds?: string[];
+  titlesById?: Record<string, string>;
+}) {
+  const db = await readDb();
+  const inJob = db.tasks.filter((t) => t.jobId === input.jobId);
+  if (inJob.length === 0) return [];
+
+  let idToOrder: Map<string, number> | null = null;
+  if (Array.isArray(input.orderedIds) && input.orderedIds.length > 0) {
+    const orderedIds = input.orderedIds;
+    const set = new Set(orderedIds);
+    if (orderedIds.length !== inJob.length) return null;
+    if (inJob.some((t) => !set.has(t.id))) return null;
+    idToOrder = new Map(orderedIds.map((id, idx) => [id, idx + 1]));
+  }
+
+  const titlesById = input.titlesById ?? {};
+  const titleKeys = Object.keys(titlesById);
+  if (titleKeys.length > 0) {
+    const inJobIdSet = new Set(inJob.map((t) => t.id));
+    for (const id of titleKeys) {
+      if (!inJobIdSet.has(id)) return null;
+      const title = titlesById[id]?.trim() ?? '';
+      if (!title) return null;
+      titlesById[id] = title;
+    }
+  }
+
+  db.tasks = db.tasks.map((t) => {
+    if (t.jobId !== input.jobId) return t;
+    const sortOrder = idToOrder ? (idToOrder.get(t.id) ?? t.sortOrder) : t.sortOrder;
+    const seq = idToOrder ? sortOrder : t.seq;
+    const title = titleKeys.length && titlesById[t.id] ? titlesById[t.id] : t.title;
+    return { ...t, sortOrder, seq, title };
+  });
+
+  await writeDb(db);
+  return db.tasks.filter((t) => t.jobId === input.jobId).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 export async function updateTaskStatus(taskId: string, status: JobTask['status']) {
   const db = await readDb();
   const idx = db.tasks.findIndex((t) => t.id === taskId);
