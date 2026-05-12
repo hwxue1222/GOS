@@ -39,6 +39,7 @@ function normalizeDb(parsed: Db): Db {
     companyRegistrationNo: (c as Client).companyRegistrationNo,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
+    deletedAt: (c as Client).deletedAt,
   }));
   const jobs = (parsed.jobs ?? []).map((j) => ({
     ...j,
@@ -315,6 +316,15 @@ export async function updateClient(
   db.clients[idx] = next;
   await writeDb(db);
   return next;
+}
+
+export async function deleteClient(clientId: string) {
+  const db = await readDb();
+  const idx = db.clients.findIndex((c) => c.id === clientId);
+  if (idx < 0) return null;
+  db.clients[idx] = { ...db.clients[idx], deletedAt: nowIso() };
+  await writeDb(db);
+  return db.clients[idx];
 }
 
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {

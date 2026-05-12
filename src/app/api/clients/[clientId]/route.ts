@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findClientById, listJobs, listTasksByJob, updateClient } from '@/lib/db';
+import { deleteClient, findClientById, listJobs, listTasksByJob, updateClient } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(_: Request, { params }: { params: Promise<{ clientId: string }> }) {
@@ -17,6 +17,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ clientId: 
 
   const client = await findClientById(clientId);
   if (!client) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
   if (!canViewAllClients) {
     const jobs = await listJobs();
@@ -96,4 +97,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   });
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, client: updated });
+}
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ clientId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (user.role !== 'owner') {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { clientId } = await params;
+  const client = await findClientById(clientId);
+  if (!client) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
+  const deleted = await deleteClient(clientId);
+  if (!deleted) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

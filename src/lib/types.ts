@@ -44,6 +44,7 @@ export type Client = {
   phone?: string;
   email?: string;
   tags: string[];
+  deletedAt?: string;
   createdAt: string;
 };
 

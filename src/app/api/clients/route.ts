@@ -13,7 +13,8 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
-  const clients = await listClients();
+  const clientsAll = await listClients();
+  const clients = clientsAll.filter((c) => !c.deletedAt);
   if (canViewAll) return NextResponse.json({ ok: true, clients });
 
   const jobs = await listJobs();

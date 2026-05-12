@@ -24,13 +24,13 @@ export default async function ClientsPage() {
   }
 
   const clientsAll = await listClients();
-  let clients = clientsAll;
+  let clients = clientsAll.filter((c) => !c.deletedAt);
   if (!canViewAll) {
     const js = await listJobs();
     const assignedClientIds = new Set(
       js.filter((j) => j.managerUserId === me.id || j.staffUserId === me.id).map((j) => j.clientId),
     );
-    clients = clientsAll.filter((c) => assignedClientIds.has(c.id));
+    clients = clients.filter((c) => assignedClientIds.has(c.id));
   }
 
   return (

@@ -59,6 +59,18 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
       </div>
     );
   }
+  if (client.deletedAt) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppTopNav active="clients" />
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const canViewAllClients = hasPermission(me, 'clients', 'viewAll');
   if (!canViewAllClients && !visibleJobs.some((j) => j.clientId === clientId)) {
@@ -105,4 +117,3 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
     </div>
   );
 }
-

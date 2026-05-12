@@ -14,6 +14,7 @@ type Client = {
   phone?: string;
   email?: string;
   tags: string[];
+  deletedAt?: string;
 };
 
 type User = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
@@ -56,6 +57,16 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   }, [clients, search]);
 
   const canCreate = me?.role === 'owner' || me?.role === 'manager';
+  const canDelete = me?.role === 'owner';
+
+  async function deleteClientFromList(clientId: string) {
+    if (!canDelete) return;
+    const ok = window.confirm('Delete this client?');
+    if (!ok) return;
+    const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) return;
+    setClients((prev) => prev.filter((c) => c.id !== clientId));
+  }
 
   async function addClient() {
     setError(null);
@@ -126,6 +137,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Tags</th>
+                <th className="px-4 py-3 font-medium w-24"></th>
               </tr>
             </thead>
             <tbody>
@@ -163,11 +175,23 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{c.tags?.length ? c.tags.join(', ') : '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                    {canDelete ? (
+                      <button
+                        onClick={() => void deleteClientFromList(c.id)}
+                        className="rounded-md border border-red-200 bg-white text-red-600 px-3 py-1.5 text-sm hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    ) : (
+                      <span className="text-black/30">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={9} className="px-4 py-10 text-center text-black/50">
                     No clients
                   </td>
                 </tr>
