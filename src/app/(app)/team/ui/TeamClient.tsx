@@ -31,7 +31,7 @@ const PERMISSION_TABLE: Array<{
   {
     module: 'jobs',
     label: 'Jobs',
-    actions: ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate', 'archive'],
+    actions: ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate'],
   },
   {
     module: 'tasks',
@@ -41,7 +41,7 @@ const PERMISSION_TABLE: Array<{
   {
     module: 'clients',
     label: 'Clients',
-    actions: ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'import', 'assignTemplate'],
+    actions: ['viewAssigned', 'viewAll', 'create', 'update', 'trash'],
   },
   {
     module: 'staffs',
@@ -53,18 +53,18 @@ const PERMISSION_TABLE: Array<{
 function defaultPermissionsForRole(role: Role): Permissions {
   if (role === 'owner') {
     return {
-      jobs: { viewAll: true, create: true, update: true, complete: true, duplicate: true, archive: true, trash: true },
-      tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
-      clients: { viewAll: true, create: true, update: true, import: true, trash: true },
-      staffs: { viewAll: true, create: true, update: true, trash: true },
+      jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, duplicate: true, trash: true },
+      tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, trash: true },
+      clients: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
+      staffs: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
     };
   }
   if (role === 'manager') {
     return {
-      jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
+      jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, duplicate: true },
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
-      clients: { viewAssigned: true, viewAll: true, create: true, update: true, import: true },
-      staffs: { viewAssigned: true, viewAll: true },
+      clients: { viewAssigned: true, viewAll: true, create: true, update: true },
+      staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
     };
   }
   return {
@@ -130,10 +130,21 @@ export default function TeamClient({ initialUsers }: Props) {
     return users.filter((u) => `${u.name} ${u.email} ${u.position ?? ''}`.toLowerCase().includes(q));
   }, [search, users]);
 
-  const actionColumns = useMemo(() => {
-    const set = new Set<PermissionAction>();
-    for (const row of PERMISSION_TABLE) for (const a of row.actions) set.add(a);
-    return Array.from(set);
+  const actionColumns = useMemo(
+    () => ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate'] as PermissionAction[],
+    [],
+  );
+
+  const actionLabel = useMemo(() => {
+    return {
+      viewAssigned: 'view',
+      viewAll: 'view all',
+      create: 'create',
+      update: 'update',
+      trash: 'delete',
+      complete: 'complete',
+      duplicate: 'duplicate',
+    } as Partial<Record<PermissionAction, string>>;
   }, []);
 
   useEffect(() => {
@@ -258,19 +269,6 @@ export default function TeamClient({ initialUsers }: Props) {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="font-medium">{mode === 'create' ? 'Add Staff' : 'Update Staff'}</div>
             <div className="flex flex-wrap items-center gap-2">
-              {mode === 'edit' ? (
-                <select
-                  value={selectedId}
-                  onChange={(e) => startEdit(e.target.value)}
-                  className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
-                >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
               <button onClick={cancel} className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm">
                 Cancel
               </button>
@@ -344,7 +342,7 @@ export default function TeamClient({ initialUsers }: Props) {
                     <th className="py-2 pr-4 font-medium">Module</th>
                     {actionColumns.map((a) => (
                       <th key={a} className="py-2 pr-4 font-medium whitespace-nowrap">
-                        {a}
+                        {actionLabel[a] ?? a}
                       </th>
                     ))}
                   </tr>

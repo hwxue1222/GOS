@@ -10,15 +10,14 @@ export type CurrentUser = {
 
 export function hasPermission(user: CurrentUser, module: PermissionModule, action: PermissionAction) {
   if (user.role === 'owner') return true;
-  if (module === 'jobs' && action === 'create') return user.role === 'manager';
   const permissions: Permissions =
     user.permissions ??
     (user.role === 'manager'
       ? {
-          jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
+          jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, duplicate: true },
           tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
-          clients: { viewAssigned: true, viewAll: true, create: true, update: true, import: true },
-          staffs: { viewAssigned: true, viewAll: true },
+          clients: { viewAssigned: true, viewAll: true, create: true, update: true },
+          staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
         }
       : {
           jobs: { viewAssigned: true },
