@@ -202,18 +202,6 @@ export async function writeDb(db: Db) {
   await writeDbRaw(db);
 }
 
-export async function clearBusinessData() {
-  const db = await readDb();
-  const next: Db = {
-    ...db,
-    clients: [],
-    jobs: [],
-    tasks: [],
-  };
-  await writeDb(next);
-  return { ok: true as const };
-}
-
 export async function findUserByEmail(email: string) {
   const db = await readDb();
   return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
