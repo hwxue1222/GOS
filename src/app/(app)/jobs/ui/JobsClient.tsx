@@ -77,6 +77,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [filterJobName, setFilterJobName] = usePersistedState<string>('gos.jobs.filter.jobName', '');
   const [view, setView] = usePersistedState<'uncomplete' | 'complete' | 'delete'>('gos.jobs.view', 'uncomplete');
   const showDeleteColumn = me.role === 'owner' && view !== 'delete';
+  const [pageSize, setPageSize] = usePersistedState('gos.jobs.pageSize', 20);
+  const [page, setPage] = usePersistedState('gos.jobs.page', 1);
 
   const [showNewJob, setShowNewJob] = useState(false);
   const [newJob, setNewJob] = useState({
@@ -110,7 +112,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     setFilterClientId('');
     setFilterManagerUserId('');
     setFilterJobName('');
-  }, [overdueUserId, setFilterClientId, setFilterJobName, setFilterManagerUserId, setSearch, setView]);
+    setPage(1);
+  }, [overdueUserId, setFilterClientId, setFilterJobName, setFilterManagerUserId, setSearch, setView, setPage]);
 
   async function reloadJobsOnly() {
     const url = overdueUserId
@@ -180,6 +183,18 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     });
   }, [filterClientId, filterJobName, filterManagerUserId, items, search, view]);
 
+  const total = filtered.length;
+  const safePageSize = Math.max(1, Number(pageSize) || 20);
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  const pageStart = (safePage - 1) * safePageSize;
+  const pageEnd = Math.min(total, pageStart + safePageSize);
+  const visible = filtered.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    if (Number(page) !== safePage) setPage(safePage);
+  }, [page, safePage, setPage]);
+
   async function createJob() {
     setError(null);
     if (!newJob.clientId || !newJob.name.trim()) {
@@ -238,6 +253,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       setDraftTasks([]);
       setTaskInput('');
       setView('uncomplete');
+      setPage(1);
       await reloadJobsOnly();
     } finally {
       setCreating(false);
@@ -310,7 +326,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             <h1 className="text-xl font-semibold">Jobs</h1>
             <div className="hidden sm:flex items-center gap-2 text-sm">
               <button
-                onClick={() => setView('uncomplete')}
+                onClick={() => {
+                  setView('uncomplete');
+                  setPage(1);
+                }}
                 className={[
                   'rounded-full px-3 py-1.5 border',
                   view === 'uncomplete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
@@ -319,7 +338,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 Uncomplete
               </button>
               <button
-                onClick={() => setView('complete')}
+                onClick={() => {
+                  setView('complete');
+                  setPage(1);
+                }}
                 className={[
                   'rounded-full px-3 py-1.5 border',
                   view === 'complete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
@@ -328,7 +350,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 Complete
               </button>
               <button
-                onClick={() => setView('delete')}
+                onClick={() => {
+                  setView('delete');
+                  setPage(1);
+                }}
                 className={[
                   'rounded-full px-3 py-1.5 border',
                   view === 'delete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
@@ -363,7 +388,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full sm:max-w-md rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
                 placeholder="Find job or client by name"
               />
@@ -372,7 +400,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
               <select
                 value={filterClientId}
-                onChange={(e) => setFilterClientId(e.target.value)}
+                onChange={(e) => {
+                  setFilterClientId(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Client: All</option>
@@ -384,7 +415,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
               </select>
               <select
                 value={filterManagerUserId}
-                onChange={(e) => setFilterManagerUserId(e.target.value)}
+                onChange={(e) => {
+                  setFilterManagerUserId(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Manager in charge: All</option>
@@ -397,7 +431,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
               </select>
               <select
                 value={filterJobName}
-                onChange={(e) => setFilterJobName(e.target.value)}
+                onChange={(e) => {
+                  setFilterJobName(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Job name: All</option>
@@ -407,7 +444,44 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </option>
                 ))}
               </select>
-              <div className="hidden lg:block col-span-5" />
+              <div className="hidden lg:block col-span-2" />
+              <div className="col-span-2 sm:col-span-4 lg:col-span-3 flex items-center justify-end gap-2 text-sm text-black/60">
+                <div className="hidden sm:block">
+                  {total === 0 ? '0' : `${pageStart + 1}-${pageEnd}`} / {total}
+                </div>
+                <select
+                  value={safePageSize}
+                  onChange={(e) => {
+                    const next = Number(e.target.value) || 20;
+                    setPageSize(next);
+                    setPage(1);
+                  }}
+                  className="rounded-md border border-black/10 bg-white px-2 py-2 text-sm text-black/70"
+                >
+                  {[10, 20, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  disabled={safePage <= 1}
+                  onClick={() => setPage(safePage - 1)}
+                  className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <div className="min-w-[72px] text-center">
+                  {safePage} / {totalPages}
+                </div>
+                <button
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage(safePage + 1)}
+                  className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
 
@@ -428,7 +502,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((it) => (
+                {visible.map((it) => (
                   <tr key={it.job.id} className="border-b border-black/5 hover:bg-black/[0.02]">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
@@ -515,7 +589,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     ) : null}
                   </tr>
                 ))}
-                {filtered.length === 0 ? (
+                {visible.length === 0 ? (
                   <tr>
                     <td colSpan={showDeleteColumn ? 10 : 9} className="px-4 py-10 text-center text-black/50">
                       No jobs
