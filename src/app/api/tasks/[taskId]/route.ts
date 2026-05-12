@@ -20,12 +20,8 @@ export async function PATCH(
   const canViewAll = hasPermission(user, 'tasks', 'viewAll') || hasPermission(user, 'jobs', 'viewAll');
   const canViewAssigned = hasPermission(user, 'tasks', 'viewAssigned') || hasPermission(user, 'jobs', 'viewAssigned');
   const assignedByTask = task.assigneeUserId === user.id;
-  const assigned =
-    assignedByTask ||
-    job.staffUserId === user.id ||
-    job.managerUserId === user.id ||
-    job.createdByUserId === user.id;
-  if (!canViewAll && !(canViewAssigned && assigned) && !(user.role === 'staff' && assignedByTask)) {
+  const assigned = assignedByTask || job.managerUserId === user.id || job.createdByUserId === user.id;
+  if (!canViewAll && !(canViewAssigned && assigned)) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -45,10 +41,8 @@ export async function PATCH(
     if (!hasPermission(user, 'tasks', 'complete')) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
-    if (user.role === 'staff') {
-      if (!assignedByTask) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-    } else {
-      if (!canModifyJob) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    if (!canModifyJob && !assignedByTask) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
     const updated = await updateTaskStatus(taskId, body!.status!);
     if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
@@ -75,7 +69,7 @@ export async function PATCH(
       typeof body?.assigneeUserId === 'string' ? body.assigneeUserId.trim() || undefined : undefined;
     if (assigneeUserId) {
       const u = await findUserById(assigneeUserId);
-      if (!u || u.role !== 'staff') {
+      if (!u) {
         return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
       }
     }

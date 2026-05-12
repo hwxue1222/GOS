@@ -53,7 +53,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
   const [me] = useState<User>(initialMe);
-  const staffUsers = useMemo(() => users.filter((u) => u.role === 'staff'), [users]);
   const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
 
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
@@ -67,7 +66,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     dueDate: '',
     repeat: 'none' as JobListItem['job']['repeat'],
     managerUserId: '',
-    staffUserId: '',
   });
   const [draftTasks, setDraftTasks] = useState<
     Array<{
@@ -121,7 +119,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           dueDate: newJob.dueDate || undefined,
           repeat: newJob.repeat,
           managerUserId: newJob.managerUserId || undefined,
-          staffUserId: newJob.staffUserId || undefined,
           tasks: draftTasks
             .map((t, idx) => ({
               title: t.title,
@@ -147,7 +144,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         dueDate: '',
         repeat: 'none',
         managerUserId: '',
-        staffUserId: '',
       });
       setDraftTasks([]);
       setTaskInput('');
@@ -184,7 +180,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           dueDate: todayYmd(),
           done: false,
           createdByName: me.name,
-          assigneeUserId: newJob.staffUserId,
+          assigneeUserId: '',
         },
       ];
     });
@@ -375,7 +371,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       value={newJob.dueDate}
                       onChange={(dueDate) => setNewJob((v) => ({ ...v, dueDate }))}
                       className="mt-1"
-                      inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
                     />
                   </label>
                   <label className="text-sm">
@@ -412,21 +408,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     >
                       <option value="">(none)</option>
                       {managerUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.role})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-black/70">Staff</div>
-                    <select
-                      value={newJob.staffUserId}
-                      onChange={(e) => setNewJob((v) => ({ ...v, staffUserId: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
-                    >
-                      <option value="">(none)</option>
-                      {staffUsers.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.name} ({u.role})
                         </option>
@@ -495,7 +476,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         }}
                       >
                         <div className="w-20 text-xs text-black/50">
-                          {t.seq}. <span className="text-black/40">by {t.createdByName}</span>
+                          {t.seq}. <span className="text-black/40">created by {t.createdByName}</span>
                         </div>
                         <input
                           type="checkbox"
@@ -532,21 +513,13 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           disabled={!canCreateTasks}
                         >
                           <option value="">(unassigned)</option>
-                          {staffUsers.map((u) => (
+                          {users.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.name} ({u.role})
                             </option>
                           ))}
                         </select>
-                        <DateInputDMY
-                          value={t.dueDate}
-                          onChange={(dueDate) =>
-                            setDraftTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, dueDate } : x)))
-                          }
-                          disabled={!canCreateTasks}
-                          className="w-36"
-                          inputClassName="rounded-md border border-black/10 px-3 py-2 text-sm"
-                        />
+                        <div className="w-28 text-sm text-black/60">{formatDateDMY(t.dueDate)}</div>
                         <button
                           onClick={() => setDraftTasks((prev) => prev.filter((x) => x.id !== t.id))}
                           className="text-black/40 hover:text-black"

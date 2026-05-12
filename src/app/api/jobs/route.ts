@@ -120,7 +120,7 @@ export async function POST(req: Request) {
   });
 
   const users = hasTasks ? await listUsers() : [];
-  const staffIdSet = new Set(users.filter((u) => u.role === 'staff').map((u) => u.id));
+  const userIdSet = new Set(users.map((u) => u.id));
 
   const createdTasks = hasTasks
     ? await Promise.all(
@@ -128,10 +128,7 @@ export async function POST(req: Request) {
           .map((t) => ({
             title: t.title?.trim() ?? '',
             dueDate: t.dueDate?.trim() || today,
-            assigneeUserId:
-              (t.assigneeUserId?.trim() && staffIdSet.has(t.assigneeUserId.trim())
-                ? t.assigneeUserId.trim()
-                : undefined) ?? (staffUserId && staffIdSet.has(staffUserId) ? staffUserId : undefined),
+            assigneeUserId: t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
             status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
             seq: typeof t.seq === 'number' ? t.seq : undefined,
             sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : undefined,

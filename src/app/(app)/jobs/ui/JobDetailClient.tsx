@@ -38,7 +38,6 @@ type Props = {
   initialTasks: JobTask[];
   initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
   meId: string;
-  meRole: 'owner' | 'manager' | 'staff';
   canModifyJob: boolean;
   canUpdateJob: boolean;
   canCreateTask: boolean;
@@ -54,7 +53,6 @@ export default function JobDetailClient({
   initialTasks,
   initialUsers,
   meId,
-  meRole,
   canModifyJob,
   canUpdateJob,
   canCreateTask,
@@ -69,26 +67,24 @@ export default function JobDetailClient({
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
-  const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>(initialJob?.staffUserId ?? '');
+  const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const [jobDraft, setJobDraft] = useState<{
     name: string;
     dueDate: string;
     repeat: Job['repeat'];
     managerUserId: string;
-    staffUserId: string;
   }>({
     name: initialJob?.name ?? '',
     dueDate: initialJob?.dueDate ?? '',
     repeat: initialJob?.repeat ?? 'none',
     managerUserId: initialJob?.managerUserId ?? '',
-    staffUserId: initialJob?.staffUserId ?? '',
   });
   const [savingJob, setSavingJob] = useState(false);
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
-  const staffUsers = useMemo(() => users.filter((u) => u.role === 'staff'), [users]);
   const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
+  const assigneeUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'staff'), [users]);
 
   function todayYmd() {
     return new Date().toISOString().slice(0, 10);
@@ -111,7 +107,6 @@ export default function JobDetailClient({
           dueDate: jobDraft.dueDate || undefined,
           repeat: jobDraft.repeat,
           managerUserId: jobDraft.managerUserId || undefined,
-          staffUserId: jobDraft.staffUserId || undefined,
         }),
       });
       if (!res.ok) {
@@ -127,7 +122,6 @@ export default function JobDetailClient({
           dueDate: j.job.dueDate ?? '',
           repeat: j.job.repeat ?? 'none',
           managerUserId: j.job.managerUserId ?? '',
-          staffUserId: j.job.staffUserId ?? '',
         });
       }
     } finally {
@@ -190,8 +184,7 @@ export default function JobDetailClient({
 
   async function toggleTask(t: JobTask) {
     if (!canCompleteTask) return;
-    if (meRole === 'staff' && t.assigneeUserId !== meId) return;
-    if (meRole !== 'staff' && !canModifyJob) return;
+    if (!canModifyJob && t.assigneeUserId !== meId) return;
     const next = t.status === 'Done' ? 'Todo' : 'Done';
     const res = await fetch(`/api/tasks/${t.id}`, {
       method: 'PATCH',
@@ -277,7 +270,7 @@ export default function JobDetailClient({
                   value={jobDraft.dueDate}
                   onChange={(dueDate) => setJobDraft((v) => ({ ...v, dueDate }))}
                   className="mt-1"
-                  inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
                 />
               </label>
               <label className="text-sm">
@@ -303,21 +296,6 @@ export default function JobDetailClient({
                 >
                   <option value="">(none)</option>
                   {managerUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                <div className="text-black/70">Staff</div>
-                <select
-                  value={jobDraft.staffUserId}
-                  onChange={(e) => setJobDraft((v) => ({ ...v, staffUserId: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">(none)</option>
-                  {staffUsers.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.role})
                     </option>
@@ -359,7 +337,7 @@ export default function JobDetailClient({
                 disabled={!canCreateTask}
               >
                 <option value="">(unassigned)</option>
-                {staffUsers.map((u) => (
+                {assigneeUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name} ({u.role})
                   </option>
@@ -417,7 +395,7 @@ export default function JobDetailClient({
                         checked={t.status === 'Done'}
                         disabled={
                           !canCompleteTask ||
-                          (meRole === 'staff' ? t.assigneeUserId !== meId : !canModifyJob)
+                          (!canModifyJob && t.assigneeUserId !== meId)
                         }
                         onChange={() => toggleTask(t)}
                       />
@@ -432,8 +410,8 @@ export default function JobDetailClient({
                           {t.title}
                         </div>
                         <div className="text-xs text-black/50">
-                          Created {formatDateDMY(t.createdAt)}
-                          {t.createdByName ? ` · by ${t.createdByName}` : ''}
+                          {t.createdByName ? `created by ${t.createdByName}` : 'created'}
+                          {t.createdAt ? ` · ${formatDateDMY(t.createdAt)}` : ''}
                           {t.assigneeName ? ` · Assigned to ${t.assigneeName}` : ''}
                           {t.dueDate ? ` · Due ${formatDateDMY(t.dueDate)}` : ''}
                         </div>
@@ -448,7 +426,7 @@ export default function JobDetailClient({
                         className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                       >
                         <option value="">(unassigned)</option>
-                        {staffUsers.map((u) => (
+                        {assigneeUsers.map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.name} ({u.role})
                           </option>
@@ -458,11 +436,11 @@ export default function JobDetailClient({
                         value={t.dueDate ?? ''}
                         onChange={(dueDate) => void patchTask(t.id, { dueDate: dueDate || undefined })}
                         className="w-36"
-                        inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
                       />
                     </div>
                   ) : (
-                    <div className="text-xs text-black/50">{t.status}</div>
+                    <div className="text-xs text-black/50">{t.dueDate ? formatDateDMY(t.dueDate) : '-'}</div>
                   )}
                 </div>
               ))}

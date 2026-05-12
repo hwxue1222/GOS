@@ -21,7 +21,7 @@ export async function GET(
     job.staffUserId === user.id ||
     job.createdByUserId === user.id ||
     tasks.some((t) => t.assigneeUserId === user.id);
-  if (!canViewAll && !(canViewAssigned && assigned) && !(user.role === 'staff' && tasks.some((t) => t.assigneeUserId === user.id))) {
+  if (!canViewAll && !(canViewAssigned && assigned)) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
   const users = await listUsers();
@@ -56,11 +56,10 @@ export async function POST(
   const title = body?.title?.trim() ?? '';
   const dueDate = body?.dueDate?.trim() || new Date().toISOString().slice(0, 10);
   const users = await listUsers();
-  const staffIdSet = new Set(users.filter((u) => u.role === 'staff').map((u) => u.id));
+  const userIdSet = new Set(users.map((u) => u.id));
   const requestedAssignee = body?.assigneeUserId?.trim() || undefined;
   const assigneeUserId =
-    (requestedAssignee && staffIdSet.has(requestedAssignee) ? requestedAssignee : undefined) ??
-    (job.staffUserId && staffIdSet.has(job.staffUserId) ? job.staffUserId : undefined);
+    requestedAssignee && userIdSet.has(requestedAssignee) ? requestedAssignee : undefined;
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 

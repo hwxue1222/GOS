@@ -23,7 +23,7 @@ export async function GET(
     job.staffUserId === user.id ||
     job.createdByUserId === user.id ||
     tasks.some((t) => t.assigneeUserId === user.id);
-  if (!canViewAll && !(canViewAssigned && assigned) && !(user.role === 'staff' && tasks.some((t) => t.assigneeUserId === user.id))) {
+  if (!canViewAll && !(canViewAssigned && assigned)) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
