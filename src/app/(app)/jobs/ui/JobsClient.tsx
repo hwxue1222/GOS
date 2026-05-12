@@ -63,6 +63,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
   const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
   const [view, setView] = usePersistedState<'uncomplete' | 'complete' | 'delete'>('gos.jobs.view', 'uncomplete');
+  const showDeleteColumn = me.role === 'owner' && view !== 'delete';
 
   const [showNewJob, setShowNewJob] = useState(false);
   const [newJob, setNewJob] = useState({
@@ -321,16 +322,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 className="w-full sm:max-w-md rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
                 placeholder="Find job or client by name"
               />
-              <button
-                onClick={() => {
-                  setFilterClientId('');
-                  setSearch('');
-                  setView('uncomplete');
-                }}
-                className="text-sm text-[#2f7bdc] self-end"
-              >
-                Reset
-              </button>
             </div>
 
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
@@ -362,7 +353,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Manager</th>
                   <th className="px-4 py-3 font-medium">Creation date</th>
-                  <th className="px-4 py-3 font-medium w-24"></th>
+                  {showDeleteColumn ? <th className="px-4 py-3 font-medium w-24"></th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -425,23 +416,21 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     <td className="px-4 py-3 whitespace-nowrap">
                       {formatDateDMY(it.job.updatedAt ?? it.job.createdAt)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
-                      {me.role === 'owner' && !it.job.deletedAt && view !== 'delete' ? (
+                    {showDeleteColumn ? (
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
                         <button
                           onClick={() => void deleteJobFromList(it.job.id)}
                           className="rounded-md border border-red-200 bg-white text-red-600 px-3 py-1.5 text-sm hover:bg-red-50"
                         >
                           Delete
                         </button>
-                      ) : (
-                        <span className="text-black/30">-</span>
-                      )}
-                    </td>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-black/50">
+                    <td colSpan={showDeleteColumn ? 9 : 8} className="px-4 py-10 text-center text-black/50">
                       No jobs
                     </td>
                   </tr>
