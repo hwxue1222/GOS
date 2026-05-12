@@ -58,7 +58,14 @@ export async function POST(req: Request) {
         repeat?: JobRepeat;
         managerUserId?: string;
         staffUserId?: string;
-        tasks?: Array<{ title?: string; dueDate?: string; assigneeUserId?: string; status?: TaskStatus }>;
+        tasks?: Array<{
+          title?: string;
+          dueDate?: string;
+          assigneeUserId?: string;
+          status?: TaskStatus;
+          seq?: number;
+          sortOrder?: number;
+        }>;
       }
     | null;
 
@@ -103,11 +110,16 @@ export async function POST(req: Request) {
             dueDate: t.dueDate?.trim() || undefined,
             assigneeUserId: t.assigneeUserId?.trim() || staffUserId,
             status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
+            seq: typeof t.seq === 'number' ? t.seq : undefined,
+            sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : undefined,
           }))
           .filter((t) => !!t.title)
           .map((t) =>
             createTask({
               jobId: job.id,
+              createdByUserId: user.id,
+              seq: t.seq,
+              sortOrder: t.sortOrder,
               title: t.title,
               dueDate: t.dueDate,
               assigneeUserId: t.assigneeUserId,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createTask, findJobById, listTasksByJob } from '@/lib/db';
+import { createTask, findJobById, listTasksByJob, listUsers } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(
@@ -19,8 +19,13 @@ export async function GET(
   if (!canViewAll && !(canViewAssigned && assigned)) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
-  const tasks = await listTasksByJob(jobId);
-  return NextResponse.json({ ok: true, tasks });
+  const [tasks, users] = await Promise.all([listTasksByJob(jobId), listUsers()]);
+  const nameById = new Map(users.map((u) => [u.id, u.name]));
+  const enriched = tasks.map((t) => ({
+    ...t,
+    createdByName: t.createdByUserId ? nameById.get(t.createdByUserId) ?? null : null,
+  }));
+  return NextResponse.json({ ok: true, tasks: enriched });
 }
 
 export async function POST(
@@ -51,6 +56,15 @@ export async function POST(
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
-  const task = await createTask({ jobId, title, dueDate, assigneeUserId, status: 'Todo' });
-  return NextResponse.json({ ok: true, task });
+  const task = await createTask({
+    jobId,
+    title,
+    dueDate,
+    assigneeUserId,
+    status: 'Todo',
+    createdByUserId: user.id,
+  });
+  const users = await listUsers();
+  const createdByName = users.find((u) => u.id === user.id)?.name ?? null;
+  return NextResponse.json({ ok: true, task: { ...task, createdByName } });
 }

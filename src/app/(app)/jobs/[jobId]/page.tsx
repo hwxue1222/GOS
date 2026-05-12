@@ -1,7 +1,7 @@
 import AppTopNav from '@/components/AppTopNav';
 import JobDetailClient from '@/app/(app)/jobs/ui/JobDetailClient';
 import { getCurrentUser } from '@/lib/auth';
-import { findJobById, listClients, listTasksByJob } from '@/lib/db';
+import { findJobById, listClients, listTasksByJob, listUsers } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export default async function JobDetailPage({
@@ -47,7 +47,22 @@ export default async function JobDetailPage({
   const canViewAllTasks = hasPermission(me, 'tasks', 'viewAll') || canViewAllJobs;
   const canViewAssignedTasks = hasPermission(me, 'tasks', 'viewAssigned') || canViewAssignedJobs;
   const visibleTasks = canViewAllTasks || (canViewAssignedTasks && assigned) ? tasks : [];
-  const canEdit = hasPermission(me, 'tasks', 'create');
+  const canCreateTask = hasPermission(me, 'tasks', 'create');
+  const canCompleteTask = hasPermission(me, 'tasks', 'complete');
+  const canReorderTask = hasPermission(me, 'tasks', 'update');
+
+  const users = await listUsers();
+  const neededIds = new Set<string>([
+    me.id,
+    ...(job.managerUserId ? [job.managerUserId] : []),
+    ...(job.staffUserId ? [job.staffUserId] : []),
+    ...visibleTasks.map((t) => t.createdByUserId).filter(Boolean),
+  ] as string[]);
+  const nameById = new Map(users.filter((u) => neededIds.has(u.id)).map((u) => [u.id, u.name]));
+  const enrichedTasks = visibleTasks.map((t) => ({
+    ...t,
+    createdByName: t.createdByUserId ? nameById.get(t.createdByUserId) ?? null : null,
+  }));
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="jobs" />
@@ -55,8 +70,10 @@ export default async function JobDetailPage({
         jobId={jobId}
         initialJob={job}
         initialClient={client}
-        initialTasks={visibleTasks}
-        canEdit={!!canEdit}
+        initialTasks={enrichedTasks}
+        canCreateTask={canCreateTask}
+        canCompleteTask={canCompleteTask}
+        canReorderTask={canReorderTask}
       />
     </div>
   );

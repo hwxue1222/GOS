@@ -32,17 +32,43 @@ async function readDbRaw(): Promise<Db> {
       repeat: (j as Job).repeat ?? 'none',
       status: (j as Job).status ?? 'Pending',
     }));
+
+    const tasks = (parsed.tasks ?? []).map((t) => ({
+      ...t,
+      seq: (t as JobTask).seq,
+      sortOrder: (t as JobTask).sortOrder,
+      createdByUserId: (t as JobTask).createdByUserId,
+    }));
+
+    const byJob = new Map<string, Array<JobTask & { createdAt: string }>>();
+    for (const t of tasks as Array<JobTask & { createdAt: string }>) {
+      if (!byJob.has(t.jobId)) byJob.set(t.jobId, []);
+      byJob.get(t.jobId)!.push(t);
+    }
+    for (const [jobId, list] of byJob) {
+      const needs = list.some((t) => typeof t.seq !== 'number' || typeof t.sortOrder !== 'number');
+      if (!needs) continue;
+      const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      const idToSeq = new Map(sorted.map((t, i) => [t.id, i + 1]));
+      for (const t of list) {
+        const seq = idToSeq.get(t.id) ?? 1;
+        if (typeof t.seq !== 'number') (t as unknown as { seq: number }).seq = seq;
+        if (typeof t.sortOrder !== 'number') (t as unknown as { sortOrder: number }).sortOrder = seq;
+      }
+      byJob.set(jobId, list);
+    }
     return {
       users,
       sessions: parsed.sessions ?? [],
       clients: parsed.clients ?? [],
       jobs,
-      tasks: parsed.tasks ?? [],
+      tasks: tasks as unknown as JobTask[],
     };
   } catch {
     return emptyDb();
   }
 }
+
 
 async function writeDbRaw(db: Db) {
   await ensureDir();
@@ -206,7 +232,9 @@ export async function findJobById(id: string) {
 
 export async function listTasksByJob(jobId: string) {
   const db = await readDb();
-  return db.tasks.filter((t) => t.jobId === jobId);
+  return db.tasks
+    .filter((t) => t.jobId === jobId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.seq - b.seq);
 }
 
 export async function findTaskById(id: string) {
@@ -214,12 +242,44 @@ export async function findTaskById(id: string) {
   return db.tasks.find((t) => t.id === id) ?? null;
 }
 
-export async function createTask(input: Omit<JobTask, 'id' | 'createdAt'>) {
+export async function createTask(
+  input: Omit<JobTask, 'id' | 'createdAt' | 'seq' | 'sortOrder'> &
+    Partial<Pick<JobTask, 'seq' | 'sortOrder'>>,
+) {
   const db = await readDb();
-  const task: JobTask = { ...input, id: newId('tsk'), createdAt: nowIso() };
-  db.tasks.unshift(task);
+  const existing = db.tasks.filter((t) => t.jobId === input.jobId);
+  const maxSeq = existing.reduce((m, t) => (t.seq > m ? t.seq : m), 0);
+  const maxOrder = existing.reduce((m, t) => (t.sortOrder > m ? t.sortOrder : m), 0);
+  const seq = typeof input.seq === 'number' ? input.seq : maxSeq + 1;
+  const sortOrder = typeof input.sortOrder === 'number' ? input.sortOrder : maxOrder + 1;
+  const task: JobTask = { ...input, seq, sortOrder, id: newId('tsk'), createdAt: nowIso() };
+  db.tasks.push(task);
   await writeDb(db);
   return task;
+}
+
+export async function updateTaskOrder(taskId: string, sortOrder: number) {
+  const db = await readDb();
+  const idx = db.tasks.findIndex((t) => t.id === taskId);
+  if (idx < 0) return null;
+  db.tasks[idx] = { ...db.tasks[idx], sortOrder };
+  await writeDb(db);
+  return db.tasks[idx];
+}
+
+export async function reorderTasks(jobId: string, orderedIds: string[]) {
+  const db = await readDb();
+  const set = new Set(orderedIds);
+  const inJob = db.tasks.filter((t) => t.jobId === jobId);
+  if (orderedIds.length !== inJob.length) return null;
+  if (inJob.some((t) => !set.has(t.id))) return null;
+  const idToOrder = new Map(orderedIds.map((id, idx) => [id, idx + 1]));
+  db.tasks = db.tasks.map((t) => {
+    if (t.jobId !== jobId) return t;
+    return { ...t, sortOrder: idToOrder.get(t.id) ?? t.sortOrder };
+  });
+  await writeDb(db);
+  return db.tasks.filter((t) => t.jobId === jobId).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export async function updateTaskStatus(taskId: string, status: JobTask['status']) {

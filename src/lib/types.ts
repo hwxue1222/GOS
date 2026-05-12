@@ -66,10 +66,13 @@ export type TaskStatus = 'Todo' | 'Done';
 export type JobTask = {
   id: string;
   jobId: string;
+  seq: number;
+  sortOrder: number;
   title: string;
   dueDate?: string;
   status: TaskStatus;
   assigneeUserId?: string;
+  createdByUserId?: string;
   createdAt: string;
 };
 

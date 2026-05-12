@@ -65,10 +65,11 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     managerUserId: '',
     staffUserId: '',
   });
-  const [draftTasks, setDraftTasks] = useState<Array<{ id: string; title: string; dueDate: string; done: boolean }>>(
-    [],
-  );
+  const [draftTasks, setDraftTasks] = useState<
+    Array<{ id: string; seq: number; title: string; dueDate: string; done: boolean; createdByName: string }>
+  >([]);
   const [taskInput, setTaskInput] = useState('');
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,11 +111,13 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           managerUserId: newJob.managerUserId || undefined,
           staffUserId: newJob.staffUserId || undefined,
           tasks: draftTasks
-            .map((t) => ({
+            .map((t, idx) => ({
               title: t.title,
               dueDate: t.dueDate || undefined,
               assigneeUserId: newJob.staffUserId || undefined,
               status: t.done && hasPermission(me, 'tasks', 'complete') ? 'Done' : 'Todo',
+              seq: t.seq,
+              sortOrder: idx + 1,
             }))
             .filter((t) => t.title.trim()),
         }),
@@ -155,8 +158,24 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   function addDraftTask() {
     const title = taskInput.trim();
     if (!title) return;
-    setDraftTasks((prev) => [{ id: newTempId(), title, dueDate: '', done: false }, ...prev]);
+    setDraftTasks((prev) => {
+      const maxSeq = prev.reduce((m, t) => (t.seq > m ? t.seq : m), 0);
+      return [...prev, { id: newTempId(), seq: maxSeq + 1, title, dueDate: '', done: false, createdByName: me.name }];
+    });
     setTaskInput('');
+  }
+
+  function reorderDraftTasks(fromId: string, toId: string) {
+    if (fromId === toId) return;
+    setDraftTasks((prev) => {
+      const fromIdx = prev.findIndex((t) => t.id === fromId);
+      const toIdx = prev.findIndex((t) => t.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
   }
 
   return (
@@ -423,7 +442,35 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
                   <div className="mt-3 divide-y divide-black/5">
                     {draftTasks.map((t) => (
-                      <div key={t.id} className="py-2 flex items-center gap-3">
+                      <div
+                        key={t.id}
+                        className={[
+                          'py-2 flex items-center gap-3',
+                          draggingTaskId === t.id ? 'opacity-60' : '',
+                        ].join(' ')}
+                        draggable={canCreateTasks}
+                        onDragStart={(e) => {
+                          setDraggingTaskId(t.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', t.id);
+                        }}
+                        onDragEnd={() => setDraggingTaskId(null)}
+                        onDragOver={(e) => {
+                          if (!draggingTaskId || draggingTaskId === t.id) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const fromId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+                          if (!fromId) return;
+                          reorderDraftTasks(fromId, t.id);
+                          setDraggingTaskId(null);
+                        }}
+                      >
+                        <div className="w-20 text-xs text-black/50">
+                          {t.seq}. <span className="text-black/40">by {t.createdByName}</span>
+                        </div>
                         <input
                           type="checkbox"
                           checked={t.done}

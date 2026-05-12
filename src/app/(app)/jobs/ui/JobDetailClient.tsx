@@ -15,9 +15,13 @@ type Job = {
 type JobTask = {
   id: string;
   jobId: string;
+  seq: number;
+  sortOrder: number;
   title: string;
   dueDate?: string;
   status: 'Todo' | 'Done';
+  createdByUserId?: string;
+  createdByName?: string | null;
   createdAt: string;
 };
 
@@ -26,7 +30,9 @@ type Props = {
   initialJob: Job | null;
   initialClient: { id: string; code: string; name: string } | null;
   initialTasks: JobTask[];
-  canEdit: boolean;
+  canCreateTask: boolean;
+  canCompleteTask: boolean;
+  canReorderTask: boolean;
 };
 
 export default function JobDetailClient({
@@ -34,7 +40,9 @@ export default function JobDetailClient({
   initialJob,
   initialClient,
   initialTasks,
-  canEdit,
+  canCreateTask,
+  canCompleteTask,
+  canReorderTask,
 }: Props) {
   const [job] = useState<Job | null>(initialJob);
   const [client] = useState<{ id: string; code: string; name: string } | null>(initialClient);
@@ -47,7 +55,7 @@ export default function JobDetailClient({
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
 
   async function addTask() {
-    if (!canEdit) {
+    if (!canCreateTask) {
       setError('FORBIDDEN');
       return;
     }
@@ -61,7 +69,7 @@ export default function JobDetailClient({
       });
       if (res.ok) {
         const j = (await res.json().catch(() => null)) as { ok?: boolean; task?: JobTask } | null;
-        if (j?.task) setTasks((prev) => [j.task!, ...prev]);
+        if (j?.task) setTasks((prev) => [...prev, j.task!].sort((a, b) => a.sortOrder - b.sortOrder));
         setNewTitle('');
       } else {
         const j = await res.json().catch(() => null);
@@ -73,6 +81,7 @@ export default function JobDetailClient({
   }
 
   async function toggleTask(t: JobTask) {
+    if (!canCompleteTask) return;
     const next = t.status === 'Done' ? 'Todo' : 'Done';
     const res = await fetch(`/api/tasks/${t.id}`, {
       method: 'PATCH',
@@ -82,7 +91,21 @@ export default function JobDetailClient({
     if (!res?.ok) return;
     const j = (await res.json().catch(() => null)) as { ok?: boolean; task?: JobTask } | null;
     if (!j?.task) return;
-    setTasks((prev) => prev.map((x) => (x.id === j.task!.id ? j.task! : x)));
+    setTasks((prev) =>
+      prev.map((x) =>
+        x.id === j.task!.id ? { ...j.task!, createdByName: x.createdByName ?? j.task!.createdByName } : x,
+      ),
+    );
+  }
+
+  async function persistOrder(next: JobTask[]) {
+    if (!canReorderTask) return;
+    const orderedIds = next.map((t) => t.id);
+    await fetch(`/api/jobs/${jobId}/tasks/order`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderedIds }),
+    }).catch(() => null);
   }
 
   return (
@@ -133,38 +156,66 @@ export default function JobDetailClient({
 
             <div className="mt-4 divide-y divide-black/5">
               {tasks.map((t) => (
-                <button
+                <div
                   key={t.id}
-                  onClick={() => toggleTask(t)}
                   className="w-full flex items-center justify-between px-2 py-3 text-left hover:bg-black/[0.02]"
+                  draggable={canReorderTask}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', t.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (!canReorderTask) return;
+                    const fromId = e.dataTransfer.getData('text/plain');
+                    if (!fromId || fromId === t.id) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(e) => {
+                    if (!canReorderTask) return;
+                    e.preventDefault();
+                    const fromId = e.dataTransfer.getData('text/plain');
+                    if (!fromId || fromId === t.id) return;
+                    const fromIdx = tasks.findIndex((x) => x.id === fromId);
+                    const toIdx = tasks.findIndex((x) => x.id === t.id);
+                    if (fromIdx < 0 || toIdx < 0) return;
+                    const next = [...tasks];
+                    const [moved] = next.splice(fromIdx, 1);
+                    next.splice(toIdx, 0, moved);
+                    const withOrder = next.map((x, idx) => ({ ...x, sortOrder: idx + 1 }));
+                    setTasks(withOrder);
+                    void persistOrder(withOrder);
+                  }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={[
-                        'h-5 w-5 rounded-full border flex items-center justify-center text-xs',
-                        t.status === 'Done' ? 'bg-[#2f7bdc] border-[#2f7bdc] text-white' : 'border-black/20',
-                      ].join(' ')}
-                    >
-                      {t.status === 'Done' ? '✓' : ''}
-                    </div>
-                    <div className="min-w-0">
-                      <div
-                        className={[
-                          'truncate',
-                          t.status === 'Done' ? 'line-through text-black/40' : '',
-                        ].join(' ')}
-                        title={t.title}
-                      >
-                        {t.title}
+                    <div className="w-10 text-sm text-black/50">{t.seq}.</div>
+                    <label className="flex items-center gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={t.status === 'Done'}
+                        disabled={!canCompleteTask}
+                        onChange={() => toggleTask(t)}
+                      />
+                      <div className="min-w-0">
+                        <div
+                          className={[
+                            'truncate',
+                            t.status === 'Done' ? 'line-through text-black/40' : '',
+                          ].join(' ')}
+                          title={t.title}
+                        >
+                          {t.title}
+                        </div>
+                        <div className="text-xs text-black/50">
+                          Created {new Date(t.createdAt).toLocaleString()}
+                          {t.createdByName ? ` · by ${t.createdByName}` : ''}
+                          {t.dueDate ? ` · Due ${t.dueDate}` : ''}
+                        </div>
                       </div>
-                      <div className="text-xs text-black/50">
-                        Created {new Date(t.createdAt).toLocaleString()}
-                        {t.dueDate ? ` · Due ${t.dueDate}` : ''}
-                      </div>
-                    </div>
+                    </label>
                   </div>
                   <div className="text-xs text-black/50">{t.status}</div>
-                </button>
+                </div>
               ))}
               {!loading && tasks.length === 0 ? (
                 <div className="py-10 text-center text-black/50 text-sm">No tasks</div>
