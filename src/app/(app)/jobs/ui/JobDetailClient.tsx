@@ -981,13 +981,6 @@ export default function JobDetailClient({
           </div>
         </div>
       ) : null}
-
-      <button
-        onClick={() => router.back()}
-        className="fixed left-4 bottom-4 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.03]"
-      >
-        Back
-      </button>
     </div>
   );
 }
