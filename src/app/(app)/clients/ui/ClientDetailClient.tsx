@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
+import { usePersistedState } from '@/lib/usePersistedState';
 
 type Client = {
   id: string;
@@ -24,6 +25,7 @@ type JobItem = {
     dueDate?: string;
     status: 'Pending' | 'Processing' | 'Complete';
     completed?: boolean;
+    deletedAt?: string;
     recurringFromJobId?: string;
     managerUserId?: string;
   };
@@ -43,9 +45,11 @@ type Props = {
 export default function ClientDetailClient({ initialMe, initialClient, initialJobs, canUpdateClient }: Props) {
   const [me] = useState<User>(initialMe);
   const [client, setClient] = useState<Client>(initialClient);
-  const [jobs] = useState<JobItem[]>(initialJobs);
+  const [jobs, setJobs] = useState<JobItem[]>(initialJobs);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jobView, setJobView] = usePersistedState<'uncomplete' | 'complete'>(`gos.client.${initialClient.id}.jobs.view`, 'uncomplete');
+  const canDeleteJob = me.role === 'owner';
 
   const [draft, setDraft] = useState({
     name: initialClient.name,
@@ -59,10 +63,22 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return jobs;
     const q = search.trim().toLowerCase();
-    return jobs.filter((it) => `${it.job.name} ${it.job.label ?? ''}`.toLowerCase().includes(q));
-  }, [jobs, search]);
+    return jobs.filter((it) => {
+      if (it.job.deletedAt) return false;
+      const isComplete =
+        !!it.job.completed || it.job.status === 'Complete' || (it.tasks.total > 0 && it.tasks.done === it.tasks.total);
+      if (jobView === 'complete') {
+        if (!isComplete) return false;
+      } else {
+        if (isComplete) return false;
+      }
+      if (q) {
+        if (!`${it.job.name} ${it.job.label ?? ''}`.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [jobView, jobs, search]);
 
   async function update() {
     setError(null);
@@ -104,6 +120,15 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     } finally {
       setSaving(false);
     }
+  }
+
+  async function deleteJobFromList(jobId: string) {
+    if (!canDeleteJob) return;
+    const ok = window.confirm('Delete this job? It will appear in the Delete list.');
+    if (!ok) return;
+    const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) return;
+    setJobs((prev) => prev.filter((x) => x.job.id !== jobId));
   }
 
   return (
@@ -189,7 +214,31 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
 
           <div className="rounded-xl bg-white border border-black/5">
             <div className="p-4 border-b border-black/5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-              <div className="text-lg font-semibold">Jobs</div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="text-lg font-semibold">Jobs</div>
+                <div className="flex items-center gap-2 text-sm">
+                  <button
+                    onClick={() => setJobView('uncomplete')}
+                    className={[
+                      'rounded-full px-3 py-1.5 border',
+                      jobView === 'uncomplete'
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white border-black/10 text-black/70',
+                    ].join(' ')}
+                  >
+                    Uncomplete
+                  </button>
+                  <button
+                    onClick={() => setJobView('complete')}
+                    className={[
+                      'rounded-full px-3 py-1.5 border',
+                      jobView === 'complete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+                    ].join(' ')}
+                  >
+                    Complete
+                  </button>
+                </div>
+              </div>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -206,6 +255,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                     <th className="px-4 py-3 font-medium">Due Date</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Manager</th>
+                    <th className="px-4 py-3 font-medium w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,11 +287,23 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                           '-'
                         )}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        {canDeleteJob ? (
+                          <button
+                            onClick={() => void deleteJobFromList(it.job.id)}
+                            className="rounded-md border border-red-200 bg-white text-red-600 px-3 py-1.5 text-sm hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <span className="text-black/30">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-black/50">
+                      <td colSpan={6} className="px-4 py-10 text-center text-black/50">
                         No jobs
                       </td>
                     </tr>
