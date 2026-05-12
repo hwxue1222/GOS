@@ -83,7 +83,15 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         return;
       }
       const j = (await res.json().catch(() => null)) as { client?: Client } | null;
-      if (j?.client) setClient(j.client);
+      if (j?.client) {
+        setClient(j.client);
+        setDraft({
+          code: j.client.code,
+          name: j.client.name,
+          phone: j.client.phone ?? '',
+          email: j.client.email ?? '',
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -95,20 +103,6 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           <div className="rounded-xl bg-white border border-black/5 p-4">
             <div className="text-lg font-semibold break-words">{client.code}_{client.name}</div>
-
-            <div className="mt-4 text-sm">
-              <div className="text-black/60 font-medium">Contact Person</div>
-              <div className="mt-3 grid grid-cols-[90px_1fr] gap-x-3 gap-y-2">
-                <div className="text-black/50">Email</div>
-                <div className="truncate" title={client.email ?? ''}>
-                  {client.email ?? '-'}
-                </div>
-                <div className="text-black/50">Phone</div>
-                <div className="truncate" title={client.phone ?? ''}>
-                  {client.phone ?? '-'}
-                </div>
-              </div>
-            </div>
 
             <div className="mt-5 rounded-lg bg-black/[0.02] border border-black/5 p-3">
               <div className="grid grid-cols-1 gap-3">
@@ -237,4 +231,3 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     </div>
   );
 }
-
