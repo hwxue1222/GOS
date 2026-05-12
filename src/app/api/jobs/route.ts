@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createJob, createTask, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { createJobWithTasks, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import type { JobRepeat, TaskStatus } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
@@ -111,49 +111,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
   }
 
-  const job = await createJob({
-    clientId,
-    name,
-    label,
-    dueDate,
-    repeat,
-    status: 'Pending',
-    completed: false,
-    managerUserId,
-    staffUserId,
-    createdByUserId: user.id,
-  });
-
   const users = hasTasks ? await listUsers() : [];
   const userIdSet = new Set(users.map((u) => u.id));
 
-  const createdTasks = hasTasks
-    ? await Promise.all(
-        tasks
-          .map((t) => ({
-            title: t.title?.trim() ?? '',
-            dueDate: t.dueDate?.trim() || today,
-            assigneeUserId:
-              t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
-            status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
-            seq: typeof t.seq === 'number' ? t.seq : undefined,
-            sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : undefined,
-          }))
-          .filter((t) => !!t.title)
-          .map((t) =>
-            createTask({
-              jobId: job.id,
-              createdByUserId: user.id,
-              seq: t.seq,
-              sortOrder: t.sortOrder,
-              title: t.title,
-              dueDate: t.dueDate,
-              assigneeUserId: t.assigneeUserId,
-              status: t.status,
-            }),
-          ),
-      )
+  const normalizedTasks = hasTasks
+    ? tasks
+        .map((t, idx) => ({
+          title: t.title?.trim() ?? '',
+          dueDate: t.dueDate?.trim() || today,
+          assigneeUserId:
+            t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
+          status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
+          seq: typeof t.seq === 'number' ? t.seq : idx + 1,
+          sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : idx + 1,
+          createdByUserId: user.id,
+        }))
+        .filter((t) => !!t.title)
     : [];
 
-  return NextResponse.json({ ok: true, job, tasks: createdTasks });
+  const created = await createJobWithTasks(
+    {
+      clientId,
+      name,
+      label,
+      dueDate,
+      repeat,
+      status: 'Pending',
+      completed: false,
+      managerUserId,
+      staffUserId,
+      createdByUserId: user.id,
+    },
+    normalizedTasks.map((t) => ({
+      title: t.title,
+      dueDate: t.dueDate,
+      assigneeUserId: t.assigneeUserId,
+      status: t.status,
+      seq: t.seq,
+      sortOrder: t.sortOrder,
+      createdByUserId: t.createdByUserId,
+    })),
+  );
+
+  return NextResponse.json({ ok: true, job: created.job, tasks: created.tasks });
 }

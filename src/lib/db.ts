@@ -291,6 +291,20 @@ export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {
   return job;
 }
 
+export async function createJobWithTasks(
+  input: Omit<Job, 'id' | 'createdAt'>,
+  tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>,
+) {
+  const db = await readDb();
+  const job: Job = { ...input, id: newId('job'), createdAt: nowIso() };
+  db.jobs.unshift(job);
+  const createdAt = nowIso();
+  const createdTasks: JobTask[] = tasks.map((t) => ({ ...t, jobId: job.id, id: newId('tsk'), createdAt }));
+  db.tasks.push(...createdTasks);
+  await writeDb(db);
+  return { job, tasks: createdTasks };
+}
+
 export async function listJobs() {
   const db = await readDb();
   return db.jobs;
