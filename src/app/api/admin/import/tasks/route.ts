@@ -94,12 +94,22 @@ export async function POST(req: Request) {
   const clientsByCode = new Map(db.clients.map((c) => [c.code.trim().toLowerCase(), c]));
   const clientsByName = new Map(db.clients.map((c) => [c.name.trim().toLowerCase(), c]));
   const jobsById = new Map(db.jobs.map((j) => [j.id, j]));
-  const jobsByKey = new Map<string, Job>();
+  const jobsByKeyNoDue = new Map<string, Job[]>();
+  const jobsByKeyWithDue = new Map<string, Job[]>();
   for (const j of db.jobs) {
     const client = db.clients.find((c) => c.id === j.clientId);
     const code = client?.code?.trim().toLowerCase();
     if (!code) continue;
-    jobsByKey.set(`${code}::${j.name.trim().toLowerCase()}`, j);
+    const nameKey = j.name.trim().toLowerCase();
+    const noDueKey = `${code}::${nameKey}`;
+    const dueYmd = parseYmd(j.dueDate);
+    if (!jobsByKeyNoDue.has(noDueKey)) jobsByKeyNoDue.set(noDueKey, []);
+    jobsByKeyNoDue.get(noDueKey)!.push(j);
+    if (dueYmd) {
+      const withDueKey = `${code}::${nameKey}::${dueYmd}`;
+      if (!jobsByKeyWithDue.has(withDueKey)) jobsByKeyWithDue.set(withDueKey, []);
+      jobsByKeyWithDue.get(withDueKey)!.push(j);
+    }
   }
 
   const assigneesByName = new Map(
@@ -122,6 +132,7 @@ export async function POST(req: Request) {
   let lastClientCode = '';
   let lastClientName = '';
   let lastJobName = '';
+  let lastDueYmd = '';
 
   for (let i = 0; i < rows.length; i++) {
     const m = rowMap(rows[i] ?? {});
@@ -130,6 +141,11 @@ export async function POST(req: Request) {
       errors.push({ row: i + 2, message: 'Missing title' });
       continue;
     }
+
+    const dueDateRaw = m.get(k('duedate')) ?? m.get(k('due date')) ?? rowStr(m, ['due date', 'duedate']);
+    const parsedRowDueYmd = parseYmd(dueDateRaw);
+    const rowDueYmd = parsedRowDueYmd ?? (lastDueYmd || null);
+    if (parsedRowDueYmd) lastDueYmd = parsedRowDueYmd;
 
     const jobId = rowStr(m, ['jobid', 'job id']);
     let job: Job | undefined = jobId ? jobsById.get(jobId) : undefined;
@@ -157,7 +173,26 @@ export async function POST(req: Request) {
         errors.push({ row: i + 2, message: `Unknown client: ${clientCode || clientName}` });
         continue;
       }
-      job = jobsByKey.get(`${client.code.trim().toLowerCase()}::${jobName.trim().toLowerCase()}`);
+      const nameKey = jobName.trim().toLowerCase();
+      const codeKey = client.code.trim().toLowerCase();
+      if (rowDueYmd) {
+        const keyWithDue = `${codeKey}::${nameKey}::${rowDueYmd}`;
+        const hits = jobsByKeyWithDue.get(keyWithDue) ?? [];
+        if (hits.length === 1) job = hits[0];
+        if (hits.length > 1) {
+          errors.push({ row: i + 2, message: `Ambiguous job match for ${client.code} ${jobName} due ${rowDueYmd}` });
+          continue;
+        }
+      }
+      if (!job) {
+        const keyNoDue = `${codeKey}::${nameKey}`;
+        const hits = jobsByKeyNoDue.get(keyNoDue) ?? [];
+        if (hits.length === 1) job = hits[0];
+        if (hits.length > 1) {
+          errors.push({ row: i + 2, message: `Ambiguous job match for ${client.code} ${jobName}` });
+          continue;
+        }
+      }
     }
 
     if (!job) {
@@ -175,11 +210,10 @@ export async function POST(req: Request) {
 
     const status = parseDone(m.get(k('done')) ?? rowStr(m, ['done', 'status']));
 
-    const dueDateRaw = m.get(k('duedate')) ?? m.get(k('due date')) ?? rowStr(m, ['due date', 'duedate']);
     const creationRaw =
       m.get(k('creationdate')) ?? m.get(k('creation date')) ?? m.get(k('createdat')) ?? rowStr(m, ['creation date', 'created at', 'createdat']);
 
-    const dueDate = parseYmd(dueDateRaw) ?? (job.dueDate ? parseYmd(job.dueDate) : null);
+    const dueDate = rowDueYmd ?? (job.dueDate ? parseYmd(job.dueDate) : null);
     const createdAtYmd = parseYmd(creationRaw) ?? dueDate;
 
     const nextSeq = (nextSeqByJobId.get(job.id) ?? 0) + 1;
