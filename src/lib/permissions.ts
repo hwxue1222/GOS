@@ -8,23 +8,38 @@ export type CurrentUser = {
   permissions?: Permissions;
 };
 
+function basePermissionsForRole(role: Role): Permissions {
+  if (role === 'manager') {
+    return {
+      jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, duplicate: true },
+      tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
+      clients: { viewAssigned: true, viewAll: true, create: true, update: true },
+      staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
+    };
+  }
+  return {
+    jobs: { viewAssigned: true },
+    tasks: { viewAssigned: true, complete: true },
+    clients: { viewAssigned: true },
+    staffs: {},
+  };
+}
+
+function mergePermissions(base: Permissions, override?: Permissions): Permissions {
+  const o = override ?? {};
+  return {
+    ...base,
+    ...o,
+    jobs: { ...(base.jobs ?? {}), ...(o.jobs ?? {}) },
+    tasks: { ...(base.tasks ?? {}), ...(o.tasks ?? {}) },
+    clients: { ...(base.clients ?? {}), ...(o.clients ?? {}) },
+    staffs: { ...(base.staffs ?? {}), ...(o.staffs ?? {}) },
+  };
+}
+
 export function hasPermission(user: CurrentUser, module: PermissionModule, action: PermissionAction) {
   if (user.role === 'owner') return true;
-  const permissions: Permissions =
-    user.permissions ??
-    (user.role === 'manager'
-      ? {
-          jobs: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, duplicate: true },
-          tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
-          clients: { viewAssigned: true, viewAll: true, create: true, update: true },
-          staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
-        }
-      : {
-          jobs: { viewAssigned: true },
-          tasks: { viewAssigned: true, complete: true },
-          clients: { viewAssigned: true },
-          staffs: {},
-        });
+  const permissions: Permissions = mergePermissions(basePermissionsForRole(user.role), user.permissions);
   return !!permissions?.[module]?.[action];
 }
 
