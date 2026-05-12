@@ -315,6 +315,15 @@ export async function updateJob(
   return db.jobs[idx];
 }
 
+export async function completeAllTasksForJob(jobId: string) {
+  const db = await readDb();
+  const has = db.tasks.some((t) => t.jobId === jobId);
+  if (!has) return [];
+  db.tasks = db.tasks.map((t) => (t.jobId === jobId ? { ...t, status: 'Done' } : t));
+  await writeDb(db);
+  return db.tasks.filter((t) => t.jobId === jobId).sort((a, b) => a.sortOrder - b.sortOrder || a.seq - b.seq);
+}
+
 export async function listTasksByJob(jobId: string) {
   const db = await readDb();
   return db.tasks

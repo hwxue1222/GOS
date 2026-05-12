@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findJobById, listClients, listTasksByJob, listUsers, updateJob } from '@/lib/db';
+import { completeAllTasksForJob, findJobById, listClients, listTasksByJob, listUsers, updateJob } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import type { JobRepeat } from '@/lib/types';
 
@@ -94,7 +94,12 @@ export async function PATCH(
   if (typeof body?.dueDate === 'string') patch.dueDate = dueDate;
   if (typeof body?.repeat === 'string') patch.repeat = repeat;
   if (typeof body?.managerUserId === 'string') patch.managerUserId = managerUserId;
-  if (typeof body?.completed === 'boolean') patch.completed = body.completed;
+  if (typeof body?.completed === 'boolean') {
+    patch.completed = body.completed;
+    if (body.completed) {
+      await completeAllTasksForJob(jobId);
+    }
+  }
 
   const updated = await updateJob(jobId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });

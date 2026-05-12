@@ -330,6 +330,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         checked={!!it.job.completed}
                         disabled={!(me.role === 'owner' || (me.role === 'manager' && it.job.managerUserId === me.id))}
                         onChange={(e) => {
+                          if (e.target.checked && it.tasks.total > 0 && it.tasks.done < it.tasks.total) {
+                            const ok = window.confirm('有未完成的 tasks。确定要完成该 job 并自动完成所有 tasks 吗？');
+                            if (!ok) return;
+                          }
                           void toggleJobCompleted(it.job.id, e.target.checked);
                         }}
                       />
