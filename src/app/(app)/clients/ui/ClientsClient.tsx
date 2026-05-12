@@ -118,7 +118,11 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
           <table className="min-w-full text-sm">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/5">
+                <th className="px-4 py-3 font-medium">Code</th>
                 <th className="px-4 py-3 font-medium">Client</th>
+                <th className="px-4 py-3 font-medium">Company registration no.</th>
+                <th className="px-4 py-3 font-medium">Contact person</th>
+                <th className="px-4 py-3 font-medium">Address</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Tags</th>
@@ -127,10 +131,30 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[320px]">
-                    <Link className="truncate text-[#2f7bdc] hover:underline block" href={`/clients/${c.id}`} title={`Code: ${c.code}`}>
+                  <td className="px-4 py-3 whitespace-nowrap">{c.code}</td>
+                  <td className="px-4 py-3 whitespace-nowrap max-w-[240px]">
+                    <Link
+                      className="truncate text-[#2f7bdc] hover:underline block"
+                      href={`/clients/${c.id}`}
+                      title={`${c.name} (Code: ${c.code})`}
+                    >
                       {c.name}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap max-w-[220px]">
+                    <div className="truncate" title={c.companyRegistrationNo ?? ''}>
+                      {c.companyRegistrationNo ?? '-'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
+                    <div className="truncate" title={c.contactPerson ?? ''}>
+                      {c.contactPerson ?? '-'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap max-w-[320px]">
+                    <div className="truncate" title={c.address ?? ''}>
+                      {c.address ?? '-'}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{c.phone ?? '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap max-w-[260px]">
@@ -143,7 +167,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               ))}
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
                     No clients
                   </td>
                 </tr>
