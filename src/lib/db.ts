@@ -721,9 +721,22 @@ export async function updateTaskStatus(taskId: string, status: JobTask['status']
   const db = await readDb();
   const idx = db.tasks.findIndex((t) => t.id === taskId);
   if (idx < 0) return null;
-  db.tasks[idx] = { ...db.tasks[idx], status };
+  const nextTask = { ...db.tasks[idx], status };
+  db.tasks[idx] = nextTask;
+
+  if (status === 'Todo') {
+    const jobIdx = db.jobs.findIndex((j) => j.id === nextTask.jobId);
+    if (jobIdx >= 0 && db.jobs[jobIdx]?.completed) {
+      db.jobs[jobIdx] = { ...db.jobs[jobIdx], completed: false, updatedAt: nowIso() };
+    }
+  } else {
+    const jobIdx = db.jobs.findIndex((j) => j.id === nextTask.jobId);
+    if (jobIdx >= 0) {
+      db.jobs[jobIdx] = { ...db.jobs[jobIdx], updatedAt: nowIso() };
+    }
+  }
   await writeDb(db);
-  return db.tasks[idx];
+  return nextTask;
 }
 
 export async function updateTask(
