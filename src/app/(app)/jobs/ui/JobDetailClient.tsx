@@ -77,6 +77,7 @@ export default function JobDetailClient({
   const [users] = useState(initialUsers);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [savingTasks, setSavingTasks] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
@@ -147,10 +148,10 @@ export default function JobDetailClient({
   }
 
   async function saveJob() {
-    if (!canUpdateJob) return;
+    if (!canUpdateJob) return true;
     if (!jobDraft.name.trim()) {
       setError('INVALID_INPUT');
-      return;
+      return false;
     }
     setSavingJob(true);
     setError(null);
@@ -169,7 +170,7 @@ export default function JobDetailClient({
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         setError(j?.error ?? 'UPDATE_FAILED');
-        return;
+        return false;
       }
       const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: Job } | null;
       if (j?.job) {
@@ -182,6 +183,7 @@ export default function JobDetailClient({
           managerUserId: j.job.managerUserId ?? '',
         });
       }
+      return true;
     } finally {
       setSavingJob(false);
     }
@@ -388,28 +390,15 @@ export default function JobDetailClient({
     );
   }
 
-  const hasUnsavedTaskChanges = useMemo(() => {
-    const currentOrder = tasks.map((t) => t.id);
-    if (currentOrder.length !== tasksSnapshot.orderIds.length) return true;
-    for (let i = 0; i < currentOrder.length; i++) {
-      if (currentOrder[i] !== tasksSnapshot.orderIds[i]) return true;
-    }
-    for (const t of tasks) {
-      const savedTitle = tasksSnapshot.titlesById[t.id];
-      if (typeof savedTitle === 'string' && savedTitle !== t.title) return true;
-    }
-    return false;
-  }, [tasks, tasksSnapshot.orderIds, tasksSnapshot.titlesById]);
-
   async function saveTasks() {
-    if (!canUpdateTask) return;
+    if (!canUpdateTask) return true;
     setTasksError(null);
     const titlesById: Record<string, string> = {};
     for (const t of tasks) {
       const title = t.title.trim();
       if (!title) {
         setTasksError('Task title is required.');
-        return;
+        return false;
       }
       const savedTitle = tasksSnapshot.titlesById[t.id];
       if (typeof savedTitle === 'string' && savedTitle !== title) {
@@ -427,7 +416,7 @@ export default function JobDetailClient({
       }
     }
     const hasTitles = Object.keys(titlesById).length > 0;
-    if (!orderChanged && !hasTitles) return;
+    if (!orderChanged && !hasTitles) return true;
 
     setSavingTasks(true);
     try {
@@ -442,11 +431,11 @@ export default function JobDetailClient({
       if (!res?.ok) {
         const j = await res?.json().catch(() => null);
         setTasksError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-        return;
+        return false;
       }
       const j = (await res.json().catch(() => null)) as { ok?: boolean; tasks?: Array<JobTask> } | null;
       const tasksFromServer = j?.tasks;
-      if (!tasksFromServer) return;
+      if (!tasksFromServer) return false;
       const createdByNameById = new Map(tasks.map((t) => [t.id, t.createdByName]));
       const assigneeNameById = new Map(tasks.map((t) => [t.id, t.assigneeName]));
       const next = tasksFromServer
@@ -461,9 +450,18 @@ export default function JobDetailClient({
         orderIds: next.map((t) => t.id),
         titlesById: Object.fromEntries(next.map((t) => [t.id, t.title])),
       });
+      return true;
     } finally {
       setSavingTasks(false);
     }
+  }
+
+  async function updateAll() {
+    setError(null);
+    setTasksError(null);
+    const okJob = await saveJob();
+    if (!okJob) return;
+    await saveTasks();
   }
 
   return (
@@ -569,11 +567,11 @@ export default function JobDetailClient({
             </div>
             <div className="mt-3 flex items-center justify-end gap-2">
               <button
-                disabled={savingJob}
-                onClick={saveJob}
+                disabled={savingJob || savingTasks}
+                onClick={updateAll}
                 className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
               >
-                {savingJob ? 'Updating...' : 'Update'}
+                {savingJob || savingTasks ? 'Updating...' : 'Update'}
               </button>
             </div>
           </div>
@@ -584,15 +582,6 @@ export default function JobDetailClient({
             <div className="font-medium">Tasks</div>
             <div className="flex items-center gap-3">
               {tasksError ? <div className="text-sm text-red-600">{tasksError}</div> : null}
-              {canUpdateTask ? (
-                <button
-                  disabled={!hasUnsavedTaskChanges || savingTasks}
-                  onClick={saveTasks}
-                  className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
-                >
-                  {savingTasks ? 'Saving...' : 'Save'}
-                </button>
-              ) : null}
               <div className="text-sm text-black/60">{doneCount}/{tasks.length}</div>
             </div>
           </div>
@@ -635,14 +624,9 @@ export default function JobDetailClient({
                 <div
                   key={t.id}
                   className="w-full flex items-center justify-between px-2 py-3 text-left hover:bg-black/[0.02]"
-                  draggable={canReorderTask}
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', t.id);
-                  }}
                   onDragOver={(e) => {
                     if (!canReorderTask) return;
-                    const fromId = e.dataTransfer.getData('text/plain');
+                    const fromId = draggingTaskId ?? e.dataTransfer.getData('text/plain');
                     if (!fromId || fromId === t.id) return;
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
@@ -650,7 +634,7 @@ export default function JobDetailClient({
                   onDrop={(e) => {
                     if (!canReorderTask) return;
                     e.preventDefault();
-                    const fromId = e.dataTransfer.getData('text/plain');
+                    const fromId = draggingTaskId ?? e.dataTransfer.getData('text/plain');
                     if (!fromId || fromId === t.id) return;
                     const fromIdx = tasks.findIndex((x) => x.id === fromId);
                     const toIdx = tasks.findIndex((x) => x.id === t.id);
@@ -660,10 +644,30 @@ export default function JobDetailClient({
                     next.splice(toIdx, 0, moved);
                     const withOrder = next.map((x, idx) => ({ ...x, sortOrder: idx + 1, seq: idx + 1 }));
                     setTasks(withOrder);
+                    setDraggingTaskId(null);
                   }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 text-sm text-black/50">{t.seq}.</div>
+                    {canReorderTask ? (
+                      <div className="w-6 flex items-center justify-center">
+                        <span
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', t.id);
+                            setDraggingTaskId(t.id);
+                          }}
+                          onDragEnd={() => setDraggingTaskId(null)}
+                          className="text-black/30 cursor-move select-none"
+                          title="Drag to reorder"
+                        >
+                          ⋮⋮
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-6" />
+                    )}
                     <label className="flex items-center gap-3 min-w-0">
                       <input
                         type="checkbox"
