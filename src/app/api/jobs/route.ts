@@ -115,8 +115,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
-  const users = hasTasks ? await listUsers() : [];
+  const users = hasTasks || managerUserId ? await listUsers() : [];
   const userIdSet = new Set(users.map((u) => u.id));
+  const userById = new Map(users.map((u) => [u.id, u]));
+
+  if (managerUserId) {
+    const u = userById.get(managerUserId);
+    if (!u || u.role !== 'manager') {
+      return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    }
+  }
+
+  if (hasTasks) {
+    const requestedAssignees = tasks
+      .map((t) => ({ title: t.title?.trim() ?? '', assigneeUserId: t.assigneeUserId?.trim() ?? '' }))
+      .filter((t) => t.title)
+      .map((t) => t.assigneeUserId)
+      .filter(Boolean);
+    for (const id of requestedAssignees) {
+      if (!userIdSet.has(id)) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+      const a = userById.get(id);
+      if (!a || a.role === 'owner') return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+      if (user.role === 'manager' && a.id !== user.id && a.role !== 'staff') {
+        return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+      }
+    }
+  }
 
   const normalizedTasks = hasTasks
     ? tasks

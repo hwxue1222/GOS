@@ -57,12 +57,20 @@ export async function POST(
   const dueDate = body?.dueDate?.trim() || new Date().toISOString().slice(0, 10);
   const users = await listUsers();
   const userIdSet = new Set(users.map((u) => u.id));
+  const userById = new Map(users.map((u) => [u.id, u]));
   const requestedAssignee = body?.assigneeUserId?.trim() || undefined;
   const assigneeUserId =
     requestedAssignee && userIdSet.has(requestedAssignee) ? requestedAssignee : undefined;
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   if (!assigneeUserId) return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
+  const assignee = userById.get(assigneeUserId);
+  if (!assignee || assignee.role === 'owner') {
+    return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+  }
+  if (user.role === 'manager' && assignee.id !== user.id && assignee.role !== 'staff') {
+    return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+  }
 
   const task = await createTask({
     jobId,

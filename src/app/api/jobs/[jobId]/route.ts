@@ -98,7 +98,7 @@ export async function PATCH(
   const users = await listUsers();
   if (managerUserId) {
     const u = users.find((x) => x.id === managerUserId);
-    if (!u || (u.role !== 'manager' && u.role !== 'owner')) {
+    if (!u || u.role !== 'manager') {
       return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
     }
   }

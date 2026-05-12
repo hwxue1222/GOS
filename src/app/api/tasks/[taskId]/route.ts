@@ -72,6 +72,12 @@ export async function PATCH(
       if (!u) {
         return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
       }
+      if (u.role === 'owner') {
+        return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+      }
+      if (user.role === 'manager' && u.id !== user.id && u.role !== 'staff') {
+        return NextResponse.json({ ok: false, error: 'ASSIGNEE_FORBIDDEN' }, { status: 400 });
+      }
     }
     const patch: Partial<{ title: string; dueDate?: string; assigneeUserId?: string }> = {};
     if (typeof title === 'string') patch.title = title;

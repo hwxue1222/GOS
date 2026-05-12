@@ -58,7 +58,13 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
   const [me] = useState<User>(initialMe);
-  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
+  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager'), [users]);
+  const assigneeUsers = useMemo(() => {
+    if (me.role === 'manager') {
+      return users.filter((u) => u.role === 'staff' || u.id === me.id);
+    }
+    return users.filter((u) => u.role === 'manager' || u.role === 'staff');
+  }, [me.id, me.role, users]);
 
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
   const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
@@ -630,7 +636,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           disabled={!canCreateTasks}
                         >
                           <option value="">(unassigned)</option>
-                          {users.map((u) => (
+                          {assigneeUsers.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.name} ({u.role})
                             </option>

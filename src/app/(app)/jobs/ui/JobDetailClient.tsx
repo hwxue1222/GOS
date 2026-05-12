@@ -132,8 +132,14 @@ export default function JobDetailClient({
   });
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
-  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
-  const assigneeUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'staff'), [users]);
+  const meRole = useMemo(() => users.find((u) => u.id === meId)?.role ?? 'staff', [meId, users]);
+  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager'), [users]);
+  const assigneeUsers = useMemo(() => {
+    if (meRole === 'manager') {
+      return users.filter((u) => u.role === 'staff' || u.id === meId);
+    }
+    return users.filter((u) => u.role === 'manager' || u.role === 'staff');
+  }, [meId, meRole, users]);
 
   function todayYmd() {
     return new Date().toISOString().slice(0, 10);
