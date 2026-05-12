@@ -283,7 +283,9 @@ export async function reorderTasks(jobId: string, orderedIds: string[]) {
   const idToOrder = new Map(orderedIds.map((id, idx) => [id, idx + 1]));
   db.tasks = db.tasks.map((t) => {
     if (t.jobId !== jobId) return t;
-    return { ...t, sortOrder: idToOrder.get(t.id) ?? t.sortOrder };
+    const nextOrder = idToOrder.get(t.id);
+    if (!nextOrder) return t;
+    return { ...t, sortOrder: nextOrder, seq: nextOrder };
   });
   await writeDb(db);
   return db.tasks.filter((t) => t.jobId === jobId).sort((a, b) => a.sortOrder - b.sortOrder);

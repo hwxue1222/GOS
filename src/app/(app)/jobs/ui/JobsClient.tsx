@@ -68,7 +68,15 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     staffUserId: '',
   });
   const [draftTasks, setDraftTasks] = useState<
-    Array<{ id: string; seq: number; title: string; dueDate: string; done: boolean; createdByName: string }>
+    Array<{
+      id: string;
+      seq: number;
+      title: string;
+      dueDate: string;
+      done: boolean;
+      createdByName: string;
+      assigneeUserId: string;
+    }>
   >([]);
   const [taskInput, setTaskInput] = useState('');
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -116,9 +124,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             .map((t, idx) => ({
               title: t.title,
               dueDate: t.dueDate || undefined,
-              assigneeUserId: newJob.staffUserId || undefined,
+              assigneeUserId: t.assigneeUserId || undefined,
               status: t.done && hasPermission(me, 'tasks', 'complete') ? 'Done' : 'Todo',
-              seq: t.seq,
+              seq: idx + 1,
               sortOrder: idx + 1,
             }))
             .filter((t) => t.title.trim()),
@@ -157,12 +165,26 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
   }
 
+  function todayYmd() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   function addDraftTask() {
     const title = taskInput.trim();
     if (!title) return;
     setDraftTasks((prev) => {
-      const maxSeq = prev.reduce((m, t) => (t.seq > m ? t.seq : m), 0);
-      return [...prev, { id: newTempId(), seq: maxSeq + 1, title, dueDate: '', done: false, createdByName: me.name }];
+      return [
+        ...prev,
+        {
+          id: newTempId(),
+          seq: prev.length + 1,
+          title,
+          dueDate: todayYmd(),
+          done: false,
+          createdByName: me.name,
+          assigneeUserId: newJob.staffUserId,
+        },
+      ];
     });
     setTaskInput('');
   }
@@ -176,7 +198,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       const next = [...prev];
       const [moved] = next.splice(fromIdx, 1);
       next.splice(toIdx, 0, moved);
-      return next;
+      return next.map((t, idx) => ({ ...t, seq: idx + 1 }));
     });
   }
 
@@ -497,6 +519,23 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           placeholder="Task title"
                           disabled={!canCreateTasks}
                         />
+                        <select
+                          value={t.assigneeUserId}
+                          onChange={(e) =>
+                            setDraftTasks((prev) =>
+                              prev.map((x) => (x.id === t.id ? { ...x, assigneeUserId: e.target.value } : x)),
+                            )
+                          }
+                          className="w-44 rounded-md border border-black/10 px-3 py-2 text-sm bg-white"
+                          disabled={!canCreateTasks}
+                        >
+                          <option value="">(unassigned)</option>
+                          {users.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} ({u.role})
+                            </option>
+                          ))}
+                        </select>
                         <DateInputDMY
                           value={t.dueDate}
                           onChange={(dueDate) =>

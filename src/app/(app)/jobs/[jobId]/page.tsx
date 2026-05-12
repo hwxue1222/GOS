@@ -56,12 +56,14 @@ export default async function JobDetailPage({
     me.id,
     ...(job.managerUserId ? [job.managerUserId] : []),
     ...(job.staffUserId ? [job.staffUserId] : []),
+    ...visibleTasks.map((t) => t.assigneeUserId).filter(Boolean),
     ...visibleTasks.map((t) => t.createdByUserId).filter(Boolean),
   ] as string[]);
   const nameById = new Map(users.filter((u) => neededIds.has(u.id)).map((u) => [u.id, u.name]));
   const enrichedTasks = visibleTasks.map((t) => ({
     ...t,
     createdByName: t.createdByUserId ? nameById.get(t.createdByUserId) ?? null : null,
+    assigneeName: t.assigneeUserId ? nameById.get(t.assigneeUserId) ?? null : null,
   }));
   return (
     <div className="min-h-screen flex flex-col">
@@ -71,6 +73,7 @@ export default async function JobDetailPage({
         initialJob={job}
         initialClient={client}
         initialTasks={enrichedTasks}
+        initialUsers={users.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
         canCreateTask={canCreateTask}
         canCompleteTask={canCompleteTask}
         canReorderTask={canReorderTask}

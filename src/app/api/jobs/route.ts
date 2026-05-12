@@ -49,6 +49,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const body = (await req.json().catch(() => null)) as
     | {
         clientId?: string;
@@ -107,7 +109,7 @@ export async function POST(req: Request) {
         tasks
           .map((t) => ({
             title: t.title?.trim() ?? '',
-            dueDate: t.dueDate?.trim() || undefined,
+            dueDate: t.dueDate?.trim() || today,
             assigneeUserId: t.assigneeUserId?.trim() || staffUserId,
             status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
             seq: typeof t.seq === 'number' ? t.seq : undefined,

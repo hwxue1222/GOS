@@ -11,6 +11,8 @@ type Job = {
   dueDate?: string;
   repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
   status: 'Pending' | 'Processing' | 'Complete';
+  managerUserId?: string;
+  staffUserId?: string;
 };
 
 type JobTask = {
@@ -21,6 +23,8 @@ type JobTask = {
   title: string;
   dueDate?: string;
   status: 'Todo' | 'Done';
+  assigneeUserId?: string;
+  assigneeName?: string | null;
   createdByUserId?: string;
   createdByName?: string | null;
   createdAt: string;
@@ -31,6 +35,7 @@ type Props = {
   initialJob: Job | null;
   initialClient: { id: string; code: string; name: string } | null;
   initialTasks: JobTask[];
+  initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
   canCreateTask: boolean;
   canCompleteTask: boolean;
   canReorderTask: boolean;
@@ -41,6 +46,7 @@ export default function JobDetailClient({
   initialJob,
   initialClient,
   initialTasks,
+  initialUsers,
   canCreateTask,
   canCompleteTask,
   canReorderTask,
@@ -48,12 +54,18 @@ export default function JobDetailClient({
   const [job] = useState<Job | null>(initialJob);
   const [client] = useState<{ id: string; code: string; name: string } | null>(initialClient);
   const [tasks, setTasks] = useState<JobTask[]>(initialTasks);
+  const [users] = useState(initialUsers);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>(initialJob?.staffUserId ?? '');
   const [creating, setCreating] = useState(false);
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
+
+  function todayYmd() {
+    return new Date().toISOString().slice(0, 10);
+  }
 
   async function addTask() {
     if (!canCreateTask) {
@@ -66,7 +78,11 @@ export default function JobDetailClient({
       const res = await fetch(`/api/jobs/${jobId}/tasks`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ title: newTitle }),
+        body: JSON.stringify({
+          title: newTitle,
+          dueDate: todayYmd(),
+          assigneeUserId: newAssigneeUserId || undefined,
+        }),
       });
       if (res.ok) {
         const j = (await res.json().catch(() => null)) as { ok?: boolean; task?: JobTask } | null;
@@ -102,11 +118,26 @@ export default function JobDetailClient({
   async function persistOrder(next: JobTask[]) {
     if (!canReorderTask) return;
     const orderedIds = next.map((t) => t.id);
-    await fetch(`/api/jobs/${jobId}/tasks/order`, {
+    const res = await fetch(`/api/jobs/${jobId}/tasks/order`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ orderedIds }),
     }).catch(() => null);
+    if (!res?.ok) return;
+    const j = (await res.json().catch(() => null)) as { ok?: boolean; tasks?: Array<JobTask> } | null;
+    const tasksFromServer = j?.tasks;
+    if (!tasksFromServer) return;
+    setTasks((prev) => {
+      const createdByNameById = new Map(prev.map((t) => [t.id, t.createdByName]));
+      const assigneeNameById = new Map(prev.map((t) => [t.id, t.assigneeName]));
+      return tasksFromServer
+        .map((t) => ({
+          ...t,
+          createdByName: createdByNameById.get(t.id) ?? t.createdByName,
+          assigneeName: assigneeNameById.get(t.id) ?? t.assigneeName,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    });
   }
 
   return (
@@ -144,6 +175,18 @@ export default function JobDetailClient({
                 className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
                 placeholder="Add a task..."
               />
+              <select
+                value={newAssigneeUserId}
+                onChange={(e) => setNewAssigneeUserId(e.target.value)}
+                className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+              >
+                <option value="">(unassigned)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role})
+                  </option>
+                ))}
+              </select>
               <button
                 disabled={creating}
                 onClick={addTask}
@@ -183,7 +226,7 @@ export default function JobDetailClient({
                     const next = [...tasks];
                     const [moved] = next.splice(fromIdx, 1);
                     next.splice(toIdx, 0, moved);
-                    const withOrder = next.map((x, idx) => ({ ...x, sortOrder: idx + 1 }));
+                    const withOrder = next.map((x, idx) => ({ ...x, sortOrder: idx + 1, seq: idx + 1 }));
                     setTasks(withOrder);
                     void persistOrder(withOrder);
                   }}
@@ -210,6 +253,7 @@ export default function JobDetailClient({
                         <div className="text-xs text-black/50">
                           Created {formatDateDMY(t.createdAt)}
                           {t.createdByName ? ` · by ${t.createdByName}` : ''}
+                          {t.assigneeName ? ` · Assigned to ${t.assigneeName}` : ''}
                           {t.dueDate ? ` · Due ${formatDateDMY(t.dueDate)}` : ''}
                         </div>
                       </div>

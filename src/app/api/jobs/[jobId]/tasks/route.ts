@@ -24,6 +24,7 @@ export async function GET(
   const enriched = tasks.map((t) => ({
     ...t,
     createdByName: t.createdByUserId ? nameById.get(t.createdByUserId) ?? null : null,
+    assigneeName: t.assigneeUserId ? nameById.get(t.assigneeUserId) ?? null : null,
   }));
   return NextResponse.json({ ok: true, tasks: enriched });
 }
@@ -51,7 +52,7 @@ export async function POST(
     | { title?: string; dueDate?: string; assigneeUserId?: string }
     | null;
   const title = body?.title?.trim() ?? '';
-  const dueDate = body?.dueDate?.trim() || undefined;
+  const dueDate = body?.dueDate?.trim() || new Date().toISOString().slice(0, 10);
   const assigneeUserId = body?.assigneeUserId || job.staffUserId || undefined;
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
