@@ -34,10 +34,12 @@ export default function LoginClient() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
-        setError(j?.error ?? 'LOGIN_FAILED');
+        setError(j?.error ?? `HTTP_${res.status}`);
         return;
       }
       router.replace(from);
+    } catch {
+      setError('NETWORK_ERROR');
     } finally {
       setLoading(false);
     }
@@ -89,4 +91,3 @@ export default function LoginClient() {
     </main>
   );
 }
-

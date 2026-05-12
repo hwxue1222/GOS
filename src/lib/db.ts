@@ -4,7 +4,14 @@ import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
 import type { Client, Db, Job, JobTask, Permissions, Role, Session, User } from '@/lib/types';
 
-const DB_FILE = path.join(process.cwd(), '.gos', 'db.json');
+function getDbFilePath() {
+  const fromEnv = process.env.GOS_DB_PATH?.trim();
+  if (fromEnv) return fromEnv;
+  if (process.env.VERCEL) return path.join('/tmp', 'gos', 'db.json');
+  return path.join(process.cwd(), '.gos', 'db.json');
+}
+
+const DB_FILE = getDbFilePath();
 
 function nowIso() {
   return new Date().toISOString();
