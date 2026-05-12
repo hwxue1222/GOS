@@ -9,6 +9,7 @@ type Job = {
   id: string;
   clientId: string;
   name: string;
+  label?: string;
   dueDate?: string;
   repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
   status: 'Pending' | 'Processing' | 'Complete';
@@ -72,11 +73,13 @@ export default function JobDetailClient({
   const [creating, setCreating] = useState(false);
   const [jobDraft, setJobDraft] = useState<{
     name: string;
+    label: string;
     dueDate: string;
     repeat: Job['repeat'];
     managerUserId: string;
   }>({
     name: initialJob?.name ?? '',
+    label: initialJob?.label ?? '',
     dueDate: initialJob?.dueDate ?? '',
     repeat: initialJob?.repeat ?? 'none',
     managerUserId: initialJob?.managerUserId ?? '',
@@ -105,6 +108,7 @@ export default function JobDetailClient({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: jobDraft.name,
+          label: jobDraft.label || undefined,
           dueDate: jobDraft.dueDate || undefined,
           repeat: jobDraft.repeat,
           managerUserId: jobDraft.managerUserId || undefined,
@@ -120,6 +124,7 @@ export default function JobDetailClient({
         setJob(j.job);
         setJobDraft({
           name: j.job.name ?? '',
+          label: j.job.label ?? '',
           dueDate: j.job.dueDate ?? '',
           repeat: j.job.repeat ?? 'none',
           managerUserId: j.job.managerUserId ?? '',
@@ -261,11 +266,19 @@ export default function JobDetailClient({
         {canUpdateJob ? (
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="text-sm sm:col-span-2">
+              <label className="text-sm">
                 <div className="text-black/70">Job name</div>
                 <input
                   value={jobDraft.name}
                   onChange={(e) => setJobDraft((v) => ({ ...v, name: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Remark</div>
+                <input
+                  value={jobDraft.label}
+                  onChange={(e) => setJobDraft((v) => ({ ...v, label: e.target.value }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
               </label>

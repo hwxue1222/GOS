@@ -61,6 +61,7 @@ export async function PATCH(
   const body = (await req.json().catch(() => null)) as
     | {
         name?: string;
+        label?: string;
         dueDate?: string;
         repeat?: JobRepeat;
         managerUserId?: string;
@@ -69,7 +70,11 @@ export async function PATCH(
       }
     | null;
   const hasJobFields =
-    typeof body?.name === 'string' || typeof body?.dueDate === 'string' || typeof body?.repeat === 'string' || typeof body?.managerUserId === 'string';
+    typeof body?.name === 'string' ||
+    typeof body?.label === 'string' ||
+    typeof body?.dueDate === 'string' ||
+    typeof body?.repeat === 'string' ||
+    typeof body?.managerUserId === 'string';
   const wantsCompleted = typeof body?.completed === 'boolean';
   if (!hasJobFields && !wantsCompleted) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
@@ -77,6 +82,7 @@ export async function PATCH(
 
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
   if (typeof body?.name === 'string' && !name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  const label = typeof body?.label === 'string' ? body.label.trim() || undefined : undefined;
   const dueDate = body?.dueDate?.trim() || undefined;
   const repeat = body?.repeat ?? 'none';
   const managerUserId = body?.managerUserId || undefined;
@@ -91,6 +97,7 @@ export async function PATCH(
 
   const patch: Parameters<typeof updateJob>[1] = {};
   if (typeof name === 'string') patch.name = name;
+  if (typeof body?.label === 'string') patch.label = label;
   if (typeof body?.dueDate === 'string') patch.dueDate = dueDate;
   if (typeof body?.repeat === 'string') patch.repeat = repeat;
   if (typeof body?.managerUserId === 'string') patch.managerUserId = managerUserId;

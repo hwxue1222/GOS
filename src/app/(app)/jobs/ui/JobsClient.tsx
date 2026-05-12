@@ -64,6 +64,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [newJob, setNewJob] = useState({
     clientId: '',
     name: '',
+    label: '',
     dueDate: '',
     repeat: 'none' as JobListItem['job']['repeat'],
     managerUserId: '',
@@ -151,6 +152,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         body: JSON.stringify({
           clientId: newJob.clientId,
           name: newJob.name,
+          label: newJob.label.trim() || undefined,
           dueDate: newJob.dueDate || undefined,
           repeat: newJob.repeat,
           managerUserId: newJob.managerUserId || undefined,
@@ -167,6 +169,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       setNewJob({
         clientId: '',
         name: '',
+        label: '',
         dueDate: '',
         repeat: 'none',
         managerUserId: '',
@@ -418,7 +421,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       value={newJob.dueDate}
                       onChange={(dueDate) => setNewJob((v) => ({ ...v, dueDate }))}
                       className="mt-1"
-                      inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
+                      inputClassName="rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm"
                     />
                   </label>
                   <label className="text-sm">
@@ -437,13 +440,22 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       <option value="2-yearly">2-yearly</option>
                     </select>
                   </label>
-                  <label className="text-sm sm:col-span-2">
+                  <label className="text-sm">
                     <div className="text-black/70">Job name</div>
                     <input
                       value={newJob.name}
                       onChange={(e) => setNewJob((v) => ({ ...v, name: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                       placeholder="e.g. Corporate secretary service_AGM"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Remark</div>
+                    <input
+                      value={newJob.label}
+                      onChange={(e) => setNewJob((v) => ({ ...v, label: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="Optional remark"
                     />
                   </label>
                   <label className="text-sm">
