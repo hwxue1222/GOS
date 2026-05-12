@@ -167,7 +167,7 @@ export default function JobDetailClient({
 
   async function deleteThisJob() {
     if (!canDeleteJob) return;
-    const ok = window.confirm('Delete this job? This cannot be undone.');
+    const ok = window.confirm('Delete this job? It will appear in the Delete list.');
     if (!ok) return;
     setError(null);
     const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' }).catch(() => null);

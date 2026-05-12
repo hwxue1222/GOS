@@ -45,6 +45,7 @@ function normalizeDb(parsed: Db): Db {
     repeat: (j as Job).repeat ?? 'none',
     status: (j as Job).status ?? 'Pending',
     completed: (j as Job).completed ?? false,
+    deletedAt: (j as Job).deletedAt,
     recurringFromJobId: (j as Job).recurringFromJobId,
     createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
   }));
@@ -450,10 +451,11 @@ export async function deleteJob(jobId: string) {
   const db = await readDb();
   const job = db.jobs.find((j) => j.id === jobId) ?? null;
   if (!job) return null;
-  db.jobs = db.jobs.filter((j) => j.id !== jobId);
-  db.tasks = db.tasks.filter((t) => t.jobId !== jobId);
+  const idx = db.jobs.findIndex((j) => j.id === jobId);
+  if (idx < 0) return null;
+  db.jobs[idx] = { ...db.jobs[idx], deletedAt: nowIso() };
   await writeDb(db);
-  return job;
+  return db.jobs[idx];
 }
 
 export async function completeAllTasksForJob(jobId: string) {

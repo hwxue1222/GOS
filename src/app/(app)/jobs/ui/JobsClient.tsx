@@ -19,6 +19,7 @@ type JobListItem = {
     repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
     status: 'Pending' | 'Processing' | 'Complete';
     completed?: boolean;
+    deletedAt?: string;
     recurringFromJobId?: string;
     managerUserId?: string;
     staffUserId?: string;
@@ -59,7 +60,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
   const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
-  const [filterStatus, setFilterStatus] = usePersistedState<string>('gos.jobs.filter.status', '');
+  const [view, setView] = usePersistedState<'uncomplete' | 'complete' | 'delete'>('gos.jobs.view', 'uncomplete');
 
   const [showNewJob, setShowNewJob] = useState(false);
   const [newJob, setNewJob] = useState({
@@ -114,15 +115,23 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
   const filtered = useMemo(() => {
     return items.filter((it) => {
+      const isDeleted = !!it.job.deletedAt;
+      const isComplete = !!it.job.completed || it.job.status === 'Complete';
+      if (view === 'delete') {
+        if (!isDeleted) return false;
+      } else {
+        if (isDeleted) return false;
+        if (view === 'complete' && !isComplete) return false;
+        if (view === 'uncomplete' && isComplete) return false;
+      }
       if (filterClientId && it.job.clientId !== filterClientId) return false;
-      if (filterStatus && it.job.status !== filterStatus) return false;
       if (search.trim()) {
         const clientText = it.client ? `${it.client.code} ${it.client.name}` : '';
         if (!textMatch(`${it.job.name} ${clientText}`, search)) return false;
       }
       return true;
     });
-  }, [filterClientId, filterStatus, items, search]);
+  }, [filterClientId, items, search, view]);
 
   async function createJob() {
     setError(null);
@@ -244,11 +253,34 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-semibold">Jobs</h1>
-            <div className="hidden sm:flex items-center gap-4 text-sm text-black/60">
-              <span className="text-black font-medium">Jobs</span>
-              <span>My work</span>
-              <span>Tasks</span>
-              <span>Templates</span>
+            <div className="hidden sm:flex items-center gap-2 text-sm">
+              <button
+                onClick={() => setView('uncomplete')}
+                className={[
+                  'rounded-full px-3 py-1.5 border',
+                  view === 'uncomplete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+                ].join(' ')}
+              >
+                Uncomplete
+              </button>
+              <button
+                onClick={() => setView('complete')}
+                className={[
+                  'rounded-full px-3 py-1.5 border',
+                  view === 'complete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+                ].join(' ')}
+              >
+                Complete
+              </button>
+              <button
+                onClick={() => setView('delete')}
+                className={[
+                  'rounded-full px-3 py-1.5 border',
+                  view === 'delete' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+                ].join(' ')}
+              >
+                Delete
+              </button>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -281,8 +313,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
               <button
                 onClick={() => {
                   setFilterClientId('');
-                  setFilterStatus('');
                   setSearch('');
+                  setView('uncomplete');
                 }}
                 className="text-sm text-[#2f7bdc] self-end"
               >
@@ -303,16 +335,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </option>
                 ))}
               </select>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
-              >
-                <option value="">Status: All</option>
-                <option value="Pending">Pending</option>
-                <option value="Complete">Complete</option>
-              </select>
-              <div className="hidden lg:block col-span-6" />
+              <div className="hidden lg:block col-span-7" />
             </div>
           </div>
 
@@ -336,8 +359,12 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       <input
                         type="checkbox"
                         checked={!!it.job.completed}
-                        disabled={!(me.role === 'owner' || (me.role === 'manager' && it.job.managerUserId === me.id))}
+                        disabled={
+                          !!it.job.deletedAt ||
+                          !(me.role === 'owner' || (me.role === 'manager' && it.job.managerUserId === me.id))
+                        }
                         onChange={(e) => {
+                          if (it.job.deletedAt) return;
                           if (e.target.checked && it.tasks.total > 0 && it.tasks.done < it.tasks.total) {
                             const ok = window.confirm('有未完成的 tasks。确定要完成该 job 并自动完成所有 tasks 吗？');
                             if (!ok) return;
@@ -371,7 +398,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-red-600">{formatDateDMY(it.job.dueDate)}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">
-                      {it.job.completed ? 'Complete' : it.job.status}
+                      {it.job.deletedAt ? 'Deleted' : it.job.completed ? 'Complete' : it.job.status}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.manager ? (
