@@ -44,6 +44,13 @@ function parseYmd(input: unknown): string | null {
     const s = input.trim();
     if (!s) return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m2 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (m2) {
+      const dd = String(Number(m2[1])).padStart(2, '0');
+      const mm = String(Number(m2[2])).padStart(2, '0');
+      const yyyy = m2[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
     const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) {
       const dd = String(Number(m[1])).padStart(2, '0');
@@ -67,6 +74,16 @@ function normalizeName(s: string) {
   return s.trim().replace(/\s+/g, ' ').replace(/\s*\(.*\)\s*$/, '');
 }
 
+function parseStatus(raw: string) {
+  const s = raw.trim().toLowerCase();
+  if (!s) return { status: 'Pending' as const, completed: false };
+  if (s === 'pending') return { status: 'Pending' as const, completed: false };
+  if (s === 'processing' || s === 'inprogress' || s === 'in progress' || s === 'progress' || s === 'inprogress.')
+    return { status: 'Processing' as const, completed: false };
+  if (s === 'complete' || s === 'completed' || s === 'done') return { status: 'Complete' as const, completed: true };
+  return null;
+}
+
 export async function POST(req: Request) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ ok: false }, { status: 401 });
@@ -80,9 +97,15 @@ export async function POST(req: Request) {
   const nowIso = new Date().toISOString();
 
   const clientsByCode = new Map(db.clients.map((c) => [c.code.trim().toLowerCase(), c]));
+  const clientsByName = new Map(db.clients.map((c) => [c.name.trim().toLowerCase(), c]));
   const managersByName = new Map(
     db.users
       .filter((u) => u.role === 'manager')
+      .map((u) => [normalizeName(u.name).toLowerCase(), u]),
+  );
+  const ownersByName = new Map(
+    db.users
+      .filter((u) => u.role === 'owner')
       .map((u) => [normalizeName(u.name).toLowerCase(), u]),
   );
 
@@ -100,16 +123,19 @@ export async function POST(req: Request) {
 
   for (let i = 0; i < rows.length; i++) {
     const m = rowMap(rows[i] ?? {});
-    const clientCode = rowStr(m, ['clientcode', 'client code', 'code', 'client']);
+    const clientCode = rowStr(m, ['clientcode', 'client code', 'code']);
+    const clientName = rowStr(m, ['clientname', 'client name', 'client']);
     const jobName = rowStr(m, ['jobname', 'job name', 'name']);
-    if (!clientCode || !jobName) {
-      errors.push({ row: i + 2, message: 'Missing client code or job name' });
+    if ((!clientCode && !clientName) || !jobName) {
+      errors.push({ row: i + 2, message: 'Missing client code/name or job name' });
       continue;
     }
 
-    const client = clientsByCode.get(clientCode.trim().toLowerCase());
+    const client =
+      (clientCode ? clientsByCode.get(clientCode.trim().toLowerCase()) : undefined) ??
+      (clientName ? clientsByName.get(clientName.trim().toLowerCase()) : undefined);
     if (!client) {
-      errors.push({ row: i + 2, message: `Unknown client code: ${clientCode}` });
+      errors.push({ row: i + 2, message: `Unknown client: ${clientCode || clientName}` });
       continue;
     }
 
@@ -131,13 +157,28 @@ export async function POST(req: Request) {
     if (managerRaw.trim()) {
       const u = managersByName.get(normalizeName(managerRaw).toLowerCase());
       if (!u) {
-        errors.push({ row: i + 2, message: `Unknown manager in charge: ${managerRaw}` });
-        continue;
+        const ownerHit = ownersByName.get(normalizeName(managerRaw).toLowerCase());
+        if (ownerHit) {
+          errors.push({
+            row: i + 2,
+            message: `Manager in charge must be manager (got owner: ${managerRaw}), set to (none)`,
+          });
+        } else {
+          errors.push({ row: i + 2, message: `Unknown manager in charge: ${managerRaw}` });
+          continue;
+        }
+      } else {
+        managerUserId = u.id;
       }
-      managerUserId = u.id;
     }
 
     const label = rowStr(m, ['remark', 'label']) || undefined;
+    const statusRaw = rowStr(m, ['status']);
+    const statusParsed = statusRaw ? parseStatus(statusRaw) : { status: 'Pending' as const, completed: false };
+    if (!statusParsed) {
+      errors.push({ row: i + 2, message: `Invalid status: ${statusRaw}` });
+      continue;
+    }
     const key = `${client.code.trim().toLowerCase()}::${jobName.trim().toLowerCase()}`;
     const hit = existingByKey.get(key);
 
@@ -149,8 +190,8 @@ export async function POST(req: Request) {
         label,
         dueDate: dueDate ?? undefined,
         repeat,
-        status: 'Pending',
-        completed: false,
+        status: statusParsed.status,
+        completed: statusParsed.completed,
         managerUserId,
         createdByUserId: me.id,
         createdAt: nowIso,
@@ -169,6 +210,8 @@ export async function POST(req: Request) {
       label,
       dueDate: dueDate ?? undefined,
       repeat,
+      status: statusParsed.status,
+      completed: statusParsed.completed,
       managerUserId,
       updatedAt: nowIso,
     };
@@ -181,4 +224,3 @@ export async function POST(req: Request) {
   await writeDb(db);
   return NextResponse.json({ ok: true, inserted, updated, errors });
 }
-
