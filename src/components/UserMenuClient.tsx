@@ -45,7 +45,7 @@ export default function UserMenuClient({ user, canManageTeam }: Props) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-white/10 bg-[#1f2a33] shadow-lg overflow-hidden">
+        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-white/10 bg-[#1f2a33] shadow-lg overflow-hidden z-50">
           <div className="px-3 py-2 text-xs opacity-80 border-b border-white/10">
             {user.email}
           </div>
