@@ -113,7 +113,7 @@ export default function JobDetailClient({
     managerUserId: initialJob?.managerUserId ?? '',
   });
   const [dupTasks, setDupTasks] = useState<
-    Array<{ key: string; title: string; dueDate: string; assigneeUserId: string }>
+    Array<{ key: string; title: string; createdAt: string; assigneeUserId: string }>
   >([]);
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
@@ -196,7 +196,7 @@ export default function JobDetailClient({
       tasks.map((t) => ({
         key: t.id,
         title: t.title,
-        dueDate: t.dueDate ?? '',
+        createdAt: t.createdAt,
         assigneeUserId: t.assigneeUserId ?? '',
       })),
     );
@@ -249,7 +249,6 @@ export default function JobDetailClient({
           tasks: dupTasks
             .map((t) => ({
               title: t.title,
-              dueDate: t.dueDate || undefined,
               assigneeUserId: t.assigneeUserId || undefined,
             }))
             .filter((t) => (t.title?.trim() ?? '') !== ''),
@@ -729,7 +728,12 @@ export default function JobDetailClient({
                       onClick={() =>
                         setDupTasks((prev) => [
                           ...prev,
-                          { key: `new_${Date.now()}_${Math.random().toString(16).slice(2)}`, title: '', dueDate: '', assigneeUserId: '' },
+                          {
+                            key: `new_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+                            title: '',
+                            createdAt: new Date().toISOString(),
+                            assigneeUserId: '',
+                          },
                         ])
                       }
                       className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.02]"
@@ -744,7 +748,7 @@ export default function JobDetailClient({
                         <tr className="border-b border-black/5">
                           <th className="px-3 py-2 font-medium">Title</th>
                           <th className="px-3 py-2 font-medium">Assignee</th>
-                          <th className="px-3 py-2 font-medium">Due date</th>
+                          <th className="px-3 py-2 font-medium">Creation date</th>
                           <th className="px-3 py-2 font-medium"></th>
                         </tr>
                       </thead>
@@ -782,14 +786,9 @@ export default function JobDetailClient({
                               </select>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <DateInputDMY
-                                value={t.dueDate}
-                                onChange={(dueDate) =>
-                                  setDupTasks((prev) => prev.map((x, i) => (i === idx ? { ...x, dueDate } : x)))
-                                }
-                                className="w-36"
-                                inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
-                              />
+                              <div className="text-sm text-black/70 whitespace-nowrap" title={t.createdAt}>
+                                {formatDateDMY(t.createdAt)}
+                              </div>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-right">
                               <button

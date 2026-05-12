@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { createManyJobsWithTasks, findJobById, listTasksByJob, listUsers } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { addMonthsYmd } from '@/lib/date';
-import type { JobRepeat, TaskStatus } from '@/lib/types';
+import type { JobRepeat } from '@/lib/types';
 
 export async function POST(req: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const user = await getCurrentUser();
@@ -46,9 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
         managerUserId?: string;
         tasks?: Array<{
           title?: string;
-          dueDate?: string;
           assigneeUserId?: string;
-          status?: TaskStatus;
         }>;
       }
     | null;
@@ -92,7 +90,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     ? tasks
         .map((t, idx) => ({
           title: t.title?.trim() ?? '',
-          dueDate: t.dueDate?.trim() || today,
+          dueDate: today,
           assigneeUserId:
             t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
           status: 'Todo' as const,
@@ -122,10 +120,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     };
 
     if (repeat !== 'none' && recurringDueDate) {
-      const recurringTasks = normalizedTasks.map((t) => ({
-        ...t,
-        dueDate: t.dueDate ? addMonthsYmd(t.dueDate, monthDelta) ?? t.dueDate : t.dueDate,
-      }));
+      const recurringTasks = normalizedTasks;
       return {
         job: baseJob,
         tasks: normalizedTasks,
@@ -140,4 +135,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
   await createManyJobsWithTasks(jobsToCreate);
   return NextResponse.json({ ok: true });
 }
-
