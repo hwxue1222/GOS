@@ -126,25 +126,37 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
         </div>
 
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/5">
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Client</th>
-                <th className="px-4 py-3 font-medium">Company registration no.</th>
-                <th className="px-4 py-3 font-medium">Contact person</th>
-                <th className="px-4 py-3 font-medium">Address</th>
-                <th className="px-4 py-3 font-medium">Phone</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Tags</th>
-                <th className="px-4 py-3 font-medium w-24"></th>
+                <th className="px-3 py-2.5 font-medium w-[84px]">Code</th>
+                <th className="px-3 py-2.5 font-medium w-[240px]">Client</th>
+                <th className="px-3 py-2.5 font-medium w-[160px]">
+                  <div className="whitespace-normal leading-tight">
+                    Company registration
+                    <br />
+                    no.
+                  </div>
+                </th>
+                <th className="px-3 py-2.5 font-medium w-[150px]">
+                  <div className="whitespace-normal leading-tight">
+                    Contact
+                    <br />
+                    person
+                  </div>
+                </th>
+                <th className="px-3 py-2.5 font-medium w-[220px]">Address</th>
+                <th className="px-3 py-2.5 font-medium w-[140px]">Phone</th>
+                <th className="px-3 py-2.5 font-medium w-[200px]">Email</th>
+                <th className="px-3 py-2.5 font-medium w-[160px]">Tags</th>
+                <th className="px-3 py-2.5 font-medium w-[96px]"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                  <td className="px-4 py-3 whitespace-nowrap">{c.code}</td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[240px]">
+                  <td className="px-3 py-2.5 whitespace-nowrap">{c.code}</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     <Link
                       className="truncate text-[#2f7bdc] hover:underline block"
                       href={`/clients/${c.id}`}
@@ -153,29 +165,37 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                       {c.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[220px]">
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="truncate" title={c.companyRegistrationNo ?? ''}>
                       {c.companyRegistrationNo ?? '-'}
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="truncate" title={c.contactPerson ?? ''}>
                       {c.contactPerson ?? '-'}
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[320px]">
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="truncate" title={c.address ?? ''}>
                       {c.address ?? '-'}
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{c.phone ?? '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[260px]">
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <div className="truncate" title={c.phone ?? ''}>
+                      {c.phone ?? '-'}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="truncate" title={c.email ?? ''}>
                       {c.email ?? '-'}
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{c.tags?.length ? c.tags.join(', ') : '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <div className="truncate" title={c.tags?.length ? c.tags.join(', ') : ''}>
+                      {c.tags?.length ? c.tags.join(', ') : '-'}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap text-right">
                     {canDelete ? (
                       <button
                         onClick={() => void deleteClientFromList(c.id)}
