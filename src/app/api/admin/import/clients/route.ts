@@ -56,10 +56,51 @@ export async function POST(req: Request) {
     const patch: Partial<Client> = {
       code,
       name,
-      companyRegistrationNo: rowStr(m, ['companyregno', 'company registration no', 'company registration no.', 'companyregistrationno']) || undefined,
-      contactPerson: rowStr(m, ['contactperson', 'contact person']) || undefined,
-      address: rowStr(m, ['address']) || undefined,
-      phone: rowStr(m, ['phone', 'telephone', 'tel']) || undefined,
+      companyRegistrationNo:
+        rowStr(m, [
+          'companyregno',
+          'company registration no',
+          'company registration no.',
+          'company registration number',
+          'companyregistrationno',
+          'registration no',
+          'registration number',
+          'reg no',
+          'regno',
+        ]) || undefined,
+      contactPerson:
+        rowStr(m, [
+          'contactperson',
+          'contact person',
+          'contact',
+          'contact name',
+          'person in charge',
+          'pic',
+        ]) || undefined,
+      address:
+        rowStr(m, [
+          'address',
+          'address1',
+          'address 1',
+          'company address',
+          'registered address',
+        ]) || undefined,
+      phone:
+        rowStr(m, [
+          'phone',
+          'phone no',
+          'phone number',
+          'phonenumber',
+          'telephone',
+          'tel',
+          'tel no',
+          'telephone no',
+          'contact no',
+          'contact number',
+          'mobile',
+          'hp',
+          'handphone',
+        ]) || undefined,
       email: rowStr(m, ['email', 'email address', 'emailaddress', 'e-mail', 'e mail', 'client email', 'clientemail']) || undefined,
     };
 
