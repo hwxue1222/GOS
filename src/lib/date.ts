@@ -17,3 +17,21 @@ export function formatDateDMY(input?: string | null) {
   }).format(d);
 }
 
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+export function addMonthsYmd(ymd: string, months: number) {
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const yyyy = Number(m[1]);
+  const mm = Number(m[2]);
+  const dd = Number(m[3]);
+  const d = new Date(Date.UTC(yyyy, mm - 1 + months, dd));
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+export function addYearsYmd(ymd: string, years: number) {
+  return addMonthsYmd(ymd, years * 12);
+}

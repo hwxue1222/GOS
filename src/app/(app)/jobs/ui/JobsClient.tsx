@@ -19,6 +19,7 @@ type JobListItem = {
     repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
     status: 'Pending' | 'Processing' | 'Complete';
     completed?: boolean;
+    recurringFromJobId?: string;
     managerUserId?: string;
     staffUserId?: string;
   };
@@ -127,6 +128,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     setError(null);
     if (!newJob.clientId || !newJob.name.trim()) {
       setError('INVALID_INPUT');
+      return;
+    }
+    if (newJob.repeat !== 'none' && !newJob.dueDate) {
+      setError('DUE_DATE_REQUIRED');
       return;
     }
     const tasksToSend = draftTasks
@@ -352,7 +357,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         href={`/jobs/${it.job.id}`}
                         title={it.job.name}
                       >
-                        {it.job.name}
+                        {it.job.recurringFromJobId ? `↻ ${it.job.name}` : it.job.name}
                       </Link>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">

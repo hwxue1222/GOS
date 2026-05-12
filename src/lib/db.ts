@@ -38,6 +38,7 @@ function normalizeDb(parsed: Db): Db {
     repeat: (j as Job).repeat ?? 'none',
     status: (j as Job).status ?? 'Pending',
     completed: (j as Job).completed ?? false,
+    recurringFromJobId: (j as Job).recurringFromJobId,
     createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
   }));
 
@@ -303,6 +304,50 @@ export async function createJobWithTasks(
   db.tasks.push(...createdTasks);
   await writeDb(db);
   return { job, tasks: createdTasks };
+}
+
+export async function createJobsWithTasks(
+  inputs: Array<{ job: Omit<Job, 'id' | 'createdAt'>; tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>> }>,
+) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const createdJobs: Job[] = [];
+  const createdTasks: JobTask[] = [];
+  for (const it of inputs) {
+    const job: Job = { ...it.job, id: newId('job'), createdAt };
+    createdJobs.push(job);
+    db.jobs.unshift(job);
+    for (const t of it.tasks) {
+      createdTasks.push({ ...t, jobId: job.id, id: newId('tsk'), createdAt });
+    }
+  }
+  db.tasks.push(...createdTasks);
+  await writeDb(db);
+  return { jobs: createdJobs, tasks: createdTasks };
+}
+
+export async function createJobWithRecurringCopy(input: {
+  job: Omit<Job, 'id' | 'createdAt'>;
+  tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>;
+  recurringJob: Omit<Job, 'id' | 'createdAt'>;
+  recurringTasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>;
+}) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const primary: Job = { ...input.job, id: newId('job'), createdAt };
+  const recurring: Job = { ...input.recurringJob, id: newId('job'), createdAt, recurringFromJobId: primary.id };
+  db.jobs.unshift(recurring);
+  db.jobs.unshift(primary);
+  const createdTasks: JobTask[] = input.tasks.map((t) => ({ ...t, jobId: primary.id, id: newId('tsk'), createdAt }));
+  const createdRecurringTasks: JobTask[] = input.recurringTasks.map((t) => ({
+    ...t,
+    jobId: recurring.id,
+    id: newId('tsk'),
+    createdAt,
+  }));
+  db.tasks.push(...createdTasks, ...createdRecurringTasks);
+  await writeDb(db);
+  return { job: primary, recurringJob: recurring, tasks: createdTasks, recurringTasks: createdRecurringTasks };
 }
 
 export async function listJobs() {

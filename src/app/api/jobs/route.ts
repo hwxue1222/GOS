@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createJobWithTasks, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { createJobWithRecurringCopy, createJobWithTasks, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import type { JobRepeat, TaskStatus } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
+import { addMonthsYmd } from '@/lib/date';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -110,6 +111,9 @@ export async function POST(req: Request) {
   if (hasUnassignedTask) {
     return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
   }
+  if (repeat !== 'none' && !dueDate) {
+    return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  }
 
   const users = hasTasks ? await listUsers() : [];
   const userIdSet = new Set(users.map((u) => u.id));
@@ -129,29 +133,47 @@ export async function POST(req: Request) {
         .filter((t) => !!t.title)
     : [];
 
-  const created = await createJobWithTasks(
-    {
-      clientId,
-      name,
-      label,
-      dueDate,
-      repeat,
-      status: 'Pending',
-      completed: false,
-      managerUserId,
-      staffUserId,
-      createdByUserId: user.id,
-    },
-    normalizedTasks.map((t) => ({
-      title: t.title,
-      dueDate: t.dueDate,
-      assigneeUserId: t.assigneeUserId,
-      status: t.status,
-      seq: t.seq,
-      sortOrder: t.sortOrder,
-      createdByUserId: t.createdByUserId,
-    })),
-  );
+  const baseJob = {
+    clientId,
+    name,
+    label,
+    dueDate,
+    repeat,
+    status: 'Pending' as const,
+    completed: false,
+    managerUserId,
+    staffUserId,
+    createdByUserId: user.id,
+  };
+  const baseTasks = normalizedTasks.map((t) => ({
+    title: t.title,
+    dueDate: t.dueDate,
+    assigneeUserId: t.assigneeUserId,
+    status: t.status,
+    seq: t.seq,
+    sortOrder: t.sortOrder,
+    createdByUserId: t.createdByUserId,
+  }));
 
-  return NextResponse.json({ ok: true, job: created.job, tasks: created.tasks });
+  const monthDelta =
+    repeat === 'monthly' ? 1 : repeat === 'quarterly' ? 3 : repeat === 'yearly' ? 12 : repeat === '2-yearly' ? 24 : 0;
+  const recurringDueDate = monthDelta && dueDate ? addMonthsYmd(dueDate, monthDelta) : null;
+
+  if (repeat !== 'none' && recurringDueDate) {
+    const recurringTasks = baseTasks.map((t) => ({
+      ...t,
+      status: 'Todo' as const,
+      dueDate: t.dueDate ? addMonthsYmd(t.dueDate, monthDelta) ?? t.dueDate : t.dueDate,
+    }));
+    const created = await createJobWithRecurringCopy({
+      job: baseJob,
+      tasks: baseTasks,
+      recurringJob: { ...baseJob, dueDate: recurringDueDate },
+      recurringTasks,
+    });
+    return NextResponse.json({ ok: true, job: created.job });
+  }
+
+  const created = await createJobWithTasks(baseJob, baseTasks);
+  return NextResponse.json({ ok: true, job: created.job });
 }

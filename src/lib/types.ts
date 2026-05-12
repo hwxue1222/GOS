@@ -57,6 +57,7 @@ export type Job = {
   repeat: JobRepeat;
   status: JobStatus;
   completed?: boolean;
+  recurringFromJobId?: string;
   managerUserId?: string;
   staffUserId?: string;
   createdByUserId?: string;
