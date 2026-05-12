@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       contactPerson: rowStr(m, ['contactperson', 'contact person']) || undefined,
       address: rowStr(m, ['address']) || undefined,
       phone: rowStr(m, ['phone', 'telephone', 'tel']) || undefined,
-      email: rowStr(m, ['email']) || undefined,
+      email: rowStr(m, ['email', 'email address', 'emailaddress', 'e-mail', 'e mail', 'client email', 'clientemail']) || undefined,
     };
 
     const hit = byCode.get(code.trim().toLowerCase());
@@ -102,4 +102,3 @@ export async function POST(req: Request) {
   await writeDb(db);
   return NextResponse.json({ ok: true, inserted, updated, errors });
 }
-
