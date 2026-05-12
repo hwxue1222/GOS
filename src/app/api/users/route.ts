@@ -48,7 +48,11 @@ export async function POST(req: Request) {
   const name = body?.name?.trim() ?? '';
   const email = body?.email?.trim() ?? '';
   const position = body?.position?.trim() || undefined;
-  const role = body?.role ?? 'staff';
+  const requestedRole = body?.role ?? 'staff';
+  if (requestedRole !== 'staff' && user.role !== 'owner') {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+  const role = requestedRole;
   const permissions = body?.permissions;
   const password = body?.password ? body.password : '123456';
 

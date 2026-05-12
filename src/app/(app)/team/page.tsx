@@ -23,7 +23,7 @@ export default async function TeamPage() {
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="jobs" />
       {allowed ? (
-        <TeamClient initialUsers={staffRows} />
+        <TeamClient initialUsers={staffRows} meRole={me.role} />
       ) : (
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">

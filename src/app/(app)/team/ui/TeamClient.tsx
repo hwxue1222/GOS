@@ -13,7 +13,7 @@ type StaffRow = {
   tasksOverdue: number;
 };
 
-type Props = { initialUsers: StaffRow[] };
+type Props = { initialUsers: StaffRow[]; meRole: Role };
 
 type FormState = {
   name: string;
@@ -104,7 +104,7 @@ function staffToForm(u: StaffRow): FormState {
   };
 }
 
-export default function TeamClient({ initialUsers }: Props) {
+export default function TeamClient({ initialUsers, meRole }: Props) {
   const [users, setUsers] = useState<StaffRow[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<'edit' | 'create'>(users.length ? 'edit' : 'create');
@@ -207,7 +207,7 @@ export default function TeamClient({ initialUsers }: Props) {
             name: form.name,
             email: form.email,
             position: form.position || undefined,
-            role: form.role,
+            role: meRole === 'owner' ? form.role : 'staff',
             permissions: form.permissions,
           }),
         });
@@ -231,7 +231,7 @@ export default function TeamClient({ initialUsers }: Props) {
             name: form.name,
             email: form.email,
             position: form.position || undefined,
-            role: form.role,
+            role: meRole === 'owner' ? form.role : undefined,
             permissions: form.permissions,
           }),
         });
@@ -313,12 +313,15 @@ export default function TeamClient({ initialUsers }: Props) {
           <div className="mt-4">
             <div className="text-sm font-medium">Roles</div>
             <div className="mt-2 flex flex-wrap gap-4 text-sm">
-              {(['owner', 'manager', 'staff'] as const).map((r) => (
+              {(['owner', 'manager', 'staff'] as const)
+                .filter((r) => meRole === 'owner' || r === 'staff' || (mode === 'edit' && form.role === r))
+                .map((r) => (
                 <label key={r} className="inline-flex items-center gap-2">
                   <input
                     type="radio"
                     name="role"
                     checked={form.role === r}
+                    disabled={meRole !== 'owner'}
                     onChange={() =>
                       setForm((v) => ({
                         ...v,

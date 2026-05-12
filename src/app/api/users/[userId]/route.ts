@@ -24,7 +24,15 @@ export async function PATCH(
   if (typeof body?.name === 'string') patch.name = body.name.trim();
   if (typeof body?.email === 'string') patch.email = body.email.trim();
   if (typeof body?.position === 'string') patch.position = body.position.trim() || undefined;
-  if (body?.role) patch.role = body.role;
+  if (body?.role) {
+    if (me.role !== 'owner') {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
+    if (body.role === 'owner') {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
+    patch.role = body.role;
+  }
   if (body?.permissions) patch.permissions = body.permissions;
 
   if (patch.email === '' || patch.name === '') {
