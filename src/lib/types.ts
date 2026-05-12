@@ -58,6 +58,7 @@ export type Job = {
   status: JobStatus;
   managerUserId?: string;
   staffUserId?: string;
+  createdByUserId?: string;
   createdAt: string;
 };
 

@@ -70,7 +70,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
   }
   return {
     jobs: { viewAssigned: true },
-    tasks: { viewAssigned: true },
+    tasks: { viewAssigned: true, complete: true },
     clients: { viewAssigned: true },
     staffs: {},
   };

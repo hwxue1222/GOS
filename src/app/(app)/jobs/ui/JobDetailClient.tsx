@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
+import { DateInputDMY } from '@/components/DateInputDMY';
 
 type Job = {
   id: string;
@@ -36,8 +37,13 @@ type Props = {
   initialClient: { id: string; code: string; name: string } | null;
   initialTasks: JobTask[];
   initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
+  meId: string;
+  meRole: 'owner' | 'manager' | 'staff';
+  canModifyJob: boolean;
+  canUpdateJob: boolean;
   canCreateTask: boolean;
   canCompleteTask: boolean;
+  canUpdateTask: boolean;
   canReorderTask: boolean;
 };
 
@@ -47,11 +53,16 @@ export default function JobDetailClient({
   initialClient,
   initialTasks,
   initialUsers,
+  meId,
+  meRole,
+  canModifyJob,
+  canUpdateJob,
   canCreateTask,
   canCompleteTask,
+  canUpdateTask,
   canReorderTask,
 }: Props) {
-  const [job] = useState<Job | null>(initialJob);
+  const [job, setJob] = useState<Job | null>(initialJob);
   const [client] = useState<{ id: string; code: string; name: string } | null>(initialClient);
   const [tasks, setTasks] = useState<JobTask[]>(initialTasks);
   const [users] = useState(initialUsers);
@@ -60,11 +71,68 @@ export default function JobDetailClient({
   const [newTitle, setNewTitle] = useState('');
   const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>(initialJob?.staffUserId ?? '');
   const [creating, setCreating] = useState(false);
+  const [jobDraft, setJobDraft] = useState<{
+    name: string;
+    dueDate: string;
+    repeat: Job['repeat'];
+    managerUserId: string;
+    staffUserId: string;
+  }>({
+    name: initialJob?.name ?? '',
+    dueDate: initialJob?.dueDate ?? '',
+    repeat: initialJob?.repeat ?? 'none',
+    managerUserId: initialJob?.managerUserId ?? '',
+    staffUserId: initialJob?.staffUserId ?? '',
+  });
+  const [savingJob, setSavingJob] = useState(false);
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
+  const staffUsers = useMemo(() => users.filter((u) => u.role === 'staff'), [users]);
+  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
 
   function todayYmd() {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  async function saveJob() {
+    if (!canUpdateJob) return;
+    if (!jobDraft.name.trim()) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    setSavingJob(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: jobDraft.name,
+          dueDate: jobDraft.dueDate || undefined,
+          repeat: jobDraft.repeat,
+          managerUserId: jobDraft.managerUserId || undefined,
+          staffUserId: jobDraft.staffUserId || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        setError(j?.error ?? 'UPDATE_FAILED');
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: Job } | null;
+      if (j?.job) {
+        setJob(j.job);
+        setJobDraft({
+          name: j.job.name ?? '',
+          dueDate: j.job.dueDate ?? '',
+          repeat: j.job.repeat ?? 'none',
+          managerUserId: j.job.managerUserId ?? '',
+          staffUserId: j.job.staffUserId ?? '',
+        });
+      }
+    } finally {
+      setSavingJob(false);
+    }
   }
 
   async function addTask() {
@@ -97,8 +165,33 @@ export default function JobDetailClient({
     }
   }
 
+  async function patchTask(taskId: string, patch: Partial<Pick<JobTask, 'dueDate' | 'assigneeUserId'>>) {
+    if (!canUpdateTask) return;
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).catch(() => null);
+    if (!res?.ok) return;
+    const j = (await res.json().catch(() => null)) as { ok?: boolean; task?: JobTask } | null;
+    if (!j?.task) return;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== j.task!.id) return t;
+        return {
+          ...t,
+          ...j.task!,
+          createdByName: j.task!.createdByName ?? t.createdByName,
+          assigneeName: j.task!.assigneeName ?? t.assigneeName,
+        };
+      }),
+    );
+  }
+
   async function toggleTask(t: JobTask) {
     if (!canCompleteTask) return;
+    if (meRole === 'staff' && t.assigneeUserId !== meId) return;
+    if (meRole !== 'staff' && !canModifyJob) return;
     const next = t.status === 'Done' ? 'Todo' : 'Done';
     const res = await fetch(`/api/tasks/${t.id}`, {
       method: 'PATCH',
@@ -110,7 +203,13 @@ export default function JobDetailClient({
     if (!j?.task) return;
     setTasks((prev) =>
       prev.map((x) =>
-        x.id === j.task!.id ? { ...j.task!, createdByName: x.createdByName ?? j.task!.createdByName } : x,
+        x.id === j.task!.id
+          ? {
+              ...j.task!,
+              createdByName: j.task!.createdByName ?? x.createdByName,
+              assigneeName: j.task!.assigneeName ?? x.assigneeName,
+            }
+          : x,
       ),
     );
   }
@@ -161,6 +260,83 @@ export default function JobDetailClient({
           </div>
         </div>
 
+        {canUpdateJob ? (
+          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-sm sm:col-span-2">
+                <div className="text-black/70">Job name</div>
+                <input
+                  value={jobDraft.name}
+                  onChange={(e) => setJobDraft((v) => ({ ...v, name: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Due date</div>
+                <DateInputDMY
+                  value={jobDraft.dueDate}
+                  onChange={(dueDate) => setJobDraft((v) => ({ ...v, dueDate }))}
+                  className="mt-1"
+                  inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Repeat</div>
+                <select
+                  value={jobDraft.repeat}
+                  onChange={(e) => setJobDraft((v) => ({ ...v, repeat: e.target.value as Job['repeat'] }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="none">none</option>
+                  <option value="monthly">monthly</option>
+                  <option value="quarterly">quarterly</option>
+                  <option value="yearly">yearly</option>
+                  <option value="2-yearly">2-yearly</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Manager</div>
+                <select
+                  value={jobDraft.managerUserId}
+                  onChange={(e) => setJobDraft((v) => ({ ...v, managerUserId: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">(none)</option>
+                  {managerUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Staff</div>
+                <select
+                  value={jobDraft.staffUserId}
+                  onChange={(e) => setJobDraft((v) => ({ ...v, staffUserId: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">(none)</option>
+                  {staffUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <button
+                disabled={savingJob}
+                onClick={saveJob}
+                className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+              >
+                {savingJob ? 'Updating...' : 'Update'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-6 rounded-xl bg-white border border-black/5">
           <div className="p-4 border-b border-black/5 flex items-center justify-between">
             <div className="font-medium">Tasks</div>
@@ -172,23 +348,25 @@ export default function JobDetailClient({
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm outline-none disabled:opacity-60"
                 placeholder="Add a task..."
+                disabled={!canCreateTask}
               />
               <select
                 value={newAssigneeUserId}
                 onChange={(e) => setNewAssigneeUserId(e.target.value)}
-                className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                disabled={!canCreateTask}
               >
                 <option value="">(unassigned)</option>
-                {users.map((u) => (
+                {staffUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name} ({u.role})
                   </option>
                 ))}
               </select>
               <button
-                disabled={creating}
+                disabled={creating || !canCreateTask}
                 onClick={addTask}
                 className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
               >
@@ -237,7 +415,10 @@ export default function JobDetailClient({
                       <input
                         type="checkbox"
                         checked={t.status === 'Done'}
-                        disabled={!canCompleteTask}
+                        disabled={
+                          !canCompleteTask ||
+                          (meRole === 'staff' ? t.assigneeUserId !== meId : !canModifyJob)
+                        }
                         onChange={() => toggleTask(t)}
                       />
                       <div className="min-w-0">
@@ -259,7 +440,30 @@ export default function JobDetailClient({
                       </div>
                     </label>
                   </div>
-                  <div className="text-xs text-black/50">{t.status}</div>
+                  {canUpdateTask ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={t.assigneeUserId ?? ''}
+                        onChange={(e) => void patchTask(t.id, { assigneeUserId: e.target.value || undefined })}
+                        className="w-44 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="">(unassigned)</option>
+                        {staffUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} ({u.role})
+                          </option>
+                        ))}
+                      </select>
+                      <DateInputDMY
+                        value={t.dueDate ?? ''}
+                        onChange={(dueDate) => void patchTask(t.id, { dueDate: dueDate || undefined })}
+                        className="w-36"
+                        inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-xs text-black/50">{t.status}</div>
+                  )}
                 </div>
               ))}
               {!loading && tasks.length === 0 ? (

@@ -15,11 +15,16 @@ export async function GET(
 
   const canViewAll = hasPermission(user, 'tasks', 'viewAll') || hasPermission(user, 'jobs', 'viewAll');
   const canViewAssigned = hasPermission(user, 'tasks', 'viewAssigned') || hasPermission(user, 'jobs', 'viewAssigned');
-  const assigned = job.managerUserId === user.id || job.staffUserId === user.id;
-  if (!canViewAll && !(canViewAssigned && assigned)) {
+  const tasks = await listTasksByJob(jobId);
+  const assigned =
+    job.managerUserId === user.id ||
+    job.staffUserId === user.id ||
+    job.createdByUserId === user.id ||
+    tasks.some((t) => t.assigneeUserId === user.id);
+  if (!canViewAll && !(canViewAssigned && assigned) && !(user.role === 'staff' && tasks.some((t) => t.assigneeUserId === user.id))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
-  const [tasks, users] = await Promise.all([listTasksByJob(jobId), listUsers()]);
+  const users = await listUsers();
   const nameById = new Map(users.map((u) => [u.id, u.name]));
   const enriched = tasks.map((t) => ({
     ...t,
@@ -42,18 +47,20 @@ export async function POST(
   const { jobId } = await params;
   const job = await findJobById(jobId);
   if (!job) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-  const canViewAllJob = hasPermission(user, 'jobs', 'viewAll');
-  const canViewAssignedJob = hasPermission(user, 'jobs', 'viewAssigned');
-  const assigned = job.managerUserId === user.id || job.staffUserId === user.id;
-  if (!canViewAllJob && !(canViewAssignedJob && assigned)) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const canModify = user.role === 'owner' || (user.role === 'manager' && job.createdByUserId === user.id);
+  if (!canModify) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
   const body = (await req.json().catch(() => null)) as
     | { title?: string; dueDate?: string; assigneeUserId?: string }
     | null;
   const title = body?.title?.trim() ?? '';
   const dueDate = body?.dueDate?.trim() || new Date().toISOString().slice(0, 10);
-  const assigneeUserId = body?.assigneeUserId || job.staffUserId || undefined;
+  const users = await listUsers();
+  const staffIdSet = new Set(users.filter((u) => u.role === 'staff').map((u) => u.id));
+  const requestedAssignee = body?.assigneeUserId?.trim() || undefined;
+  const assigneeUserId =
+    (requestedAssignee && staffIdSet.has(requestedAssignee) ? requestedAssignee : undefined) ??
+    (job.staffUserId && staffIdSet.has(job.staffUserId) ? job.staffUserId : undefined);
 
   if (!title) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
@@ -65,7 +72,7 @@ export async function POST(
     status: 'Todo',
     createdByUserId: user.id,
   });
-  const users = await listUsers();
   const createdByName = users.find((u) => u.id === user.id)?.name ?? null;
-  return NextResponse.json({ ok: true, task: { ...task, createdByName } });
+  const assigneeName = assigneeUserId ? users.find((u) => u.id === assigneeUserId)?.name ?? null : null;
+  return NextResponse.json({ ok: true, task: { ...task, createdByName, assigneeName } });
 }

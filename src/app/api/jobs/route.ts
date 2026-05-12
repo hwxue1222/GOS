@@ -17,16 +17,30 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
+  const taskByJobId = new Map<string, Awaited<ReturnType<typeof listTasksByJob>>>();
   const visibleJobs = canViewAll
     ? jobs
-    : jobs.filter((j) => j.managerUserId === user.id || j.staffUserId === user.id);
+    : (
+        await Promise.all(
+          jobs.map(async (job) => {
+            const tasks = await listTasksByJob(job.id);
+            taskByJobId.set(job.id, tasks);
+            const assigned =
+              job.managerUserId === user.id ||
+              job.staffUserId === user.id ||
+              job.createdByUserId === user.id ||
+              tasks.some((t) => t.assigneeUserId === user.id);
+            return assigned ? job : null;
+          }),
+        )
+      ).filter(Boolean);
 
   const items = await Promise.all(
-    visibleJobs.map(async (job) => {
+    (visibleJobs as typeof jobs).map(async (job) => {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
       const manager = job.managerUserId ? users.find((u) => u.id === job.managerUserId) ?? null : null;
       const staff = job.staffUserId ? users.find((u) => u.id === job.staffUserId) ?? null : null;
-      const tasks = await listTasksByJob(job.id);
+      const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
       const done = tasks.filter((t) => t.status === 'Done').length;
       const status = computeJobStatus(tasks);
       return {
@@ -102,7 +116,11 @@ export async function POST(req: Request) {
     status: 'Pending',
     managerUserId,
     staffUserId,
+    createdByUserId: user.id,
   });
+
+  const users = hasTasks ? await listUsers() : [];
+  const staffIdSet = new Set(users.filter((u) => u.role === 'staff').map((u) => u.id));
 
   const createdTasks = hasTasks
     ? await Promise.all(
@@ -110,7 +128,10 @@ export async function POST(req: Request) {
           .map((t) => ({
             title: t.title?.trim() ?? '',
             dueDate: t.dueDate?.trim() || today,
-            assigneeUserId: t.assigneeUserId?.trim() || staffUserId,
+            assigneeUserId:
+              (t.assigneeUserId?.trim() && staffIdSet.has(t.assigneeUserId.trim())
+                ? t.assigneeUserId.trim()
+                : undefined) ?? (staffUserId && staffIdSet.has(staffUserId) ? staffUserId : undefined),
             status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
             seq: typeof t.seq === 'number' ? t.seq : undefined,
             sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : undefined,

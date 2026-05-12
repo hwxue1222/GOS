@@ -38,6 +38,7 @@ async function readDbRaw(): Promise<Db> {
       ...j,
       repeat: (j as Job).repeat ?? 'none',
       status: (j as Job).status ?? 'Pending',
+      createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
     }));
 
     const tasks = (parsed.tasks ?? []).map((t) => ({
@@ -237,6 +238,18 @@ export async function findJobById(id: string) {
   return db.jobs.find((j) => j.id === id) ?? null;
 }
 
+export async function updateJob(
+  jobId: string,
+  patch: Partial<Pick<Job, 'clientId' | 'name' | 'label' | 'dueDate' | 'repeat' | 'managerUserId' | 'staffUserId'>>,
+) {
+  const db = await readDb();
+  const idx = db.jobs.findIndex((j) => j.id === jobId);
+  if (idx < 0) return null;
+  db.jobs[idx] = { ...db.jobs[idx], ...patch };
+  await writeDb(db);
+  return db.jobs[idx];
+}
+
 export async function listTasksByJob(jobId: string) {
   const db = await readDb();
   return db.tasks
@@ -296,6 +309,18 @@ export async function updateTaskStatus(taskId: string, status: JobTask['status']
   const idx = db.tasks.findIndex((t) => t.id === taskId);
   if (idx < 0) return null;
   db.tasks[idx] = { ...db.tasks[idx], status };
+  await writeDb(db);
+  return db.tasks[idx];
+}
+
+export async function updateTask(
+  taskId: string,
+  patch: Partial<Pick<JobTask, 'title' | 'dueDate' | 'assigneeUserId'>>,
+) {
+  const db = await readDb();
+  const idx = db.tasks.findIndex((t) => t.id === taskId);
+  if (idx < 0) return null;
+  db.tasks[idx] = { ...db.tasks[idx], ...patch };
   await writeDb(db);
   return db.tasks[idx];
 }

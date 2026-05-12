@@ -53,6 +53,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
   const [me] = useState<User>(initialMe);
+  const staffUsers = useMemo(() => users.filter((u) => u.role === 'staff'), [users]);
+  const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
 
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
   const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
@@ -409,7 +411,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                     >
                       <option value="">(none)</option>
-                      {users.map((u) => (
+                      {managerUsers.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.name} ({u.role})
                         </option>
@@ -424,7 +426,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                     >
                       <option value="">(none)</option>
-                      {users.map((u) => (
+                      {staffUsers.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.name} ({u.role})
                         </option>
@@ -530,7 +532,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           disabled={!canCreateTasks}
                         >
                           <option value="">(unassigned)</option>
-                          {users.map((u) => (
+                          {staffUsers.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.name} ({u.role})
                             </option>

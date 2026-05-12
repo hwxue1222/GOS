@@ -17,12 +17,8 @@ export async function PATCH(
   const job = await findJobById(jobId);
   if (!job) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  const canViewAllJob = hasPermission(user, 'jobs', 'viewAll');
-  const canViewAssignedJob = hasPermission(user, 'jobs', 'viewAssigned');
-  const assigned = job.managerUserId === user.id || job.staffUserId === user.id;
-  if (!canViewAllJob && !(canViewAssignedJob && assigned)) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const canModify = user.role === 'owner' || (user.role === 'manager' && job.createdByUserId === user.id);
+  if (!canModify) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as { orderedIds?: string[] } | null;
   const orderedIds = Array.isArray(body?.orderedIds) ? body!.orderedIds : [];
@@ -34,4 +30,3 @@ export async function PATCH(
   if (!tasks) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   return NextResponse.json({ ok: true, tasks });
 }
-

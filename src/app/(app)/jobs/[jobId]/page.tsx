@@ -28,8 +28,13 @@ export default async function JobDetailPage({
 
   const canViewAllJobs = hasPermission(me, 'jobs', 'viewAll');
   const canViewAssignedJobs = hasPermission(me, 'jobs', 'viewAssigned');
-  const assigned = job.managerUserId === me.id || job.staffUserId === me.id;
-  if (!canViewAllJobs && !(canViewAssignedJobs && assigned)) {
+  const [clients, tasksAll] = await Promise.all([listClients(), listTasksByJob(jobId)]);
+  const assignedByFields = job.managerUserId === me.id || job.staffUserId === me.id;
+  const assignedByTask = tasksAll.some((t) => t.assigneeUserId === me.id);
+  const assignedByCreator = job.createdByUserId === me.id;
+  const assignedAny = assignedByFields || assignedByTask || assignedByCreator;
+  const canAccess = canViewAllJobs || (canViewAssignedJobs && assignedAny) || (me.role === 'staff' && assignedByTask);
+  if (!canAccess) {
     return (
       <div className="min-h-screen flex flex-col">
         <AppTopNav active="jobs" />
@@ -42,14 +47,14 @@ export default async function JobDetailPage({
     );
   }
 
-  const [clients, tasks] = await Promise.all([listClients(), listTasksByJob(jobId)]);
   const client = clients.find((c) => c.id === job.clientId) ?? null;
-  const canViewAllTasks = hasPermission(me, 'tasks', 'viewAll') || canViewAllJobs;
-  const canViewAssignedTasks = hasPermission(me, 'tasks', 'viewAssigned') || canViewAssignedJobs;
-  const visibleTasks = canViewAllTasks || (canViewAssignedTasks && assigned) ? tasks : [];
-  const canCreateTask = hasPermission(me, 'tasks', 'create');
+  const visibleTasks = tasksAll;
+  const canModifyJob = me.role === 'owner' || (me.role === 'manager' && job.createdByUserId === me.id);
+  const canUpdateJob = canModifyJob && hasPermission(me, 'jobs', 'update');
+  const canCreateTask = canModifyJob && hasPermission(me, 'tasks', 'create');
   const canCompleteTask = hasPermission(me, 'tasks', 'complete');
-  const canReorderTask = hasPermission(me, 'tasks', 'update');
+  const canUpdateTask = canModifyJob && hasPermission(me, 'tasks', 'update');
+  const canReorderTask = canUpdateTask;
 
   const users = await listUsers();
   const neededIds = new Set<string>([
@@ -74,8 +79,13 @@ export default async function JobDetailPage({
         initialClient={client}
         initialTasks={enrichedTasks}
         initialUsers={users.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
+        meId={me.id}
+        meRole={me.role}
+        canModifyJob={canModifyJob}
+        canUpdateJob={canUpdateJob}
         canCreateTask={canCreateTask}
         canCompleteTask={canCompleteTask}
+        canUpdateTask={canUpdateTask}
         canReorderTask={canReorderTask}
       />
     </div>

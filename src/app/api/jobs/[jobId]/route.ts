@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findJobById, listClients, listUsers } from '@/lib/db';
+import { findJobById, listClients, listTasksByJob, listUsers, updateJob } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import type { JobRepeat } from '@/lib/types';
 
 export async function GET(
   _req: Request,
@@ -16,8 +17,13 @@ export async function GET(
 
   const canViewAll = hasPermission(user, 'jobs', 'viewAll');
   const canViewAssigned = hasPermission(user, 'jobs', 'viewAssigned');
-  const assigned = job.managerUserId === user.id || job.staffUserId === user.id;
-  if (!canViewAll && !(canViewAssigned && assigned)) {
+  const tasks = await listTasksByJob(jobId);
+  const assigned =
+    job.managerUserId === user.id ||
+    job.staffUserId === user.id ||
+    job.createdByUserId === user.id ||
+    tasks.some((t) => t.assigneeUserId === user.id);
+  if (!canViewAll && !(canViewAssigned && assigned) && !(user.role === 'staff' && tasks.some((t) => t.assigneeUserId === user.id))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -33,4 +39,50 @@ export async function GET(
     manager: manager ? { id: manager.id, name: manager.name } : null,
     staff: staff ? { id: staff.id, name: staff.name } : null,
   });
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ jobId: string }> },
+) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(user, 'jobs', 'update')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { jobId } = await params;
+  const job = await findJobById(jobId);
+  if (!job) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
+  const canModify = user.role === 'owner' || (user.role === 'manager' && job.createdByUserId === user.id);
+  if (!canModify) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  const body = (await req.json().catch(() => null)) as
+    | { name?: string; dueDate?: string; repeat?: JobRepeat; managerUserId?: string; staffUserId?: string }
+    | null;
+  const name = body?.name?.trim() ?? '';
+  if (!name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  const dueDate = body?.dueDate?.trim() || undefined;
+  const repeat = body?.repeat ?? 'none';
+  const managerUserId = body?.managerUserId || undefined;
+  const staffUserId = body?.staffUserId || undefined;
+
+  const users = await listUsers();
+  if (managerUserId) {
+    const u = users.find((x) => x.id === managerUserId);
+    if (!u || (u.role !== 'manager' && u.role !== 'owner')) {
+      return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    }
+  }
+  if (staffUserId) {
+    const u = users.find((x) => x.id === staffUserId);
+    if (!u || u.role !== 'staff') {
+      return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    }
+  }
+
+  const updated = await updateJob(jobId, { name, dueDate, repeat, managerUserId, staffUserId });
+  if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  return NextResponse.json({ ok: true, job: updated });
 }

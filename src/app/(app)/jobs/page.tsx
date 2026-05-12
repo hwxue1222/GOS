@@ -25,9 +25,23 @@ export default async function JobsPage() {
   }
 
   const [clientsAll, jobsAll, usersAll] = await Promise.all([listClients(), listJobs(), listUsers()]);
+  const taskByJobId = new Map<string, Awaited<ReturnType<typeof listTasksByJob>>>();
   const jobs = canViewAllJobs
     ? jobsAll
-    : jobsAll.filter((j) => j.managerUserId === me.id || j.staffUserId === me.id);
+    : (
+        await Promise.all(
+          jobsAll.map(async (j) => {
+            const tasks = await listTasksByJob(j.id);
+            taskByJobId.set(j.id, tasks);
+            const assigned =
+              j.managerUserId === me.id ||
+              j.staffUserId === me.id ||
+              j.createdByUserId === me.id ||
+              tasks.some((t) => t.assigneeUserId === me.id);
+            return assigned ? j : null;
+          }),
+        )
+      ).filter((j): j is (typeof jobsAll)[number] => j !== null);
 
   const canViewAllStaffs = hasPermission(me, 'staffs', 'viewAll');
   const safeUsers = (canViewAllStaffs ? usersAll : usersAll.filter((u) => u.id === me.id)).map((u) => ({
@@ -47,7 +61,7 @@ export default async function JobsPage() {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
       const manager = job.managerUserId ? safeUsers.find((u) => u.id === job.managerUserId) ?? null : null;
       const staff = job.staffUserId ? safeUsers.find((u) => u.id === job.staffUserId) ?? null : null;
-      const tasks = await listTasksByJob(job.id);
+      const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
       const done = tasks.filter((t) => t.status === 'Done').length;
       return {
         job: { ...job, status: computeJobStatus(tasks) },
