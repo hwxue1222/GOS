@@ -339,7 +339,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-sm text-black/60">Export results to Excel</div>
+            {me.role === 'owner' ? (
+              <div className="hidden sm:block text-sm text-black/60">Export results to Excel</div>
+            ) : null}
             <button
               disabled={!canCreate}
               onClick={() => {
