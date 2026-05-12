@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
 import type { Permissions } from '@/lib/types';
@@ -53,7 +52,6 @@ function textMatch(haystack: string, needle: string) {
 }
 
 export default function JobsClient({ initialItems, initialClients, initialUsers, initialMe }: Props) {
-  const router = useRouter();
   const [items, setItems] = useState<JobListItem[]>(initialItems);
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
@@ -196,7 +194,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         setError(j?.error ?? 'CREATE_FAILED');
         return;
       }
-      const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: { id?: string } } | null;
+      await res.json().catch(() => null);
       setShowNewJob(false);
       setNewJob({
         clientId: '',
@@ -208,9 +206,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       });
       setDraftTasks([]);
       setTaskInput('');
-      const jobId = j?.job?.id;
-      if (jobId) router.push(`/jobs/${jobId}`);
-      else await reloadJobsOnly();
+      setView('uncomplete');
+      await reloadJobsOnly();
     } finally {
       setCreating(false);
     }
