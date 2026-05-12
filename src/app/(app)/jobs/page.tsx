@@ -90,6 +90,7 @@ export default async function JobsPage({
     ? clientsAll
     : clientsAll.filter((c) => filteredJobs.some((j) => j.clientId === c.id));
 
+  const nameById = new Map(usersAll.map((u) => [u.id, u.name]));
   const items = await Promise.all(
     filteredJobs.map(async (job) => {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
@@ -97,10 +98,21 @@ export default async function JobsPage({
       const staff = job.staffUserId ? safeUsers.find((u) => u.id === job.staffUserId) ?? null : null;
       const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
       const done = tasks.filter((t) => t.status === 'Done').length;
+      const involvedIds = new Set<string>();
+      if (job.managerUserId) involvedIds.add(job.managerUserId);
+      if (job.staffUserId) involvedIds.add(job.staffUserId);
+      for (const t of tasks) {
+        if (t.assigneeUserId) involvedIds.add(t.assigneeUserId);
+      }
+      const staffNames = [...involvedIds]
+        .map((id) => nameById.get(id))
+        .filter((x): x is string => !!x)
+        .sort((a, b) => a.localeCompare(b));
       return {
         job: { ...job, status: job.completed ? 'Complete' : computeJobStatus(tasks) },
         client: client ? { id: client.id, code: client.code, name: client.name } : null,
         tasks: { done, total: tasks.length },
+        staffNames,
         manager: manager ? { id: manager.id, name: manager.name } : null,
         staff: staff ? { id: staff.id, name: staff.name } : null,
       };

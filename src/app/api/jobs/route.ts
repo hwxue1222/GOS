@@ -38,6 +38,7 @@ export async function GET(req: Request) {
         )
       ).filter(Boolean);
 
+  const nameById = new Map(users.map((u) => [u.id, u.name]));
   const nowTime = at ? Number(at) : Date.now();
   const items = (
     await Promise.all(
@@ -64,11 +65,22 @@ export async function GET(req: Request) {
       }
 
       const done = tasks.filter((t) => t.status === 'Done').length;
+      const involvedIds = new Set<string>();
+      if (job.managerUserId) involvedIds.add(job.managerUserId);
+      if (job.staffUserId) involvedIds.add(job.staffUserId);
+      for (const t of tasks) {
+        if (t.assigneeUserId) involvedIds.add(t.assigneeUserId);
+      }
+      const staffNames = [...involvedIds]
+        .map((id) => nameById.get(id))
+        .filter((x): x is string => !!x)
+        .sort((a, b) => a.localeCompare(b));
       const status = job.completed ? 'Complete' : computeJobStatus(tasks);
       return {
         job: { ...job, status },
         client,
         tasks: { done, total: tasks.length },
+        staffNames,
         manager: manager ? { id: manager.id, name: manager.name } : null,
         staff: staff ? { id: staff.id, name: staff.name } : null,
       };

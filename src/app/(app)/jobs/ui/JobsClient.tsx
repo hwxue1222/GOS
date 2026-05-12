@@ -28,6 +28,7 @@ type JobListItem = {
   };
   client: { id: string; code: string; name: string } | null;
   tasks: { done: number; total: number };
+  staffNames: string[];
   manager: { id: string; name: string } | null;
   staff: { id: string; name: string } | null;
 };
@@ -56,6 +57,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const searchParams = useSearchParams();
   const overdueUserId = searchParams.get('overdueUserId') ?? '';
   const at = searchParams.get('at') ?? '';
+  const todayYmdNow = new Date().toISOString().slice(0, 10);
 
   const [items, setItems] = useState<JobListItem[]>(initialItems);
   const [clients] = useState<Client[]>(initialClients);
@@ -71,6 +73,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
   const [search, setSearch] = usePersistedState('gos.jobs.search', '');
   const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
+  const [filterManagerUserId, setFilterManagerUserId] = usePersistedState<string>('gos.jobs.filter.managerUserId', '');
+  const [filterJobName, setFilterJobName] = usePersistedState<string>('gos.jobs.filter.jobName', '');
   const [view, setView] = usePersistedState<'uncomplete' | 'complete' | 'delete'>('gos.jobs.view', 'uncomplete');
   const showDeleteColumn = me.role === 'owner' && view !== 'delete';
 
@@ -104,7 +108,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     setView('uncomplete');
     setSearch('');
     setFilterClientId('');
-  }, [overdueUserId, setFilterClientId, setSearch, setView]);
+    setFilterManagerUserId('');
+    setFilterJobName('');
+  }, [overdueUserId, setFilterClientId, setFilterJobName, setFilterManagerUserId, setSearch, setView]);
 
   async function reloadJobsOnly() {
     const url = overdueUserId
@@ -156,13 +162,23 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         if (view === 'uncomplete' && isComplete) return false;
       }
       if (filterClientId && it.job.clientId !== filterClientId) return false;
+      if (filterManagerUserId) {
+        if (filterManagerUserId === '__none__') {
+          if (it.job.managerUserId) return false;
+        } else {
+          if (it.job.managerUserId !== filterManagerUserId) return false;
+        }
+      }
+      if (filterJobName) {
+        if (it.job.name !== filterJobName) return false;
+      }
       if (search.trim()) {
         const clientText = it.client ? `${it.client.code} ${it.client.name}` : '';
         if (!textMatch(`${it.job.name} ${clientText}`, search)) return false;
       }
       return true;
     });
-  }, [filterClientId, items, search, view]);
+  }, [filterClientId, filterJobName, filterManagerUserId, items, search, view]);
 
   async function createJob() {
     setError(null);
@@ -235,6 +251,15 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     () => draftTasks.some((t) => t.title.trim() && !t.assigneeUserId),
     [draftTasks],
   );
+  const jobNameOptions = useMemo(() => {
+    const set = new Set(items.map((it) => it.job.name).filter(Boolean));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [items]);
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return false;
+    return dueDate < todayYmdNow;
+  };
 
   function newTempId() {
     return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
@@ -355,7 +380,32 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </option>
                 ))}
               </select>
-              <div className="hidden lg:block col-span-7" />
+              <select
+                value={filterManagerUserId}
+                onChange={(e) => setFilterManagerUserId(e.target.value)}
+                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+              >
+                <option value="">Manager in charge: All</option>
+                <option value="__none__">(none)</option>
+                {managerUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filterJobName}
+                onChange={(e) => setFilterJobName(e.target.value)}
+                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+              >
+                <option value="">Job name: All</option>
+                {jobNameOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <div className="hidden lg:block col-span-5" />
             </div>
           </div>
 
@@ -369,7 +419,8 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <th className="px-4 py-3 font-medium">Tasks</th>
                   <th className="px-4 py-3 font-medium">Due Date</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Manager</th>
+                  <th className="px-4 py-3 font-medium">Manager in charge</th>
+                  <th className="px-4 py-3 font-medium">Staff</th>
                   <th className="px-4 py-3 font-medium">Creation date</th>
                   {showDeleteColumn ? <th className="px-4 py-3 font-medium w-24"></th> : null}
                 </tr>
@@ -418,7 +469,18 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.tasks.done}/{it.tasks.total}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-red-600">{formatDateDMY(it.job.dueDate)}</td>
+                    <td
+                      className={[
+                        'px-4 py-3 whitespace-nowrap',
+                        !it.job.dueDate
+                          ? 'text-black/40'
+                          : isOverdue(it.job.dueDate)
+                            ? 'text-red-600'
+                            : 'text-[#2f7bdc]',
+                      ].join(' ')}
+                    >
+                      {formatDateDMY(it.job.dueDate)}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">
                       {it.job.deletedAt ? 'Deleted' : it.job.completed ? 'Complete' : it.job.status}
                     </td>
@@ -430,6 +492,11 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap max-w-[260px]">
+                      <div className="truncate" title={it.staffNames.join(', ')}>
+                        {it.staffNames.length ? it.staffNames.join(', ') : '-'}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {formatDateDMY(it.job.updatedAt ?? it.job.createdAt)}
@@ -448,7 +515,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={showDeleteColumn ? 9 : 8} className="px-4 py-10 text-center text-black/50">
+                    <td colSpan={showDeleteColumn ? 10 : 9} className="px-4 py-10 text-center text-black/50">
                       No jobs
                     </td>
                   </tr>
