@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
 import type { Permissions } from '@/lib/types';
@@ -52,6 +53,10 @@ function textMatch(haystack: string, needle: string) {
 }
 
 export default function JobsClient({ initialItems, initialClients, initialUsers, initialMe }: Props) {
+  const searchParams = useSearchParams();
+  const overdueUserId = searchParams.get('overdueUserId') ?? '';
+  const at = searchParams.get('at') ?? '';
+
   const [items, setItems] = useState<JobListItem[]>(initialItems);
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
@@ -94,8 +99,18 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!overdueUserId) return;
+    setView('uncomplete');
+    setSearch('');
+    setFilterClientId('');
+  }, [overdueUserId, setFilterClientId, setSearch, setView]);
+
   async function reloadJobsOnly() {
-    const jobsRes = await fetch('/api/jobs').catch(() => null);
+    const url = overdueUserId
+      ? `/api/jobs?overdueUserId=${encodeURIComponent(overdueUserId)}${at ? `&at=${encodeURIComponent(at)}` : ''}`
+      : '/api/jobs';
+    const jobsRes = await fetch(url).catch(() => null);
     if (!jobsRes?.ok) return;
     const j = (await jobsRes.json().catch(() => null)) as { ok?: boolean; items?: JobListItem[] } | null;
     setItems(j?.items ?? []);

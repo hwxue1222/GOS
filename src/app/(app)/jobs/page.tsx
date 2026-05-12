@@ -5,7 +5,11 @@ import { listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import { hasPermission } from '@/lib/permissions';
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const me = await getCurrentUser();
   if (!me) return null;
 
@@ -43,6 +47,36 @@ export default async function JobsPage() {
         )
       ).filter((j): j is (typeof jobsAll)[number] => j !== null);
 
+  const overdueUserIdRaw = searchParams?.overdueUserId;
+  const overdueUserId = Array.isArray(overdueUserIdRaw) ? overdueUserIdRaw[0] ?? '' : overdueUserIdRaw ?? '';
+  const atRaw = searchParams?.at;
+  const at = Array.isArray(atRaw) ? atRaw[0] ?? '' : atRaw ?? '';
+  const nowTime = at ? Number(at) : 0;
+  const filteredJobs =
+    overdueUserId
+      ? (
+          await Promise.all(
+            jobs.map(async (j) => {
+              if (j.deletedAt) return null;
+              if (j.completed) return null;
+              const tasks = taskByJobId.get(j.id) ?? (await listTasksByJob(j.id));
+              taskByJobId.set(j.id, tasks);
+              const hit = tasks.some((t) => {
+                if (t.status !== 'Todo') return false;
+                const assigneeId = t.assigneeUserId ?? j.staffUserId;
+                if (!assigneeId || assigneeId !== overdueUserId) return false;
+                const due = t.dueDate ?? j.dueDate;
+                if (!due) return false;
+                const dueTime = new Date(due).getTime();
+                if (Number.isNaN(dueTime)) return false;
+                return nowTime ? dueTime < nowTime : false;
+              });
+              return hit ? j : null;
+            }),
+          )
+        ).filter((j): j is (typeof jobsAll)[number] => j !== null)
+      : jobs;
+
   const canViewAllStaffs = hasPermission(me, 'staffs', 'viewAll');
   const safeUsers = (canViewAllStaffs ? usersAll : usersAll.filter((u) => u.id === me.id)).map((u) => ({
     id: u.id,
@@ -54,10 +88,10 @@ export default async function JobsPage() {
   const canViewAllClients = hasPermission(me, 'clients', 'viewAll');
   const clients = canViewAllClients
     ? clientsAll
-    : clientsAll.filter((c) => jobs.some((j) => j.clientId === c.id));
+    : clientsAll.filter((c) => filteredJobs.some((j) => j.clientId === c.id));
 
   const items = await Promise.all(
-    jobs.map(async (job) => {
+    filteredJobs.map(async (job) => {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
       const manager = job.managerUserId ? safeUsers.find((u) => u.id === job.managerUserId) ?? null : null;
       const staff = job.staffUserId ? safeUsers.find((u) => u.id === job.staffUserId) ?? null : null;

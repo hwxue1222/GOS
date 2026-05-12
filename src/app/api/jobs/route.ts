@@ -6,11 +6,13 @@ import type { JobRepeat, TaskStatus } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
 import { addMonthsYmd } from '@/lib/date';
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const [clients, jobs, users] = await Promise.all([listClients(), listJobs(), listUsers()]);
+  const overdueUserId = new URL(req.url).searchParams.get('overdueUserId') ?? '';
+  const at = new URL(req.url).searchParams.get('at') ?? '';
 
   const canViewAll = hasPermission(user, 'jobs', 'viewAll');
   const canViewAssigned = hasPermission(user, 'jobs', 'viewAssigned');
@@ -36,12 +38,31 @@ export async function GET() {
         )
       ).filter(Boolean);
 
-  const items = await Promise.all(
-    (visibleJobs as typeof jobs).map(async (job) => {
+  const nowTime = at ? Number(at) : Date.now();
+  const items = (
+    await Promise.all(
+      (visibleJobs as typeof jobs).map(async (job) => {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
       const manager = job.managerUserId ? users.find((u) => u.id === job.managerUserId) ?? null : null;
       const staff = job.staffUserId ? users.find((u) => u.id === job.staffUserId) ?? null : null;
       const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
+
+      if (overdueUserId) {
+        if (job.deletedAt) return null;
+        if (job.completed) return null;
+        const hit = tasks.some((t) => {
+          if (t.status !== 'Todo') return false;
+          const assigneeId = t.assigneeUserId ?? job.staffUserId;
+          if (!assigneeId || assigneeId !== overdueUserId) return false;
+          const due = t.dueDate ?? job.dueDate;
+          if (!due) return false;
+          const dueTime = new Date(due).getTime();
+          if (Number.isNaN(dueTime)) return false;
+          return nowTime ? dueTime < nowTime : false;
+        });
+        if (!hit) return null;
+      }
+
       const done = tasks.filter((t) => t.status === 'Done').length;
       const status = job.completed ? 'Complete' : computeJobStatus(tasks);
       return {
@@ -51,8 +72,9 @@ export async function GET() {
         manager: manager ? { id: manager.id, name: manager.name } : null,
         staff: staff ? { id: staff.id, name: staff.name } : null,
       };
-    }),
-  );
+      }),
+    )
+  ).filter(Boolean);
 
   return NextResponse.json({ ok: true, items });
 }

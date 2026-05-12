@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { PermissionAction, PermissionModule, Permissions, Role } from '@/lib/types';
 
 type StaffRow = {
@@ -105,6 +106,7 @@ function staffToForm(u: StaffRow): FormState {
 }
 
 export default function TeamClient({ initialUsers, meRole }: Props) {
+  const router = useRouter();
   const [users, setUsers] = useState<StaffRow[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<'edit' | 'create'>(users.length ? 'edit' : 'create');
@@ -421,9 +423,15 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
                   <td className="px-4 py-3 whitespace-nowrap">{u.role}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {u.tasksOverdue > 0 ? (
-                      <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded bg-red-600 text-white text-xs">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/jobs?overdueUserId=${encodeURIComponent(u.id)}&at=${Date.now()}`);
+                        }}
+                        className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded bg-red-600 text-white text-xs"
+                      >
                         {u.tasksOverdue}
-                      </span>
+                      </button>
                     ) : (
                       <span className="text-black/40">0</span>
                     )}
