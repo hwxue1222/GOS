@@ -117,6 +117,10 @@ export async function POST(req: Request) {
   const errors: Array<{ row: number; message: string }> = [];
   const touchedJobs = new Set<string>();
 
+  let lastClientCode = '';
+  let lastClientName = '';
+  let lastJobName = '';
+
   for (let i = 0; i < rows.length; i++) {
     const m = rowMap(rows[i] ?? {});
     const title = rowStr(m, ['title', 'task', 'tasktitle', 'task title', 'task name', 'name']);
@@ -128,9 +132,18 @@ export async function POST(req: Request) {
     const jobId = rowStr(m, ['jobid', 'job id']);
     let job: Job | undefined = jobId ? jobsById.get(jobId) : undefined;
     if (!job) {
-      const clientCode = rowStr(m, ['clientcode', 'client code', 'code']);
-      const clientName = rowStr(m, ['clientname', 'client name', 'client']);
-      const jobName = rowStr(m, ['jobname', 'job name']);
+      const rawClientCode = rowStr(m, ['clientcode', 'client code', 'code']);
+      const rawClientName = rowStr(m, ['clientname', 'client name', 'client']);
+      const rawJobName = rowStr(m, ['jobname', 'job name']);
+
+      const clientCode = rawClientCode || lastClientCode;
+      const clientName = rawClientName || lastClientName;
+      const jobName = rawJobName || lastJobName;
+
+      if (rawClientCode) lastClientCode = rawClientCode;
+      if (rawClientName) lastClientName = rawClientName;
+      if (rawJobName) lastJobName = rawJobName;
+
       if ((!clientCode && !clientName) || !jobName) {
         errors.push({ row: i + 2, message: 'Missing job id or (client code/name + job name)' });
         continue;
