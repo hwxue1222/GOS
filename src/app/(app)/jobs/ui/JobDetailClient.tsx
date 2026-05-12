@@ -186,11 +186,11 @@ export default function JobDetailClient({
     setClientSearch('');
     setSelectedClientIds([]);
     setDupDraft({
-      name: jobDraft.name,
-      label: jobDraft.label,
-      dueDate: jobDraft.dueDate,
-      repeat: jobDraft.repeat,
-      managerUserId: jobDraft.managerUserId,
+      name: job?.name ?? jobDraft.name,
+      label: job?.label ?? jobDraft.label,
+      dueDate: job?.dueDate ?? jobDraft.dueDate,
+      repeat: job?.repeat ?? jobDraft.repeat,
+      managerUserId: job?.managerUserId ?? jobDraft.managerUserId,
     });
     setDupTasks(
       tasks.map((t) => ({
@@ -628,6 +628,9 @@ export default function JobDetailClient({
               <button onClick={() => setShowDuplicate(false)} className="text-black/50 hover:text-black">
                 ✕
               </button>
+            </div>
+            <div className="mt-2 text-sm text-black/60">
+              This is a temporary template. Editing here will not change the original job.
             </div>
 
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
