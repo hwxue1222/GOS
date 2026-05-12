@@ -688,7 +688,7 @@ export default function JobDetailClient({
                         checked={t.status === 'Done'}
                         disabled={
                           !canCompleteTask ||
-                          (!canModifyJob && t.assigneeUserId !== meId)
+                          (meRole === 'manager' ? !canModifyJob : (!canModifyJob && t.assigneeUserId !== meId))
                         }
                         onChange={() => toggleTask(t)}
                       />

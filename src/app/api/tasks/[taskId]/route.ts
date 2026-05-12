@@ -41,6 +41,9 @@ export async function PATCH(
     if (!hasPermission(user, 'tasks', 'complete')) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
+    if (user.role === 'manager' && !canModifyJob) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
     if (!canModifyJob && !assignedByTask) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
