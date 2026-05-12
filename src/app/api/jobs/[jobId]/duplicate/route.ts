@@ -69,10 +69,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
   const tasks = Array.isArray(body?.tasks) ? body!.tasks : [];
 
   if (!clientIds.length || !name) {
-    return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'INVALID_INPUT', field: !clientIds.length ? 'clientIds' : 'name' }, { status: 400 });
   }
   if (repeat !== 'none' && !dueDate) {
-    return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'INVALID_INPUT', field: 'dueDate' }, { status: 400 });
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -83,7 +83,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
   }
   const hasUnassignedTask = tasks.some((t) => (t.title?.trim() ?? '') !== '' && !(t.assigneeUserId?.trim() ?? ''));
   if (hasUnassignedTask) {
-    return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'TASK_UNASSIGNED', field: 'tasks' }, { status: 400 });
   }
 
   const users = (hasTasks || managerUserId) ? await listUsers() : [];
@@ -91,7 +91,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
   if (managerUserId) {
     const u = users.find((x) => x.id === managerUserId);
     if (!u || (u.role !== 'manager' && u.role !== 'owner')) {
-      return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'INVALID_INPUT', field: 'managerUserId' }, { status: 400 });
     }
   }
 

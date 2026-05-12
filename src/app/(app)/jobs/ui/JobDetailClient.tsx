@@ -96,7 +96,14 @@ export default function JobDetailClient({
   const [savingJob, setSavingJob] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
-  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [duplicateErrors, setDuplicateErrors] = useState<{
+    clients?: string;
+    name?: string;
+    dueDate?: string;
+    tasks?: string;
+    managerUserId?: string;
+    general?: string;
+  }>({});
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [dupDraft, setDupDraft] = useState<{
@@ -190,7 +197,7 @@ export default function JobDetailClient({
 
   function openDuplicate() {
     if (!canDuplicateJob) return;
-    setDuplicateError(null);
+    setDuplicateErrors({});
     setClientSearch('');
     setSelectedClientIds([]);
     setDupDraft({
@@ -208,7 +215,7 @@ export default function JobDetailClient({
         assigneeUserId: t.assigneeUserId ?? '',
       })),
     );
-    setShowDuplicate(true);
+    setTimeout(() => setShowDuplicate(true), 0);
   }
 
   function toggleSelectedClient(id: string) {
@@ -223,24 +230,19 @@ export default function JobDetailClient({
 
   async function submitDuplicate() {
     if (!canDuplicateJob) return;
-    setDuplicateError(null);
-    if (!selectedClientIds.length) {
-      setDuplicateError('INVALID_INPUT');
-      return;
-    }
-    if (!dupDraft.name.trim()) {
-      setDuplicateError('INVALID_INPUT');
-      return;
-    }
+    const nextErrors: typeof duplicateErrors = {};
+    if (!selectedClientIds.length) nextErrors.clients = 'Select at least one client.';
+    if (!dupDraft.name.trim()) nextErrors.name = 'Job name is required.';
     if (dupDraft.repeat !== 'none' && !dupDraft.dueDate.trim()) {
-      setDuplicateError('INVALID_INPUT');
-      return;
+      nextErrors.dueDate = 'Due date is required when repeat is not none.';
     }
     const hasUnassigned = dupTasks.some((t) => t.title.trim() && !t.assigneeUserId.trim());
-    if (hasUnassigned) {
-      setDuplicateError('TASK_UNASSIGNED');
+    if (hasUnassigned) nextErrors.tasks = 'Each task must have an assignee.';
+    if (Object.keys(nextErrors).length) {
+      setDuplicateErrors(nextErrors);
       return;
     }
+    setDuplicateErrors({});
 
     setDuplicating(true);
     try {
@@ -265,7 +267,21 @@ export default function JobDetailClient({
       }).catch(() => null);
       if (!res?.ok) {
         const j = await res?.json().catch(() => null);
-        setDuplicateError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        const err = j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`;
+        const field = typeof j?.field === 'string' ? j.field : null;
+        if (err === 'TASK_UNASSIGNED') {
+          setDuplicateErrors({ tasks: 'Each task must have an assignee.' });
+          return;
+        }
+        if (err === 'INVALID_INPUT') {
+          if (field === 'clientIds') setDuplicateErrors({ clients: 'Select at least one client.' });
+          else if (field === 'name') setDuplicateErrors({ name: 'Job name is required.' });
+          else if (field === 'dueDate') setDuplicateErrors({ dueDate: 'Due date is required when repeat is not none.' });
+          else if (field === 'managerUserId') setDuplicateErrors({ managerUserId: 'Manager in charge is invalid.' });
+          else setDuplicateErrors({ general: 'Invalid input. Please check the form.' });
+          return;
+        }
+        setDuplicateErrors({ general: err });
         return;
       }
       setShowDuplicate(false);
@@ -405,7 +421,11 @@ export default function JobDetailClient({
           <div className="flex items-center justify-end gap-2">
             {canDuplicateJob ? (
               <button
-                onClick={openDuplicate}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openDuplicate();
+                }}
                 className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.02]"
               >
                 Duplicate
@@ -651,6 +671,7 @@ export default function JobDetailClient({
                   className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
                   placeholder="Find client..."
                 />
+                {duplicateErrors.clients ? <div className="mt-2 text-sm text-red-600">{duplicateErrors.clients}</div> : null}
                 <div className="mt-3 max-h-[340px] overflow-y-auto rounded-lg border border-black/5">
                   {filteredClients.map((c) => (
                     <label
@@ -684,6 +705,7 @@ export default function JobDetailClient({
                       onChange={(e) => setDupDraft((v) => ({ ...v, name: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                     />
+                    {duplicateErrors.name ? <div className="mt-1 text-sm text-red-600">{duplicateErrors.name}</div> : null}
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Remark</div>
@@ -701,6 +723,7 @@ export default function JobDetailClient({
                       className="mt-1"
                       inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
                     />
+                    {duplicateErrors.dueDate ? <div className="mt-1 text-sm text-red-600">{duplicateErrors.dueDate}</div> : null}
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Repeat</div>
@@ -730,6 +753,9 @@ export default function JobDetailClient({
                         </option>
                       ))}
                     </select>
+                    {duplicateErrors.managerUserId ? (
+                      <div className="mt-1 text-sm text-red-600">{duplicateErrors.managerUserId}</div>
+                    ) : null}
                   </label>
                 </div>
 
@@ -829,7 +855,8 @@ export default function JobDetailClient({
                   </div>
                 </div>
 
-                {duplicateError ? <div className="mt-3 text-sm text-red-600">{duplicateError}</div> : null}
+                {duplicateErrors.tasks ? <div className="mt-3 text-sm text-red-600">{duplicateErrors.tasks}</div> : null}
+                {duplicateErrors.general ? <div className="mt-3 text-sm text-red-600">{duplicateErrors.general}</div> : null}
 
                 <div className="mt-5 flex items-center justify-end gap-2">
                   <button
