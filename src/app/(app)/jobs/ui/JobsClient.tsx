@@ -7,6 +7,7 @@ import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
 import type { Permissions } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
+import { DateInputDMY } from '@/components/DateInputDMY';
 
 type JobListItem = {
   job: {
@@ -346,12 +347,11 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Due date</div>
-                    <input
-                      type="date"
-                      lang="en-GB"
+                    <DateInputDMY
                       value={newJob.dueDate}
-                      onChange={(e) => setNewJob((v) => ({ ...v, dueDate: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      onChange={(dueDate) => setNewJob((v) => ({ ...v, dueDate }))}
+                      className="mt-1"
+                      inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm"
                     />
                   </label>
                   <label className="text-sm">
@@ -497,17 +497,14 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           placeholder="Task title"
                           disabled={!canCreateTasks}
                         />
-                        <input
-                          type="date"
-                          lang="en-GB"
+                        <DateInputDMY
                           value={t.dueDate}
-                          onChange={(e) =>
-                            setDraftTasks((prev) =>
-                              prev.map((x) => (x.id === t.id ? { ...x, dueDate: e.target.value } : x)),
-                            )
+                          onChange={(dueDate) =>
+                            setDraftTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, dueDate } : x)))
                           }
-                          className="w-36 rounded-md border border-black/10 px-3 py-2 text-sm"
                           disabled={!canCreateTasks}
+                          className="w-36"
+                          inputClassName="rounded-md border border-black/10 px-3 py-2 text-sm"
                         />
                         <button
                           onClick={() => setDraftTasks((prev) => prev.filter((x) => x.id !== t.id))}
