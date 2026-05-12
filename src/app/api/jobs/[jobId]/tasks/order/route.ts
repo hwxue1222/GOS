@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findJobById, reorderTasks, updateTasksInJob } from '@/lib/db';
+import { findJobById, reorderTasks, touchJob, updateTasksInJob } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function PATCH(
@@ -34,5 +34,6 @@ export async function PATCH(
 
   const tasks = hasTitles ? await updateTasksInJob({ jobId, orderedIds: hasOrder ? orderedIds : undefined, titlesById }) : await reorderTasks(jobId, orderedIds);
   if (!tasks) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  await touchJob(jobId);
   return NextResponse.json({ ok: true, tasks });
 }

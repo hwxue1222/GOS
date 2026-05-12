@@ -20,9 +20,11 @@ type JobListItem = {
     status: 'Pending' | 'Processing' | 'Complete';
     completed?: boolean;
     deletedAt?: string;
+    updatedAt?: string;
     recurringFromJobId?: string;
     managerUserId?: string;
     staffUserId?: string;
+    createdAt: string;
   };
   client: { id: string; code: string; name: string } | null;
   tasks: { done: number; total: number };
@@ -359,6 +361,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <th className="px-4 py-3 font-medium">Due Date</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Manager</th>
+                  <th className="px-4 py-3 font-medium">Creation date</th>
                   <th className="px-4 py-3 font-medium w-24"></th>
                 </tr>
               </thead>
@@ -419,6 +422,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                         '-'
                       )}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {formatDateDMY(it.job.updatedAt ?? it.job.createdAt)}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
                       {me.role === 'owner' && !it.job.deletedAt && view !== 'delete' ? (
                         <button
@@ -435,7 +441,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-black/50">
+                    <td colSpan={9} className="px-4 py-10 text-center text-black/50">
                       No jobs
                     </td>
                   </tr>

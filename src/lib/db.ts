@@ -47,6 +47,7 @@ function normalizeDb(parsed: Db): Db {
     status: (j as Job).status ?? 'Pending',
     completed: (j as Job).completed ?? false,
     deletedAt: (j as Job).deletedAt,
+    updatedAt: (j as Job).updatedAt ?? (j as Job).createdAt,
     recurringFromJobId: (j as Job).recurringFromJobId,
     createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
   }));
@@ -329,7 +330,8 @@ export async function deleteClient(clientId: string) {
 
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {
   const db = await readDb();
-  const job: Job = { ...input, id: newId('job'), createdAt: nowIso() };
+  const createdAt = nowIso();
+  const job: Job = { ...input, id: newId('job'), createdAt, updatedAt: createdAt };
   db.jobs.unshift(job);
   await writeDb(db);
   return job;
@@ -340,9 +342,9 @@ export async function createJobWithTasks(
   tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>,
 ) {
   const db = await readDb();
-  const job: Job = { ...input, id: newId('job'), createdAt: nowIso() };
-  db.jobs.unshift(job);
   const createdAt = nowIso();
+  const job: Job = { ...input, id: newId('job'), createdAt, updatedAt: createdAt };
+  db.jobs.unshift(job);
   const createdTasks: JobTask[] = tasks.map((t) => ({ ...t, jobId: job.id, id: newId('tsk'), createdAt }));
   db.tasks.push(...createdTasks);
   await writeDb(db);
@@ -357,7 +359,7 @@ export async function createJobsWithTasks(
   const createdJobs: Job[] = [];
   const createdTasks: JobTask[] = [];
   for (const it of inputs) {
-    const job: Job = { ...it.job, id: newId('job'), createdAt };
+    const job: Job = { ...it.job, id: newId('job'), createdAt, updatedAt: createdAt };
     createdJobs.push(job);
     db.jobs.unshift(job);
     for (const t of it.tasks) {
@@ -388,7 +390,7 @@ export async function createManyJobsWithTasks(
   const createdTasks: JobTask[] = [];
 
   for (const it of inputs) {
-    const primary: Job = { ...it.job, id: newId('job'), createdAt };
+    const primary: Job = { ...it.job, id: newId('job'), createdAt, updatedAt: createdAt };
     db.jobs.unshift(primary);
     for (const t of it.tasks) {
       createdTasks.push({ ...t, jobId: primary.id, id: newId('tsk'), createdAt: t.createdAt ?? createdAt });
@@ -399,6 +401,7 @@ export async function createManyJobsWithTasks(
         ...it.recurringJob,
         id: newId('job'),
         createdAt,
+        updatedAt: createdAt,
         recurringFromJobId: primary.id,
       };
       db.jobs.unshift(recurring);
@@ -420,8 +423,14 @@ export async function createJobWithRecurringCopy(input: {
 }) {
   const db = await readDb();
   const createdAt = nowIso();
-  const primary: Job = { ...input.job, id: newId('job'), createdAt };
-  const recurring: Job = { ...input.recurringJob, id: newId('job'), createdAt, recurringFromJobId: primary.id };
+  const primary: Job = { ...input.job, id: newId('job'), createdAt, updatedAt: createdAt };
+  const recurring: Job = {
+    ...input.recurringJob,
+    id: newId('job'),
+    createdAt,
+    updatedAt: createdAt,
+    recurringFromJobId: primary.id,
+  };
   db.jobs.unshift(recurring);
   db.jobs.unshift(primary);
   const createdTasks: JobTask[] = input.tasks.map((t) => ({ ...t, jobId: primary.id, id: newId('tsk'), createdAt }));
@@ -455,7 +464,7 @@ export async function updateJob(
   const db = await readDb();
   const idx = db.jobs.findIndex((j) => j.id === jobId);
   if (idx < 0) return null;
-  db.jobs[idx] = { ...db.jobs[idx], ...patch };
+  db.jobs[idx] = { ...db.jobs[idx], ...patch, updatedAt: nowIso() };
   await writeDb(db);
   return db.jobs[idx];
 }
@@ -467,6 +476,15 @@ export async function deleteJob(jobId: string) {
   const idx = db.jobs.findIndex((j) => j.id === jobId);
   if (idx < 0) return null;
   db.jobs[idx] = { ...db.jobs[idx], deletedAt: nowIso() };
+  await writeDb(db);
+  return db.jobs[idx];
+}
+
+export async function touchJob(jobId: string) {
+  const db = await readDb();
+  const idx = db.jobs.findIndex((j) => j.id === jobId);
+  if (idx < 0) return null;
+  db.jobs[idx] = { ...db.jobs[idx], updatedAt: nowIso() };
   await writeDb(db);
   return db.jobs[idx];
 }

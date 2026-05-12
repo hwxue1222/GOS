@@ -62,6 +62,7 @@ export type Job = {
   status: JobStatus;
   completed?: boolean;
   deletedAt?: string;
+  updatedAt?: string;
   recurringFromJobId?: string;
   managerUserId?: string;
   staffUserId?: string;
