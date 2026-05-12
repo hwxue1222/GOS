@@ -33,6 +33,13 @@ function parseYmd(input: unknown): string | null {
     const s = input.trim();
     if (!s) return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m2 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (m2) {
+      const dd = String(Number(m2[1])).padStart(2, '0');
+      const mm = String(Number(m2[2])).padStart(2, '0');
+      const yyyy = m2[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
     const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) {
       const dd = String(Number(m[1])).padStart(2, '0');
@@ -83,6 +90,7 @@ export async function POST(req: Request) {
   const nowIso = new Date().toISOString();
 
   const clientsByCode = new Map(db.clients.map((c) => [c.code.trim().toLowerCase(), c]));
+  const clientsByName = new Map(db.clients.map((c) => [c.name.trim().toLowerCase(), c]));
   const jobsById = new Map(db.jobs.map((j) => [j.id, j]));
   const jobsByKey = new Map<string, Job>();
   for (const j of db.jobs) {
@@ -111,7 +119,7 @@ export async function POST(req: Request) {
 
   for (let i = 0; i < rows.length; i++) {
     const m = rowMap(rows[i] ?? {});
-    const title = rowStr(m, ['title', 'task', 'tasktitle', 'task title', 'name']);
+    const title = rowStr(m, ['title', 'task', 'tasktitle', 'task title', 'task name', 'name']);
     if (!title) {
       errors.push({ row: i + 2, message: 'Missing title' });
       continue;
@@ -120,15 +128,18 @@ export async function POST(req: Request) {
     const jobId = rowStr(m, ['jobid', 'job id']);
     let job: Job | undefined = jobId ? jobsById.get(jobId) : undefined;
     if (!job) {
-      const clientCode = rowStr(m, ['clientcode', 'client code', 'code', 'client']);
+      const clientCode = rowStr(m, ['clientcode', 'client code', 'code']);
+      const clientName = rowStr(m, ['clientname', 'client name', 'client']);
       const jobName = rowStr(m, ['jobname', 'job name']);
-      if (!clientCode || !jobName) {
-        errors.push({ row: i + 2, message: 'Missing job id or (client code + job name)' });
+      if ((!clientCode && !clientName) || !jobName) {
+        errors.push({ row: i + 2, message: 'Missing job id or (client code/name + job name)' });
         continue;
       }
-      const client = clientsByCode.get(clientCode.trim().toLowerCase());
+      const client =
+        (clientCode ? clientsByCode.get(clientCode.trim().toLowerCase()) : undefined) ??
+        (clientName ? clientsByName.get(clientName.trim().toLowerCase()) : undefined);
       if (!client) {
-        errors.push({ row: i + 2, message: `Unknown client code: ${clientCode}` });
+        errors.push({ row: i + 2, message: `Unknown client: ${clientCode || clientName}` });
         continue;
       }
       job = jobsByKey.get(`${client.code.trim().toLowerCase()}::${jobName.trim().toLowerCase()}`);
@@ -141,12 +152,8 @@ export async function POST(req: Request) {
 
     const assigneeRaw = rowStr(m, ['assignee', 'assignedto', 'assigned to']);
     const assigneeName = normalizeName(assigneeRaw);
-    if (!assigneeName) {
-      errors.push({ row: i + 2, message: 'Missing assignee' });
-      continue;
-    }
-    const assignee = assigneesByName.get(assigneeName.toLowerCase());
-    if (!assignee) {
+    const assignee = assigneeName ? assigneesByName.get(assigneeName.toLowerCase()) ?? null : null;
+    if (assigneeName && !assignee) {
       errors.push({ row: i + 2, message: `Unknown assignee: ${assigneeRaw}` });
       continue;
     }
@@ -173,7 +180,7 @@ export async function POST(req: Request) {
       title,
       dueDate: dueDate ?? undefined,
       status,
-      assigneeUserId: assignee.id,
+      assigneeUserId: assignee?.id ?? undefined,
       createdByUserId: me.id,
       createdAt: createdAtYmd ? `${createdAtYmd}T00:00:00.000Z` : nowIso,
     };
@@ -192,4 +199,3 @@ export async function POST(req: Request) {
   await writeDb(db);
   return NextResponse.json({ ok: true, inserted, updated: 0, errors });
 }
-
