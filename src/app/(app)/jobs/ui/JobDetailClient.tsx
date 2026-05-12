@@ -587,7 +587,15 @@ export default function JobDetailClient({
           </div>
 
           <div className="p-4">
-            <div className="flex gap-2">
+            <div
+              className="flex gap-2"
+              onDropCapture={(e) => {
+                if (!draggingTaskId) return;
+                e.preventDefault();
+                e.stopPropagation();
+                setDraggingTaskId(null);
+              }}
+            >
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
