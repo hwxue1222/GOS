@@ -29,20 +29,11 @@ function emptyDb(): Db {
 
 function normalizeDb(parsed: Db): Db {
   const keyOfName = (name: string) => name.trim().toLowerCase();
-  const rawUsers = (parsed.users ?? []).map((u) => ({
+  const users = (parsed.users ?? []).map((u) => ({
     ...u,
     position: (u as User).position,
     permissions: (u as User).permissions,
   }));
-  const seenNameKey = new Map<string, number>();
-  const users = rawUsers.map((u) => {
-    const k = keyOfName(u.name);
-    if (!k) return u;
-    const n = (seenNameKey.get(k) ?? 0) + 1;
-    seenNameKey.set(k, n);
-    if (n === 1) return u;
-    return { ...u, name: `${u.name} (${u.id.slice(-4)})` };
-  });
 
   const reservedFromDb = Array.isArray((parsed as unknown as { reservedNames?: unknown }).reservedNames)
     ? ((parsed as unknown as { reservedNames?: string[] }).reservedNames ?? [])
