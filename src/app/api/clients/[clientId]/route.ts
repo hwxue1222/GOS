@@ -78,6 +78,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   const email = typeof body?.email === 'string' ? body.email.trim() || undefined : undefined;
   const tags = Array.isArray(body?.tags) ? body?.tags.filter(Boolean) : undefined;
 
+  if (typeof body?.code === 'string' && user.role !== 'owner') {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
   if (typeof body?.code === 'string' && !code) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   if (typeof body?.name === 'string' && !name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
