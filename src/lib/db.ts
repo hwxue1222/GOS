@@ -37,6 +37,7 @@ function normalizeDb(parsed: Db): Db {
     ...j,
     repeat: (j as Job).repeat ?? 'none',
     status: (j as Job).status ?? 'Pending',
+    completed: (j as Job).completed ?? false,
     createdByUserId: (j as Job).createdByUserId ?? (j as Job).managerUserId ?? undefined,
   }));
 
@@ -302,7 +303,9 @@ export async function findJobById(id: string) {
 
 export async function updateJob(
   jobId: string,
-  patch: Partial<Pick<Job, 'clientId' | 'name' | 'label' | 'dueDate' | 'repeat' | 'managerUserId' | 'staffUserId'>>,
+  patch: Partial<
+    Pick<Job, 'clientId' | 'name' | 'label' | 'dueDate' | 'repeat' | 'completed' | 'managerUserId' | 'staffUserId'>
+  >,
 ) {
   const db = await readDb();
   const idx = db.jobs.findIndex((j) => j.id === jobId);

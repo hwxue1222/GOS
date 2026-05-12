@@ -55,18 +55,31 @@ export async function PATCH(
   const job = await findJobById(jobId);
   if (!job) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  const canModify = user.role === 'owner' || (user.role === 'manager' && job.createdByUserId === user.id);
+  const canModify = user.role === 'owner' || (user.role === 'manager' && job.managerUserId === user.id);
   if (!canModify) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as
-    | { name?: string; dueDate?: string; repeat?: JobRepeat; managerUserId?: string; staffUserId?: string }
+    | {
+        name?: string;
+        dueDate?: string;
+        repeat?: JobRepeat;
+        managerUserId?: string;
+        staffUserId?: string;
+        completed?: boolean;
+      }
     | null;
-  const name = body?.name?.trim() ?? '';
-  if (!name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  const hasJobFields =
+    typeof body?.name === 'string' || typeof body?.dueDate === 'string' || typeof body?.repeat === 'string' || typeof body?.managerUserId === 'string';
+  const wantsCompleted = typeof body?.completed === 'boolean';
+  if (!hasJobFields && !wantsCompleted) {
+    return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  }
+
+  const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
+  if (typeof body?.name === 'string' && !name) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const dueDate = body?.dueDate?.trim() || undefined;
   const repeat = body?.repeat ?? 'none';
   const managerUserId = body?.managerUserId || undefined;
-  const staffUserId = body?.staffUserId || undefined;
 
   const users = await listUsers();
   if (managerUserId) {
@@ -75,14 +88,15 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
     }
   }
-  if (staffUserId) {
-    const u = users.find((x) => x.id === staffUserId);
-    if (!u || u.role !== 'staff') {
-      return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
-    }
-  }
 
-  const updated = await updateJob(jobId, { name, dueDate, repeat, managerUserId, staffUserId });
+  const patch: Parameters<typeof updateJob>[1] = {};
+  if (typeof name === 'string') patch.name = name;
+  if (typeof body?.dueDate === 'string') patch.dueDate = dueDate;
+  if (typeof body?.repeat === 'string') patch.repeat = repeat;
+  if (typeof body?.managerUserId === 'string') patch.managerUserId = managerUserId;
+  if (typeof body?.completed === 'boolean') patch.completed = body.completed;
+
+  const updated = await updateJob(jobId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, job: updated });
 }

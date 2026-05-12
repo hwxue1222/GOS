@@ -49,7 +49,7 @@ export default async function JobDetailPage({
 
   const client = clients.find((c) => c.id === job.clientId) ?? null;
   const visibleTasks = tasksAll;
-  const canModifyJob = me.role === 'owner' || (me.role === 'manager' && job.createdByUserId === me.id);
+  const canModifyJob = me.role === 'owner' || (me.role === 'manager' && job.managerUserId === me.id);
   const canUpdateJob = canModifyJob && hasPermission(me, 'jobs', 'update');
   const canCreateTask = canModifyJob && hasPermission(me, 'tasks', 'create');
   const canCompleteTask = hasPermission(me, 'tasks', 'complete');

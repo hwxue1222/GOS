@@ -35,7 +35,7 @@ export async function PATCH(
     typeof body?.dueDate === 'string' ||
     typeof body?.assigneeUserId === 'string';
 
-  const canModifyJob = user.role === 'owner' || (user.role === 'manager' && job.createdByUserId === user.id);
+  const canModifyJob = user.role === 'owner' || (user.role === 'manager' && job.managerUserId === user.id);
 
   if (wantsStatus) {
     if (!hasPermission(user, 'tasks', 'complete')) {

@@ -64,7 +64,7 @@ export default async function JobsPage() {
       const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
       const done = tasks.filter((t) => t.status === 'Done').length;
       return {
-        job: { ...job, status: computeJobStatus(tasks) },
+        job: { ...job, status: job.completed ? 'Complete' : computeJobStatus(tasks) },
         client: client ? { id: client.id, code: client.code, name: client.name } : null,
         tasks: { done, total: tasks.length },
         manager: manager ? { id: manager.id, name: manager.name } : null,

@@ -42,7 +42,7 @@ export async function GET() {
       const staff = job.staffUserId ? users.find((u) => u.id === job.staffUserId) ?? null : null;
       const tasks = taskByJobId.get(job.id) ?? (await listTasksByJob(job.id));
       const done = tasks.filter((t) => t.status === 'Done').length;
-      const status = computeJobStatus(tasks);
+      const status = job.completed ? 'Complete' : computeJobStatus(tasks);
       return {
         job: { ...job, status },
         client,
@@ -118,6 +118,7 @@ export async function POST(req: Request) {
     dueDate,
     repeat,
     status: 'Pending',
+    completed: false,
     managerUserId,
     staffUserId,
     createdByUserId: user.id,

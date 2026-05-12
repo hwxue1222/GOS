@@ -18,6 +18,7 @@ type JobListItem = {
     dueDate?: string;
     repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
     status: 'Pending' | 'Processing' | 'Complete';
+    completed?: boolean;
     managerUserId?: string;
     staffUserId?: string;
   };
@@ -88,6 +89,25 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     if (!jobsRes?.ok) return;
     const j = (await jobsRes.json().catch(() => null)) as { ok?: boolean; items?: JobListItem[] } | null;
     setItems(j?.items ?? []);
+  }
+
+  async function toggleJobCompleted(jobId: string, nextCompleted: boolean) {
+    const res = await fetch(`/api/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ completed: nextCompleted }),
+    }).catch(() => null);
+    if (!res?.ok) return;
+    const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: { completed?: boolean } } | null;
+    if (!j?.ok) return;
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.job.id !== jobId) return it;
+        const completed = j.job?.completed ?? nextCompleted;
+        return { ...it, job: { ...it.job, completed, status: completed ? 'Complete' : it.job.status } };
+      }),
+    );
+    await reloadJobsOnly();
   }
 
   const filtered = useMemo(() => {
@@ -292,6 +312,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
             <table className="min-w-full text-sm">
               <thead className="text-left text-black/60">
                 <tr className="border-b border-black/5">
+                  <th className="px-4 py-3 font-medium w-10"></th>
                   <th className="px-4 py-3 font-medium">Client</th>
                   <th className="px-4 py-3 font-medium">Job Name</th>
                   <th className="px-4 py-3 font-medium">Tasks</th>
@@ -303,6 +324,16 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
               <tbody>
                 {filtered.map((it) => (
                   <tr key={it.job.id} className="border-b border-black/5 hover:bg-black/[0.02]">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={!!it.job.completed}
+                        disabled={!(me.role === 'owner' || (me.role === 'manager' && it.job.managerUserId === me.id))}
+                        onChange={(e) => {
+                          void toggleJobCompleted(it.job.id, e.target.checked);
+                        }}
+                      />
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap max-w-[220px]">
                       <div className="truncate" title={it.client ? `${it.client.code} ${it.client.name}` : ''}>
                         {it.client ? `${it.client.code} ${it.client.name}` : '-'}
@@ -321,7 +352,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       {it.tasks.done}/{it.tasks.total}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-red-600">{formatDateDMY(it.job.dueDate)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">{it.job.status}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">
+                      {it.job.completed ? 'Complete' : it.job.status}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.manager ? (
                         <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-black/10 text-xs">
@@ -335,7 +368,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-black/50">
+                    <td colSpan={7} className="px-4 py-10 text-center text-black/50">
                       No jobs
                     </td>
                   </tr>
@@ -410,7 +443,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     />
                   </label>
                   <label className="text-sm">
-                    <div className="text-black/70">Manager</div>
+                    <div className="text-black/70">Manager in charge</div>
                     <select
                       value={newJob.managerUserId}
                       onChange={(e) => setNewJob((v) => ({ ...v, managerUserId: e.target.value }))}

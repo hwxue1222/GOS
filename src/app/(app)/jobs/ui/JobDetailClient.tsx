@@ -12,6 +12,7 @@ type Job = {
   dueDate?: string;
   repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
   status: 'Pending' | 'Processing' | 'Complete';
+  completed?: boolean;
   managerUserId?: string;
   staffUserId?: string;
 };
@@ -292,7 +293,7 @@ export default function JobDetailClient({
                 </select>
               </label>
               <label className="text-sm">
-                <div className="text-black/70">Manager</div>
+                <div className="text-black/70">Manager in charge</div>
                 <select
                   value={jobDraft.managerUserId}
                   onChange={(e) => setJobDraft((v) => ({ ...v, managerUserId: e.target.value }))}
