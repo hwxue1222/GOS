@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createJob, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { createJob, createTask, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
-import type { JobRepeat } from '@/lib/types';
+import type { JobRepeat, TaskStatus } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
         repeat?: JobRepeat;
         managerUserId?: string;
         staffUserId?: string;
+        tasks?: Array<{ title?: string; dueDate?: string; assigneeUserId?: string; status?: TaskStatus }>;
       }
     | null;
 
@@ -68,9 +69,19 @@ export async function POST(req: Request) {
   const repeat = body?.repeat ?? 'none';
   const managerUserId = body?.managerUserId || undefined;
   const staffUserId = body?.staffUserId || undefined;
+  const tasks = Array.isArray(body?.tasks) ? body!.tasks : [];
 
   if (!clientId || !name) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  }
+
+  const hasTasks = tasks.some((t) => (t.title?.trim() ?? '') !== '');
+  if (hasTasks && !hasPermission(user, 'tasks', 'create')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+  const hasDoneTasks = tasks.some((t) => t.status === 'Done');
+  if (hasDoneTasks && !hasPermission(user, 'tasks', 'complete')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
   const job = await createJob({
@@ -83,5 +94,28 @@ export async function POST(req: Request) {
     managerUserId,
     staffUserId,
   });
-  return NextResponse.json({ ok: true, job });
+
+  const createdTasks = hasTasks
+    ? await Promise.all(
+        tasks
+          .map((t) => ({
+            title: t.title?.trim() ?? '',
+            dueDate: t.dueDate?.trim() || undefined,
+            assigneeUserId: t.assigneeUserId?.trim() || staffUserId,
+            status: (t.status === 'Done' ? 'Done' : 'Todo') as TaskStatus,
+          }))
+          .filter((t) => !!t.title)
+          .map((t) =>
+            createTask({
+              jobId: job.id,
+              title: t.title,
+              dueDate: t.dueDate,
+              assigneeUserId: t.assigneeUserId,
+              status: t.status,
+            }),
+          ),
+      )
+    : [];
+
+  return NextResponse.json({ ok: true, job, tasks: createdTasks });
 }

@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
+import { hasPermission } from '@/lib/permissions';
+import type { Permissions } from '@/lib/types';
 
 type JobListItem = {
   job: {
@@ -23,7 +26,13 @@ type JobListItem = {
 };
 
 type Client = { id: string; code: string; name: string };
-type User = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'manager' | 'staff';
+  permissions?: Permissions;
+};
 
 type Props = {
   initialItems: JobListItem[];
@@ -37,6 +46,7 @@ function textMatch(haystack: string, needle: string) {
 }
 
 export default function JobsClient({ initialItems, initialClients, initialUsers, initialMe }: Props) {
+  const router = useRouter();
   const [items, setItems] = useState<JobListItem[]>(initialItems);
   const [clients] = useState<Client[]>(initialClients);
   const [users] = useState<User[]>(initialUsers);
@@ -55,6 +65,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     managerUserId: '',
     staffUserId: '',
   });
+  const [draftTasks, setDraftTasks] = useState<Array<{ id: string; title: string; dueDate: string; done: boolean }>>(
+    [],
+  );
+  const [taskInput, setTaskInput] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +109,14 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           repeat: newJob.repeat,
           managerUserId: newJob.managerUserId || undefined,
           staffUserId: newJob.staffUserId || undefined,
+          tasks: draftTasks
+            .map((t) => ({
+              title: t.title,
+              dueDate: t.dueDate || undefined,
+              assigneeUserId: newJob.staffUserId || undefined,
+              status: t.done && hasPermission(me, 'tasks', 'complete') ? 'Done' : 'Todo',
+            }))
+            .filter((t) => t.title.trim()),
         }),
       });
       if (!res.ok) {
@@ -102,6 +124,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         setError(j?.error ?? 'CREATE_FAILED');
         return;
       }
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: { id?: string } } | null;
       setShowNewJob(false);
       setNewJob({
         clientId: '',
@@ -111,13 +134,30 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         managerUserId: '',
         staffUserId: '',
       });
-      await reloadJobsOnly();
+      setDraftTasks([]);
+      setTaskInput('');
+      const jobId = j?.job?.id;
+      if (jobId) router.push(`/jobs/${jobId}`);
+      else await reloadJobsOnly();
     } finally {
       setCreating(false);
     }
   }
 
-  const canCreate = me?.role === 'owner' || me?.role === 'manager';
+  const canCreate = hasPermission(me, 'jobs', 'create');
+  const canCreateTasks = hasPermission(me, 'tasks', 'create');
+  const canCompleteTasks = hasPermission(me, 'tasks', 'complete');
+
+  function newTempId() {
+    return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function addDraftTask() {
+    const title = taskInput.trim();
+    if (!title) return;
+    setDraftTasks((prev) => [{ id: newTempId(), title, dueDate: '', done: false }, ...prev]);
+    setTaskInput('');
+  }
 
   return (
     <div className="flex-1">
@@ -348,6 +388,90 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       ))}
                     </select>
                   </label>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-black/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">Tasks</div>
+                    {!canCreateTasks ? (
+                      <div className="text-xs text-red-600">No permission to create tasks</div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      value={taskInput}
+                      onChange={(e) => setTaskInput(e.target.value)}
+                      className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                      placeholder="Add a task..."
+                      disabled={!canCreateTasks}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addDraftTask();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={addDraftTask}
+                      disabled={!canCreateTasks}
+                      className="rounded-lg bg-black text-white px-3 py-2 text-sm disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  <div className="mt-3 divide-y divide-black/5">
+                    {draftTasks.map((t) => (
+                      <div key={t.id} className="py-2 flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={t.done}
+                          disabled={!canCompleteTasks}
+                          onChange={(e) =>
+                            setDraftTasks((prev) =>
+                              prev.map((x) => (x.id === t.id ? { ...x, done: e.target.checked } : x)),
+                            )
+                          }
+                        />
+                        <input
+                          value={t.title}
+                          onChange={(e) =>
+                            setDraftTasks((prev) =>
+                              prev.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)),
+                            )
+                          }
+                          className={[
+                            'flex-1 rounded-md border border-black/10 px-3 py-2 text-sm',
+                            t.done ? 'line-through text-black/40' : '',
+                          ].join(' ')}
+                          placeholder="Task title"
+                          disabled={!canCreateTasks}
+                        />
+                        <input
+                          value={t.dueDate}
+                          onChange={(e) =>
+                            setDraftTasks((prev) =>
+                              prev.map((x) => (x.id === t.id ? { ...x, dueDate: e.target.value } : x)),
+                            )
+                          }
+                          className="w-36 rounded-md border border-black/10 px-3 py-2 text-sm"
+                          placeholder="YYYY-MM-DD"
+                          disabled={!canCreateTasks}
+                        />
+                        <button
+                          onClick={() => setDraftTasks((prev) => prev.filter((x) => x.id !== t.id))}
+                          className="text-black/40 hover:text-black"
+                          disabled={!canCreateTasks}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {draftTasks.length === 0 ? (
+                      <div className="py-6 text-sm text-black/50 text-center">No tasks</div>
+                    ) : null}
+                  </div>
                 </div>
 
                 {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
