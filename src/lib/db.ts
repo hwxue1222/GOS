@@ -77,6 +77,37 @@ async function hasKv(): Promise<boolean> {
   return !!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN;
 }
 
+async function hasRedis(): Promise<boolean> {
+  return !!process.env.REDIS_URL;
+}
+
+type RedisClient = {
+  get: (key: string) => Promise<string | null>;
+  set: (key: string, value: string) => Promise<unknown>;
+};
+
+async function getRedisClient(): Promise<RedisClient> {
+  const g = globalThis as unknown as {
+    __gosRedisClientPromise?: Promise<RedisClient>;
+  };
+  if (g.__gosRedisClientPromise) return g.__gosRedisClientPromise;
+  g.__gosRedisClientPromise = (async () => {
+    const mod = (await import('redis')) as unknown as {
+      createClient: (opts: { url: string }) => {
+        connect: () => Promise<void>;
+        get: (key: string) => Promise<string | null>;
+        set: (key: string, value: string) => Promise<unknown>;
+      };
+    };
+    const url = process.env.REDIS_URL;
+    if (!url) throw new Error('REDIS_URL missing');
+    const client = mod.createClient({ url });
+    await client.connect();
+    return client;
+  })();
+  return g.__gosRedisClientPromise;
+}
+
 async function readDbRaw(): Promise<Db> {
   try {
     if (await hasKv()) {
@@ -85,6 +116,12 @@ async function readDbRaw(): Promise<Db> {
       if (!raw) return emptyDb();
       if (typeof raw === 'string') return normalizeDb(JSON.parse(raw) as Db);
       return normalizeDb(raw as Db);
+    }
+    if (await hasRedis()) {
+      const redis = await getRedisClient();
+      const raw = await redis.get(KV_DB_KEY);
+      if (!raw) return emptyDb();
+      return normalizeDb(JSON.parse(raw) as Db);
     }
     const content = await fs.readFile(DB_FILE, 'utf-8');
     return normalizeDb(JSON.parse(content) as Db);
@@ -97,6 +134,11 @@ async function writeDbRaw(db: Db) {
   if (await hasKv()) {
     const mod = (await import('@vercel/kv')) as unknown as { kv: { set: (key: string, value: unknown) => Promise<unknown> } };
     await mod.kv.set(KV_DB_KEY, db);
+    return;
+  }
+  if (await hasRedis()) {
+    const redis = await getRedisClient();
+    await redis.set(KV_DB_KEY, JSON.stringify(db));
     return;
   }
   await ensureDir();

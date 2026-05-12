@@ -16,7 +16,17 @@ GOS 默认使用本地 JSON 数据库：
 - 本地开发：`./.gos/db.json`（已在 `.gitignore` 中忽略，不会提交到仓库）
 - Vercel：默认落到临时目录 `/tmp/gos/db.json`（serverless 环境会重启/多实例，数据不保证持久化；你看到的“退出再登录数据全没了”就是这个原因）
 
-要让线上数据持久化并且多次登录不丢失，建议在 Vercel 项目里接入 Redis（Vercel Marketplace / Upstash Redis），并设置环境变量：
+要让线上数据持久化并且多次登录不丢失，建议在 Vercel 项目里接入 Redis（Vercel Marketplace / Upstash Redis）。
+
+### 方式 A（推荐）：只用 `REDIS_URL`
+
+如果你的 Vercel Redis 集成自动注入了 `REDIS_URL`，GOS 会自动改用 Redis 存储整个 DB（用户、client、job、task、session）并在多实例间保持一致，无需额外配置。
+
+（可选）你也可以设置 `GOS_KV_DB_KEY`：默认 `gos:db`。
+
+### 方式 B：用 Upstash REST（KV）
+
+如果你拿到的是 Upstash 的 REST 连接信息，也可以设置环境变量：
 
 - `KV_REST_API_URL`
 - `KV_REST_API_TOKEN`
