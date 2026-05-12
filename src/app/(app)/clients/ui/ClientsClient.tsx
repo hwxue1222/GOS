@@ -126,76 +126,64 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
         </div>
 
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
-          <table className="min-w-full text-sm table-fixed">
+          <table className="min-w-full text-xs">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/5">
-                <th className="px-3 py-2.5 font-medium w-[84px]">Code</th>
-                <th className="px-3 py-2.5 font-medium w-[240px]">Client</th>
-                <th className="px-3 py-2.5 font-medium w-[160px]">
-                  <div className="whitespace-normal leading-tight">
-                    Company registration
-                    <br />
-                    no.
-                  </div>
-                </th>
-                <th className="px-3 py-2.5 font-medium w-[150px]">
-                  <div className="whitespace-normal leading-tight">
-                    Contact
-                    <br />
-                    person
-                  </div>
-                </th>
-                <th className="px-3 py-2.5 font-medium w-[220px]">Address</th>
-                <th className="px-3 py-2.5 font-medium w-[140px]">Phone</th>
-                <th className="px-3 py-2.5 font-medium w-[200px]">Email</th>
-                <th className="px-3 py-2.5 font-medium w-[160px]">Tags</th>
-                <th className="px-3 py-2.5 font-medium w-[96px]"></th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Client</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Reg no.</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Contact</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Address</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Phone</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Email</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Tags</th>
+                <th className="px-2 py-2 font-medium w-24"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                  <td className="px-3 py-2.5 whitespace-nowrap">{c.code}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">{c.code}</td>
+                  <td className="px-2 py-2 min-w-[180px] max-w-[280px]">
                     <Link
-                      className="truncate text-[#2f7bdc] hover:underline block"
+                      className="text-[#2f7bdc] hover:underline block leading-tight break-words"
                       href={`/clients/${c.id}`}
                       title={`${c.name} (Code: ${c.code})`}
                     >
                       {c.name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.companyRegistrationNo ?? ''}>
-                      {c.companyRegistrationNo ?? '-'}
+                  <td className="px-2 py-2 min-w-[120px] max-w-[160px]">
+                    <div className="leading-tight break-words" title={c.companyRegistrationNo ?? ''}>
+                      {c.companyRegistrationNo?.trim() ? c.companyRegistrationNo : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.contactPerson ?? ''}>
-                      {c.contactPerson ?? '-'}
+                  <td className="px-2 py-2 min-w-[120px] max-w-[160px]">
+                    <div className="leading-tight break-words" title={c.contactPerson ?? ''}>
+                      {c.contactPerson?.trim() ? c.contactPerson : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.address ?? ''}>
-                      {c.address ?? '-'}
+                  <td className="px-2 py-2 min-w-[160px] max-w-[260px]">
+                    <div className="leading-tight break-words" title={c.address ?? ''}>
+                      {c.address?.trim() ? c.address : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.phone ?? ''}>
-                      {c.phone ?? '-'}
+                  <td className="px-2 py-2 min-w-[110px] max-w-[160px]">
+                    <div className="leading-tight break-words" title={c.phone ?? ''}>
+                      {c.phone?.trim() ? c.phone : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.email ?? ''}>
-                      {c.email ?? '-'}
+                  <td className="px-2 py-2 min-w-[160px] max-w-[240px]">
+                    <div className="leading-tight break-words" title={c.email ?? ''}>
+                      {c.email?.trim() ? c.email : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <div className="truncate" title={c.tags?.length ? c.tags.join(', ') : ''}>
+                  <td className="px-2 py-2 min-w-[140px] max-w-[220px]">
+                    <div className="leading-tight break-words" title={c.tags?.length ? c.tags.join(', ') : ''}>
                       {c.tags?.length ? c.tags.join(', ') : '-'}
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-right">
                     {canDelete ? (
                       <button
                         onClick={() => void deleteClientFromList(c.id)}
