@@ -80,6 +80,7 @@ export default async function JobDetailPage({
         initialTasks={enrichedTasks}
         initialUsers={users.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
         meId={me.id}
+        canDeleteJob={me.role === 'owner'}
         canModifyJob={canModifyJob}
         canUpdateJob={canUpdateJob}
         canCreateTask={canCreateTask}

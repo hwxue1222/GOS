@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { completeAllTasksForJob, findJobById, listClients, listTasksByJob, listUsers, updateJob } from '@/lib/db';
+import {
+  completeAllTasksForJob,
+  deleteJob,
+  findJobById,
+  listClients,
+  listTasksByJob,
+  listUsers,
+  updateJob,
+} from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import type { JobRepeat } from '@/lib/types';
 
@@ -111,4 +119,17 @@ export async function PATCH(
   const updated = await updateJob(jobId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, job: updated });
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ jobId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (user.role !== 'owner') {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { jobId } = await params;
+  const deleted = await deleteJob(jobId);
+  if (!deleted) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

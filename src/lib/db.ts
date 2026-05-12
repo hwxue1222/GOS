@@ -406,6 +406,16 @@ export async function updateJob(
   return db.jobs[idx];
 }
 
+export async function deleteJob(jobId: string) {
+  const db = await readDb();
+  const job = db.jobs.find((j) => j.id === jobId) ?? null;
+  if (!job) return null;
+  db.jobs = db.jobs.filter((j) => j.id !== jobId);
+  db.tasks = db.tasks.filter((t) => t.jobId !== jobId);
+  await writeDb(db);
+  return job;
+}
+
 export async function completeAllTasksForJob(jobId: string) {
   const db = await readDb();
   const has = db.tasks.some((t) => t.jobId === jobId);

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 
@@ -40,6 +41,7 @@ type Props = {
   initialTasks: JobTask[];
   initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
   meId: string;
+  canDeleteJob: boolean;
   canModifyJob: boolean;
   canUpdateJob: boolean;
   canCreateTask: boolean;
@@ -55,6 +57,7 @@ export default function JobDetailClient({
   initialTasks,
   initialUsers,
   meId,
+  canDeleteJob,
   canModifyJob,
   canUpdateJob,
   canCreateTask,
@@ -62,6 +65,7 @@ export default function JobDetailClient({
   canUpdateTask,
   canReorderTask,
 }: Props) {
+  const router = useRouter();
   const [job, setJob] = useState<Job | null>(initialJob);
   const [client] = useState<{ id: string; code: string; name: string } | null>(initialClient);
   const [tasks, setTasks] = useState<JobTask[]>(initialTasks);
@@ -133,6 +137,21 @@ export default function JobDetailClient({
     } finally {
       setSavingJob(false);
     }
+  }
+
+  async function deleteThisJob() {
+    if (!canDeleteJob) return;
+    const ok = window.confirm('Delete this job? This cannot be undone.');
+    if (!ok) return;
+    setError(null);
+    const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    router.push('/jobs');
+    router.refresh();
   }
 
   async function addTask() {
@@ -261,6 +280,16 @@ export default function JobDetailClient({
               {doneCount}/{tasks.length} tasks done
             </div>
           </div>
+          {canDeleteJob ? (
+            <div className="flex items-center justify-end">
+              <button
+                onClick={deleteThisJob}
+                className="rounded-lg border border-red-200 bg-white text-red-600 px-4 py-2 text-sm hover:bg-red-50"
+              >
+                Delete job
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {canUpdateJob ? (
