@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import UserMenuClient from '@/components/UserMenuClient';
+import { canManageTeam } from '@/lib/permissions';
 
 type Props = {
   active: 'jobs' | 'clients' | 'reports';
@@ -51,9 +52,8 @@ export default async function AppTopNav({ active }: Props) {
             </NavLink>
           </nav>
         </div>
-        <UserMenuClient user={user} />
+        <UserMenuClient user={user} canManageTeam={canManageTeam(user)} />
       </div>
     </header>
   );
 }
-

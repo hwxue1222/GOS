@@ -209,6 +209,11 @@ export async function listTasksByJob(jobId: string) {
   return db.tasks.filter((t) => t.jobId === jobId);
 }
 
+export async function findTaskById(id: string) {
+  const db = await readDb();
+  return db.tasks.find((t) => t.id === id) ?? null;
+}
+
 export async function createTask(input: Omit<JobTask, 'id' | 'createdAt'>) {
   const db = await readDb();
   const task: JobTask = { ...input, id: newId('tsk'), createdAt: nowIso() };

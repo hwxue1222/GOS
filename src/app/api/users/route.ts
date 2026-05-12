@@ -2,14 +2,22 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { createUser, listUsers } from '@/lib/db';
 import type { Permissions } from '@/lib/types';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  const canViewAll = hasPermission(user, 'staffs', 'viewAll');
+  const canViewAssigned = hasPermission(user, 'staffs', 'viewAssigned');
+  if (!canViewAll && !canViewAssigned) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
   const users = await listUsers();
+  const visible = canViewAll ? users : users.filter((u) => u.id === user.id);
   return NextResponse.json({
     ok: true,
-    users: users.map((u) => ({
+    users: visible.map((u) => ({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -23,7 +31,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role !== 'owner') {
+  if (!hasPermission(user, 'staffs', 'create')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 

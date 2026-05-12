@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ ok: false }, { status: 401 });
-  if (me.role !== 'owner') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (!hasPermission(me, 'staffs', 'viewAll')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
 
   const [users, jobs] = await Promise.all([listUsers(), listJobs()]);
   const tasksByJob = await Promise.all(jobs.map(async (j) => [j.id, await listTasksByJob(j.id)] as const));
@@ -41,4 +44,3 @@ export async function GET() {
 
   return NextResponse.json({ ok: true, users: staffRows });
 }
-

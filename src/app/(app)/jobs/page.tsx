@@ -3,11 +3,44 @@ import JobsClient from '@/app/(app)/jobs/ui/JobsClient';
 import { getCurrentUser } from '@/lib/auth';
 import { listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
+import { hasPermission } from '@/lib/permissions';
 
 export default async function JobsPage() {
   const me = await getCurrentUser();
-  const [clients, jobs, users] = await Promise.all([listClients(), listJobs(), listUsers()]);
-  const safeUsers = users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+  if (!me) return null;
+
+  const canViewAllJobs = hasPermission(me, 'jobs', 'viewAll');
+  const canViewAssignedJobs = hasPermission(me, 'jobs', 'viewAssigned');
+  if (!canViewAllJobs && !canViewAssignedJobs) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppTopNav active="jobs" />
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const [clientsAll, jobsAll, usersAll] = await Promise.all([listClients(), listJobs(), listUsers()]);
+  const jobs = canViewAllJobs
+    ? jobsAll
+    : jobsAll.filter((j) => j.managerUserId === me.id || j.staffUserId === me.id);
+
+  const canViewAllStaffs = hasPermission(me, 'staffs', 'viewAll');
+  const safeUsers = (canViewAllStaffs ? usersAll : usersAll.filter((u) => u.id === me.id)).map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+  }));
+
+  const canViewAllClients = hasPermission(me, 'clients', 'viewAll');
+  const clients = canViewAllClients
+    ? clientsAll
+    : clientsAll.filter((c) => jobs.some((j) => j.clientId === c.id));
 
   const items = await Promise.all(
     jobs.map(async (job) => {
@@ -29,9 +62,7 @@ export default async function JobsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="jobs" />
-      {me ? (
-        <JobsClient initialItems={items} initialClients={clients} initialUsers={safeUsers} initialMe={me} />
-      ) : null}
+      <JobsClient initialItems={items} initialClients={clients} initialUsers={safeUsers} initialMe={me} />
     </div>
   );
 }

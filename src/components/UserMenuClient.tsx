@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 
 type Props = {
   user: { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+  canManageTeam: boolean;
 };
 
-export default function UserMenuClient({ user }: Props) {
+export default function UserMenuClient({ user, canManageTeam }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -48,7 +49,7 @@ export default function UserMenuClient({ user }: Props) {
           <div className="px-3 py-2 text-xs opacity-80 border-b border-white/10">
             {user.email}
           </div>
-          {user.role === 'owner' ? (
+          {canManageTeam ? (
             <button
               onClick={() => {
                 setOpen(false);
@@ -86,4 +87,3 @@ export default function UserMenuClient({ user }: Props) {
     </div>
   );
 }
-

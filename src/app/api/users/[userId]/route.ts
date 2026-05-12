@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { updateUser } from '@/lib/db';
 import type { Permissions, Role } from '@/lib/types';
+import { hasPermission } from '@/lib/permissions';
 
 export async function PATCH(
   req: Request,
@@ -9,7 +10,7 @@ export async function PATCH(
 ) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ ok: false }, { status: 401 });
-  if (me.role !== 'owner') {
+  if (!hasPermission(me, 'staffs', 'update')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -45,4 +46,3 @@ export async function PATCH(
     },
   });
 }
-

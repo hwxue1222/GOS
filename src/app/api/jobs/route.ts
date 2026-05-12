@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { createJob, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import type { JobRepeat } from '@/lib/types';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -10,8 +11,18 @@ export async function GET() {
 
   const [clients, jobs, users] = await Promise.all([listClients(), listJobs(), listUsers()]);
 
+  const canViewAll = hasPermission(user, 'jobs', 'viewAll');
+  const canViewAssigned = hasPermission(user, 'jobs', 'viewAssigned');
+  if (!canViewAll && !canViewAssigned) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const visibleJobs = canViewAll
+    ? jobs
+    : jobs.filter((j) => j.managerUserId === user.id || j.staffUserId === user.id);
+
   const items = await Promise.all(
-    jobs.map(async (job) => {
+    visibleJobs.map(async (job) => {
       const client = clients.find((c) => c.id === job.clientId) ?? null;
       const manager = job.managerUserId ? users.find((u) => u.id === job.managerUserId) ?? null : null;
       const staff = job.staffUserId ? users.find((u) => u.id === job.staffUserId) ?? null : null;
@@ -34,7 +45,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role === 'staff') {
+  if (!hasPermission(user, 'jobs', 'create')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 

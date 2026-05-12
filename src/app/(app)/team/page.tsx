@@ -2,10 +2,13 @@ import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import TeamClient from '@/app/(app)/team/ui/TeamClient';
 import { listUsers } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export default async function TeamPage() {
   const me = await getCurrentUser();
-  const users = me?.role === 'owner' ? await listUsers() : [];
+  if (!me) return null;
+  const allowed = hasPermission(me, 'staffs', 'viewAll');
+  const users = allowed ? await listUsers() : [];
   const safeUsers = users.map((u) => ({
     id: u.id,
     name: u.name,
@@ -19,7 +22,7 @@ export default async function TeamPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="jobs" />
-      {me?.role === 'owner' ? (
+      {allowed ? (
         <TeamClient initialUsers={staffRows} />
       ) : (
         <div className="flex-1">

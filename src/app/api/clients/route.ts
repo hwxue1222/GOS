@@ -1,18 +1,36 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createClient, listClients } from '@/lib/db';
+import { createClient, listClients, listJobs } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const canViewAll = hasPermission(user, 'clients', 'viewAll');
+  const canViewAssigned = hasPermission(user, 'clients', 'viewAssigned');
+  if (!canViewAll && !canViewAssigned) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
   const clients = await listClients();
-  return NextResponse.json({ ok: true, clients });
+  if (canViewAll) return NextResponse.json({ ok: true, clients });
+
+  const jobs = await listJobs();
+  const assignedClientIds = new Set(
+    jobs
+      .filter((j) => j.managerUserId === user.id || j.staffUserId === user.id)
+      .map((j) => j.clientId),
+  );
+  const filtered = clients.filter((c) => assignedClientIds.has(c.id));
+
+  return NextResponse.json({ ok: true, clients: filtered });
 }
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role === 'staff') {
+  if (!hasPermission(user, 'clients', 'create')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -32,4 +50,3 @@ export async function POST(req: Request) {
   const client = await createClient({ code, name, phone, email, tags });
   return NextResponse.json({ ok: true, client });
 }
-
