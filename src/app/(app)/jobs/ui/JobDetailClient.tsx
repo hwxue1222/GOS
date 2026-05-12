@@ -124,6 +124,14 @@ export default function JobDetailClient({
     return new Date().toISOString().slice(0, 10);
   }
 
+  function toYmd(input?: string | null) {
+    if (!input) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
+    const d = new Date(input);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  }
+
   async function saveJob() {
     if (!canUpdateJob) return;
     if (!jobDraft.name.trim()) {
@@ -196,7 +204,7 @@ export default function JobDetailClient({
       tasks.map((t) => ({
         key: t.id,
         title: t.title,
-        createdAt: t.createdAt,
+        createdAt: toYmd(t.createdAt) || todayYmd(),
         assigneeUserId: t.assigneeUserId ?? '',
       })),
     );
@@ -249,6 +257,7 @@ export default function JobDetailClient({
           tasks: dupTasks
             .map((t) => ({
               title: t.title,
+              createdAt: t.createdAt || undefined,
               assigneeUserId: t.assigneeUserId || undefined,
             }))
             .filter((t) => (t.title?.trim() ?? '') !== ''),
@@ -734,7 +743,7 @@ export default function JobDetailClient({
                           {
                             key: `new_${Date.now()}_${Math.random().toString(16).slice(2)}`,
                             title: '',
-                            createdAt: new Date().toISOString(),
+                            createdAt: todayYmd(),
                             assigneeUserId: '',
                           },
                         ])
@@ -789,9 +798,14 @@ export default function JobDetailClient({
                               </select>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <div className="text-sm text-black/70 whitespace-nowrap" title={t.createdAt}>
-                                {formatDateDMY(t.createdAt)}
-                              </div>
+                              <DateInputDMY
+                                value={t.createdAt}
+                                onChange={(createdAt) =>
+                                  setDupTasks((prev) => prev.map((x, i) => (i === idx ? { ...x, createdAt } : x)))
+                                }
+                                className="w-36"
+                                inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
+                              />
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-right">
                               <button

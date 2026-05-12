@@ -5,6 +5,14 @@ import { hasPermission } from '@/lib/permissions';
 import { addMonthsYmd } from '@/lib/date';
 import type { JobRepeat } from '@/lib/types';
 
+function toYmd(input: string) {
+  const trimmed = input.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
@@ -46,6 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
         managerUserId?: string;
         tasks?: Array<{
           title?: string;
+          createdAt?: string;
           assigneeUserId?: string;
         }>;
       }
@@ -90,7 +99,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     ? tasks
         .map((t, idx) => ({
           title: t.title?.trim() ?? '',
-          dueDate: today,
+          createdAt: typeof t.createdAt === 'string' ? toYmd(t.createdAt) ?? today : today,
           assigneeUserId:
             t.assigneeUserId?.trim() && userIdSet.has(t.assigneeUserId.trim()) ? t.assigneeUserId.trim() : undefined,
           status: 'Todo' as const,
@@ -100,6 +109,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
         }))
         .filter((t) => !!t.title)
     : [];
+  const normalizedTasksWithDueDate = normalizedTasks.map((t) => ({ ...t, dueDate: t.createdAt }));
 
   const monthDelta =
     repeat === 'monthly' ? 1 : repeat === 'quarterly' ? 3 : repeat === 'yearly' ? 12 : repeat === '2-yearly' ? 24 : 0;
@@ -120,16 +130,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ jobId: 
     };
 
     if (repeat !== 'none' && recurringDueDate) {
-      const recurringTasks = normalizedTasks;
+      const recurringTasks = normalizedTasksWithDueDate;
       return {
         job: baseJob,
-        tasks: normalizedTasks,
+        tasks: normalizedTasksWithDueDate,
         recurringJob: { ...baseJob, dueDate: recurringDueDate },
         recurringTasks,
       };
     }
 
-    return { job: baseJob, tasks: normalizedTasks };
+    return { job: baseJob, tasks: normalizedTasksWithDueDate };
   });
 
   await createManyJobsWithTasks(jobsToCreate);
