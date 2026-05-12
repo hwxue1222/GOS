@@ -38,10 +38,12 @@ type Props = {
   jobId: string;
   initialJob: Job | null;
   initialClient: { id: string; code: string; name: string } | null;
+  initialClients: Array<{ id: string; code: string; name: string }>;
   initialTasks: JobTask[];
   initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
   meId: string;
   canDeleteJob: boolean;
+  canDuplicateJob: boolean;
   canModifyJob: boolean;
   canUpdateJob: boolean;
   canCreateTask: boolean;
@@ -54,10 +56,12 @@ export default function JobDetailClient({
   jobId,
   initialJob,
   initialClient,
+  initialClients,
   initialTasks,
   initialUsers,
   meId,
   canDeleteJob,
+  canDuplicateJob,
   canModifyJob,
   canUpdateJob,
   canCreateTask,
@@ -68,6 +72,7 @@ export default function JobDetailClient({
   const router = useRouter();
   const [job, setJob] = useState<Job | null>(initialJob);
   const [client] = useState<{ id: string; code: string; name: string } | null>(initialClient);
+  const [clients] = useState(initialClients);
   const [tasks, setTasks] = useState<JobTask[]>(initialTasks);
   const [users] = useState(initialUsers);
   const [loading] = useState(false);
@@ -89,6 +94,27 @@ export default function JobDetailClient({
     managerUserId: initialJob?.managerUserId ?? '',
   });
   const [savingJob, setSavingJob] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [dupDraft, setDupDraft] = useState<{
+    name: string;
+    label: string;
+    dueDate: string;
+    repeat: Job['repeat'];
+    managerUserId: string;
+  }>({
+    name: initialJob?.name ?? '',
+    label: initialJob?.label ?? '',
+    dueDate: initialJob?.dueDate ?? '',
+    repeat: initialJob?.repeat ?? 'none',
+    managerUserId: initialJob?.managerUserId ?? '',
+  });
+  const [dupTasks, setDupTasks] = useState<
+    Array<{ key: string; title: string; dueDate: string; assigneeUserId: string }>
+  >([]);
 
   const doneCount = useMemo(() => tasks.filter((t) => t.status === 'Done').length, [tasks]);
   const managerUsers = useMemo(() => users.filter((u) => u.role === 'manager' || u.role === 'owner'), [users]);
@@ -152,6 +178,94 @@ export default function JobDetailClient({
     }
     router.push('/jobs');
     router.refresh();
+  }
+
+  function openDuplicate() {
+    if (!canDuplicateJob) return;
+    setDuplicateError(null);
+    setClientSearch('');
+    setSelectedClientIds([]);
+    setDupDraft({
+      name: jobDraft.name,
+      label: jobDraft.label,
+      dueDate: jobDraft.dueDate,
+      repeat: jobDraft.repeat,
+      managerUserId: jobDraft.managerUserId,
+    });
+    setDupTasks(
+      tasks.map((t) => ({
+        key: t.id,
+        title: t.title,
+        dueDate: t.dueDate ?? '',
+        assigneeUserId: t.assigneeUserId ?? '',
+      })),
+    );
+    setShowDuplicate(true);
+  }
+
+  function toggleSelectedClient(id: string) {
+    setSelectedClientIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  const filteredClients = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q));
+  }, [clientSearch, clients]);
+
+  async function submitDuplicate() {
+    if (!canDuplicateJob) return;
+    setDuplicateError(null);
+    if (!selectedClientIds.length) {
+      setDuplicateError('INVALID_INPUT');
+      return;
+    }
+    if (!dupDraft.name.trim()) {
+      setDuplicateError('INVALID_INPUT');
+      return;
+    }
+    if (dupDraft.repeat !== 'none' && !dupDraft.dueDate.trim()) {
+      setDuplicateError('INVALID_INPUT');
+      return;
+    }
+    const hasUnassigned = dupTasks.some((t) => t.title.trim() && !t.assigneeUserId.trim());
+    if (hasUnassigned) {
+      setDuplicateError('TASK_UNASSIGNED');
+      return;
+    }
+
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/duplicate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          clientIds: selectedClientIds,
+          name: dupDraft.name,
+          label: dupDraft.label || undefined,
+          dueDate: dupDraft.dueDate || undefined,
+          repeat: dupDraft.repeat,
+          managerUserId: dupDraft.managerUserId || undefined,
+          tasks: dupTasks
+            .map((t) => ({
+              title: t.title,
+              dueDate: t.dueDate || undefined,
+              assigneeUserId: t.assigneeUserId || undefined,
+            }))
+            .filter((t) => (t.title?.trim() ?? '') !== ''),
+        }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setDuplicateError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      setShowDuplicate(false);
+      router.push('/jobs');
+      router.refresh();
+    } finally {
+      setDuplicating(false);
+    }
   }
 
   async function addTask() {
@@ -280,16 +394,24 @@ export default function JobDetailClient({
               {doneCount}/{tasks.length} tasks done
             </div>
           </div>
-          {canDeleteJob ? (
-            <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-2">
+            {canDuplicateJob ? (
+              <button
+                onClick={openDuplicate}
+                className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/[0.02]"
+              >
+                Duplicate
+              </button>
+            ) : null}
+            {canDeleteJob ? (
               <button
                 onClick={deleteThisJob}
                 className="rounded-lg border border-red-200 bg-white text-red-600 px-4 py-2 text-sm hover:bg-red-50"
               >
                 Delete job
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
         {canUpdateJob ? (
@@ -498,6 +620,221 @@ export default function JobDetailClient({
           </div>
         </div>
       </div>
+
+      {showDuplicate ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4">
+          <div className="w-full max-w-5xl rounded-xl bg-white p-5 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">Duplicate job</div>
+              <button onClick={() => setShowDuplicate(false)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+              <div className="rounded-xl border border-black/5 p-4">
+                <div className="text-sm font-medium">Copy to clients</div>
+                <input
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                  placeholder="Find client..."
+                />
+                <div className="mt-3 max-h-[340px] overflow-y-auto rounded-lg border border-black/5">
+                  {filteredClients.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex items-center gap-3 px-3 py-2 border-b border-black/5 last:border-b-0 hover:bg-black/[0.02] cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedClientIds.includes(c.id)}
+                        onChange={() => toggleSelectedClient(c.id)}
+                      />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm" title={`${c.code} ${c.name}`}>
+                          {c.code} {c.name}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                  {filteredClients.length === 0 ? (
+                    <div className="px-3 py-8 text-sm text-black/50 text-center">No clients</div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-black/5 p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <div className="text-black/70">Job name</div>
+                    <input
+                      value={dupDraft.name}
+                      onChange={(e) => setDupDraft((v) => ({ ...v, name: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Remark</div>
+                    <input
+                      value={dupDraft.label}
+                      onChange={(e) => setDupDraft((v) => ({ ...v, label: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Due date</div>
+                    <DateInputDMY
+                      value={dupDraft.dueDate}
+                      onChange={(dueDate) => setDupDraft((v) => ({ ...v, dueDate }))}
+                      className="mt-1"
+                      inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Repeat</div>
+                    <select
+                      value={dupDraft.repeat}
+                      onChange={(e) => setDupDraft((v) => ({ ...v, repeat: e.target.value as Job['repeat'] }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="none">none</option>
+                      <option value="monthly">monthly</option>
+                      <option value="quarterly">quarterly</option>
+                      <option value="yearly">yearly</option>
+                      <option value="2-yearly">2-yearly</option>
+                    </select>
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">Manager in charge</div>
+                    <select
+                      value={dupDraft.managerUserId}
+                      onChange={(e) => setDupDraft((v) => ({ ...v, managerUserId: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">(none)</option>
+                      {managerUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Tasks</div>
+                    <button
+                      onClick={() =>
+                        setDupTasks((prev) => [
+                          ...prev,
+                          { key: `new_${Date.now()}_${Math.random().toString(16).slice(2)}`, title: '', dueDate: '', assigneeUserId: '' },
+                        ])
+                      }
+                      className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.02]"
+                    >
+                      + Add task
+                    </button>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-black/5 overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="text-left text-black/60">
+                        <tr className="border-b border-black/5">
+                          <th className="px-3 py-2 font-medium">Title</th>
+                          <th className="px-3 py-2 font-medium">Assignee</th>
+                          <th className="px-3 py-2 font-medium">Due date</th>
+                          <th className="px-3 py-2 font-medium"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dupTasks.map((t, idx) => (
+                          <tr key={t.key} className="border-b border-black/5 last:border-b-0">
+                            <td className="px-3 py-2 min-w-[280px]">
+                              <input
+                                value={t.title}
+                                onChange={(e) =>
+                                  setDupTasks((prev) =>
+                                    prev.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)),
+                                  )
+                                }
+                                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                placeholder="Task title"
+                              />
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <select
+                                value={t.assigneeUserId}
+                                onChange={(e) =>
+                                  setDupTasks((prev) =>
+                                    prev.map((x, i) => (i === idx ? { ...x, assigneeUserId: e.target.value } : x)),
+                                  )
+                                }
+                                className="w-56 rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                              >
+                                <option value="">(assign required)</option>
+                                {assigneeUsers.map((u) => (
+                                  <option key={u.id} value={u.id}>
+                                    {u.name} ({u.role})
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <DateInputDMY
+                                value={t.dueDate}
+                                onChange={(dueDate) =>
+                                  setDupTasks((prev) => prev.map((x, i) => (i === idx ? { ...x, dueDate } : x)))
+                                }
+                                className="w-36"
+                                inputClassName="border-0 bg-transparent px-0 py-2 text-sm text-black/80"
+                              />
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-right">
+                              <button
+                                onClick={() => setDupTasks((prev) => prev.filter((_, i) => i !== idx))}
+                                className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.02]"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {dupTasks.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-8 text-center text-black/50">
+                              No tasks
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {duplicateError ? <div className="mt-3 text-sm text-red-600">{duplicateError}</div> : null}
+
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setShowDuplicate(false)}
+                    className="rounded-lg border border-black/10 px-4 py-2 text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={duplicating}
+                    onClick={submitDuplicate}
+                    className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+                  >
+                    {duplicating ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -55,6 +55,8 @@ export default async function JobDetailPage({
   const canCompleteTask = hasPermission(me, 'tasks', 'complete');
   const canUpdateTask = canModifyJob && hasPermission(me, 'tasks', 'update');
   const canReorderTask = canUpdateTask;
+  const canDuplicateJob =
+    (me.role === 'owner' || me.role === 'manager') && hasPermission(me, 'jobs', 'create') && hasPermission(me, 'jobs', 'duplicate');
 
   const users = await listUsers();
   const neededIds = new Set<string>([
@@ -77,10 +79,12 @@ export default async function JobDetailPage({
         jobId={jobId}
         initialJob={job}
         initialClient={client}
+        initialClients={clients.map((c) => ({ id: c.id, code: c.code, name: c.name }))}
         initialTasks={enrichedTasks}
         initialUsers={users.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
         meId={me.id}
         canDeleteJob={me.role === 'owner'}
+        canDuplicateJob={canDuplicateJob}
         canModifyJob={canModifyJob}
         canUpdateJob={canUpdateJob}
         canCreateTask={canCreateTask}

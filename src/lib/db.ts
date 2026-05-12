@@ -358,6 +358,46 @@ export async function createJobsWithTasks(
   return { jobs: createdJobs, tasks: createdTasks };
 }
 
+export async function createManyJobsWithTasks(
+  inputs: Array<
+    | { job: Omit<Job, 'id' | 'createdAt'>; tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>> }
+    | {
+        job: Omit<Job, 'id' | 'createdAt'>;
+        tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>;
+        recurringJob: Omit<Job, 'id' | 'createdAt'>;
+        recurringTasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>;
+      }
+  >,
+) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const createdTasks: JobTask[] = [];
+
+  for (const it of inputs) {
+    const primary: Job = { ...it.job, id: newId('job'), createdAt };
+    db.jobs.unshift(primary);
+    for (const t of it.tasks) {
+      createdTasks.push({ ...t, jobId: primary.id, id: newId('tsk'), createdAt });
+    }
+
+    if ('recurringJob' in it) {
+      const recurring: Job = {
+        ...it.recurringJob,
+        id: newId('job'),
+        createdAt,
+        recurringFromJobId: primary.id,
+      };
+      db.jobs.unshift(recurring);
+      for (const t of it.recurringTasks) {
+        createdTasks.push({ ...t, jobId: recurring.id, id: newId('tsk'), createdAt });
+      }
+    }
+  }
+
+  db.tasks.push(...createdTasks);
+  await writeDb(db);
+}
+
 export async function createJobWithRecurringCopy(input: {
   job: Omit<Job, 'id' | 'createdAt'>;
   tasks: Array<Omit<JobTask, 'id' | 'createdAt' | 'jobId'>>;
