@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { updateUser } from '@/lib/db';
+import { findUserByEmail, findUserByName, updateUser } from '@/lib/db';
 import type { Permissions, Role } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
 
@@ -29,6 +29,19 @@ export async function PATCH(
 
   if (patch.email === '' || patch.name === '') {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  }
+
+  if (patch.email) {
+    const hit = await findUserByEmail(patch.email);
+    if (hit && hit.id !== userId) {
+      return NextResponse.json({ ok: false, error: 'EMAIL_TAKEN' }, { status: 409 });
+    }
+  }
+  if (patch.name) {
+    const hit = await findUserByName(patch.name);
+    if (hit && hit.id !== userId) {
+      return NextResponse.json({ ok: false, error: 'NAME_TAKEN' }, { status: 409 });
+    }
   }
 
   const updated = await updateUser(userId, patch);

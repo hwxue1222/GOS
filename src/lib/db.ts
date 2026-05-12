@@ -192,6 +192,17 @@ export async function findUserByEmail(email: string) {
   return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
+export async function findUserByName(name: string) {
+  const db = await readDb();
+  return db.users.find((u) => u.name.toLowerCase() === name.toLowerCase()) ?? null;
+}
+
+export async function findUserByEmailOrName(identifier: string) {
+  const db = await readDb();
+  const needle = identifier.toLowerCase();
+  return db.users.find((u) => u.email.toLowerCase() === needle || u.name.toLowerCase() === needle) ?? null;
+}
+
 export async function findUserById(id: string) {
   const db = await readDb();
   return db.users.find((u) => u.id === id) ?? null;
@@ -231,8 +242,10 @@ export async function createUser(input: {
   password: string;
 }) {
   const db = await readDb();
-  const existing = db.users.find((u) => u.email.toLowerCase() === input.email.toLowerCase());
-  if (existing) return { ok: false as const, error: 'EMAIL_TAKEN' as const };
+  const emailTaken = db.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase());
+  if (emailTaken) return { ok: false as const, error: 'EMAIL_TAKEN' as const };
+  const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase());
+  if (nameTaken) return { ok: false as const, error: 'NAME_TAKEN' as const };
   const user: User = {
     id: newId('usr'),
     name: input.name,
@@ -260,6 +273,15 @@ export async function updateUser(
   db.users[idx] = next;
   await writeDb(db);
   return next;
+}
+
+export async function setUserPassword(userId: string, newPassword: string) {
+  const db = await readDb();
+  const idx = db.users.findIndex((u) => u.id === userId);
+  if (idx < 0) return null;
+  db.users[idx] = { ...db.users[idx], passwordHash: await hashPassword(newPassword) };
+  await writeDb(db);
+  return db.users[idx];
 }
 
 export async function listUsers() {

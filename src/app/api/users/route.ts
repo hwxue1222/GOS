@@ -50,9 +50,9 @@ export async function POST(req: Request) {
   const position = body?.position?.trim() || undefined;
   const role = body?.role ?? 'staff';
   const permissions = body?.permissions;
-  const password = body?.password ?? '';
+  const password = body?.password ? body.password : '123456';
 
-  if (!name || !email || !password) {
+  if (!name || !email) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 

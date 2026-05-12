@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
-import { createSession, findUserByEmail } from '@/lib/db';
+import { createSession, findUserByEmailOrName } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { SESSION_COOKIE } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => null)) as
-      | { email?: string; password?: string }
+      | { email?: string; account?: string; password?: string }
       | null;
-    const email = body?.email?.trim() ?? '';
+    const account = (body?.account ?? body?.email ?? '').trim();
     const password = body?.password ?? '';
 
-    if (!email || !password) {
+    if (!account || !password) {
       return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
     }
 
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmailOrName(account);
     if (!user) return NextResponse.json({ ok: false, error: 'INVALID_LOGIN' }, { status: 401 });
 
     const ok = await verifyPassword(password, user.passwordHash);

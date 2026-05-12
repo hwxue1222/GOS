@@ -21,7 +21,6 @@ type FormState = {
   position: string;
   role: Role;
   permissions: Permissions;
-  password: string;
 };
 
 const PERMISSION_TABLE: Array<{
@@ -102,7 +101,6 @@ function staffToForm(u: StaffRow): FormState {
     position: u.position ?? '',
     role: u.role,
     permissions: u.permissions ?? defaultPermissionsForRole(u.role),
-    password: '123456',
   };
 }
 
@@ -123,7 +121,6 @@ export default function TeamClient({ initialUsers }: Props) {
       position: '',
       role: 'staff',
       permissions: defaultPermissionsForRole('staff'),
-      password: '123456',
     };
   });
 
@@ -162,7 +159,6 @@ export default function TeamClient({ initialUsers }: Props) {
       position: '',
       role: 'staff',
       permissions: defaultPermissionsForRole('staff'),
-      password: '123456',
     });
   }
 
@@ -202,7 +198,6 @@ export default function TeamClient({ initialUsers }: Props) {
             position: form.position || undefined,
             role: form.role,
             permissions: form.permissions,
-            password: form.password || '123456',
           }),
         });
         if (!res.ok) {
@@ -294,7 +289,7 @@ export default function TeamClient({ initialUsers }: Props) {
               value={form.name}
               onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
               className="rounded-lg border border-black/10 px-3 py-2 text-sm"
-              placeholder="Staff name"
+              placeholder="Staff name (login account)"
             />
             <input
               value={form.email}
@@ -309,13 +304,9 @@ export default function TeamClient({ initialUsers }: Props) {
               placeholder="Position"
             />
             {mode === 'create' ? (
-              <input
-                value={form.password}
-                onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))}
-                className="rounded-lg border border-black/10 px-3 py-2 text-sm"
-                placeholder="Initial password"
-                type="password"
-              />
+              <div className="text-sm text-black/60 flex items-center">
+                Login account: staff name · Initial password: 123456
+              </div>
             ) : (
               <div />
             )}

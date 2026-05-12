@@ -8,7 +8,7 @@ export default function LoginClient() {
   const params = useSearchParams();
   const from = useMemo(() => params.get('from') ?? '/jobs', [params]);
 
-  const [email, setEmail] = useState('luke@gos.local');
+  const [account, setAccount] = useState('');
   const [password, setPassword] = useState('123456');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function LoginClient() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ account, password }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
@@ -55,13 +55,13 @@ export default function LoginClient() {
         <p className="text-sm opacity-70 mt-1">请使用你的员工账号登录</p>
 
         <label className="block mt-6 text-sm">
-          <div className="opacity-80">Email</div>
+          <div className="opacity-80">Account</div>
           <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={account}
+            onChange={(e) => setAccount(e.target.value)}
             className="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none"
-            placeholder="you@example.com"
-            autoComplete="email"
+            placeholder="Name or email"
+            autoComplete="username"
           />
         </label>
 
