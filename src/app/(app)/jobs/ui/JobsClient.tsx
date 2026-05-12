@@ -327,10 +327,10 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <label className="text-sm">
                     <div className="text-black/70">Due date</div>
                     <input
+                      type="date"
                       value={newJob.dueDate}
                       onChange={(e) => setNewJob((v) => ({ ...v, dueDate: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      placeholder="YYYY-MM-DD"
                     />
                   </label>
                   <label className="text-sm">
@@ -449,6 +449,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                           disabled={!canCreateTasks}
                         />
                         <input
+                          type="date"
                           value={t.dueDate}
                           onChange={(e) =>
                             setDraftTasks((prev) =>
@@ -456,7 +457,6 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                             )
                           }
                           className="w-36 rounded-md border border-black/10 px-3 py-2 text-sm"
-                          placeholder="YYYY-MM-DD"
                           disabled={!canCreateTasks}
                         />
                         <button
