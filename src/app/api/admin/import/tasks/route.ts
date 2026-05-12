@@ -30,17 +30,19 @@ function rowStr(m: Map<string, unknown>, keys: string[]) {
 function parseYmd(input: unknown): string | null {
   if (input == null) return null;
   if (typeof input === 'string') {
-    const s = input.trim();
+    const s0 = input.trim();
+    const s = s0.replace(/\s+/g, ' ');
     if (!s) return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const m2 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    const head = s.split(' ')[0] ?? s;
+    const m2 = head.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (m2) {
       const dd = String(Number(m2[1])).padStart(2, '0');
       const mm = String(Number(m2[2])).padStart(2, '0');
       const yyyy = m2[3];
       return `${yyyy}-${mm}-${dd}`;
     }
-    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const m = head.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (m) {
       const dd = String(Number(m[1])).padStart(2, '0');
       const mm = String(Number(m[2])).padStart(2, '0');
