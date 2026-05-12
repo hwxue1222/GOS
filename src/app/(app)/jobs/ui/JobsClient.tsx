@@ -1,0 +1,377 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePersistedState } from '@/lib/usePersistedState';
+
+type JobListItem = {
+  job: {
+    id: string;
+    clientId: string;
+    name: string;
+    label?: string;
+    dueDate?: string;
+    repeat: 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
+    status: 'Pending' | 'Processing' | 'Complete';
+    managerUserId?: string;
+    staffUserId?: string;
+  };
+  client: { id: string; code: string; name: string } | null;
+  tasks: { done: number; total: number };
+  manager: { id: string; name: string } | null;
+  staff: { id: string; name: string } | null;
+};
+
+type Client = { id: string; code: string; name: string };
+type User = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+
+type Props = {
+  initialItems: JobListItem[];
+  initialClients: Client[];
+  initialUsers: User[];
+  initialMe: User;
+};
+
+function textMatch(haystack: string, needle: string) {
+  return haystack.toLowerCase().includes(needle.trim().toLowerCase());
+}
+
+export default function JobsClient({ initialItems, initialClients, initialUsers, initialMe }: Props) {
+  const [items, setItems] = useState<JobListItem[]>(initialItems);
+  const [clients] = useState<Client[]>(initialClients);
+  const [users] = useState<User[]>(initialUsers);
+  const [me] = useState<User>(initialMe);
+
+  const [search, setSearch] = usePersistedState('gos.jobs.search', '');
+  const [filterClientId, setFilterClientId] = usePersistedState<string>('gos.jobs.filter.clientId', '');
+  const [filterStatus, setFilterStatus] = usePersistedState<string>('gos.jobs.filter.status', '');
+
+  const [showNewJob, setShowNewJob] = useState(false);
+  const [newJob, setNewJob] = useState({
+    clientId: '',
+    name: '',
+    dueDate: '',
+    repeat: 'none' as JobListItem['job']['repeat'],
+    managerUserId: '',
+    staffUserId: '',
+  });
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reloadJobsOnly() {
+    const jobsRes = await fetch('/api/jobs').catch(() => null);
+    if (!jobsRes?.ok) return;
+    const j = (await jobsRes.json().catch(() => null)) as { ok?: boolean; items?: JobListItem[] } | null;
+    setItems(j?.items ?? []);
+  }
+
+  const filtered = useMemo(() => {
+    return items.filter((it) => {
+      if (filterClientId && it.job.clientId !== filterClientId) return false;
+      if (filterStatus && it.job.status !== filterStatus) return false;
+      if (search.trim()) {
+        const clientText = it.client ? `${it.client.code} ${it.client.name}` : '';
+        if (!textMatch(`${it.job.name} ${clientText}`, search)) return false;
+      }
+      return true;
+    });
+  }, [filterClientId, filterStatus, items, search]);
+
+  async function createJob() {
+    setError(null);
+    if (!newJob.clientId || !newJob.name.trim()) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          clientId: newJob.clientId,
+          name: newJob.name,
+          dueDate: newJob.dueDate || undefined,
+          repeat: newJob.repeat,
+          managerUserId: newJob.managerUserId || undefined,
+          staffUserId: newJob.staffUserId || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        setError(j?.error ?? 'CREATE_FAILED');
+        return;
+      }
+      setShowNewJob(false);
+      setNewJob({
+        clientId: '',
+        name: '',
+        dueDate: '',
+        repeat: 'none',
+        managerUserId: '',
+        staffUserId: '',
+      });
+      await reloadJobsOnly();
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  const canCreate = me?.role === 'owner' || me?.role === 'manager';
+
+  return (
+    <div className="flex-1">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <h1 className="text-xl font-semibold">Jobs</h1>
+            <div className="hidden sm:flex items-center gap-4 text-sm text-black/60">
+              <span className="text-black font-medium">Jobs</span>
+              <span>My work</span>
+              <span>Tasks</span>
+              <span>Templates</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-sm text-black/60">Export results to Excel</div>
+            <button
+              disabled={!canCreate}
+              onClick={() => {
+                if (!canCreate) return;
+                setShowNewJob(true);
+                if (!newJob.clientId && clients.length) {
+                  setNewJob((v) => ({ ...v, clientId: clients[0]?.id ?? '' }));
+                }
+              }}
+              className="rounded-full bg-[#5aa7ff] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              New job
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-white border border-black/5">
+          <div className="p-4 border-b border-black/5">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full sm:max-w-md rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                placeholder="Find job or client by name"
+              />
+              <button
+                onClick={() => {
+                  setFilterClientId('');
+                  setFilterStatus('');
+                  setSearch('');
+                }}
+                className="text-sm text-[#2f7bdc] self-end"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+              <select
+                value={filterClientId}
+                onChange={(e) => setFilterClientId(e.target.value)}
+                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+              >
+                <option value="">Client: All</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} {c.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+              >
+                <option value="">Status: All</option>
+                <option value="Pending">Pending</option>
+                <option value="Complete">Complete</option>
+              </select>
+              <div className="hidden lg:block col-span-6" />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-left text-black/60">
+                <tr className="border-b border-black/5">
+                  <th className="px-4 py-3 font-medium">Client</th>
+                  <th className="px-4 py-3 font-medium">Job Name</th>
+                  <th className="px-4 py-3 font-medium">Tasks</th>
+                  <th className="px-4 py-3 font-medium">Due Date</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Manager</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((it) => (
+                  <tr key={it.job.id} className="border-b border-black/5 hover:bg-black/[0.02]">
+                    <td className="px-4 py-3 whitespace-nowrap max-w-[220px]">
+                      <div className="truncate" title={it.client ? `${it.client.code} ${it.client.name}` : ''}>
+                        {it.client ? `${it.client.code} ${it.client.name}` : '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap max-w-[340px]">
+                      <Link
+                        className="text-[#2f7bdc] hover:underline truncate inline-block max-w-[340px]"
+                        href={`/jobs/${it.job.id}`}
+                        title={it.job.name}
+                      >
+                        {it.job.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {it.tasks.done}/{it.tasks.total}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-red-600">{it.job.dueDate ?? '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">{it.job.status}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {it.manager ? (
+                        <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-black/10 text-xs">
+                          {it.manager.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-black/50">
+                      No jobs
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {showNewJob ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">New job</div>
+              <button onClick={() => setShowNewJob(false)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+
+            {!canCreate ? (
+              <div className="mt-4 text-sm text-red-600">FORBIDDEN</div>
+            ) : (
+              <>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <div className="text-black/70">Client</div>
+                    <select
+                      value={newJob.clientId}
+                      onChange={(e) => setNewJob((v) => ({ ...v, clientId: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Due date</div>
+                    <input
+                      value={newJob.dueDate}
+                      onChange={(e) => setNewJob((v) => ({ ...v, dueDate: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="YYYY-MM-DD"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Repeat</div>
+                    <select
+                      value={newJob.repeat}
+                      onChange={(e) =>
+                        setNewJob((v) => ({ ...v, repeat: e.target.value as JobListItem['job']['repeat'] }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="none">none</option>
+                      <option value="monthly">monthly</option>
+                      <option value="quarterly">quarterly</option>
+                      <option value="yearly">yearly</option>
+                      <option value="2-yearly">2-yearly</option>
+                    </select>
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">Job name</div>
+                    <input
+                      value={newJob.name}
+                      onChange={(e) => setNewJob((v) => ({ ...v, name: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="e.g. Corporate secretary service_AGM"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Manager</div>
+                    <select
+                      value={newJob.managerUserId}
+                      onChange={(e) => setNewJob((v) => ({ ...v, managerUserId: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">(none)</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Staff</div>
+                    <select
+                      value={newJob.staffUserId}
+                      onChange={(e) => setNewJob((v) => ({ ...v, staffUserId: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">(none)</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setShowNewJob(false)}
+                    className="rounded-lg border border-black/10 px-4 py-2 text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={creating}
+                    onClick={createJob}
+                    className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+                  >
+                    {creating ? 'Creating...' : 'Create'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

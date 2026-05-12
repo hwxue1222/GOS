@@ -20,6 +20,9 @@
 # production
 /build
 
+# local db
+/.gos/
+
 # misc
 .DS_Store
 *.pem
