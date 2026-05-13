@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createTask, findJobById, listTasksByJob, listUsers } from '@/lib/db';
+import { createTask, findJobById, listTasksByJob, listUsers, readDb, writeDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(
@@ -83,4 +83,52 @@ export async function POST(
   const createdByName = users.find((u) => u.id === user.id)?.name ?? null;
   const assigneeName = assigneeUserId ? users.find((u) => u.id === assigneeUserId)?.name ?? null : null;
   return NextResponse.json({ ok: true, task: { ...task, createdByName, assigneeName } });
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ jobId: string }> },
+) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(user, 'tasks', 'update')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { jobId } = await params;
+  const job = await findJobById(jobId);
+  if (!job) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  const canModify = user.role === 'owner' || (user.role === 'manager' && job.managerUserId === user.id);
+  if (!canModify) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  const body = (await req.json().catch(() => null)) as { taskIds?: string[] } | null;
+  const taskIds = Array.isArray(body?.taskIds) ? body!.taskIds.filter((x) => typeof x === 'string' && x.trim()) : [];
+  if (!taskIds.length) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  const deleteIdSet = new Set(taskIds.map((x) => x.trim()));
+  const db = await readDb();
+  const before = db.tasks.filter((t) => t.jobId === jobId);
+  const after = before.filter((t) => !deleteIdSet.has(t.id));
+  const deleted = before.length - after.length;
+
+  const ordered = after
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.seq - b.seq)
+    .map((t, idx) => ({ ...t, sortOrder: idx + 1, seq: idx + 1 }));
+
+  db.tasks = [...db.tasks.filter((t) => t.jobId !== jobId), ...ordered];
+
+  const nowIso = new Date().toISOString();
+  const jobIdx = db.jobs.findIndex((j) => j.id === jobId);
+  if (jobIdx >= 0) db.jobs[jobIdx] = { ...db.jobs[jobIdx], updatedAt: nowIso };
+
+  await writeDb(db);
+
+  const nameById = new Map(db.users.map((u) => [u.id, u.name]));
+  const enriched = ordered.map((t) => ({
+    ...t,
+    createdByName: t.createdByUserId ? nameById.get(t.createdByUserId) ?? null : null,
+    assigneeName: t.assigneeUserId ? nameById.get(t.assigneeUserId) ?? null : null,
+  }));
+
+  return NextResponse.json({ ok: true, deleted, tasks: enriched });
 }

@@ -80,6 +80,8 @@ export default function JobDetailClient({
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [savingTasks, setSavingTasks] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [deletingTasks, setDeletingTasks] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAssigneeUserId, setNewAssigneeUserId] = useState<string>('');
   const [creating, setCreating] = useState(false);
@@ -396,6 +398,42 @@ export default function JobDetailClient({
     );
   }
 
+  function toggleSelectedTask(taskId: string) {
+    setSelectedTaskIds((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]));
+  }
+
+  async function deleteSelectedTasks() {
+    if (!canUpdateTask) return;
+    if (!selectedTaskIds.length) return;
+    const ok = window.confirm(`Delete ${selectedTaskIds.length} selected tasks?`);
+    if (!ok) return;
+    setTasksError(null);
+    setDeletingTasks(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/tasks`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ taskIds: selectedTaskIds }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setTasksError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; tasks?: JobTask[] } | null;
+      const tasksFromServer = j?.tasks ?? [];
+      const next = [...tasksFromServer].sort((a, b) => a.sortOrder - b.sortOrder);
+      setTasks(next);
+      setTasksSnapshot({
+        orderIds: next.map((t) => t.id),
+        titlesById: Object.fromEntries(next.map((t) => [t.id, t.title])),
+      });
+      setSelectedTaskIds([]);
+    } finally {
+      setDeletingTasks(false);
+    }
+  }
+
   async function saveTasks() {
     if (!canUpdateTask) return true;
     setTasksError(null);
@@ -588,6 +626,23 @@ export default function JobDetailClient({
             <div className="font-medium">Tasks</div>
             <div className="flex items-center gap-3">
               {tasksError ? <div className="text-sm text-red-600">{tasksError}</div> : null}
+              {canUpdateTask && tasks.length ? (
+                <button
+                  onClick={() => setSelectedTaskIds((prev) => (prev.length === tasks.length ? [] : tasks.map((t) => t.id)))}
+                  className="text-sm text-black/60 hover:text-black"
+                >
+                  {selectedTaskIds.length === tasks.length ? 'Clear' : 'Select all'}
+                </button>
+              ) : null}
+              {canUpdateTask && selectedTaskIds.length ? (
+                <button
+                  disabled={deletingTasks || savingTasks}
+                  onClick={deleteSelectedTasks}
+                  className="text-sm text-red-600 hover:text-red-700 disabled:opacity-60"
+                >
+                  {deletingTasks ? 'Deleting...' : `Delete selected (${selectedTaskIds.length})`}
+                </button>
+              ) : null}
               <div className="text-sm text-black/60">{doneCount}/{tasks.length}</div>
             </div>
           </div>
@@ -663,6 +718,13 @@ export default function JobDetailClient({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 text-sm text-black/50">{t.seq}.</div>
+                    {canUpdateTask ? (
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskIds.includes(t.id)}
+                        onChange={() => toggleSelectedTask(t.id)}
+                      />
+                    ) : null}
                     {canReorderTask ? (
                       <div className="w-6 flex items-center justify-center">
                         <span
