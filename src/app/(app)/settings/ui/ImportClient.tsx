@@ -96,6 +96,8 @@ function Section({
 export default function ImportClient() {
   const [fixing, setFixing] = useState(false);
   const [fixResult, setFixResult] = useState<SimpleResult | null>(null);
+  const [fixingAnnual, setFixingAnnual] = useState(false);
+  const [fixAnnualResult, setFixAnnualResult] = useState<SimpleResult | null>(null);
 
   async function fixGstQuarterly() {
     setFixing(true);
@@ -109,11 +111,23 @@ export default function ImportClient() {
     }
   }
 
+  async function fixAnnualYearly() {
+    setFixingAnnual(true);
+    setFixAnnualResult(null);
+    try {
+      const res = await fetch('/api/admin/fix-annual-yearly', { method: 'POST' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as SimpleResult | null;
+      setFixAnnualResult(j ?? { ok: false });
+    } finally {
+      setFixingAnnual(false);
+    }
+  }
+
   return (
     <div className="mt-4 space-y-4">
       <div className="rounded-xl bg-white border border-black/5 p-5">
         <div className="text-sm font-medium">Maintenance</div>
-        <div className="mt-1 text-sm text-black/60">Set repeat=quarterly for all jobs named Tax Service_GST.</div>
+        <div className="mt-1 text-sm text-black/60">Bulk set repeat for specific job names.</div>
         <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
           <button
             onClick={fixGstQuarterly}
@@ -125,6 +139,21 @@ export default function ImportClient() {
           {fixResult?.ok ? (
             <div className="text-sm text-black/60">Updated {fixResult.updated ?? 0}</div>
           ) : fixResult ? (
+            <div className="text-sm text-red-600">FAILED</div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <button
+            onClick={fixAnnualYearly}
+            disabled={fixingAnnual}
+            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          >
+            {fixingAnnual ? 'Running...' : 'Fix yearly jobs'}
+          </button>
+          {fixAnnualResult?.ok ? (
+            <div className="text-sm text-black/60">Updated {fixAnnualResult.updated ?? 0}</div>
+          ) : fixAnnualResult ? (
             <div className="text-sm text-red-600">FAILED</div>
           ) : null}
         </div>
