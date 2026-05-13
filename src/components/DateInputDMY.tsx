@@ -18,7 +18,7 @@ export function DateInputDMY(props: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="absolute inset-0 z-10 w-full h-full opacity-0"
+        className={['w-full opacity-0', inputClassName].filter(Boolean).join(' ')}
       />
       <input
         aria-hidden="true"
@@ -26,9 +26,8 @@ export function DateInputDMY(props: {
         readOnly
         value={value ? formatDateDMY(value) : ''}
         placeholder="DD/MM/YYYY"
-        className={['w-full pointer-events-none', inputClassName].filter(Boolean).join(' ')}
+        className={['absolute inset-0 w-full pointer-events-none', inputClassName].filter(Boolean).join(' ')}
       />
     </div>
   );
 }
-
