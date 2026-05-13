@@ -514,9 +514,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   <th className="px-4 py-3 font-medium">Tasks</th>
                   <th className="px-4 py-3 font-medium">Due Date</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Manager in charge</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Manager in charge</th>
                   <th className="px-4 py-3 font-medium">Staff</th>
-                  <th className="px-4 py-3 font-medium">Creation date</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap min-w-[120px]">Creation date</th>
                   {showDeleteColumn ? <th className="px-4 py-3 font-medium w-24"></th> : null}
                 </tr>
               </thead>
