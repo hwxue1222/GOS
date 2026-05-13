@@ -1,6 +1,7 @@
 'use client';
 
 import { formatDateDMY } from '@/lib/date';
+import { useRef } from 'react';
 
 export function DateInputDMY(props: {
   value: string;
@@ -10,10 +11,32 @@ export function DateInputDMY(props: {
   inputClassName?: string;
 }) {
   const { value, onChange, disabled, className, inputClassName } = props;
+  const ref = useRef<HTMLInputElement | null>(null);
+
+  function openPicker() {
+    if (disabled) return;
+    const el = ref.current;
+    if (!el) return;
+    try {
+      (el as unknown as { showPicker?: () => void }).showPicker?.();
+    } catch {}
+    try {
+      el.focus();
+    } catch {}
+  }
 
   return (
-    <div className={['relative', className].filter(Boolean).join(' ')}>
+    <div
+      className={['relative', className].filter(Boolean).join(' ')}
+      onMouseDown={(e) => {
+        if (disabled) return;
+        e.preventDefault();
+        openPicker();
+      }}
+      onClick={() => openPicker()}
+    >
       <input
+        ref={ref}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
