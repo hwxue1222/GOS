@@ -103,6 +103,8 @@ export default function ImportClient() {
   const [fixAnnualReturnTasksResult, setFixAnnualReturnTasksResult] = useState<FixTasksResult | null>(null);
   const [fixingAgmTasks, setFixingAgmTasks] = useState(false);
   const [fixAgmTasksResult, setFixAgmTasksResult] = useState<FixTasksResult | null>(null);
+  const [fixingYearlyClosingTasks, setFixingYearlyClosingTasks] = useState(false);
+  const [fixYearlyClosingTasksResult, setFixYearlyClosingTasksResult] = useState<FixTasksResult | null>(null);
 
   async function fixGstQuarterly() {
     setFixing(true);
@@ -149,6 +151,18 @@ export default function ImportClient() {
       setFixAgmTasksResult(j ?? { ok: false });
     } finally {
       setFixingAgmTasks(false);
+    }
+  }
+
+  async function fixYearlyClosingTasks() {
+    setFixingYearlyClosingTasks(true);
+    setFixYearlyClosingTasksResult(null);
+    try {
+      const res = await fetch('/api/admin/fix-yearly-closing-tasks', { method: 'POST' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as FixTasksResult | null;
+      setFixYearlyClosingTasksResult(j ?? { ok: false });
+    } finally {
+      setFixingYearlyClosingTasks(false);
     }
   }
 
@@ -217,6 +231,23 @@ export default function ImportClient() {
               Jobs {fixAgmTasksResult.updatedJobs ?? 0}, tasks {fixAgmTasksResult.insertedTasks ?? 0}
             </div>
           ) : fixAgmTasksResult ? (
+            <div className="text-sm text-red-600">FAILED</div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <button
+            onClick={fixYearlyClosingTasks}
+            disabled={fixingYearlyClosingTasks}
+            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          >
+            {fixingYearlyClosingTasks ? 'Running...' : 'Fix Accounting_yearly closing tasks'}
+          </button>
+          {fixYearlyClosingTasksResult?.ok ? (
+            <div className="text-sm text-black/60">
+              Jobs {fixYearlyClosingTasksResult.updatedJobs ?? 0}, tasks {fixYearlyClosingTasksResult.insertedTasks ?? 0}
+            </div>
+          ) : fixYearlyClosingTasksResult ? (
             <div className="text-sm text-red-600">FAILED</div>
           ) : null}
         </div>
