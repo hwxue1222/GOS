@@ -93,7 +93,6 @@ export async function POST(req: Request) {
 
   const clientsByCode = new Map(db.clients.map((c) => [c.code.trim().toLowerCase(), c]));
   const clientsByName = new Map(db.clients.map((c) => [c.name.trim().toLowerCase(), c]));
-  const jobsById = new Map(db.jobs.map((j) => [j.id, j]));
   const jobsByKeyNoDue = new Map<string, Job[]>();
   const jobsByKeyWithDue = new Map<string, Job[]>();
   for (const j of db.jobs) {
@@ -118,124 +117,201 @@ export async function POST(req: Request) {
       .map((u) => [normalizeName(u.name).toLowerCase(), u]),
   );
 
-  const nextSeqByJobId = new Map<string, number>();
-  const nextSortByJobId = new Map<string, number>();
+  const oldTaskCountByJobId = new Map<string, number>();
   for (const t of db.tasks) {
-    nextSeqByJobId.set(t.jobId, Math.max(nextSeqByJobId.get(t.jobId) ?? 0, t.seq));
-    nextSortByJobId.set(t.jobId, Math.max(nextSortByJobId.get(t.jobId) ?? 0, t.sortOrder));
+    oldTaskCountByJobId.set(t.jobId, (oldTaskCountByJobId.get(t.jobId) ?? 0) + 1);
   }
 
   let inserted = 0;
+  let replaced = 0;
+  let updatedJobs = 0;
   const errors: Array<{ row: number; message: string }> = [];
   const touchedJobs = new Set<string>();
+  const jobIdsToReplace = new Set<string>();
+  const createdTasks: JobTask[] = [];
 
   let lastClientCode = '';
   let lastClientName = '';
   let lastJobName = '';
   let lastDueYmd = '';
 
+  type StagedTask = {
+    row: number;
+    title: string;
+    dueYmd: string | null;
+    status: TaskStatus;
+    assigneeUserId?: string;
+    createdAtYmd: string | null;
+  };
+  type Group = {
+    rowStart: number;
+    clientCode: string;
+    clientName: string;
+    jobName: string;
+    dueYmd: string | null;
+    tasks: StagedTask[];
+  };
+
+  const groups: Group[] = [];
+  let current: Group | null = null;
+  let currentKey = '';
+
   for (let i = 0; i < rows.length; i++) {
+    const rowNo = i + 2;
     const m = rowMap(rows[i] ?? {});
+
     const title = rowStr(m, ['title', 'task', 'tasktitle', 'task title', 'task name', 'name']);
     if (!title) {
-      errors.push({ row: i + 2, message: 'Missing title' });
+      errors.push({ row: rowNo, message: 'Missing title' });
       continue;
     }
+
+    const rawClientCode = rowStr(m, ['clientcode', 'client code', 'code']);
+    const rawClientName = rowStr(m, ['clientname', 'client name', 'client']);
+    const rawJobName = rowStr(m, ['jobname', 'job name']);
+
+    const clientCode = rawClientCode || lastClientCode;
+    const clientName = rawClientName || lastClientName;
+    const jobName = rawJobName || lastJobName;
+
+    if (rawClientCode) lastClientCode = rawClientCode;
+    if (rawClientName) lastClientName = rawClientName;
+    if (rawJobName) lastJobName = rawJobName;
 
     const dueDateRaw = m.get(k('duedate')) ?? m.get(k('due date')) ?? rowStr(m, ['due date', 'duedate']);
     const parsedRowDueYmd = parseYmd(dueDateRaw);
-    const rowDueYmd = parsedRowDueYmd ?? (lastDueYmd || null);
+    const dueYmd = parsedRowDueYmd ?? (lastDueYmd || null);
     if (parsedRowDueYmd) lastDueYmd = parsedRowDueYmd;
 
-    const jobId = rowStr(m, ['jobid', 'job id']);
-    let job: Job | undefined = jobId ? jobsById.get(jobId) : undefined;
-    if (!job) {
-      const rawClientCode = rowStr(m, ['clientcode', 'client code', 'code']);
-      const rawClientName = rowStr(m, ['clientname', 'client name', 'client']);
-      const rawJobName = rowStr(m, ['jobname', 'job name']);
-
-      const clientCode = rawClientCode || lastClientCode;
-      const clientName = rawClientName || lastClientName;
-      const jobName = rawJobName || lastJobName;
-
-      if (rawClientCode) lastClientCode = rawClientCode;
-      if (rawClientName) lastClientName = rawClientName;
-      if (rawJobName) lastJobName = rawJobName;
-
-      if ((!clientCode && !clientName) || !jobName) {
-        errors.push({ row: i + 2, message: 'Missing job id or (client code/name + job name)' });
-        continue;
-      }
-      const client =
-        (clientCode ? clientsByCode.get(clientCode.trim().toLowerCase()) : undefined) ??
-        (clientName ? clientsByName.get(clientName.trim().toLowerCase()) : undefined);
-      if (!client) {
-        errors.push({ row: i + 2, message: `Unknown client: ${clientCode || clientName}` });
-        continue;
-      }
-      const nameKey = jobName.trim().toLowerCase();
-      const codeKey = client.code.trim().toLowerCase();
-      if (rowDueYmd) {
-        const keyWithDue = `${codeKey}::${nameKey}::${rowDueYmd}`;
-        const hits = jobsByKeyWithDue.get(keyWithDue) ?? [];
-        if (hits.length === 1) job = hits[0];
-        if (hits.length > 1) {
-          errors.push({ row: i + 2, message: `Ambiguous job match for ${client.code} ${jobName} due ${rowDueYmd}` });
-          continue;
-        }
-      }
-      if (!job) {
-        const keyNoDue = `${codeKey}::${nameKey}`;
-        const hits = jobsByKeyNoDue.get(keyNoDue) ?? [];
-        if (hits.length === 1) job = hits[0];
-        if (hits.length > 1) {
-          errors.push({ row: i + 2, message: `Ambiguous job match for ${client.code} ${jobName}` });
-          continue;
-        }
-      }
-    }
-
-    if (!job) {
-      errors.push({ row: i + 2, message: 'Job not found' });
+    if ((!clientCode && !clientName) || !jobName) {
+      errors.push({ row: rowNo, message: 'Missing client code/name or job name' });
       continue;
     }
 
-    const assigneeRaw = rowStr(m, ['assignee', 'assignedto', 'assigned to']);
+    const key = `${clientCode.trim().toLowerCase()}::${jobName.trim().toLowerCase()}::${dueYmd ?? ''}`;
+    if (!current || key !== currentKey) {
+      if (current) groups.push(current);
+      current = {
+        rowStart: rowNo,
+        clientCode,
+        clientName,
+        jobName,
+        dueYmd,
+        tasks: [],
+      };
+      currentKey = key;
+    }
+
+    const assigneeRaw = rowStr(m, ['assignee', 'assignedto', 'assigned to', 'assignedto']);
     const assigneeName = normalizeName(assigneeRaw);
     const assignee = assigneeName ? assigneesByName.get(assigneeName.toLowerCase()) ?? null : null;
     if (assigneeName && !assignee) {
-      errors.push({ row: i + 2, message: `Unknown assignee: ${assigneeRaw}` });
+      errors.push({ row: rowNo, message: `Unknown assignee: ${assigneeRaw}` });
       continue;
     }
 
     const status = parseDone(m.get(k('done')) ?? rowStr(m, ['done', 'status']));
-
     const creationRaw =
-      m.get(k('creationdate')) ?? m.get(k('creation date')) ?? m.get(k('createdat')) ?? rowStr(m, ['creation date', 'created at', 'createdat']);
+      m.get(k('creationdate')) ??
+      m.get(k('creation date')) ??
+      m.get(k('createdat')) ??
+      rowStr(m, ['creation date', 'created at', 'createdat']);
+    const createdAtYmd = parseYmd(creationRaw) ?? dueYmd;
 
-    const dueDate = rowDueYmd ?? (job.dueDate ? parseYmd(job.dueDate) : null);
-    const createdAtYmd = parseYmd(creationRaw) ?? dueDate;
-
-    const nextSeq = (nextSeqByJobId.get(job.id) ?? 0) + 1;
-    const nextSort = (nextSortByJobId.get(job.id) ?? 0) + 1;
-    nextSeqByJobId.set(job.id, nextSeq);
-    nextSortByJobId.set(job.id, nextSort);
-
-    const task: JobTask = {
-      id: newId('tsk'),
-      jobId: job.id,
-      seq: nextSeq,
-      sortOrder: nextSort,
+    current.tasks.push({
+      row: rowNo,
       title,
-      dueDate: dueDate ?? undefined,
+      dueYmd,
       status,
       assigneeUserId: assignee?.id ?? undefined,
-      createdByUserId: me.id,
-      createdAt: createdAtYmd ? `${createdAtYmd}T00:00:00.000Z` : nowIso,
-    };
-    db.tasks.push(task);
-    inserted++;
+      createdAtYmd,
+    });
+  }
+
+  if (current) groups.push(current);
+
+  const jobNameKeyToClientCode = new Map<string, string>();
+  for (const g of groups) {
+    const client =
+      (g.clientCode ? clientsByCode.get(g.clientCode.trim().toLowerCase()) : undefined) ??
+      (g.clientName ? clientsByName.get(g.clientName.trim().toLowerCase()) : undefined);
+    if (!client) {
+      errors.push({ row: g.rowStart, message: `Unknown client: ${g.clientCode || g.clientName}` });
+      continue;
+    }
+    const codeKey = client.code.trim().toLowerCase();
+    const nameKey = g.jobName.trim().toLowerCase();
+    jobNameKeyToClientCode.set(`${g.rowStart}`, codeKey);
+
+    let job: Job | undefined = undefined;
+    if (g.dueYmd) {
+      const withDueKey = `${codeKey}::${nameKey}::${g.dueYmd}`;
+      const hits = jobsByKeyWithDue.get(withDueKey) ?? [];
+      if (hits.length === 1) job = hits[0];
+      if (hits.length > 1) {
+        errors.push({ row: g.rowStart, message: `Ambiguous job match for ${client.code} ${g.jobName} due ${g.dueYmd}` });
+        continue;
+      }
+    }
+    if (!job) {
+      const noDueKey = `${codeKey}::${nameKey}`;
+      const hits = jobsByKeyNoDue.get(noDueKey) ?? [];
+      if (hits.length === 1) {
+        const hit = hits[0];
+        if (g.dueYmd) {
+          const jobDue = parseYmd(hit.dueDate);
+          if (jobDue && jobDue !== g.dueYmd) {
+            errors.push({
+              row: g.rowStart,
+              message: `Due date mismatch for ${client.code} ${g.jobName}: sheet ${g.dueYmd}, job ${jobDue}`,
+            });
+            continue;
+          }
+        }
+        job = hit;
+      }
+      if (hits.length > 1) {
+        errors.push({ row: g.rowStart, message: `Ambiguous job match for ${client.code} ${g.jobName}` });
+        continue;
+      }
+    }
+
+    if (!job) {
+      errors.push({ row: g.rowStart, message: `Job not found for ${client.code} ${g.jobName}` });
+      continue;
+    }
+
+    jobIdsToReplace.add(job.id);
     touchedJobs.add(job.id);
+
+    let seq = 0;
+    for (const t of g.tasks) {
+      seq++;
+      const dueDate = t.dueYmd ?? (job.dueDate ? parseYmd(job.dueDate) : null);
+      const createdAtYmd = t.createdAtYmd ?? dueDate;
+      createdTasks.push({
+        id: newId('tsk'),
+        jobId: job.id,
+        seq,
+        sortOrder: seq,
+        title: t.title,
+        dueDate: dueDate ?? undefined,
+        status: t.status,
+        assigneeUserId: t.assigneeUserId,
+        createdByUserId: me.id,
+        createdAt: createdAtYmd ? `${createdAtYmd}T00:00:00.000Z` : nowIso,
+      });
+    }
+  }
+
+  if (jobIdsToReplace.size) {
+    for (const jobId of jobIdsToReplace) {
+      replaced += oldTaskCountByJobId.get(jobId) ?? 0;
+    }
+    db.tasks = db.tasks.filter((t) => !jobIdsToReplace.has(t.jobId));
+    db.tasks.push(...createdTasks);
+    inserted = createdTasks.length;
+    updatedJobs = jobIdsToReplace.size;
   }
 
   if (touchedJobs.size) {
@@ -246,5 +322,5 @@ export async function POST(req: Request) {
   }
 
   await writeDb(db);
-  return NextResponse.json({ ok: true, inserted, updated: 0, errors });
+  return NextResponse.json({ ok: true, inserted, updated: updatedJobs, replaced, updatedJobs, errors });
 }
