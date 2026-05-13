@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import {
+  createJobWithTasks,
   completeAllTasksForJob,
   deleteJob,
   findJobById,
   listClients,
+  listJobs,
   listTasksByJob,
   listUsers,
   updateJob,
 } from '@/lib/db';
+import { addMonthsYmd } from '@/lib/date';
 import { hasPermission } from '@/lib/permissions';
 import type { JobRepeat } from '@/lib/types';
 
@@ -118,6 +121,57 @@ export async function PATCH(
 
   const updated = await updateJob(jobId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
+  const justCompleted = wantsCompleted && body?.completed === true && !job.completed;
+  const effectiveRepeat = typeof body?.repeat === 'string' ? repeat : job.repeat;
+  const effectiveDueDate = typeof body?.dueDate === 'string' ? dueDate : job.dueDate;
+  const monthDelta =
+    effectiveRepeat === 'monthly'
+      ? 1
+      : effectiveRepeat === 'quarterly'
+        ? 3
+        : effectiveRepeat === 'yearly'
+          ? 12
+          : effectiveRepeat === '2-yearly'
+            ? 24
+            : 0;
+
+  if (justCompleted && effectiveRepeat !== 'none' && monthDelta && effectiveDueDate) {
+    const nextDueDate = addMonthsYmd(effectiveDueDate, monthDelta);
+    if (nextDueDate) {
+      const jobs = await listJobs();
+      const hasNext = jobs.some((j) => j.recurringFromJobId === jobId && !j.deletedAt);
+      if (!hasNext) {
+        const tasks = await listTasksByJob(jobId);
+        const recurringTasks = tasks.map((t, idx) => ({
+          title: t.title,
+          dueDate: t.dueDate ? addMonthsYmd(t.dueDate, monthDelta) ?? t.dueDate : undefined,
+          status: 'Todo' as const,
+          assigneeUserId: t.assigneeUserId,
+          seq: idx + 1,
+          sortOrder: idx + 1,
+          createdByUserId: user.id,
+        }));
+        await createJobWithTasks(
+          {
+            clientId: job.clientId,
+            name: updated.name,
+            label: updated.label,
+            dueDate: nextDueDate,
+            repeat: effectiveRepeat,
+            status: 'Pending',
+            completed: false,
+            managerUserId: updated.managerUserId,
+            staffUserId: updated.staffUserId,
+            createdByUserId: user.id,
+            recurringFromJobId: jobId,
+          },
+          recurringTasks,
+        );
+      }
+    }
+  }
+
   return NextResponse.json({ ok: true, job: updated });
 }
 
