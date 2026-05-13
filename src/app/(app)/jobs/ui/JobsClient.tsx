@@ -183,13 +183,32 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     });
   }, [filterClientId, filterJobName, filterManagerUserId, items, search, view]);
 
-  const total = filtered.length;
+  const dueKey = (dueDate?: string) => {
+    if (!dueDate) return null;
+    const head = dueDate.trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return null;
+    return head;
+  };
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const da = dueKey(a.job.dueDate);
+      const db = dueKey(b.job.dueDate);
+      if (!da && !db) return a.job.id.localeCompare(b.job.id);
+      if (!da) return 1;
+      if (!db) return -1;
+      if (da !== db) return da.localeCompare(db);
+      return a.job.id.localeCompare(b.job.id);
+    });
+  }, [filtered]);
+
+  const total = sorted.length;
   const safePageSize = Math.max(1, Number(pageSize) || 20);
   const totalPages = Math.max(1, Math.ceil(total / safePageSize));
   const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
   const pageStart = (safePage - 1) * safePageSize;
   const pageEnd = Math.min(total, pageStart + safePageSize);
-  const visible = filtered.slice(pageStart, pageEnd);
+  const visible = sorted.slice(pageStart, pageEnd);
 
   useEffect(() => {
     if (Number(page) !== safePage) setPage(safePage);
