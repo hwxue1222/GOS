@@ -5,6 +5,7 @@ import { useState } from 'react';
 type ImportError = { row: number; message: string };
 type ImportResult = { ok?: boolean; inserted?: number; updated?: number; errors?: ImportError[] };
 type SimpleResult = { ok?: boolean; updated?: number; error?: string };
+type FixTasksResult = { ok?: boolean; updatedJobs?: number; insertedTasks?: number; replacedTasks?: number; error?: string };
 
 async function readRows(file: File): Promise<Array<Record<string, unknown>>> {
   const mod = (await import('xlsx')) as unknown as {
@@ -98,6 +99,8 @@ export default function ImportClient() {
   const [fixResult, setFixResult] = useState<SimpleResult | null>(null);
   const [fixingAnnual, setFixingAnnual] = useState(false);
   const [fixAnnualResult, setFixAnnualResult] = useState<SimpleResult | null>(null);
+  const [fixingAnnualReturnTasks, setFixingAnnualReturnTasks] = useState(false);
+  const [fixAnnualReturnTasksResult, setFixAnnualReturnTasksResult] = useState<FixTasksResult | null>(null);
 
   async function fixGstQuarterly() {
     setFixing(true);
@@ -120,6 +123,18 @@ export default function ImportClient() {
       setFixAnnualResult(j ?? { ok: false });
     } finally {
       setFixingAnnual(false);
+    }
+  }
+
+  async function fixAnnualReturnTasks() {
+    setFixingAnnualReturnTasks(true);
+    setFixAnnualReturnTasksResult(null);
+    try {
+      const res = await fetch('/api/admin/fix-annual-return-tasks', { method: 'POST' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as FixTasksResult | null;
+      setFixAnnualReturnTasksResult(j ?? { ok: false });
+    } finally {
+      setFixingAnnualReturnTasks(false);
     }
   }
 
@@ -154,6 +169,23 @@ export default function ImportClient() {
           {fixAnnualResult?.ok ? (
             <div className="text-sm text-black/60">Updated {fixAnnualResult.updated ?? 0}</div>
           ) : fixAnnualResult ? (
+            <div className="text-sm text-red-600">FAILED</div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <button
+            onClick={fixAnnualReturnTasks}
+            disabled={fixingAnnualReturnTasks}
+            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          >
+            {fixingAnnualReturnTasks ? 'Running...' : 'Fix Tax Service_annual return tasks'}
+          </button>
+          {fixAnnualReturnTasksResult?.ok ? (
+            <div className="text-sm text-black/60">
+              Jobs {fixAnnualReturnTasksResult.updatedJobs ?? 0}, tasks {fixAnnualReturnTasksResult.insertedTasks ?? 0}
+            </div>
+          ) : fixAnnualReturnTasksResult ? (
             <div className="text-sm text-red-600">FAILED</div>
           ) : null}
         </div>
