@@ -622,7 +622,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       </div>
 
       {showNewJob ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-5">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">New job</div>

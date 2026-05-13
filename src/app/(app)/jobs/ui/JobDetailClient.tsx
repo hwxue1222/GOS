@@ -814,7 +814,7 @@ export default function JobDetailClient({
       </div>
 
       {showDuplicate ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-4">
           <div className="w-full max-w-5xl rounded-xl bg-white p-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">Duplicate job</div>
