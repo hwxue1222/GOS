@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 type ImportError = { row: number; message: string };
 type ImportResult = { ok?: boolean; inserted?: number; updated?: number; errors?: ImportError[] };
+type SimpleResult = { ok?: boolean; updated?: number; error?: string };
 
 async function readRows(file: File): Promise<Array<Record<string, unknown>>> {
   const mod = (await import('xlsx')) as unknown as {
@@ -93,8 +94,41 @@ function Section({
 }
 
 export default function ImportClient() {
+  const [fixing, setFixing] = useState(false);
+  const [fixResult, setFixResult] = useState<SimpleResult | null>(null);
+
+  async function fixGstQuarterly() {
+    setFixing(true);
+    setFixResult(null);
+    try {
+      const res = await fetch('/api/admin/fix-gst-quarterly', { method: 'POST' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as SimpleResult | null;
+      setFixResult(j ?? { ok: false });
+    } finally {
+      setFixing(false);
+    }
+  }
+
   return (
     <div className="mt-4 space-y-4">
+      <div className="rounded-xl bg-white border border-black/5 p-5">
+        <div className="text-sm font-medium">Maintenance</div>
+        <div className="mt-1 text-sm text-black/60">Set repeat=quarterly for all jobs named Tax Service_GST.</div>
+        <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <button
+            onClick={fixGstQuarterly}
+            disabled={fixing}
+            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          >
+            {fixing ? 'Running...' : 'Fix Tax Service_GST'}
+          </button>
+          {fixResult?.ok ? (
+            <div className="text-sm text-black/60">Updated {fixResult.updated ?? 0}</div>
+          ) : fixResult ? (
+            <div className="text-sm text-red-600">FAILED</div>
+          ) : null}
+        </div>
+      </div>
       <Section
         title="Import Clients"
         hint="Excel/CSV first sheet. Required columns: code, name. Optional: company reg no, contact person, address, phone, email."
@@ -113,4 +147,3 @@ export default function ImportClient() {
     </div>
   );
 }
-
