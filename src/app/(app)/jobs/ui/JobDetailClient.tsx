@@ -718,13 +718,6 @@ export default function JobDetailClient({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 text-sm text-black/50">{t.seq}.</div>
-                    {canUpdateTask ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedTaskIds.includes(t.id)}
-                        onChange={() => toggleSelectedTask(t.id)}
-                      />
-                    ) : null}
                     {canReorderTask ? (
                       <div className="w-6 flex items-center justify-center">
                         <span
@@ -800,6 +793,12 @@ export default function JobDetailClient({
                           </option>
                         ))}
                       </select>
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskIds.includes(t.id)}
+                        onChange={() => toggleSelectedTask(t.id)}
+                        title="Select for delete"
+                      />
                     </div>
                   ) : (
                     <div className="text-xs text-black/50">-</div>
