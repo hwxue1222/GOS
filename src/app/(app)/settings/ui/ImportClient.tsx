@@ -101,6 +101,8 @@ export default function ImportClient() {
   const [fixAnnualResult, setFixAnnualResult] = useState<SimpleResult | null>(null);
   const [fixingAnnualReturnTasks, setFixingAnnualReturnTasks] = useState(false);
   const [fixAnnualReturnTasksResult, setFixAnnualReturnTasksResult] = useState<FixTasksResult | null>(null);
+  const [fixingAgmTasks, setFixingAgmTasks] = useState(false);
+  const [fixAgmTasksResult, setFixAgmTasksResult] = useState<FixTasksResult | null>(null);
 
   async function fixGstQuarterly() {
     setFixing(true);
@@ -135,6 +137,18 @@ export default function ImportClient() {
       setFixAnnualReturnTasksResult(j ?? { ok: false });
     } finally {
       setFixingAnnualReturnTasks(false);
+    }
+  }
+
+  async function fixAgmTasks() {
+    setFixingAgmTasks(true);
+    setFixAgmTasksResult(null);
+    try {
+      const res = await fetch('/api/admin/fix-agm-tasks', { method: 'POST' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as FixTasksResult | null;
+      setFixAgmTasksResult(j ?? { ok: false });
+    } finally {
+      setFixingAgmTasks(false);
     }
   }
 
@@ -186,6 +200,23 @@ export default function ImportClient() {
               Jobs {fixAnnualReturnTasksResult.updatedJobs ?? 0}, tasks {fixAnnualReturnTasksResult.insertedTasks ?? 0}
             </div>
           ) : fixAnnualReturnTasksResult ? (
+            <div className="text-sm text-red-600">FAILED</div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <button
+            onClick={fixAgmTasks}
+            disabled={fixingAgmTasks}
+            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          >
+            {fixingAgmTasks ? 'Running...' : 'Fix Corporate secretary service_AGM tasks'}
+          </button>
+          {fixAgmTasksResult?.ok ? (
+            <div className="text-sm text-black/60">
+              Jobs {fixAgmTasksResult.updatedJobs ?? 0}, tasks {fixAgmTasksResult.insertedTasks ?? 0}
+            </div>
+          ) : fixAgmTasksResult ? (
             <div className="text-sm text-red-600">FAILED</div>
           ) : null}
         </div>
