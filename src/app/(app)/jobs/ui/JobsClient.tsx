@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -82,6 +82,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
   const [showNewJob, setShowNewJob] = useState(false);
   const [newJobClientSearch, setNewJobClientSearch] = useState('');
+  const [newJobClientOpen, setNewJobClientOpen] = useState(false);
   const [newJobNameChoice, setNewJobNameChoice] = useState<'__new__' | string>('__new__');
   const [newJob, setNewJob] = useState({
     clientId: '',
@@ -107,6 +108,9 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const newJobClientRef = useRef<HTMLDivElement | null>(null);
+  const newJobClientSearchRef = useRef<HTMLInputElement | null>(null);
+
   const newJobClients = useMemo(() => {
     const needle = newJobClientSearch.trim();
     if (!needle) return clients;
@@ -115,6 +119,27 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     if (selected && !filtered.some((c) => c.id === selected.id)) return [selected, ...filtered];
     return filtered;
   }, [clients, newJob.clientId, newJobClientSearch]);
+
+  const newJobSelectedClient = useMemo(() => {
+    return newJob.clientId ? clients.find((c) => c.id === newJob.clientId) ?? null : null;
+  }, [clients, newJob.clientId]);
+
+  useEffect(() => {
+    if (!newJobClientOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const root = newJobClientRef.current;
+      const target = e.target as Node | null;
+      if (!root || !target) return;
+      if (!root.contains(target)) setNewJobClientOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [newJobClientOpen]);
+
+  useEffect(() => {
+    if (!newJobClientOpen) return;
+    setTimeout(() => newJobClientSearchRef.current?.focus(), 0);
+  }, [newJobClientOpen]);
 
   useEffect(() => {
     if (!overdueUserId) return;
@@ -273,6 +298,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       await res.json().catch(() => null);
       setShowNewJob(false);
       setNewJobClientSearch('');
+      setNewJobClientOpen(false);
       setNewJobNameChoice('__new__');
       setNewJob({
         clientId: '',
@@ -405,6 +431,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 if (!canCreate) return;
                 setShowNewJob(true);
                 setNewJobClientSearch('');
+                setNewJobClientOpen(false);
                 setNewJobNameChoice('__new__');
                 if (!newJob.clientId && clients.length) {
                   setNewJob((v) => ({ ...v, clientId: clients[0]?.id ?? '' }));
@@ -641,7 +668,15 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           <div className="w-full max-w-lg rounded-xl bg-white p-5">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">New job</div>
-              <button onClick={() => setShowNewJob(false)} className="text-black/50 hover:text-black">
+              <button
+                onClick={() => {
+                  setShowNewJob(false);
+                  setNewJobClientSearch('');
+                  setNewJobClientOpen(false);
+                  setNewJobNameChoice('__new__');
+                }}
+                className="text-black/50 hover:text-black"
+              >
                 ✕
               </button>
             </div>
@@ -653,23 +688,52 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="text-sm">
                     <div className="text-black/70">Client</div>
-                    <input
-                      value={newJobClientSearch}
-                      onChange={(e) => setNewJobClientSearch(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
-                      placeholder="Search client..."
-                    />
-                    <select
-                      value={newJob.clientId}
-                      onChange={(e) => setNewJob((v) => ({ ...v, clientId: e.target.value }))}
-                      className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
-                    >
-                      {newJobClients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.code} {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div ref={newJobClientRef} className="mt-1 relative">
+                      <button
+                        type="button"
+                        onClick={() => setNewJobClientOpen((v) => !v)}
+                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white flex items-center justify-between gap-2"
+                      >
+                        <span className="truncate">
+                          {newJobSelectedClient ? `${newJobSelectedClient.code} ${newJobSelectedClient.name}` : '-'}
+                        </span>
+                        <span className="text-black/40">▾</span>
+                      </button>
+                      {newJobClientOpen ? (
+                        <div className="absolute z-[70] mt-1 w-full rounded-lg border border-black/10 bg-white shadow-sm">
+                          <div className="p-2 border-b border-black/5">
+                            <input
+                              ref={newJobClientSearchRef}
+                              value={newJobClientSearch}
+                              onChange={(e) => setNewJobClientSearch(e.target.value)}
+                              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                              placeholder="Search client..."
+                            />
+                          </div>
+                          <div className="max-h-56 overflow-y-auto">
+                            {newJobClients.map((c) => (
+                              <button
+                                type="button"
+                                key={c.id}
+                                onClick={() => {
+                                  setNewJob((v) => ({ ...v, clientId: c.id }));
+                                  setNewJobClientOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.02]"
+                                title={`${c.code} ${c.name}`}
+                              >
+                                <div className="truncate">
+                                  {c.code} {c.name}
+                                </div>
+                              </button>
+                            ))}
+                            {newJobClients.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-black/50">No clients</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Due date</div>
@@ -711,7 +775,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                       }}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                     >
-                      <option value="__new__">新增</option>
+                      <option value="__new__">new name</option>
                       {jobNameOptions.map((n) => (
                         <option key={n} value={n}>
                           {n}
@@ -881,7 +945,12 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
                 <div className="mt-5 flex items-center justify-end gap-2">
                   <button
-                    onClick={() => setShowNewJob(false)}
+                    onClick={() => {
+                      setShowNewJob(false);
+                      setNewJobClientSearch('');
+                      setNewJobClientOpen(false);
+                      setNewJobNameChoice('__new__');
+                    }}
                     className="rounded-lg border border-black/10 px-4 py-2 text-sm"
                   >
                     Cancel
