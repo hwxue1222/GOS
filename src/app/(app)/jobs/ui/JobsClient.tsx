@@ -82,6 +82,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
 
   const [showNewJob, setShowNewJob] = useState(false);
   const [newJobClientSearch, setNewJobClientSearch] = useState('');
+  const [newJobNameChoice, setNewJobNameChoice] = useState<'__new__' | string>('__new__');
   const [newJob, setNewJob] = useState({
     clientId: '',
     name: '',
@@ -272,6 +273,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       await res.json().catch(() => null);
       setShowNewJob(false);
       setNewJobClientSearch('');
+      setNewJobNameChoice('__new__');
       setNewJob({
         clientId: '',
         name: '',
@@ -403,6 +405,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 if (!canCreate) return;
                 setShowNewJob(true);
                 setNewJobClientSearch('');
+                setNewJobNameChoice('__new__');
                 if (!newJob.clientId && clients.length) {
                   setNewJob((v) => ({ ...v, clientId: clients[0]?.id ?? '' }));
                 }
@@ -695,12 +698,34 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Job name</div>
-                    <input
-                      value={newJob.name}
-                      onChange={(e) => setNewJob((v) => ({ ...v, name: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      placeholder="e.g. Corporate secretary service_AGM"
-                    />
+                    <select
+                      value={newJobNameChoice}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNewJobNameChoice(v);
+                        if (v === '__new__') {
+                          setNewJob((x) => ({ ...x, name: '' }));
+                        } else {
+                          setNewJob((x) => ({ ...x, name: v }));
+                        }
+                      }}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="__new__">新增</option>
+                      {jobNameOptions.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                    {newJobNameChoice === '__new__' ? (
+                      <input
+                        value={newJob.name}
+                        onChange={(e) => setNewJob((v) => ({ ...v, name: e.target.value }))}
+                        className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        placeholder="New job name..."
+                      />
+                    ) : null}
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Remark</div>
