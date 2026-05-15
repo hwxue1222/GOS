@@ -81,6 +81,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [page, setPage] = usePersistedState('gos.jobs.page', 1);
 
   const [showNewJob, setShowNewJob] = useState(false);
+  const [newJobClientSearch, setNewJobClientSearch] = useState('');
   const [newJob, setNewJob] = useState({
     clientId: '',
     name: '',
@@ -104,6 +105,15 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const newJobClients = useMemo(() => {
+    const needle = newJobClientSearch.trim();
+    if (!needle) return clients;
+    const filtered = clients.filter((c) => textMatch(`${c.code} ${c.name}`, needle));
+    const selected = newJob.clientId ? clients.find((c) => c.id === newJob.clientId) ?? null : null;
+    if (selected && !filtered.some((c) => c.id === selected.id)) return [selected, ...filtered];
+    return filtered;
+  }, [clients, newJob.clientId, newJobClientSearch]);
 
   useEffect(() => {
     if (!overdueUserId) return;
@@ -261,6 +271,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
       }
       await res.json().catch(() => null);
       setShowNewJob(false);
+      setNewJobClientSearch('');
       setNewJob({
         clientId: '',
         name: '',
@@ -391,6 +402,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
               onClick={() => {
                 if (!canCreate) return;
                 setShowNewJob(true);
+                setNewJobClientSearch('');
                 if (!newJob.clientId && clients.length) {
                   setNewJob((v) => ({ ...v, clientId: clients[0]?.id ?? '' }));
                 }
@@ -638,12 +650,18 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="text-sm">
                     <div className="text-black/70">Client</div>
+                    <input
+                      value={newJobClientSearch}
+                      onChange={(e) => setNewJobClientSearch(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+                      placeholder="Search client..."
+                    />
                     <select
                       value={newJob.clientId}
                       onChange={(e) => setNewJob((v) => ({ ...v, clientId: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                      className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                     >
-                      {clients.map((c) => (
+                      {newJobClients.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.code} {c.name}
                         </option>
