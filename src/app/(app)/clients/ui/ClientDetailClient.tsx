@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -49,6 +49,8 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [jobs, setJobs] = useState<JobItem[]>(initialJobs);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const successTimerRef = useRef<number | null>(null);
   const [jobView, setJobView] = usePersistedState<'uncomplete' | 'complete'>(`gos.client.${initialClient.id}.jobs.view`, 'uncomplete');
   const canDeleteJob = me.role === 'owner';
 
@@ -82,8 +84,15 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     });
   }, [jobView, jobs, search]);
 
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
+    };
+  }, []);
+
   async function update() {
     setError(null);
+    setSuccess(null);
     if (!draft.name.trim()) {
       setError('INVALID_INPUT');
       return;
@@ -120,6 +129,9 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
           phone: j.client.phone ?? '',
           email: j.client.email ?? '',
         });
+        if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
+        setSuccess('Updated successfully');
+        successTimerRef.current = window.setTimeout(() => setSuccess(null), 2000);
       }
     } finally {
       setSaving(false);
@@ -212,6 +224,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
               </div>
 
               {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+              {success ? <div className="mt-3 text-sm text-green-700">{success}</div> : null}
 
               <div className="mt-4 flex items-center justify-end">
                 <button
