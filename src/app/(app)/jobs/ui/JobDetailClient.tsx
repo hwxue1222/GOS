@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
@@ -77,6 +77,8 @@ export default function JobDetailClient({
   const [users] = useState(initialUsers);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const successTimerRef = useRef<number | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [savingTasks, setSavingTasks] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
@@ -142,6 +144,12 @@ export default function JobDetailClient({
     }
     return users.filter((u) => u.role === 'manager' || u.role === 'staff');
   }, [meId, meRole, users]);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   function todayYmd() {
     return new Date().toISOString().slice(0, 10);
@@ -503,9 +511,14 @@ export default function JobDetailClient({
   async function updateAll() {
     setError(null);
     setTasksError(null);
+    setSuccess(null);
+    if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
     const okJob = await saveJob();
     if (!okJob) return;
-    await saveTasks();
+    const okTasks = await saveTasks();
+    if (!okTasks) return;
+    setSuccess('Updated successfully');
+    successTimerRef.current = window.setTimeout(() => setSuccess(null), 2000);
   }
 
   return (
@@ -609,11 +622,12 @@ export default function JobDetailClient({
                 </select>
               </label>
             </div>
-            <div className="mt-3 flex items-center justify-end gap-2">
+            <div className="mt-3 flex items-center gap-2">
+              {success ? <div className="text-sm text-green-700">{success}</div> : null}
               <button
                 disabled={savingJob || savingTasks}
                 onClick={updateAll}
-                className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+                className="ml-auto rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
               >
                 {savingJob || savingTasks ? 'Updating...' : 'Update'}
               </button>
