@@ -68,6 +68,17 @@ export async function POST(req: Request) {
           'reg no',
           'regno',
         ]) || undefined,
+      fye:
+        rowStr(m, [
+          'fye',
+          'financial year end',
+          'financial yearend',
+          'financialyearend',
+          'fy end',
+          'fyend',
+          'year end',
+          'yearend',
+        ]) || undefined,
       contactPerson:
         rowStr(m, [
           'contactperson',
@@ -111,6 +122,7 @@ export async function POST(req: Request) {
         code: patch.code!,
         name: patch.name!,
         companyRegistrationNo: patch.companyRegistrationNo,
+        fye: patch.fye,
         contactPerson: patch.contactPerson,
         address: patch.address,
         phone: patch.phone,
@@ -129,6 +141,7 @@ export async function POST(req: Request) {
       code: patch.code!,
       name: patch.name!,
       companyRegistrationNo: patch.companyRegistrationNo,
+      fye: patch.fye,
       contactPerson: patch.contactPerson,
       address: patch.address,
       phone: patch.phone,

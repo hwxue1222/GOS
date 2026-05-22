@@ -51,6 +51,7 @@ function normalizeDb(parsed: Db): Db {
     ...c,
     tags: (c as Client).tags ?? [],
     companyRegistrationNo: (c as Client).companyRegistrationNo,
+    fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
     phone: (c as Client).phone,
@@ -367,6 +368,7 @@ export async function createClient(input: {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -379,6 +381,7 @@ export async function createClient(input: {
     code: input.code,
     name: input.name,
     companyRegistrationNo: input.companyRegistrationNo,
+    fye: input.fye,
     contactPerson: input.contactPerson,
     address: input.address,
     phone: input.phone,
@@ -403,7 +406,9 @@ export async function findClientById(id: string) {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
+  patch: Partial<
+    Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'fye' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>
+  >,
 ) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);

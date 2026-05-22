@@ -59,6 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
         code?: string;
         name?: string;
         companyRegistrationNo?: string;
+        fye?: string;
         contactPerson?: string;
         address?: string;
         phone?: string;
@@ -71,6 +72,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
   const hasCompanyRegistrationNo = typeof body?.companyRegistrationNo === 'string';
   const companyRegistrationNo = hasCompanyRegistrationNo ? body!.companyRegistrationNo!.trim() || undefined : undefined;
+  const hasFye = typeof body?.fye === 'string';
+  const fye = hasFye ? body!.fye!.trim() || undefined : undefined;
   const hasContactPerson = typeof body?.contactPerson === 'string';
   const contactPerson = hasContactPerson ? body!.contactPerson!.trim() || undefined : undefined;
   const hasAddress = typeof body?.address === 'string';
@@ -89,6 +92,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
     ...(code !== undefined ? { code } : {}),
     ...(name !== undefined ? { name } : {}),
     ...(hasCompanyRegistrationNo ? { companyRegistrationNo } : {}),
+    ...(hasFye ? { fye } : {}),
     ...(hasContactPerson ? { contactPerson } : {}),
     ...(hasAddress ? { address } : {}),
     phone,

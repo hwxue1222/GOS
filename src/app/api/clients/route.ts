@@ -40,6 +40,7 @@ export async function POST(req: Request) {
         code?: string;
         name?: string;
         companyRegistrationNo?: string;
+        fye?: string;
         contactPerson?: string;
         address?: string;
         phone?: string;
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
   const code = body?.code?.trim() ?? '';
   const name = body?.name?.trim() ?? '';
   const companyRegistrationNo = body?.companyRegistrationNo?.trim() || undefined;
+  const fye = body?.fye?.trim() || undefined;
   const contactPerson = body?.contactPerson?.trim() || undefined;
   const address = body?.address?.trim() || undefined;
   const phone = body?.phone?.trim() || undefined;
@@ -60,6 +62,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
-  const client = await createClient({ code, name, companyRegistrationNo, contactPerson, address, phone, email, tags });
+  const client = await createClient({ code, name, companyRegistrationNo, fye, contactPerson, address, phone, email, tags });
   return NextResponse.json({ ok: true, client });
 }

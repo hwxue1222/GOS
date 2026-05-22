@@ -9,6 +9,7 @@ type Client = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -42,6 +43,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     code: '',
     name: '',
     companyRegistrationNo: '',
+    fye: '',
     contactPerson: '',
     address: '',
     phone: '',
@@ -52,7 +54,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     if (!search.trim()) return clients;
     return clients.filter((c) =>
       textMatch(
-        `${c.code} ${c.name} ${c.companyRegistrationNo ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
+        `${c.code} ${c.name} ${c.companyRegistrationNo ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
         search,
       ),
     );
@@ -93,6 +95,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
           code: form.code,
           name: form.name,
           companyRegistrationNo: form.companyRegistrationNo || undefined,
+          fye: form.fye || undefined,
           contactPerson: form.contactPerson || undefined,
           address: form.address || undefined,
           phone: form.phone || undefined,
@@ -107,7 +110,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
       const j = (await res.json().catch(() => null)) as { ok?: boolean; client?: Client } | null;
       if (j?.client) setClients((prev) => [j.client!, ...prev]);
       setShowAdd(false);
-      setForm({ code: '', name: '', companyRegistrationNo: '', contactPerson: '', address: '', phone: '', email: '' });
+      setForm({ code: '', name: '', companyRegistrationNo: '', fye: '', contactPerson: '', address: '', phone: '', email: '' });
     } finally {
       setCreating(false);
     }
@@ -145,6 +148,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Client</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Reg no.</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">FYE</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Contact</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Address</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Phone</th>
@@ -168,6 +172,11 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                   <td className="px-2 py-2 min-w-[120px] max-w-[160px]">
                     <div className="leading-tight break-words" title={c.companyRegistrationNo ?? ''}>
                       {c.companyRegistrationNo?.trim() ? c.companyRegistrationNo : '-'}
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 min-w-[90px] max-w-[120px]">
+                    <div className="leading-tight break-words" title={c.fye ?? ''}>
+                      {c.fye?.trim() ? c.fye : '-'}
                     </div>
                   </td>
                   <td className="px-2 py-2 min-w-[120px] max-w-[160px]">
@@ -206,7 +215,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               ))}
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={9} className="px-4 py-10 text-center text-black/50">
                     No clients
                   </td>
                 </tr>
@@ -299,6 +308,15 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                       onChange={(e) => setForm((v) => ({ ...v, companyRegistrationNo: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                       placeholder="Company registration no."
+                    />
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">FYE (Financial year end)</div>
+                    <input
+                      value={form.fye}
+                      onChange={(e) => setForm((v) => ({ ...v, fye: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="e.g. 31/12"
                     />
                   </label>
                   <label className="text-sm sm:col-span-2">

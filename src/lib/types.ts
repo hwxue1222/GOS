@@ -39,6 +39,7 @@ export type Client = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
