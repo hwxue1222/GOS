@@ -1,7 +1,7 @@
 import AppTopNav from '@/components/AppTopNav';
 import ClientDetailClient from '@/app/(app)/clients/ui/ClientDetailClient';
 import { getCurrentUser } from '@/lib/auth';
-import { listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { listClientDirectors, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import { hasPermission } from '@/lib/permissions';
 
@@ -109,11 +109,18 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
   );
 
   const canUpdateClient = hasPermission(me, 'clients', 'update');
+  const directors = await listClientDirectors(clientId, { includeResigned: true });
 
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="clients" />
-      <ClientDetailClient initialMe={me} initialClient={client} initialJobs={items} canUpdateClient={canUpdateClient} />
+      <ClientDetailClient
+        initialMe={me}
+        initialClient={client}
+        initialJobs={items}
+        initialDirectors={directors}
+        canUpdateClient={canUpdateClient}
+      />
     </div>
   );
 }

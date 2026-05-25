@@ -5,7 +5,6 @@ export type PermissionAction =
   | 'viewAll'
   | 'create'
   | 'update'
-  | 'markPaid'
   | 'trash'
   | 'complete'
   | 'duplicate'
@@ -13,7 +12,7 @@ export type PermissionAction =
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices';
+export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -40,7 +39,6 @@ export type Client = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
-  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -48,6 +46,74 @@ export type Client = {
   tags: string[];
   deletedAt?: string;
   createdAt: string;
+};
+
+export type PersonIdType = 'NRIC' | 'PASSPORT' | 'OTHER';
+
+export type Person = {
+  id: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  idType?: PersonIdType;
+  idNo?: string;
+  nationality?: string;
+  dob?: string;
+  address?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type PartyType = 'PERSON' | 'COMPANY';
+
+export type Party = {
+  id: string;
+  type: PartyType;
+  displayName: string;
+  personId?: string;
+  clientId?: string;
+  externalCompanyId?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type ExternalCompany = {
+  id: string;
+  name: string;
+  registrationNo?: string;
+  jurisdiction?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type ClientPartyRoleType = 'DIRECTOR' | 'SHAREHOLDER';
+
+export type ClientPartyRole = {
+  id: string;
+  clientId: string;
+  partyId: string;
+  role: ClientPartyRoleType;
+  appointmentDate?: string;
+  resignationDate?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type CompanyRepresentativeScope = 'GLOBAL';
+
+export type CompanyRepresentative = {
+  id: string;
+  companyPartyId: string;
+  representativePersonId: string;
+  scope: CompanyRepresentativeScope;
+  evidenceDocumentId?: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  createdAt: string;
+  updatedAt?: string;
 };
 
 export type JobStatus = 'Pending' | 'Processing' | 'Complete';
@@ -87,45 +153,16 @@ export type JobTask = {
   createdAt: string;
 };
 
-export type Currency = 'MYR' | 'SGD' | 'USD' | 'CNY';
-
-export type InvoiceStatus = 'UNPAID' | 'PAID' | 'VOID';
-
-export type InvoiceItem = {
-  id: string;
-  description: string;
-  qty: number;
-  unitPrice: number;
-};
-
-export type Invoice = {
-  id: string;
-  invoiceNo: string;
-  clientId: string;
-  jobId?: string;
-  issueDate: string;
-  dueDate?: string;
-  currency: Currency;
-  status: InvoiceStatus;
-  items: InvoiceItem[];
-  discount?: number;
-  tax?: number;
-  subtotal: number;
-  total: number;
-  notes?: string;
-  paidAt?: string;
-  deletedAt?: string;
-  createdByUserId: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type Db = {
   users: User[];
   sessions: Session[];
   clients: Client[];
+  persons: Person[];
+  parties: Party[];
+  externalCompanies: ExternalCompany[];
+  clientPartyRoles: ClientPartyRole[];
+  companyRepresentatives: CompanyRepresentative[];
   jobs: Job[];
   tasks: JobTask[];
-  invoices: Invoice[];
   reservedNames?: string[];
 };

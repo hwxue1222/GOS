@@ -2,7 +2,21 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
-import type { Client, Db, Invoice, Job, JobTask, Permissions, Role, Session, User } from '@/lib/types';
+import type {
+  Client,
+  ClientPartyRole,
+  CompanyRepresentative,
+  Db,
+  ExternalCompany,
+  Job,
+  JobTask,
+  Party,
+  Permissions,
+  Person,
+  Role,
+  Session,
+  User,
+} from '@/lib/types';
 
 const KV_DB_KEY = process.env.GOS_KV_DB_KEY?.trim() || 'gos:db';
 
@@ -24,7 +38,19 @@ async function ensureDir() {
 }
 
 function emptyDb(): Db {
-  return { users: [], sessions: [], clients: [], jobs: [], tasks: [], invoices: [], reservedNames: [] };
+  return {
+    users: [],
+    sessions: [],
+    clients: [],
+    persons: [],
+    parties: [],
+    externalCompanies: [],
+    clientPartyRoles: [],
+    companyRepresentatives: [],
+    jobs: [],
+    tasks: [],
+    reservedNames: [],
+  };
 }
 
 function normalizeDb(parsed: Db): Db {
@@ -51,7 +77,6 @@ function normalizeDb(parsed: Db): Db {
     ...c,
     tags: (c as Client).tags ?? [],
     companyRegistrationNo: (c as Client).companyRegistrationNo,
-    fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
     phone: (c as Client).phone,
@@ -76,9 +101,6 @@ function normalizeDb(parsed: Db): Db {
     createdByUserId: (t as JobTask).createdByUserId,
   }));
 
-  const invoices = (parsed as unknown as { invoices?: unknown }).invoices;
-  const safeInvoices = Array.isArray(invoices) ? (invoices as Invoice[]) : [];
-
   const byJob = new Map<string, Array<JobTask & { createdAt: string }>>();
   for (const t of tasks as Array<JobTask & { createdAt: string }>) {
     if (!byJob.has(t.jobId)) byJob.set(t.jobId, []);
@@ -96,13 +118,71 @@ function normalizeDb(parsed: Db): Db {
     }
     byJob.set(jobId, list);
   }
+
+  const persons = (parsed.persons ?? []).map((p) => ({
+    ...p,
+    fullName: (p as Person).fullName,
+    email: (p as Person).email,
+    phone: (p as Person).phone,
+    idType: (p as Person).idType,
+    idNo: (p as Person).idNo,
+    nationality: (p as Person).nationality,
+    dob: (p as Person).dob,
+    address: (p as Person).address,
+    updatedAt: (p as Person).updatedAt ?? (p as Person).createdAt,
+  }));
+
+  const parties = (parsed.parties ?? []).map((p) => ({
+    ...p,
+    type: (p as Party).type,
+    displayName: (p as Party).displayName,
+    personId: (p as Party).personId,
+    clientId: (p as Party).clientId,
+    externalCompanyId: (p as Party).externalCompanyId,
+    updatedAt: (p as Party).updatedAt ?? (p as Party).createdAt,
+  }));
+
+  const externalCompanies = (parsed.externalCompanies ?? []).map((c) => ({
+    ...c,
+    name: (c as ExternalCompany).name,
+    registrationNo: (c as ExternalCompany).registrationNo,
+    jurisdiction: (c as ExternalCompany).jurisdiction,
+    address: (c as ExternalCompany).address,
+    email: (c as ExternalCompany).email,
+    phone: (c as ExternalCompany).phone,
+    updatedAt: (c as ExternalCompany).updatedAt ?? (c as ExternalCompany).createdAt,
+  }));
+
+  const clientPartyRoles = (parsed.clientPartyRoles ?? []).map((r) => ({
+    ...r,
+    role: (r as ClientPartyRole).role,
+    appointmentDate: (r as ClientPartyRole).appointmentDate,
+    resignationDate: (r as ClientPartyRole).resignationDate,
+    updatedAt: (r as ClientPartyRole).updatedAt ?? (r as ClientPartyRole).createdAt,
+  }));
+
+  const companyRepresentatives = (parsed.companyRepresentatives ?? []).map((r) => ({
+    ...r,
+    companyPartyId: (r as CompanyRepresentative).companyPartyId,
+    representativePersonId: (r as CompanyRepresentative).representativePersonId,
+    scope: (r as CompanyRepresentative).scope ?? 'GLOBAL',
+    evidenceDocumentId: (r as CompanyRepresentative).evidenceDocumentId,
+    effectiveFrom: (r as CompanyRepresentative).effectiveFrom ?? (r as CompanyRepresentative).createdAt,
+    effectiveTo: (r as CompanyRepresentative).effectiveTo,
+    updatedAt: (r as CompanyRepresentative).updatedAt ?? (r as CompanyRepresentative).createdAt,
+  }));
+
   return {
     users,
     sessions: parsed.sessions ?? [],
     clients,
+    persons,
+    parties,
+    externalCompanies,
+    clientPartyRoles,
+    companyRepresentatives,
     jobs,
     tasks: tasks as unknown as JobTask[],
-    invoices: safeInvoices,
     reservedNames: [...reservedSet],
   };
 }
@@ -195,7 +275,6 @@ export async function readDb(): Promise<Db> {
       tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
       clients: { viewAll: true, create: true, update: true, import: true },
       staffs: { viewAll: true, create: true, update: true },
-      invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
     },
     passwordHash: lukePasswordHash,
     createdAt: nowIso(),
@@ -373,7 +452,6 @@ export async function createClient(input: {
   code: string;
   name: string;
   companyRegistrationNo?: string;
-  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -386,7 +464,6 @@ export async function createClient(input: {
     code: input.code,
     name: input.name,
     companyRegistrationNo: input.companyRegistrationNo,
-    fye: input.fye,
     contactPerson: input.contactPerson,
     address: input.address,
     phone: input.phone,
@@ -411,9 +488,7 @@ export async function findClientById(id: string) {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<
-    Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'fye' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>
-  >,
+  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
 ) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);
@@ -432,6 +507,171 @@ export async function deleteClient(clientId: string) {
   db.clients[idx] = { ...db.clients[idx], deletedAt: nowIso() };
   await writeDb(db);
   return db.clients[idx];
+}
+
+export async function listPersons() {
+  const db = await readDb();
+  return db.persons;
+}
+
+export async function findPersonById(id: string) {
+  const db = await readDb();
+  return db.persons.find((p) => p.id === id) ?? null;
+}
+
+export async function createPerson(input: {
+  fullName: string;
+  email?: string;
+  phone?: string;
+  idType?: Person['idType'];
+  idNo?: string;
+  nationality?: string;
+  dob?: string;
+  address?: string;
+}) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const person: Person = {
+    id: newId('per'),
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    idType: input.idType,
+    idNo: input.idNo,
+    nationality: input.nationality,
+    dob: input.dob,
+    address: input.address,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.persons.unshift(person);
+  await writeDb(db);
+  return person;
+}
+
+export async function updatePerson(
+  personId: string,
+  patch: Partial<Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address'>>,
+) {
+  const db = await readDb();
+  const idx = db.persons.findIndex((p) => p.id === personId);
+  if (idx < 0) return null;
+  db.persons[idx] = { ...db.persons[idx], ...patch, updatedAt: nowIso() };
+  await writeDb(db);
+  return db.persons[idx];
+}
+
+export async function createPartyForPerson(person: Person) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const party: Party = {
+    id: newId('pty'),
+    type: 'PERSON',
+    displayName: person.fullName,
+    personId: person.id,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.parties.unshift(party);
+  await writeDb(db);
+  return party;
+}
+
+export async function listClientDirectors(clientId: string, opts?: { includeResigned?: boolean }) {
+  const db = await readDb();
+  const roles = db.clientPartyRoles
+    .filter((r) => r.clientId === clientId && r.role === 'DIRECTOR')
+    .filter((r) => (opts?.includeResigned ? true : !r.resignationDate))
+    .sort((a, b) => (a.appointmentDate ?? '').localeCompare(b.appointmentDate ?? '') || a.createdAt.localeCompare(b.createdAt));
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+
+  return roles
+    .map((r) => {
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) return null;
+      const person = personById.get(party.personId);
+      if (!person) return null;
+      return { role: r, party, person };
+    })
+    .filter((x): x is { role: ClientPartyRole; party: Party; person: Person } => x !== null);
+}
+
+export async function addClientDirector(input: {
+  clientId: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  appointmentDate?: string;
+}) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const person: Person = {
+    id: newId('per'),
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  const party: Party = {
+    id: newId('pty'),
+    type: 'PERSON',
+    displayName: input.fullName,
+    personId: person.id,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  const role: ClientPartyRole = {
+    id: newId('cpr'),
+    clientId: input.clientId,
+    partyId: party.id,
+    role: 'DIRECTOR',
+    appointmentDate: input.appointmentDate,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.persons.unshift(person);
+  db.parties.unshift(party);
+  db.clientPartyRoles.unshift(role);
+  await writeDb(db);
+  return { role, party, person };
+}
+
+export async function updateClientDirector(input: {
+  clientId: string;
+  roleId: string;
+  personPatch?: Partial<Pick<Person, 'fullName' | 'email' | 'phone'>>;
+  rolePatch?: Partial<Pick<ClientPartyRole, 'appointmentDate' | 'resignationDate'>>;
+}) {
+  const db = await readDb();
+  const roleIdx = db.clientPartyRoles.findIndex((r) => r.id === input.roleId && r.clientId === input.clientId && r.role === 'DIRECTOR');
+  if (roleIdx < 0) return null;
+  const role = db.clientPartyRoles[roleIdx];
+  const party = db.parties.find((p) => p.id === role.partyId) ?? null;
+  if (!party || party.type !== 'PERSON' || !party.personId) return null;
+  const personIdx = db.persons.findIndex((p) => p.id === party.personId);
+  if (personIdx < 0) return null;
+
+  const now = nowIso();
+  if (input.personPatch) {
+    db.persons[personIdx] = { ...db.persons[personIdx], ...input.personPatch, updatedAt: now };
+    if (typeof input.personPatch.fullName === 'string' && input.personPatch.fullName.trim()) {
+      const nextName = input.personPatch.fullName.trim();
+      const partyIdx = db.parties.findIndex((p) => p.id === party.id);
+      if (partyIdx >= 0) db.parties[partyIdx] = { ...db.parties[partyIdx], displayName: nextName, updatedAt: now };
+    }
+  }
+  if (input.rolePatch) {
+    db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], ...input.rolePatch, updatedAt: now };
+  }
+
+  await writeDb(db);
+  const updatedRole = db.clientPartyRoles[roleIdx];
+  const updatedParty = db.parties.find((p) => p.id === updatedRole.partyId)!;
+  const updatedPerson = db.persons.find((p) => p.id === updatedParty.personId)!;
+  return { role: updatedRole, party: updatedParty, person: updatedPerson };
 }
 
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {
@@ -732,43 +972,4 @@ export async function updateTask(
   db.tasks[idx] = { ...db.tasks[idx], ...patch };
   await writeDb(db);
   return db.tasks[idx];
-}
-
-export async function listInvoices() {
-  const db = await readDb();
-  return db.invoices;
-}
-
-export async function findInvoiceById(id: string) {
-  const db = await readDb();
-  return db.invoices.find((x) => x.id === id) ?? null;
-}
-
-export async function createInvoice(input: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) {
-  const db = await readDb();
-  const createdAt = nowIso();
-  const invoice: Invoice = { ...input, id: newId('inv'), createdAt, updatedAt: createdAt };
-  db.invoices.unshift(invoice);
-  await writeDb(db);
-  return invoice;
-}
-
-export async function updateInvoice(invoiceId: string, next: Omit<Invoice, 'updatedAt'>) {
-  const db = await readDb();
-  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
-  if (idx < 0) return null;
-  const updatedAt = nowIso();
-  const invoice: Invoice = { ...next, updatedAt };
-  db.invoices[idx] = invoice;
-  await writeDb(db);
-  return invoice;
-}
-
-export async function deleteInvoice(invoiceId: string) {
-  const db = await readDb();
-  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
-  if (idx < 0) return null;
-  db.invoices[idx] = { ...db.invoices[idx], deletedAt: nowIso() };
-  await writeDb(db);
-  return db.invoices[idx];
 }
