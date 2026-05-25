@@ -66,6 +66,13 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
 
   const [search, setSearch] = useState('');
 
+  const todayYmdNow = new Date().toISOString().slice(0, 10);
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return false;
+    return dueDate < todayYmdNow;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return jobs.filter((it) => {
@@ -300,7 +307,18 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                       <td className="px-4 py-3 whitespace-nowrap">
                         {it.tasks.done}/{it.tasks.total}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-red-600">{formatDateDMY(it.job.dueDate)}</td>
+                      <td
+                        className={[
+                          'px-4 py-3 whitespace-nowrap',
+                          !it.job.dueDate
+                            ? 'text-black/40'
+                            : isOverdue(it.job.dueDate)
+                              ? 'text-red-600'
+                              : 'text-[#2f7bdc]',
+                        ].join(' ')}
+                      >
+                        {formatDateDMY(it.job.dueDate)}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">
                         {it.job.completed ? 'Complete' : it.job.status}
                       </td>
