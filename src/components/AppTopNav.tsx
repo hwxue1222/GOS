@@ -4,7 +4,7 @@ import UserMenuClient from '@/components/UserMenuClient';
 import { canManageTeam } from '@/lib/permissions';
 
 type Props = {
-  active: 'jobs' | 'clients' | 'reports';
+  active: 'jobs' | 'clients' | 'invoices' | 'reports';
 };
 
 function NavLink({
@@ -46,6 +46,9 @@ export default async function AppTopNav({ active }: Props) {
             </NavLink>
             <NavLink href="/clients" active={active === 'clients'}>
               Clients
+            </NavLink>
+            <NavLink href="/invoices" active={active === 'invoices'}>
+              Invoices
             </NavLink>
             <NavLink href="/reports" active={active === 'reports'}>
               Reports

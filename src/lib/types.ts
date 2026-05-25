@@ -5,6 +5,7 @@ export type PermissionAction =
   | 'viewAll'
   | 'create'
   | 'update'
+  | 'markPaid'
   | 'trash'
   | 'complete'
   | 'duplicate'
@@ -12,7 +13,7 @@ export type PermissionAction =
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs';
+export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -86,11 +87,45 @@ export type JobTask = {
   createdAt: string;
 };
 
+export type Currency = 'MYR' | 'SGD' | 'USD' | 'CNY';
+
+export type InvoiceStatus = 'UNPAID' | 'PAID' | 'VOID';
+
+export type InvoiceItem = {
+  id: string;
+  description: string;
+  qty: number;
+  unitPrice: number;
+};
+
+export type Invoice = {
+  id: string;
+  invoiceNo: string;
+  clientId: string;
+  jobId?: string;
+  issueDate: string;
+  dueDate?: string;
+  currency: Currency;
+  status: InvoiceStatus;
+  items: InvoiceItem[];
+  discount?: number;
+  tax?: number;
+  subtotal: number;
+  total: number;
+  notes?: string;
+  paidAt?: string;
+  deletedAt?: string;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Db = {
   users: User[];
   sessions: Session[];
   clients: Client[];
   jobs: Job[];
   tasks: JobTask[];
+  invoices: Invoice[];
   reservedNames?: string[];
 };

@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
-import type { Client, Db, Job, JobTask, Permissions, Role, Session, User } from '@/lib/types';
+import type { Client, Db, Invoice, Job, JobTask, Permissions, Role, Session, User } from '@/lib/types';
 
 const KV_DB_KEY = process.env.GOS_KV_DB_KEY?.trim() || 'gos:db';
 
@@ -24,7 +24,7 @@ async function ensureDir() {
 }
 
 function emptyDb(): Db {
-  return { users: [], sessions: [], clients: [], jobs: [], tasks: [], reservedNames: [] };
+  return { users: [], sessions: [], clients: [], jobs: [], tasks: [], invoices: [], reservedNames: [] };
 }
 
 function normalizeDb(parsed: Db): Db {
@@ -76,6 +76,9 @@ function normalizeDb(parsed: Db): Db {
     createdByUserId: (t as JobTask).createdByUserId,
   }));
 
+  const invoices = (parsed as unknown as { invoices?: unknown }).invoices;
+  const safeInvoices = Array.isArray(invoices) ? (invoices as Invoice[]) : [];
+
   const byJob = new Map<string, Array<JobTask & { createdAt: string }>>();
   for (const t of tasks as Array<JobTask & { createdAt: string }>) {
     if (!byJob.has(t.jobId)) byJob.set(t.jobId, []);
@@ -99,6 +102,7 @@ function normalizeDb(parsed: Db): Db {
     clients,
     jobs,
     tasks: tasks as unknown as JobTask[],
+    invoices: safeInvoices,
     reservedNames: [...reservedSet],
   };
 }
@@ -191,6 +195,7 @@ export async function readDb(): Promise<Db> {
       tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
       clients: { viewAll: true, create: true, update: true, import: true },
       staffs: { viewAll: true, create: true, update: true },
+      invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
     },
     passwordHash: lukePasswordHash,
     createdAt: nowIso(),
@@ -727,4 +732,43 @@ export async function updateTask(
   db.tasks[idx] = { ...db.tasks[idx], ...patch };
   await writeDb(db);
   return db.tasks[idx];
+}
+
+export async function listInvoices() {
+  const db = await readDb();
+  return db.invoices;
+}
+
+export async function findInvoiceById(id: string) {
+  const db = await readDb();
+  return db.invoices.find((x) => x.id === id) ?? null;
+}
+
+export async function createInvoice(input: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const invoice: Invoice = { ...input, id: newId('inv'), createdAt, updatedAt: createdAt };
+  db.invoices.unshift(invoice);
+  await writeDb(db);
+  return invoice;
+}
+
+export async function updateInvoice(invoiceId: string, next: Omit<Invoice, 'updatedAt'>) {
+  const db = await readDb();
+  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
+  if (idx < 0) return null;
+  const updatedAt = nowIso();
+  const invoice: Invoice = { ...next, updatedAt };
+  db.invoices[idx] = invoice;
+  await writeDb(db);
+  return invoice;
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  const db = await readDb();
+  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
+  if (idx < 0) return null;
+  db.invoices[idx] = { ...db.invoices[idx], deletedAt: nowIso() };
+  await writeDb(db);
+  return db.invoices[idx];
 }

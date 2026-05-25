@@ -15,6 +15,7 @@ function basePermissionsForRole(role: Role): Permissions {
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
       clients: { viewAssigned: true, viewAll: true, create: true, update: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
+      invoices: { viewAll: true, create: true, update: true, markPaid: true },
     };
   }
   return {
@@ -22,6 +23,7 @@ function basePermissionsForRole(role: Role): Permissions {
     tasks: { viewAssigned: true, complete: true },
     clients: { viewAssigned: true },
     staffs: {},
+    invoices: {},
   };
 }
 
@@ -34,6 +36,7 @@ function mergePermissions(base: Permissions, override?: Permissions): Permission
     tasks: { ...(base.tasks ?? {}), ...(o.tasks ?? {}) },
     clients: { ...(base.clients ?? {}), ...(o.clients ?? {}) },
     staffs: { ...(base.staffs ?? {}), ...(o.staffs ?? {}) },
+    invoices: { ...(base.invoices ?? {}), ...(o.invoices ?? {}) },
   };
 }
 
