@@ -3,6 +3,7 @@ import { findInvoiceById, findClientById } from '@/lib/db';
 import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/lib/invoice';
 import type { InvoiceBillTo } from '@/lib/types';
 import PrintButtonClient from '@/app/(app)/invoices/[invoiceId]/print/PrintButtonClient';
+import Image from 'next/image';
 
 function formatDateDmy(ymd: string) {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -43,8 +44,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <div className="max-w-[860px] mx-auto bg-white px-8 py-8">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-md bg-red-600 text-white flex items-center justify-center font-semibold text-2xl">
-              B
+            <div className="h-12 w-12 rounded-md bg-white border border-black/10 flex items-center justify-center overflow-hidden">
+              <Image src="/templates/invoice-logo.png" alt="Logo" width={48} height={48} className="h-full w-full object-contain" />
             </div>
             <div className="leading-tight">
               {cfg.displayNameZh ? <div className="text-lg font-semibold">{cfg.displayNameZh}</div> : null}
