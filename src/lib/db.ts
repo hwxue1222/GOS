@@ -143,6 +143,7 @@ function normalizeDb(parsed: Db): Db {
           issuer: (inv as Invoice).issuer ?? 'BBY_SG',
           billTo: nextBillTo,
           currency: (inv as Invoice).currency ?? 'SGD',
+          publicToken: typeof (inv as Invoice).publicToken === 'string' ? (inv as Invoice).publicToken : undefined,
           paymentNote: typeof (inv as Invoice).paymentNote === 'string' ? (inv as Invoice).paymentNote : undefined,
           items: Array.isArray((inv as Invoice).items) ? (inv as Invoice).items : [],
           subtotal: typeof (inv as Invoice).subtotal === 'number' ? (inv as Invoice).subtotal : 0,
@@ -1971,6 +1972,13 @@ export async function listInvoices() {
 export async function findInvoiceById(id: string) {
   const db = await readDb();
   return db.invoices.find((x) => x.id === id) ?? null;
+}
+
+export async function findInvoiceByPublicToken(token: string) {
+  const t = token.trim();
+  if (!t) return null;
+  const db = await readDb();
+  return db.invoices.find((x) => x.publicToken === t) ?? null;
 }
 
 function upsertInvoiceEmailHistoryInDb(

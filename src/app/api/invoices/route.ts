@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
+import { newPublicToken } from '@/lib/id';
 import { hasPermission } from '@/lib/permissions';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
 
@@ -189,6 +190,7 @@ export async function POST(req: Request) {
   const payload: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'> = {
     issuer,
     invoiceNo,
+    publicToken: newPublicToken(),
     billTo,
     jobId,
     issueDate,
@@ -221,7 +223,7 @@ export async function POST(req: Request) {
   }
 
   const baseUrl = process.env.APP_BASE_URL?.trim() || new URL(req.url).origin;
-  const printUrl = `${baseUrl}/invoices/${invoice.id}/print`;
+  const printUrl = `${baseUrl}/p/invoice/${invoice.publicToken}`;
   const subjectTemplate =
     typeof body?.emailSubject === 'string' && body.emailSubject.trim()
       ? body.emailSubject.trim()

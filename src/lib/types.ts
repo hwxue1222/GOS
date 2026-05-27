@@ -89,6 +89,7 @@ export type Invoice = {
   id: string;
   issuer: InvoiceIssuer;
   invoiceNo: string;
+  publicToken?: string;
   billTo: InvoiceBillTo;
   jobId?: string;
   issueDate: string;

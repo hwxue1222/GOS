@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { findInvoiceById, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
+import { newPublicToken } from '@/lib/id';
 import { hasPermission } from '@/lib/permissions';
 
 export const runtime = 'nodejs';
@@ -51,7 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   }
 
   const { invoiceId } = await ctx.params;
-  const invoice = await findInvoiceById(invoiceId);
+  let invoice = await findInvoiceById(invoiceId);
   if (!invoice || invoice.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
   const body = (await req.json().catch(() => null)) as
@@ -68,7 +69,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   if (!to.length) return NextResponse.json({ ok: false, error: 'MISSING_TO' }, { status: 400 });
 
   const baseUrl = process.env.APP_BASE_URL?.trim() || new URL(req.url).origin;
-  const printUrl = `${baseUrl}/invoices/${invoice.id}/print`;
+  let publicToken = invoice.publicToken;
+  if (!publicToken) {
+    const token = newPublicToken();
+    const updated = await updateInvoice(invoice.id, { ...invoice, publicToken: token });
+    if (updated) invoice = updated;
+    publicToken = invoice.publicToken ?? token;
+  }
+  const printUrl = `${baseUrl}/p/invoice/${publicToken}`;
 
   const subjectTemplate =
     typeof body?.subject === 'string' && body.subject.trim()
