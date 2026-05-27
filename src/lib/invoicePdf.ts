@@ -80,6 +80,10 @@ export async function buildInvoicePdf(params: {
   const gray = rgb(0.35, 0.35, 0.35);
   const white = rgb(1, 1, 1);
 
+  const clearBox = (x: number, y: number, w: number, h: number) => {
+    page.drawRectangle({ x, y, width: w, height: h, color: white });
+  };
+
   const drawLabelValue = (x: number, y: number, label: string, value: string) => {
     page.drawText(label, { x, y, size: 9, font: fontBold, color: black });
     page.drawText(value, { x: x + 95, y, size: 9, font, color: black });
@@ -87,10 +91,11 @@ export async function buildInvoicePdf(params: {
 
   const top = height - 160;
 
-  page.drawText('INVOICE', { x: width / 2 - 32, y: height - 200, size: 16, font: fontBold, color: black });
-
   const leftX = 68;
   const rightX = width / 2 + 10;
+
+  clearBox(leftX + 88, top - 86, width / 2 - (leftX + 88) - 28, 104);
+  clearBox(rightX + 88, top - 86, width - (rightX + 88) - 54, 104);
 
   drawLabelValue(leftX, top, 'Bill To', safeText(billToName));
   const addrLines = wrapText(safeText(billToAddress), width / 2 - 120, (s) => font.widthOfTextAtSize(s, 9));
@@ -107,14 +112,21 @@ export async function buildInvoicePdf(params: {
   drawLabelValue(rightX, top - 54, 'Payment', safeText(invoice.paymentMethod ?? 'As below'));
   drawLabelValue(rightX, top - 72, 'Credit Term', safeText(invoice.creditTerm ?? 'Net 15'));
 
-  page.drawText(`${issuerCfg.displayName}`, { x: 68, y: height - 120, size: 10, font: fontBold, color: gray });
-
   const tableTopY = height - 390;
   const rowH = 18;
   const colSvcX = 70;
   const colDescX = 120;
   const colQtyX = width - 190;
   const colAmtX = width - 92;
+
+  for (let i = 0; i < 4; i++) {
+    const y = tableTopY - i * rowH - 2;
+    clearBox(colSvcX - 2, y, 36, 14);
+    clearBox(colDescX - 2, y, colQtyX - colDescX - 6, 14);
+    clearBox(colQtyX - 2, y, 50, 14);
+    clearBox(colAmtX - 58, y, 60, 14);
+    clearBox(colDescX - 2, y - 11, colQtyX - colDescX - 6, 12);
+  }
 
   invoice.items.slice(0, 14).forEach((it, idx) => {
     const y = tableTopY - idx * rowH;
@@ -132,6 +144,7 @@ export async function buildInvoicePdf(params: {
 
   const totalsX = width - 290;
   const totalsY = 230;
+  clearBox(totalsX - 8, totalsY - 36, width - (totalsX - 8) - 70, 96);
   if (invoice.discount) {
     page.drawText(`Discount in ${invoice.currency}`, { x: totalsX, y: totalsY + 40, size: 10, font: fontBold, color: black });
     const v = `(${Math.abs(invoice.discount).toFixed(2)})`;
