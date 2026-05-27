@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -80,6 +80,17 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     appointmentDate: '',
     resignationDate: '',
   });
+  const [corpRepLoading, setCorpRepLoading] = useState(false);
+  const [corpRepSaving, setCorpRepSaving] = useState(false);
+  const [corpRepError, setCorpRepError] = useState<string | null>(null);
+  const [corpRepCurrent, setCorpRepCurrent] = useState<{
+    representative: { id: string; effectiveFrom: string };
+    person: { id: string; fullName: string; email?: string };
+  } | null>(null);
+  const [corpRepLatestRdr, setCorpRepLatestRdr] = useState<{ id: string; status: string; packetId: string } | null>(null);
+  const [corpRepLatestRequests, setCorpRepLatestRequests] = useState<Array<{ email: string; status: string; signedAt?: string }>>([]);
+  const [corpRepPickPersonId, setCorpRepPickPersonId] = useState('');
+  const [corpRepSignLinks, setCorpRepSignLinks] = useState<Array<{ email: string; url: string }> | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -100,6 +111,37 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   }, [jobView, jobs, search]);
 
   const todayYmd = new Date().toISOString().slice(0, 10);
+
+  const activeDirectors = useMemo(
+    () => directors.filter((d) => !d.role.resignationDate),
+    [directors],
+  );
+
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      setCorpRepError(null);
+      setCorpRepLoading(true);
+      try {
+        const res = await fetch(`/api/clients/${client.id}/corporate-representative`);
+        const j = await res.json().catch(() => null);
+        if (ignore) return;
+        if (!res.ok) {
+          setCorpRepError(j?.error ?? `HTTP_${res.status}`);
+          return;
+        }
+        setCorpRepCurrent(j?.current ?? null);
+        setCorpRepLatestRdr(j?.latestRdr ? { id: j.latestRdr.id, status: j.latestRdr.status, packetId: j.latestRdr.packetId } : null);
+        setCorpRepLatestRequests(Array.isArray(j?.latestRequests) ? j.latestRequests : []);
+      } finally {
+        if (!ignore) setCorpRepLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [client.id]);
 
   async function update() {
     setError(null);
@@ -257,6 +299,41 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
       if (j?.director) setDirectors((prev) => prev.map((x) => (x.role.id === roleId ? j.director! : x)));
     } finally {
       setDirectorSaving(false);
+    }
+  }
+
+  async function appointCorporateRepresentative() {
+    setCorpRepError(null);
+    setCorpRepSignLinks(null);
+    const personId = corpRepPickPersonId.trim();
+    if (!personId) {
+      setCorpRepError('INVALID_INPUT');
+      return;
+    }
+    setCorpRepSaving(true);
+    try {
+      const res = await fetch(`/api/clients/${client.id}/corporate-representative`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ representativePersonId: personId }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) {
+        setCorpRepError(j?.error ?? `HTTP_${res.status}`);
+        return;
+      }
+      setCorpRepLatestRdr(j?.rdrId ? { id: j.rdrId, status: 'SIGNING', packetId: j.packetId } : null);
+      setCorpRepSignLinks(Array.isArray(j?.signLinks) ? j.signLinks : null);
+
+      const refresh = await fetch(`/api/clients/${client.id}/corporate-representative`);
+      const rj = await refresh.json().catch(() => null);
+      if (refresh.ok) {
+        setCorpRepCurrent(rj?.current ?? null);
+        setCorpRepLatestRdr(rj?.latestRdr ? { id: rj.latestRdr.id, status: rj.latestRdr.status, packetId: rj.latestRdr.packetId } : null);
+        setCorpRepLatestRequests(Array.isArray(rj?.latestRequests) ? rj.latestRequests : []);
+      }
+    } finally {
+      setCorpRepSaving(false);
     }
   }
 
@@ -647,6 +724,108 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                 ) : null}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-white border border-black/5">
+          <div className="p-4 border-b border-black/5 flex items-center justify-between gap-3">
+            <div className="text-lg font-semibold">Corporate Representative</div>
+            {corpRepLoading ? <div className="text-sm text-black/50">Loading...</div> : null}
+          </div>
+          <div className="p-4">
+            {corpRepError ? <div className="text-sm text-red-600">{corpRepError}</div> : null}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="rounded-lg bg-black/[0.02] border border-black/5 p-4">
+                <div className="text-sm font-medium">Current</div>
+                {corpRepCurrent ? (
+                  <div className="mt-2 text-sm">
+                    <div className="text-black/80">{corpRepCurrent.person.fullName}</div>
+                    <div className="text-black/60">{corpRepCurrent.person.email ?? '-'}</div>
+                    <div className="mt-2 text-xs text-black/50">{`Effective: ${formatDateDMY(
+                      corpRepCurrent.representative.effectiveFrom.slice(0, 10),
+                    )}`}</div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-black/50">No representative</div>
+                )}
+
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  <label className="text-sm">
+                    <div className="text-black/70">Pick a director as representative</div>
+                    <select
+                      disabled={!canUpdateClient || corpRepSaving}
+                      value={corpRepPickPersonId}
+                      onChange={(e) => setCorpRepPickPersonId(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    >
+                      <option value="">Select...</option>
+                      {activeDirectors.map((d) => (
+                        <option key={d.person.id} value={d.person.id}>
+                          {d.person.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex items-center justify-end">
+                    <button
+                      disabled={!canUpdateClient || corpRepSaving}
+                      onClick={() => void appointCorporateRepresentative()}
+                      className="rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                    >
+                      {corpRepSaving ? 'Creating...' : 'Appoint / Change'}
+                    </button>
+                  </div>
+                </div>
+
+                {corpRepSignLinks ? (
+                  <div className="mt-4">
+                    <div className="text-sm font-medium">Signing links</div>
+                    <div className="mt-2 grid grid-cols-1 gap-1 text-sm">
+                      {corpRepSignLinks.map((l) => (
+                        <div key={l.email} className="break-words">
+                          <span className="text-black/60">{l.email}</span>
+                          <span className="text-black/40">{' — '}</span>
+                          <a className="text-[#2f7bdc] hover:underline" href={l.url} target="_blank" rel="noreferrer">
+                            {l.url}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 text-xs text-black/50">
+                      Links are shown only once. Use email sending in production.
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg bg-black/[0.02] border border-black/5 p-4">
+                <div className="text-sm font-medium">Latest Appointment</div>
+                {corpRepLatestRdr ? (
+                  <div className="mt-2 text-sm text-black/70">
+                    <div>{`Status: ${corpRepLatestRdr.status}`}</div>
+                    <div className="mt-2">
+                      {corpRepLatestRequests.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-1">
+                          {corpRepLatestRequests.map((r) => (
+                            <div key={r.email} className="flex items-center justify-between gap-3">
+                              <div className="truncate" title={r.email}>
+                                {r.email}
+                              </div>
+                              <div className="text-xs text-black/50">{r.status}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-black/50">No signers</div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-black/50">No appointment yet</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

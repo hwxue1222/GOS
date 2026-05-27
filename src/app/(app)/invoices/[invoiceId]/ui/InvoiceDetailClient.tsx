@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
-import type { Currency, Invoice, InvoiceItem, InvoiceStatus } from '@/lib/types';
+import type { Currency, Invoice, InvoiceIssuer, InvoiceItem, InvoiceStatus } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
 type JobLite = { id: string; name: string };
@@ -49,6 +49,22 @@ function newTempId() {
   return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
 }
 
+function splitEmails(text: string) {
+  const parts = text
+    .split(/[\s,;]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const p of parts) {
+    const k = p.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(p);
+  }
+  return out;
+}
+
 export default function InvoiceDetailClient({
   initialMe,
   initialInvoice,
@@ -63,6 +79,7 @@ export default function InvoiceDetailClient({
   const [invoice, setInvoice] = useState<Invoice>(initialInvoice);
 
   const [saving, setSaving] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const successTimerRef = useRef<number | null>(null);
@@ -74,16 +91,34 @@ export default function InvoiceDetailClient({
   }, []);
 
   const [draft, setDraft] = useState({
+    issuer: initialInvoice.issuer,
     invoiceNo: initialInvoice.invoiceNo,
-    clientId: initialInvoice.clientId,
+    billToType: initialInvoice.billTo.type as 'CLIENT' | 'ONE_OFF',
+    clientId: initialInvoice.billTo.type === 'CLIENT' ? initialInvoice.billTo.clientId : '',
+    companyName: initialInvoice.billTo.companyName || '',
+    address: initialInvoice.billTo.address ?? '',
+    contactNo: initialInvoice.billTo.contactNo ?? '',
+    email: initialInvoice.billTo.email ?? '',
     issueDate: initialInvoice.issueDate,
     dueDate: initialInvoice.dueDate ?? '',
+    creditTerm: initialInvoice.creditTerm ?? 'Net 15',
+    doNo: initialInvoice.doNo ?? '',
+    paymentMethod: initialInvoice.paymentMethod ?? 'As below',
     currency: initialInvoice.currency,
+    fxUsdRate: initialInvoice.fxUsdRate ? String(initialInvoice.fxUsdRate) : '',
+    fxCnyRate: initialInvoice.fxCnyRate ? String(initialInvoice.fxCnyRate) : '',
     status: initialInvoice.status,
     discount: initialInvoice.discount ? String(initialInvoice.discount) : '',
     tax: initialInvoice.tax ? String(initialInvoice.tax) : '',
     notes: initialInvoice.notes ?? '',
+    toEmailsText: (initialInvoice.recipients?.to ?? []).join(' '),
+    ccEmailsText: (initialInvoice.recipients?.cc ?? []).join(' '),
   });
+
+  const [suggestions, setSuggestions] = useState<{
+    history: { toEmails: string[]; ccEmails: string[] };
+    notifyPeople: Array<{ role: 'DIRECTOR' | 'SHAREHOLDER'; name: string; email: string }>;
+  } | null>(null);
 
   const [items, setItems] = useState<InvoiceItem[]>(
     initialInvoice.items.length ? initialInvoice.items : [{ id: newTempId(), description: '', qty: 1, unitPrice: 0 }],
@@ -100,8 +135,74 @@ export default function InvoiceDetailClient({
   const statusPill = statusLabel(invoice.status);
 
   const currentClient = useMemo(() => {
+    if (draft.billToType !== 'CLIENT') return null;
     return clients.find((c) => c.id === draft.clientId) ?? null;
-  }, [clients, draft.clientId]);
+  }, [clients, draft.billToType, draft.clientId]);
+
+  useEffect(() => {
+    let canceled = false;
+    async function run() {
+      if (!canEdit) return;
+      if (draft.billToType === 'CLIENT') {
+        const clientId = draft.clientId.trim();
+        if (!clientId) {
+          setSuggestions(null);
+          return;
+        }
+        const sugRes = await fetch(`/api/invoices/suggestions?type=CLIENT&clientId=${encodeURIComponent(clientId)}`).catch(() => null);
+        if (canceled) return;
+        if (!sugRes?.ok) {
+          setSuggestions(null);
+          return;
+        }
+        const s = (await sugRes.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              history?: { toEmails?: string[]; ccEmails?: string[] };
+              notifyPeople?: Array<{ role: 'DIRECTOR' | 'SHAREHOLDER'; name: string; email: string }>;
+            }
+          | null;
+        if (!s?.ok) {
+          setSuggestions(null);
+          return;
+        }
+        setSuggestions({
+          history: { toEmails: s.history?.toEmails ?? [], ccEmails: s.history?.ccEmails ?? [] },
+          notifyPeople: s.notifyPeople ?? [],
+        });
+        return;
+      }
+      const companyName = draft.companyName.trim();
+      if (!companyName) {
+        setSuggestions(null);
+        return;
+      }
+      const sugRes = await fetch(`/api/invoices/suggestions?type=ONE_OFF&companyName=${encodeURIComponent(companyName)}`).catch(() => null);
+      if (canceled) return;
+      if (!sugRes?.ok) {
+        setSuggestions(null);
+        return;
+      }
+      const s = (await sugRes.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            history?: { toEmails?: string[]; ccEmails?: string[] };
+          }
+        | null;
+      if (!s?.ok) {
+        setSuggestions(null);
+        return;
+      }
+      setSuggestions({
+        history: { toEmails: s.history?.toEmails ?? [], ccEmails: s.history?.ccEmails ?? [] },
+        notifyPeople: [],
+      });
+    }
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [canEdit, draft.billToType, draft.clientId, draft.companyName]);
 
   async function saveInvoice(patch?: Partial<{ status: InvoiceStatus }>) {
     setError(null);
@@ -125,16 +226,41 @@ export default function InvoiceDetailClient({
     setSaving(true);
     try {
       const status = patch?.status ?? draft.status;
+      const toEmails = splitEmails(draft.toEmailsText);
+      const ccEmails = splitEmails(draft.ccEmailsText);
       const res = await fetch(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          issuer: draft.issuer,
           invoiceNo: draft.invoiceNo || undefined,
-          clientId: draft.clientId,
+          billTo:
+            draft.billToType === 'CLIENT'
+              ? {
+                  type: 'CLIENT',
+                  clientId: draft.clientId,
+                  companyName: draft.companyName || undefined,
+                  address: draft.address || undefined,
+                  contactNo: draft.contactNo || undefined,
+                  email: draft.email || undefined,
+                }
+              : {
+                  type: 'ONE_OFF',
+                  companyName: draft.companyName,
+                  address: draft.address || undefined,
+                  contactNo: draft.contactNo || undefined,
+                  email: draft.email || undefined,
+                },
           issueDate: draft.issueDate,
           dueDate: draft.dueDate || null,
+          creditTerm: draft.creditTerm || null,
+          doNo: draft.doNo || null,
+          paymentMethod: draft.paymentMethod || null,
           currency: draft.currency,
           status,
+          fxUsdRate: draft.fxUsdRate ? safeNumber(draft.fxUsdRate) : undefined,
+          fxCnyRate: draft.fxCnyRate ? safeNumber(draft.fxCnyRate) : undefined,
+          recipients: { to: toEmails, cc: ccEmails },
           discount: draft.discount ? safeNumber(draft.discount) : undefined,
           tax: draft.tax ? safeNumber(draft.tax) : undefined,
           notes: draft.notes || null,
@@ -149,7 +275,24 @@ export default function InvoiceDetailClient({
       const j = (await res.json().catch(() => null)) as { ok?: boolean; invoice?: Invoice } | null;
       if (!j?.invoice) return;
       setInvoice(j.invoice);
-      setDraft((p) => ({ ...p, status: j.invoice!.status }));
+      setDraft((p) => ({
+        ...p,
+        issuer: j.invoice!.issuer,
+        invoiceNo: j.invoice!.invoiceNo,
+        billToType: j.invoice!.billTo.type,
+        clientId: j.invoice!.billTo.type === 'CLIENT' ? j.invoice!.billTo.clientId : '',
+        companyName: j.invoice!.billTo.companyName || '',
+        address: j.invoice!.billTo.address ?? '',
+        contactNo: j.invoice!.billTo.contactNo ?? '',
+        email: j.invoice!.billTo.email ?? '',
+        currency: j.invoice!.currency,
+        status: j.invoice!.status,
+        creditTerm: j.invoice!.creditTerm ?? 'Net 15',
+        doNo: j.invoice!.doNo ?? '',
+        paymentMethod: j.invoice!.paymentMethod ?? 'As below',
+        fxUsdRate: j.invoice!.fxUsdRate ? String(j.invoice!.fxUsdRate) : '',
+        fxCnyRate: j.invoice!.fxCnyRate ? String(j.invoice!.fxCnyRate) : '',
+      }));
       setSuccess('Updated successfully');
       successTimerRef.current = window.setTimeout(() => setSuccess(null), 2000);
     } finally {
@@ -164,6 +307,42 @@ export default function InvoiceDetailClient({
     const res = await fetch(`/api/invoices/${invoice.id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) return;
     window.location.href = '/invoices';
+  }
+
+  async function sendEmailNow() {
+    if (!canEdit) return;
+    setError(null);
+    const to = splitEmails(draft.toEmailsText);
+    const cc = splitEmails(draft.ccEmailsText);
+    if (!to.length) {
+      setError('MISSING_TO');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ to, cc }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setError(j?.error ?? 'EMAIL_SEND_FAILED');
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; invoice?: Invoice } | null;
+      if (!j?.invoice) return;
+      setInvoice(j.invoice);
+      setDraft((p) => ({
+        ...p,
+        toEmailsText: (j.invoice!.recipients?.to ?? []).join(' '),
+        ccEmailsText: (j.invoice!.recipients?.cc ?? []).join(' '),
+      }));
+      setSuccess('Email sent');
+      successTimerRef.current = window.setTimeout(() => setSuccess(null), 2000);
+    } finally {
+      setSendingEmail(false);
+    }
   }
 
   return (
@@ -203,6 +382,20 @@ export default function InvoiceDetailClient({
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+              href={`/invoices/${invoice.id}/print`}
+              target="_blank"
+            >
+              Preview / Print
+            </Link>
+            <button
+              disabled={saving || sendingEmail || !canEdit}
+              onClick={() => void sendEmailNow()}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              {sendingEmail ? 'Sending...' : 'Send Email'}
+            </button>
             {invoice.status !== 'PAID' ? (
               <button
                 disabled={saving || !canEdit}
@@ -248,20 +441,62 @@ export default function InvoiceDetailClient({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-black/60 mb-1">Client</div>
+                <div className="text-xs text-black/60 mb-1">Bill To Type</div>
                 <select
                   disabled={!canEdit}
-                  value={draft.clientId}
-                  onChange={(e) => setDraft((p) => ({ ...p, clientId: e.target.value }))}
+                  value={draft.billToType}
+                  onChange={(e) => {
+                    const v = e.target.value as 'CLIENT' | 'ONE_OFF';
+                    setDraft((p) => ({ ...p, billToType: v, clientId: v === 'CLIENT' ? p.clientId : '' }));
+                  }}
                   className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
                 >
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} {c.name}
-                    </option>
-                  ))}
+                  <option value="CLIENT">Existing client</option>
+                  <option value="ONE_OFF">One-off company</option>
                 </select>
               </div>
+
+              <div>
+                <div className="text-xs text-black/60 mb-1">Issuer Company</div>
+                <select
+                  disabled={!canEdit}
+                  value={draft.issuer}
+                  onChange={(e) => setDraft((p) => ({ ...p, issuer: e.target.value as InvoiceIssuer }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                >
+                  <option value="BBY_SG">BBY.SG Pte. Ltd.</option>
+                  <option value="BYBRIDGE">Bybridge Consultancy Pte. Ltd.</option>
+                </select>
+              </div>
+
+              {draft.billToType === 'CLIENT' ? (
+                <div className="sm:col-span-2">
+                  <div className="text-xs text-black/60 mb-1">Company</div>
+                  <select
+                    disabled={!canEdit}
+                    value={draft.clientId}
+                    onChange={(e) => setDraft((p) => ({ ...p, clientId: e.target.value }))}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                  >
+                    <option value="">Select client...</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="sm:col-span-2">
+                  <div className="text-xs text-black/60 mb-1">Company Name</div>
+                  <input
+                    disabled={!canEdit}
+                    value={draft.companyName}
+                    onChange={(e) => setDraft((p) => ({ ...p, companyName: e.target.value }))}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                  />
+                </div>
+              )}
 
               <div>
                 <div className="text-xs text-black/60 mb-1">Invoice No</div>
@@ -271,6 +506,18 @@ export default function InvoiceDetailClient({
                   onChange={(e) => setDraft((p) => ({ ...p, invoiceNo: e.target.value }))}
                   className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
                 />
+              </div>
+
+              <div>
+                <div className="text-xs text-black/60 mb-1">Currency</div>
+                <select
+                  disabled={!canEdit}
+                  value={draft.currency}
+                  onChange={(e) => setDraft((p) => ({ ...p, currency: e.target.value as Currency }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                >
+                  <option value="SGD">SGD</option>
+                </select>
               </div>
 
               <div>
@@ -294,22 +541,190 @@ export default function InvoiceDetailClient({
               </div>
 
               <div>
-                <div className="text-xs text-black/60 mb-1">Currency</div>
-                <select
+                <div className="text-xs text-black/60 mb-1">Credit Term</div>
+                <input
                   disabled={!canEdit}
-                  value={draft.currency}
-                  onChange={(e) => setDraft((p) => ({ ...p, currency: e.target.value as Currency }))}
-                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
-                >
-                  {(['MYR', 'SGD', 'USD', 'CNY'] as Currency[]).map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  value={draft.creditTerm}
+                  onChange={(e) => setDraft((p) => ({ ...p, creditTerm: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs text-black/60 mb-1">D/O No.</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.doNo}
+                  onChange={(e) => setDraft((p) => ({ ...p, doNo: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <div className="text-xs text-black/60 mb-1">Payment Method</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.paymentMethod}
+                  onChange={(e) => setDraft((p) => ({ ...p, paymentMethod: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
+              </div>
+
+              {draft.billToType === 'CLIENT' ? (
+                <div className="sm:col-span-2">
+                  <div className="text-xs text-black/60 mb-1">Company Name (override)</div>
+                  <input
+                    disabled={!canEdit}
+                    value={draft.companyName}
+                    onChange={(e) => setDraft((p) => ({ ...p, companyName: e.target.value }))}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                    placeholder={currentClient?.name ?? ''}
+                  />
+                </div>
+              ) : null}
+
+              <div className="sm:col-span-2">
+                <div className="text-xs text-black/60 mb-1">Address</div>
+                <textarea
+                  disabled={!canEdit}
+                  value={draft.address}
+                  onChange={(e) => setDraft((p) => ({ ...p, address: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <div className="text-xs text-black/60 mb-1">Contact No.</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.contactNo}
+                  onChange={(e) => setDraft((p) => ({ ...p, contactNo: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <div className="text-xs text-black/60 mb-1">Email</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.email}
+                  onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                  inputMode="email"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <div className="text-xs text-black/60 mb-1">To Emails</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.toEmailsText}
+                  onChange={(e) => setDraft((p) => ({ ...p, toEmailsText: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
+                {canEdit && suggestions?.notifyPeople?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {suggestions.notifyPeople.map((p) => (
+                      <button
+                        key={`${p.role}:${p.email}`}
+                        type="button"
+                        onClick={() => {
+                          const email = p.email.trim();
+                          if (!email) return;
+                          setDraft((prev) => {
+                            const has = prev.toEmailsText.toLowerCase().includes(email.toLowerCase());
+                            return has ? prev : { ...prev, toEmailsText: `${prev.toEmailsText} ${email}`.trim() };
+                          });
+                        }}
+                        className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70 hover:bg-black/[0.02]"
+                        title={`${p.role}: ${p.name}`}
+                      >
+                        {p.name} ({p.role})
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {canEdit && suggestions?.history?.toEmails?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {suggestions.history.toEmails.map((e) => (
+                      <button
+                        key={`to:${e}`}
+                        type="button"
+                        onClick={() => {
+                          const email = e.trim();
+                          if (!email) return;
+                          setDraft((prev) => {
+                            const has = prev.toEmailsText.toLowerCase().includes(email.toLowerCase());
+                            return has ? prev : { ...prev, toEmailsText: `${prev.toEmailsText} ${email}`.trim() };
+                          });
+                        }}
+                        className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70 hover:bg-black/[0.02]"
+                        title="History"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="sm:col-span-2">
+                <div className="text-xs text-black/60 mb-1">CC Emails</div>
+                <input
+                  disabled={!canEdit}
+                  value={draft.ccEmailsText}
+                  onChange={(e) => setDraft((p) => ({ ...p, ccEmailsText: e.target.value }))}
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                />
+                {canEdit && suggestions?.history?.ccEmails?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {suggestions.history.ccEmails.map((e) => (
+                      <button
+                        key={`cc:${e}`}
+                        type="button"
+                        onClick={() => {
+                          const email = e.trim();
+                          if (!email) return;
+                          setDraft((prev) => {
+                            const has = prev.ccEmailsText.toLowerCase().includes(email.toLowerCase());
+                            return has ? prev : { ...prev, ccEmailsText: `${prev.ccEmailsText} ${email}`.trim() };
+                          });
+                        }}
+                        className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70 hover:bg-black/[0.02]"
+                        title="History"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                <div>
+                  <div className="text-xs text-black/60 mb-1">USD rate</div>
+                  <input
+                    disabled={!canEdit}
+                    value={draft.fxUsdRate}
+                    onChange={(e) => setDraft((p) => ({ ...p, fxUsdRate: e.target.value }))}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                    inputMode="decimal"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-black/60 mb-1">CNY rate</div>
+                  <input
+                    disabled={!canEdit}
+                    value={draft.fxCnyRate}
+                    onChange={(e) => setDraft((p) => ({ ...p, fxCnyRate: e.target.value }))}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                    inputMode="decimal"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                 <div>
                   <div className="text-xs text-black/60 mb-1">Discount</div>
                   <input
@@ -468,14 +883,18 @@ export default function InvoiceDetailClient({
             <div className="text-sm font-semibold">Info</div>
             <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-black/60">Client</div>
+                <div className="text-black/60">Issuer</div>
+                <div className="text-right">{invoice.issuer}</div>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-black/60">Bill To</div>
                 <div className="text-right">
                   {currentClient ? (
                     <Link className="text-[#2f7bdc] hover:underline" href={`/clients/${currentClient.id}`}>
                       {currentClient.code} {currentClient.name}
                     </Link>
                   ) : (
-                    '-'
+                    invoice.billTo.companyName || '-'
                   )}
                 </div>
               </div>
@@ -491,6 +910,28 @@ export default function InvoiceDetailClient({
                   )}
                 </div>
               </div>
+              {invoice.sentAt ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-black/60">Sent at</div>
+                  <div className="text-right">{formatDateDMY(invoice.sentAt)}</div>
+                </div>
+              ) : null}
+              {invoice.recipients?.to?.length ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-black/60">To</div>
+                  <div className="text-right max-w-[220px] truncate" title={invoice.recipients.to.join(', ')}>
+                    {invoice.recipients.to.join(', ')}
+                  </div>
+                </div>
+              ) : null}
+              {invoice.recipients?.cc?.length ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-black/60">CC</div>
+                  <div className="text-right max-w-[220px] truncate" title={invoice.recipients.cc.join(', ')}>
+                    {invoice.recipients.cc.join(', ')}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-3">
                 <div className="text-black/60">Created by</div>
                 <div className="text-right">{createdByName}</div>

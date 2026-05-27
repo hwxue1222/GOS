@@ -1,0 +1,42 @@
+export type EmailAttachment = { filename: string; contentBase64: string; contentType?: string };
+
+export async function sendEmail(input: {
+  to: string | string[];
+  cc?: string | string[];
+  subject: string;
+  html: string;
+  attachments?: EmailAttachment[];
+}) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !from) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: input.to,
+      cc: input.cc,
+      subject: input.subject,
+      html: input.html,
+      attachments: input.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.contentBase64,
+        content_type: a.contentType,
+      })),
+    }),
+  }).catch(() => null);
+
+  if (!res?.ok) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+  return { ok: true as const };
+}
+
+export async function sendSigningInvite(input: { to: string; title: string; url: string }) {
+  const subject = `Signature required: ${input.title}`;
+  const html = `<div style="font-family: ui-sans-serif,system-ui; line-height:1.5;"><div>Please sign:</div><div style="margin-top:8px;"><a href="${input.url}">${input.url}</a></div><div style="color:#555;font-size:12px;margin-top:10px;">This link is unique to you.</div></div>`;
+  return sendEmail({ to: input.to, subject, html });
+}

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createInvoice, listInvoices } from '@/lib/db';
+import { createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
+import { sendEmail } from '@/lib/email';
+import { buildInvoicePdf } from '@/lib/invoicePdf';
 import { hasPermission } from '@/lib/permissions';
-import type { Currency, Invoice, InvoiceItem, InvoiceStatus } from '@/lib/types';
+import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
+
+export const runtime = 'nodejs';
 
 function todayYmd() {
   return new Date().toISOString().slice(0, 10);
@@ -44,11 +48,41 @@ function computeTotals(items: InvoiceItem[], discount: number, tax: number) {
   return { subtotal, discount: safeDiscount, tax: safeTax, total };
 }
 
-function generateInvoiceNo() {
-  const ymd = todayYmd().replace(/-/g, '');
-  const rand = Math.random().toString(16).slice(2, 6).toUpperCase();
-  return `INV-${ymd}-${rand}`;
+function normalizeEmailList(input: unknown) {
+  if (!Array.isArray(input)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of input) {
+    const v = typeof raw === 'string' ? raw.trim() : '';
+    if (!v) continue;
+    const k = v.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(v);
+  }
+  return out;
 }
+
+function fillTemplate(template: string, vars: Record<string, string>) {
+  return template.replaceAll(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '');
+}
+
+const DEFAULT_INVOICE_EMAIL_SUBJECT = 'Invoice 发票 {{invoiceNo}}';
+
+const DEFAULT_INVOICE_EMAIL_HTML =
+  '<div style="font-family: ui-sans-serif, system-ui; line-height: 1.7; color: #111;">' +
+    '<div style="font-size:14px;">{{billToCompany}}</div>' +
+    '<div style="margin-top:10px;">欢迎您使用百桥咨询 BBY.SG 的财务/税务/公司秘书等专业服务，请查收发票，并尽快安排付款。</div>' +
+    '<div style="margin-top:10px;">如有问题，请联系百桥咨询客服（微信 18851644566 或者 电话 +65 89926681）。</div>' +
+    '<div style="margin-top:12px;">发票号 Invoice No: <b>{{invoiceNo}}</b></div>' +
+    '<div style="margin-top:10px;">预览 / 打印 Preview / Print: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
+    '<hr style="border:0;border-top:1px solid #e5e5e5;margin:18px 0;" />' +
+    '<div style="font-size:14px;">{{billToCompany}}</div>' +
+    '<div style="margin-top:10px;">Thank you for choosing BBY.SG for professional accounting, tax, and corporate secretarial services. Please find the invoice attached and kindly arrange payment at your earliest convenience.</div>' +
+    '<div style="margin-top:10px;">If you have any questions, please contact our customer service (WeChat: 18851644566 or Tel: +65 89926681).</div>' +
+    '<div style="margin-top:12px;">Invoice No: <b>{{invoiceNo}}</b></div>' +
+    '<div style="margin-top:10px;">Preview / Print: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
+  '</div>';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -70,44 +104,102 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => null)) as
     | {
+        issuer?: InvoiceIssuer;
         invoiceNo?: string;
-        clientId?: string;
+        billTo?: unknown;
         jobId?: string;
         issueDate?: string;
         dueDate?: string;
+        creditTerm?: string;
+        doNo?: string;
+        paymentMethod?: string;
         currency?: Currency;
         status?: InvoiceStatus;
         items?: unknown;
         discount?: unknown;
         tax?: unknown;
         notes?: string;
+        fxUsdRate?: unknown;
+        fxCnyRate?: unknown;
+        recipients?: { to?: unknown; cc?: unknown };
+        sendNow?: boolean;
+        emailSubject?: unknown;
+        emailHtml?: unknown;
       }
     | null;
 
-  const clientId = body?.clientId?.trim() ?? '';
-  if (!clientId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
-
-  const invoiceNo = body?.invoiceNo?.trim() ? body!.invoiceNo!.trim() : generateInvoiceNo();
+  const issuer: InvoiceIssuer = body?.issuer ?? 'BBY_SG';
   const issueDate = body?.issueDate?.trim() || todayYmd();
   const dueDate = body?.dueDate?.trim() || undefined;
   const jobId = body?.jobId?.trim() || undefined;
+  const creditTerm = body?.creditTerm?.trim() || undefined;
+  const doNo = body?.doNo?.trim() || undefined;
+  const paymentMethod = body?.paymentMethod?.trim() || undefined;
+
   const currency: Currency = body?.currency ?? 'SGD';
   const status: InvoiceStatus = body?.status ?? 'UNPAID';
   const items = normalizeItems(body?.items);
   const discount = safeNumber(body?.discount);
   const tax = safeNumber(body?.tax);
   const notes = body?.notes?.trim() || undefined;
+  const fxUsdRate = safeNumber(body?.fxUsdRate) || undefined;
+  const fxCnyRate = safeNumber(body?.fxCnyRate) || undefined;
+  const toEmails = normalizeEmailList(body?.recipients?.to);
+  const ccEmails = normalizeEmailList(body?.recipients?.cc);
+  const sendNow = body?.sendNow ?? false;
 
   const totals = computeTotals(items, discount, tax);
   const now = new Date().toISOString();
 
+  const billToRaw = body?.billTo as
+    | { type?: 'CLIENT'; clientId?: string; companyName?: string; address?: string; contactNo?: string; email?: string }
+    | { type?: 'ONE_OFF'; companyName?: string; address?: string; contactNo?: string; email?: string }
+    | null
+    | undefined;
+  if (!billToRaw?.type) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  let billTo: Invoice['billTo'];
+  if (billToRaw.type === 'CLIENT') {
+    const clientId = billToRaw.clientId?.trim() ?? '';
+    if (!clientId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    const client = await findClientById(clientId);
+    if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'INVALID_CLIENT' }, { status: 400 });
+    billTo = {
+      type: 'CLIENT',
+      clientId,
+      companyName: billToRaw.companyName?.trim() || client.name,
+      address: billToRaw.address?.trim() || client.address || undefined,
+      contactNo: billToRaw.contactNo?.trim() || client.phone || undefined,
+      email: billToRaw.email?.trim() || client.email || undefined,
+    };
+  } else {
+    const companyName = billToRaw.companyName?.trim() ?? '';
+    if (!companyName) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    billTo = {
+      type: 'ONE_OFF',
+      companyName,
+      address: billToRaw.address?.trim() || undefined,
+      contactNo: billToRaw.contactNo?.trim() || undefined,
+      email: billToRaw.email?.trim() || undefined,
+    };
+  }
+
+  const invoiceNo = body?.invoiceNo?.trim() ? body!.invoiceNo!.trim() : '';
+
   const payload: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'> = {
+    issuer,
     invoiceNo,
-    clientId,
+    billTo,
     jobId,
     issueDate,
     dueDate,
+    creditTerm,
+    doNo,
+    paymentMethod,
     currency,
+    fxUsdRate,
+    fxCnyRate,
+    recipients: toEmails.length || ccEmails.length ? { to: toEmails, cc: ccEmails } : undefined,
     status,
     items,
     discount: totals.discount || undefined,
@@ -117,10 +209,49 @@ export async function POST(req: Request) {
     notes,
     paidAt: status === 'PAID' ? now : undefined,
     createdByUserId: user.id,
+    sentAt: undefined,
     deletedAt: undefined,
-  };
+  } as Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>;
 
   const invoice = await createInvoice(payload);
-  return NextResponse.json({ ok: true, invoice });
-}
 
+  if (!sendNow) return NextResponse.json({ ok: true, invoice });
+  if (!toEmails.length) {
+    return NextResponse.json({ ok: true, invoice, send: { ok: false, error: 'MISSING_TO' as const } });
+  }
+
+  const baseUrl = process.env.APP_BASE_URL?.trim() || new URL(req.url).origin;
+  const printUrl = `${baseUrl}/invoices/${invoice.id}/print`;
+  const subjectTemplate =
+    typeof body?.emailSubject === 'string' && body.emailSubject.trim()
+      ? body.emailSubject.trim()
+      : process.env.INVOICE_EMAIL_SUBJECT?.trim() || DEFAULT_INVOICE_EMAIL_SUBJECT;
+  const htmlTemplate =
+    typeof body?.emailHtml === 'string' && body.emailHtml.trim()
+      ? body.emailHtml
+      : process.env.INVOICE_EMAIL_HTML?.trim() || DEFAULT_INVOICE_EMAIL_HTML;
+
+  const vars = { invoiceNo: invoice.invoiceNo, billToCompany: invoice.billTo.companyName || '', printUrl };
+  const subject = fillTemplate(subjectTemplate, vars);
+  const html = fillTemplate(htmlTemplate, vars);
+
+  const client = invoice.billTo.type === 'CLIENT' ? await findClientById(invoice.billTo.clientId).catch(() => null) : null;
+  const pdfBuffer = await buildInvoicePdf({ invoice, client });
+  const pdfBase64 = pdfBuffer.toString('base64');
+
+  const sendRes = await sendEmail({
+    to: toEmails,
+    cc: ccEmails.length ? ccEmails : undefined,
+    subject,
+    html,
+    attachments: [{ filename: `${invoice.invoiceNo}.pdf`, contentBase64: pdfBase64, contentType: 'application/pdf' }],
+  });
+
+  if (!sendRes.ok) return NextResponse.json({ ok: true, invoice, send: { ok: false, error: sendRes.error } });
+
+  const sentAt = new Date().toISOString();
+  const updated = await updateInvoice(invoice.id, { ...invoice, sentAt, recipients: { to: toEmails, cc: ccEmails } });
+  await upsertInvoiceEmailHistory({ billTo: invoice.billTo, toEmails, ccEmails });
+
+  return NextResponse.json({ ok: true, invoice: updated, send: { ok: true } });
+}

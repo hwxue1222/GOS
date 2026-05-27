@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { createHash, randomBytes } from 'crypto';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
 import type {
@@ -7,14 +8,21 @@ import type {
   ClientPartyRole,
   CompanyRepresentative,
   Db,
+  Document,
   ExternalCompany,
+  Invoice,
+  InvoiceEmailHistory,
   Job,
   JobTask,
   Party,
   Permissions,
   Person,
+  RepresentativeDesignationRequest,
   Role,
   Session,
+  ShareTransfer,
+  SignaturePacket,
+  SignatureRequest,
   User,
 } from '@/lib/types';
 
@@ -42,11 +50,18 @@ function emptyDb(): Db {
     users: [],
     sessions: [],
     clients: [],
+    invoices: [],
+    invoiceEmailHistories: [],
     persons: [],
     parties: [],
     externalCompanies: [],
     clientPartyRoles: [],
     companyRepresentatives: [],
+    documents: [],
+    signaturePackets: [],
+    signatureRequests: [],
+    representativeDesignationRequests: [],
+    shareTransfers: [],
     jobs: [],
     tasks: [],
     reservedNames: [],
@@ -77,12 +92,103 @@ function normalizeDb(parsed: Db): Db {
     ...c,
     tags: (c as Client).tags ?? [],
     companyRegistrationNo: (c as Client).companyRegistrationNo,
+    fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
     phone: (c as Client).phone,
     email: (c as Client).email,
     deletedAt: (c as Client).deletedAt,
   }));
+
+  const invoices = (parsed as unknown as { invoices?: unknown }).invoices;
+  const normalizedInvoices: Invoice[] = Array.isArray(invoices)
+    ? (invoices as Invoice[]).map((inv) => {
+        const createdAt = (inv as Invoice).createdAt ?? nowIso();
+        const updatedAt = (inv as Invoice).updatedAt ?? createdAt;
+        const billTo = (inv as Invoice).billTo as Invoice['billTo'] | undefined;
+        const fallbackClientId = (inv as unknown as { clientId?: string }).clientId;
+        const legacyClientId = typeof fallbackClientId === 'string' ? fallbackClientId : undefined;
+        const nextBillTo: Invoice['billTo'] =
+          billTo && (billTo as { type?: string }).type === 'CLIENT' && typeof (billTo as { clientId?: unknown }).clientId === 'string'
+            ? {
+                type: 'CLIENT',
+                clientId: String((billTo as { clientId: string }).clientId),
+                companyName:
+                  typeof (billTo as { companyName?: unknown }).companyName === 'string'
+                    ? String((billTo as { companyName?: string }).companyName)
+                    : '',
+                address: typeof (billTo as { address?: unknown }).address === 'string' ? String((billTo as { address?: string }).address) : undefined,
+                contactNo:
+                  typeof (billTo as { contactNo?: unknown }).contactNo === 'string' ? String((billTo as { contactNo?: string }).contactNo) : undefined,
+                email: typeof (billTo as { email?: unknown }).email === 'string' ? String((billTo as { email?: string }).email) : undefined,
+              }
+            : billTo && (billTo as { type?: string }).type === 'ONE_OFF'
+              ? {
+                  type: 'ONE_OFF',
+                  companyName:
+                    typeof (billTo as { companyName?: unknown }).companyName === 'string'
+                      ? String((billTo as { companyName?: string }).companyName)
+                      : '',
+                  address: typeof (billTo as { address?: unknown }).address === 'string' ? String((billTo as { address?: string }).address) : undefined,
+                  contactNo:
+                    typeof (billTo as { contactNo?: unknown }).contactNo === 'string' ? String((billTo as { contactNo?: string }).contactNo) : undefined,
+                  email: typeof (billTo as { email?: unknown }).email === 'string' ? String((billTo as { email?: string }).email) : undefined,
+                }
+              : legacyClientId
+                ? { type: 'CLIENT', clientId: legacyClientId, companyName: '' }
+                : { type: 'ONE_OFF', companyName: '' };
+
+        return {
+          ...inv,
+          issuer: (inv as Invoice).issuer ?? 'BBY_SG',
+          billTo: nextBillTo,
+          currency: (inv as Invoice).currency ?? 'SGD',
+          items: Array.isArray((inv as Invoice).items) ? (inv as Invoice).items : [],
+          subtotal: typeof (inv as Invoice).subtotal === 'number' ? (inv as Invoice).subtotal : 0,
+          total: typeof (inv as Invoice).total === 'number' ? (inv as Invoice).total : 0,
+          status: (inv as Invoice).status ?? 'UNPAID',
+          createdAt,
+          updatedAt,
+        };
+      })
+    : [];
+
+  const invoiceEmailHistories = (parsed as unknown as { invoiceEmailHistories?: unknown }).invoiceEmailHistories;
+  const normalizedInvoiceEmailHistories: InvoiceEmailHistory[] = Array.isArray(invoiceEmailHistories)
+    ? (invoiceEmailHistories as InvoiceEmailHistory[]).map((h) => {
+        const createdAt = (h as InvoiceEmailHistory).createdAt ?? nowIso();
+        const updatedAt = (h as InvoiceEmailHistory).updatedAt ?? createdAt;
+        const key = (h as InvoiceEmailHistory).key;
+        const nextKey: InvoiceEmailHistory['key'] =
+          key && (key as { type?: string }).type === 'CLIENT' && typeof (key as { clientId?: unknown }).clientId === 'string'
+            ? { type: 'CLIENT', clientId: String((key as { clientId: string }).clientId) }
+            : key && (key as { type?: string }).type === 'ONE_OFF' && typeof (key as { companyNameKey?: unknown }).companyNameKey === 'string'
+              ? { type: 'ONE_OFF', companyNameKey: String((key as { companyNameKey: string }).companyNameKey) }
+              : { type: 'ONE_OFF', companyNameKey: '' };
+        const uniq = (xs: unknown) => {
+          if (!Array.isArray(xs)) return [];
+          const out: string[] = [];
+          const seen = new Set<string>();
+          for (const v of xs) {
+            const s = typeof v === 'string' ? v.trim() : '';
+            if (!s) continue;
+            const k = s.toLowerCase();
+            if (seen.has(k)) continue;
+            seen.add(k);
+            out.push(s);
+          }
+          return out;
+        };
+        return {
+          ...h,
+          key: nextKey,
+          toEmails: uniq((h as InvoiceEmailHistory).toEmails),
+          ccEmails: uniq((h as InvoiceEmailHistory).ccEmails),
+          createdAt,
+          updatedAt,
+        };
+      })
+    : [];
   const jobs = (parsed.jobs ?? []).map((j) => ({
     ...j,
     repeat: (j as Job).repeat ?? 'none',
@@ -158,6 +264,10 @@ function normalizeDb(parsed: Db): Db {
     role: (r as ClientPartyRole).role,
     appointmentDate: (r as ClientPartyRole).appointmentDate,
     resignationDate: (r as ClientPartyRole).resignationDate,
+    shareClass: (r as ClientPartyRole).shareClass,
+    shares: (r as ClientPartyRole).shares,
+    fromDate: (r as ClientPartyRole).fromDate,
+    toDate: (r as ClientPartyRole).toDate,
     updatedAt: (r as ClientPartyRole).updatedAt ?? (r as ClientPartyRole).createdAt,
   }));
 
@@ -172,19 +282,97 @@ function normalizeDb(parsed: Db): Db {
     updatedAt: (r as CompanyRepresentative).updatedAt ?? (r as CompanyRepresentative).createdAt,
   }));
 
+  const documents = (parsed.documents ?? []).map((d) => ({
+    ...d,
+    type: (d as Document).type,
+    title: (d as Document).title,
+    html: (d as Document).html,
+    sha256: (d as Document).sha256,
+  }));
+
+  const signaturePackets = (parsed.signaturePackets ?? []).map((p) => ({
+    ...p,
+    kind: (p as SignaturePacket).kind,
+    relatedType: (p as SignaturePacket).relatedType,
+    relatedId: (p as SignaturePacket).relatedId,
+    documentId: (p as SignaturePacket).documentId,
+    status: (p as SignaturePacket).status ?? 'DRAFT',
+    updatedAt: (p as SignaturePacket).updatedAt ?? (p as SignaturePacket).createdAt,
+  }));
+
+  const signatureRequests = (parsed.signatureRequests ?? []).map((r) => ({
+    ...r,
+    packetId: (r as SignatureRequest).packetId,
+    email: (r as SignatureRequest).email,
+    tokenHash: (r as SignatureRequest).tokenHash,
+    expiresAt: (r as SignatureRequest).expiresAt,
+    status: (r as SignatureRequest).status ?? 'PENDING',
+    rdrRepresentativeName: (r as SignatureRequest).rdrRepresentativeName,
+    rdrRepresentativeEmail: (r as SignatureRequest).rdrRepresentativeEmail,
+    otpHash: (r as SignatureRequest).otpHash,
+    otpExpiresAt: (r as SignatureRequest).otpExpiresAt,
+    otpSentAt: (r as SignatureRequest).otpSentAt,
+    signedAt: (r as SignatureRequest).signedAt,
+    signedIp: (r as SignatureRequest).signedIp,
+    signedUserAgent: (r as SignatureRequest).signedUserAgent,
+    updatedAt: (r as SignatureRequest).updatedAt ?? (r as SignatureRequest).createdAt,
+  }));
+
+  const representativeDesignationRequests = (parsed.representativeDesignationRequests ?? []).map((r) => ({
+    ...r,
+    triggerType: (r as RepresentativeDesignationRequest).triggerType,
+    companyPartyId: (r as RepresentativeDesignationRequest).companyPartyId,
+    representativePersonId: (r as RepresentativeDesignationRequest).representativePersonId,
+    representativeName: (r as RepresentativeDesignationRequest).representativeName,
+    representativeEmail: (r as RepresentativeDesignationRequest).representativeEmail,
+    packetId: (r as RepresentativeDesignationRequest).packetId,
+    status: (r as RepresentativeDesignationRequest).status ?? 'SIGNING',
+    updatedAt: (r as RepresentativeDesignationRequest).updatedAt ?? (r as RepresentativeDesignationRequest).createdAt,
+  }));
+
+  const shareTransfers = (parsed.shareTransfers ?? []).map((t) => ({
+    ...t,
+    clientId: (t as ShareTransfer).clientId,
+    transferorPartyId: (t as ShareTransfer).transferorPartyId,
+    transfereePartyId: (t as ShareTransfer).transfereePartyId,
+    shareClass: (t as ShareTransfer).shareClass,
+    shares: (t as ShareTransfer).shares,
+    effectiveDate: (t as ShareTransfer).effectiveDate,
+    status: (t as ShareTransfer).status ?? 'SIGNING',
+    staPacketId: (t as ShareTransfer).staPacketId,
+    brPacketId: (t as ShareTransfer).brPacketId,
+    blockingRdrIds: Array.isArray((t as ShareTransfer).blockingRdrIds) ? (t as ShareTransfer).blockingRdrIds : undefined,
+    updatedAt: (t as ShareTransfer).updatedAt ?? (t as ShareTransfer).createdAt,
+  }));
+
   return {
     users,
     sessions: parsed.sessions ?? [],
     clients,
+    invoices: normalizedInvoices,
+    invoiceEmailHistories: normalizedInvoiceEmailHistories,
     persons,
     parties,
     externalCompanies,
     clientPartyRoles,
     companyRepresentatives,
+    documents,
+    signaturePackets,
+    signatureRequests,
+    representativeDesignationRequests,
+    shareTransfers,
     jobs,
     tasks: tasks as unknown as JobTask[],
     reservedNames: [...reservedSet],
   };
+}
+
+function sha256Hex(content: string) {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function newToken() {
+  return randomBytes(24).toString('hex');
 }
 
 async function hasKv(): Promise<boolean> {
@@ -275,6 +463,7 @@ export async function readDb(): Promise<Db> {
       tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
       clients: { viewAll: true, create: true, update: true, import: true },
       staffs: { viewAll: true, create: true, update: true },
+      invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
     },
     passwordHash: lukePasswordHash,
     createdAt: nowIso(),
@@ -452,6 +641,7 @@ export async function createClient(input: {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -464,6 +654,7 @@ export async function createClient(input: {
     code: input.code,
     name: input.name,
     companyRegistrationNo: input.companyRegistrationNo,
+    fye: input.fye,
     contactPerson: input.contactPerson,
     address: input.address,
     phone: input.phone,
@@ -488,7 +679,7 @@ export async function findClientById(id: string) {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
+  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'fye' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
 ) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);
@@ -672,6 +863,721 @@ export async function updateClientDirector(input: {
   const updatedParty = db.parties.find((p) => p.id === updatedRole.partyId)!;
   const updatedPerson = db.persons.find((p) => p.id === updatedParty.personId)!;
   return { role: updatedRole, party: updatedParty, person: updatedPerson };
+}
+
+export async function getOrCreateCompanyPartyForClient(clientId: string) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === clientId) ?? null;
+  if (!client || client.deletedAt) return null;
+
+  const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === clientId) ?? null;
+  if (hit) return hit;
+
+  const createdAt = nowIso();
+  const party: Party = {
+    id: newId('pty'),
+    type: 'COMPANY',
+    displayName: client.name,
+    clientId,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.parties.unshift(party);
+  await writeDb(db);
+  return party;
+}
+
+export async function getActiveCompanyRepresentative(companyPartyId: string) {
+  const db = await readDb();
+  const reps = db.companyRepresentatives
+    .filter((r) => r.companyPartyId === companyPartyId && r.scope === 'GLOBAL')
+    .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+  const active = reps.find((r) => !r.effectiveTo) ?? null;
+  if (!active) return null;
+  const person = db.persons.find((p) => p.id === active.representativePersonId) ?? null;
+  return person ? { representative: active, person } : null;
+}
+
+export async function listRepresentativeDesignationRequests(companyPartyId: string) {
+  const db = await readDb();
+  return db.representativeDesignationRequests
+    .filter((r) => r.companyPartyId === companyPartyId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createRepresentativeDesignationRequest(input: {
+  id?: string;
+  triggerType: RepresentativeDesignationRequest['triggerType'];
+  companyPartyId: string;
+  packetId: string;
+  representativePersonId?: string;
+  representativeName?: string;
+  representativeEmail?: string;
+}) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const rdr: RepresentativeDesignationRequest = {
+    id: input.id ?? newId('rdr'),
+    triggerType: input.triggerType,
+    companyPartyId: input.companyPartyId,
+    representativePersonId: input.representativePersonId,
+    representativeName: input.representativeName,
+    representativeEmail: input.representativeEmail,
+    packetId: input.packetId,
+    status: 'SIGNING',
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.representativeDesignationRequests.unshift(rdr);
+  await writeDb(db);
+  return rdr;
+}
+
+export async function listSignatureRequestsByPacket(packetId: string) {
+  const db = await readDb();
+  return db.signatureRequests
+    .filter((r) => r.packetId === packetId)
+    .sort((a, b) => a.email.localeCompare(b.email));
+}
+
+export async function createDocument(input: { type: Document['type']; title: string; html: string }) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const doc: Document = {
+    id: newId('doc'),
+    type: input.type,
+    title: input.title,
+    html: input.html,
+    sha256: sha256Hex(input.html),
+    createdAt,
+  };
+  db.documents.unshift(doc);
+  await writeDb(db);
+  return doc;
+}
+
+export async function createSignaturePacket(input: {
+  kind: SignaturePacket['kind'];
+  relatedType: SignaturePacket['relatedType'];
+  relatedId: string;
+  documentId: string;
+  status?: SignaturePacket['status'];
+}) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const packet: SignaturePacket = {
+    id: newId('spk'),
+    kind: input.kind,
+    relatedType: input.relatedType,
+    relatedId: input.relatedId,
+    documentId: input.documentId,
+    status: input.status ?? 'DRAFT',
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.signaturePackets.unshift(packet);
+  await writeDb(db);
+  return packet;
+}
+
+export async function createSignatureRequestsForPacket(input: { packetId: string; emails: string[] }) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  const links: Array<{ email: string; url: string }> = [];
+  for (const raw of input.emails) {
+    const email = raw.trim();
+    if (!email) continue;
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: input.packetId,
+      email,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt,
+      updatedAt: createdAt,
+    };
+    db.signatureRequests.unshift(req);
+    links.push({ email, url: `/sign/${token}` });
+  }
+
+  await writeDb(db);
+  return links;
+}
+
+export async function getSignatureContextByToken(token: string) {
+  const tokenHash = sha256Hex(token);
+  const db = await readDb();
+  const request = db.signatureRequests.find((r) => r.tokenHash === tokenHash) ?? null;
+  if (!request) return null;
+  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
+  if (!packet) return null;
+  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
+  if (!document) return null;
+  const rdr =
+    packet.relatedType === 'RDR'
+      ? (db.representativeDesignationRequests.find((x) => x.id === packet.relatedId) ?? null)
+      : null;
+  return { request, packet, document, rdr };
+}
+
+export async function issueSignatureOtp(token: string) {
+  const tokenHash = sha256Hex(token);
+  const db = await readDb();
+  const idx = db.signatureRequests.findIndex((r) => r.tokenHash === tokenHash);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const req = db.signatureRequests[idx];
+  if (req.status === 'SIGNED') return { ok: false as const, error: 'ALREADY_SIGNED' as const };
+  if (new Date(req.expiresAt).getTime() < Date.now()) {
+    db.signatureRequests[idx] = { ...req, status: 'EXPIRED', updatedAt: nowIso() };
+    await writeDb(db);
+    return { ok: false as const, error: 'EXPIRED' as const };
+  }
+
+  const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
+  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const now = nowIso();
+  db.signatureRequests[idx] = {
+    ...req,
+    otpHash: sha256Hex(otp),
+    otpExpiresAt,
+    otpSentAt: now,
+    status: 'OTP_SENT',
+    updatedAt: now,
+  };
+  await writeDb(db);
+  return { ok: true as const, otp, email: req.email };
+}
+
+async function finalizeRdrIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'RDR') return;
+  if (packet.status !== 'SIGNED') return;
+
+  const rdrIdx = db.representativeDesignationRequests.findIndex((r) => r.id === packet.relatedId);
+  if (rdrIdx < 0) return;
+  const rdr = db.representativeDesignationRequests[rdrIdx];
+  if (rdr.status !== 'SIGNING') return;
+
+  const name = rdr.representativeName?.trim() || undefined;
+  const email = rdr.representativeEmail?.trim() || undefined;
+  if (!name || !email) return;
+
+  const existingPerson = db.persons.find((p) => (p.email ?? '').toLowerCase() === email.toLowerCase()) ?? null;
+  const now = nowIso();
+  const person: Person = existingPerson
+    ? { ...existingPerson, fullName: name, updatedAt: now }
+    : { id: newId('per'), fullName: name, email, createdAt: now, updatedAt: now };
+  if (existingPerson) {
+    const pIdx = db.persons.findIndex((p) => p.id === existingPerson.id);
+    if (pIdx >= 0) db.persons[pIdx] = person;
+  } else {
+    db.persons.unshift(person);
+  }
+
+  const prevActive = db.companyRepresentatives
+    .filter((r) => r.companyPartyId === rdr.companyPartyId && r.scope === 'GLOBAL')
+    .find((r) => !r.effectiveTo);
+  if (prevActive) {
+    const i = db.companyRepresentatives.findIndex((r) => r.id === prevActive.id);
+    if (i >= 0) db.companyRepresentatives[i] = { ...db.companyRepresentatives[i], effectiveTo: now, updatedAt: now };
+  }
+  const rep: CompanyRepresentative = {
+    id: newId('rep'),
+    companyPartyId: rdr.companyPartyId,
+    representativePersonId: person.id,
+    scope: 'GLOBAL',
+    evidenceDocumentId: packet.documentId,
+    effectiveFrom: now,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.companyRepresentatives.unshift(rep);
+  db.representativeDesignationRequests[rdrIdx] = { ...rdr, representativePersonId: person.id, status: 'EFFECTIVE', updatedAt: now };
+}
+
+async function maybeFinalizeShareTransferIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'SHARE_TRANSFER') return;
+  const idx = db.shareTransfers.findIndex((t) => t.id === packet.relatedId);
+  if (idx < 0) return;
+  const t = db.shareTransfers[idx];
+  if (t.status === 'APPLIED') return;
+  const sta = db.signaturePackets.find((p) => p.id === t.staPacketId) ?? null;
+  const br = db.signaturePackets.find((p) => p.id === t.brPacketId) ?? null;
+  if (!sta || !br) return;
+  if (sta.status === 'SIGNED' && br.status === 'SIGNED') {
+    db.shareTransfers[idx] = { ...t, status: 'SIGNED', updatedAt: nowIso(), blockingRdrIds: undefined };
+  }
+}
+
+export async function signByToken(input: {
+  token: string;
+  otp: string;
+  ip?: string;
+  userAgent?: string;
+  rdrRepresentativeName?: string;
+  rdrRepresentativeEmail?: string;
+}) {
+  const tokenHash = sha256Hex(input.token);
+  const db = await readDb();
+  const reqIdx = db.signatureRequests.findIndex((r) => r.tokenHash === tokenHash);
+  if (reqIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const req = db.signatureRequests[reqIdx];
+  if (req.status === 'SIGNED') return { ok: false as const, error: 'ALREADY_SIGNED' as const };
+  if (req.status === 'REVOKED') return { ok: false as const, error: 'REVOKED' as const };
+  if (new Date(req.expiresAt).getTime() < Date.now()) return { ok: false as const, error: 'EXPIRED' as const };
+
+  if (!req.otpHash || !req.otpExpiresAt) return { ok: false as const, error: 'OTP_REQUIRED' as const };
+  if (new Date(req.otpExpiresAt).getTime() < Date.now()) return { ok: false as const, error: 'OTP_EXPIRED' as const };
+  if (sha256Hex(input.otp.trim()) !== req.otpHash) return { ok: false as const, error: 'OTP_INVALID' as const };
+
+  const packetIdx = db.signaturePackets.findIndex((p) => p.id === req.packetId);
+  if (packetIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const packet = db.signaturePackets[packetIdx];
+
+  const now = nowIso();
+  const nextReq: SignatureRequest = {
+    ...req,
+    status: 'SIGNED',
+    signedAt: now,
+    signedIp: input.ip,
+    signedUserAgent: input.userAgent,
+    updatedAt: now,
+  };
+
+  if (packet.relatedType === 'RDR') {
+    const rdrIdx = db.representativeDesignationRequests.findIndex((r) => r.id === packet.relatedId);
+    if (rdrIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+    const rdr = db.representativeDesignationRequests[rdrIdx];
+
+    const repName = input.rdrRepresentativeName?.trim() || undefined;
+    const repEmail = input.rdrRepresentativeEmail?.trim() || undefined;
+    if (repName && repEmail) {
+      nextReq.rdrRepresentativeName = repName;
+      nextReq.rdrRepresentativeEmail = repEmail;
+      if (rdr.representativeEmail && rdr.representativeEmail.toLowerCase() !== repEmail.toLowerCase()) {
+        return { ok: false as const, error: 'REPRESENTATIVE_MISMATCH' as const };
+      }
+      if (rdr.representativeName && rdr.representativeName !== repName) {
+        return { ok: false as const, error: 'REPRESENTATIVE_MISMATCH' as const };
+      }
+      if (!rdr.representativeEmail || !rdr.representativeName) {
+        db.representativeDesignationRequests[rdrIdx] = {
+          ...rdr,
+          representativeName: repName,
+          representativeEmail: repEmail,
+          updatedAt: now,
+        };
+      }
+    } else if (!rdr.representativeEmail || !rdr.representativeName) {
+      return { ok: false as const, error: 'REPRESENTATIVE_REQUIRED' as const };
+    }
+  }
+
+  db.signatureRequests[reqIdx] = nextReq;
+
+  const all = db.signatureRequests.filter((r) => r.packetId === packet.id);
+  if (all.length > 0 && all.every((r) => r.status === 'SIGNED')) {
+    db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNED', updatedAt: now };
+    await finalizeRdrIfReady(db, db.signaturePackets[packetIdx]);
+    await maybeFinalizeShareTransferIfReady(db, db.signaturePackets[packetIdx]);
+  } else if (packet.status === 'DRAFT') {
+    db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
+  }
+
+  await writeDb(db);
+  return { ok: true as const };
+}
+
+export async function listShareTransfers() {
+  const db = await readDb();
+  return db.shareTransfers;
+}
+
+export async function createShareTransferRequest(input: {
+  clientId: string;
+  transferor:
+    | { kind: 'PERSON'; fullName: string; email: string }
+    | { kind: 'COMPANY_CLIENT'; clientId: string };
+  transferee:
+    | { kind: 'PERSON'; fullName: string; email: string }
+    | { kind: 'COMPANY_CLIENT'; clientId: string };
+  shares: number;
+  shareClass?: string;
+  effectiveDate: string;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  const effectiveDate = input.effectiveDate.trim();
+  if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const shares = Number(input.shares);
+  if (!Number.isFinite(shares) || shares <= 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const makePersonParty = (fullNameRaw: string, emailRaw: string) => {
+    const fullName = fullNameRaw.trim();
+    const email = emailRaw.trim();
+    if (!fullName || !email) return null;
+    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+    const party: Party = {
+      id: newId('pty'),
+      type: 'PERSON',
+      displayName: fullName,
+      personId: person.id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    db.parties.unshift(party);
+    return { person, party };
+  };
+
+  const ensureCompanyParty = (companyClientId: string) => {
+    const c = db.clients.find((x) => x.id === companyClientId) ?? null;
+    if (!c || c.deletedAt) return null;
+    const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === companyClientId) ?? null;
+    if (hit) return { company: c, party: hit };
+    const party: Party = {
+      id: newId('pty'),
+      type: 'COMPANY',
+      displayName: c.name,
+      clientId: companyClientId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.parties.unshift(party);
+    return { company: c, party };
+  };
+
+  const transferor =
+    input.transferor.kind === 'PERSON'
+      ? makePersonParty(input.transferor.fullName, input.transferor.email)
+      : ensureCompanyParty(input.transferor.clientId);
+  if (!transferor) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const transferee =
+    input.transferee.kind === 'PERSON'
+      ? makePersonParty(input.transferee.fullName, input.transferee.email)
+      : ensureCompanyParty(input.transferee.clientId);
+  if (!transferee) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const transferorPartyId = transferor.party.id;
+  const transfereePartyId = transferee.party.id;
+
+  const transferorName = transferor.party.displayName;
+  const transfereeName = transferee.party.displayName;
+
+  const transferId = newId('stf');
+
+  const staDoc: Document = {
+    id: newId('doc'),
+    type: 'STA',
+    title: `Share Transfer Agreement - ${client.name}`,
+    html: '',
+    sha256: '',
+    createdAt: now,
+  };
+  const brDoc: Document = {
+    id: newId('doc'),
+    type: 'BR',
+    title: `Board Resolution - ${client.name}`,
+    html: '',
+    sha256: '',
+    createdAt: now,
+  };
+
+  db.documents.unshift(staDoc, brDoc);
+
+  const staPacket: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'STA',
+    relatedType: 'SHARE_TRANSFER',
+    relatedId: transferId,
+    documentId: staDoc.id,
+    status: 'DRAFT',
+    createdAt: now,
+    updatedAt: now,
+  };
+  const brPacket: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'BR',
+    relatedType: 'SHARE_TRANSFER',
+    relatedId: transferId,
+    documentId: brDoc.id,
+    status: 'SIGNING',
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.signaturePackets.unshift(staPacket, brPacket);
+
+  const shareClass = typeof input.shareClass === 'string' ? input.shareClass.trim() || undefined : undefined;
+
+  const staHtml = (await import('@/lib/docTemplates')).renderShareTransferAgreementHtml({
+    targetCompanyName: client.name,
+    transferorName,
+    transfereeName,
+    shares,
+    shareClass,
+    effectiveDate,
+  });
+  const brSummary = `Approve the transfer of ${shares}${shareClass ? ` (${shareClass})` : ''} shares from ${transferorName} to ${transfereeName} effective on ${effectiveDate}.`;
+  const brHtml = (await import('@/lib/docTemplates')).renderBoardResolutionHtml({
+    companyName: client.name,
+    resolutionDate: effectiveDate,
+    summary: brSummary,
+  });
+
+  const staSha = sha256Hex(staHtml);
+  const brSha = sha256Hex(brHtml);
+  const staIdx = db.documents.findIndex((d) => d.id === staDoc.id);
+  const brIdx = db.documents.findIndex((d) => d.id === brDoc.id);
+  if (staIdx >= 0) db.documents[staIdx] = { ...db.documents[staIdx], html: staHtml, sha256: staSha };
+  if (brIdx >= 0) db.documents[brIdx] = { ...db.documents[brIdx], html: brHtml, sha256: brSha };
+
+  const directors = db.clientPartyRoles
+    .filter((r) => r.clientId === client.id && r.role === 'DIRECTOR' && !r.resignationDate)
+    .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+    .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+    .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+    .filter((p): p is Person => !!p);
+
+  const directorEmails = directors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
+  if (directorEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const brLinks: Array<{ email: string; url: string }> = [];
+  for (const email of directorEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: brPacket.id,
+      email,
+      tokenHash: sha256Hex(token),
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    brLinks.push({ email, url: `/sign/${token}` });
+  }
+
+  const blockingRdrIds: string[] = [];
+  const staSignerEmails: string[] = [];
+  const rdrLinks: Array<{ email: string; url: string }> = [];
+
+  const resolveStaEmail = (party: Party) => {
+    if (party.type === 'PERSON') {
+      const person = party.personId ? db.persons.find((p) => p.id === party.personId) ?? null : null;
+      return person?.email ?? null;
+    }
+    if (party.type === 'COMPANY' && party.clientId) {
+      const activeRep = db.companyRepresentatives
+        .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
+        .find((r) => !r.effectiveTo);
+      if (!activeRep) return null;
+      const person = db.persons.find((p) => p.id === activeRep.representativePersonId) ?? null;
+      return person?.email ?? null;
+    }
+    return null;
+  };
+
+  const ensureAutoRdr = async (companyParty: Party) => {
+    const companyClientId = companyParty.clientId;
+    if (!companyClientId) return null;
+    const company = db.clients.find((c) => c.id === companyClientId) ?? null;
+    if (!company || company.deletedAt) return null;
+
+    const directors = db.clientPartyRoles
+      .filter((r) => r.clientId === companyClientId && r.role === 'DIRECTOR' && !r.resignationDate)
+      .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+      .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+      .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+      .filter((p): p is Person => !!p);
+    const emails = directors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
+    if (emails.length !== directors.length) return null;
+
+    const rdrId = newId('rdr');
+    const html = (await import('@/lib/docTemplates')).renderRdrAuthorizationHtml({
+      companyName: company.name,
+      representativeName: undefined,
+      purpose: `Appoint a GLOBAL corporate representative for signing documents (Share Transfer).`,
+      dateYmd: effectiveDate,
+    });
+    const doc: Document = {
+      id: newId('doc'),
+      type: 'RDR_AUTH',
+      title: `Corporate Representative - ${company.name}`,
+      html,
+      sha256: sha256Hex(html),
+      createdAt: now,
+    };
+    db.documents.unshift(doc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'RDR',
+      relatedType: 'RDR',
+      relatedId: rdrId,
+      documentId: doc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(packet);
+
+    const rdr: RepresentativeDesignationRequest = {
+      id: rdrId,
+      triggerType: 'AUTO_FOR_CHANGE_REQUEST',
+      companyPartyId: companyParty.id,
+      representativePersonId: undefined,
+      representativeName: undefined,
+      representativeEmail: undefined,
+      packetId: packet.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.representativeDesignationRequests.unshift(rdr);
+
+    const links: Array<{ email: string; url: string }> = [];
+    for (const email of emails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email,
+        tokenHash: sha256Hex(token),
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      links.push({ email, url: `/sign/${token}` });
+    }
+
+    return { rdrId, links };
+  };
+
+  for (const party of [transferor.party, transferee.party]) {
+    const email = resolveStaEmail(party);
+    if (email) {
+      staSignerEmails.push(email);
+      continue;
+    }
+    if (party.type === 'COMPANY') {
+      const created = await ensureAutoRdr(party);
+      if (!created) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+      blockingRdrIds.push(created.rdrId);
+      rdrLinks.push(...created.links);
+      continue;
+    }
+    return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  }
+
+  const staLinks: Array<{ email: string; url: string }> = [];
+  if (blockingRdrIds.length === 0) {
+    (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
+    for (const email of staSignerEmails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: staPacket.id,
+        email,
+        tokenHash: sha256Hex(token),
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      staLinks.push({ email, url: `/sign/${token}` });
+    }
+  }
+
+  const status: ShareTransfer['status'] = blockingRdrIds.length > 0 ? 'BLOCKED_REPRESENTATIVE' : 'SIGNING';
+  const transfer: ShareTransfer = {
+    id: transferId,
+    clientId: client.id,
+    transferorPartyId,
+    transfereePartyId,
+    shareClass,
+    shares,
+    effectiveDate,
+    status,
+    staPacketId: staPacket.id,
+    brPacketId: brPacket.id,
+    blockingRdrIds: blockingRdrIds.length > 0 ? blockingRdrIds : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.shareTransfers.unshift(transfer);
+
+  await writeDb(db);
+  return { ok: true as const, transfer, signLinks: { br: brLinks, sta: staLinks, rdr: rdrLinks } };
+}
+
+export async function resumeShareTransfer(transferId: string) {
+  const db = await readDb();
+  const idx = db.shareTransfers.findIndex((t) => t.id === transferId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const t = db.shareTransfers[idx];
+  if (t.status !== 'BLOCKED_REPRESENTATIVE') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const staPacketIdx = db.signaturePackets.findIndex((p) => p.id === t.staPacketId);
+  if (staPacketIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const staPacket = db.signaturePackets[staPacketIdx];
+
+  const transferorParty = db.parties.find((p) => p.id === t.transferorPartyId) ?? null;
+  const transfereeParty = db.parties.find((p) => p.id === t.transfereePartyId) ?? null;
+  if (!transferorParty || !transfereeParty) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const resolveEmail = (party: Party) => {
+    if (party.type === 'PERSON' && party.personId) {
+      const person = db.persons.find((p) => p.id === party.personId) ?? null;
+      return person?.email ?? null;
+    }
+    if (party.type === 'COMPANY') {
+      const rep = db.companyRepresentatives
+        .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
+        .find((r) => !r.effectiveTo);
+      if (!rep) return null;
+      const person = db.persons.find((p) => p.id === rep.representativePersonId) ?? null;
+      return person?.email ?? null;
+    }
+    return null;
+  };
+
+  const emails = [resolveEmail(transferorParty), resolveEmail(transfereeParty)];
+  if (emails.some((e) => !e)) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+
+  const now = nowIso();
+  const links: Array<{ email: string; url: string }> = [];
+  for (const email of emails as string[]) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: staPacket.id,
+      email,
+      tokenHash: sha256Hex(token),
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    links.push({ email, url: `/sign/${token}` });
+  }
+
+  db.signaturePackets[staPacketIdx] = { ...staPacket, status: 'SIGNING', updatedAt: now };
+  db.shareTransfers[idx] = { ...t, status: 'SIGNING', blockingRdrIds: undefined, updatedAt: now };
+
+  await writeDb(db);
+  return { ok: true as const, signLinks: links };
 }
 
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {
@@ -972,4 +1878,204 @@ export async function updateTask(
   db.tasks[idx] = { ...db.tasks[idx], ...patch };
   await writeDb(db);
   return db.tasks[idx];
+}
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function uniqEmails(input: string[]) {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of input) {
+    const v = raw.trim();
+    if (!v) continue;
+    const k = normalizeEmail(v);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(v);
+  }
+  return out;
+}
+
+function invoiceEmailHistoryKeyOfBillTo(billTo: Invoice['billTo']): InvoiceEmailHistory['key'] {
+  if (billTo.type === 'CLIENT') return { type: 'CLIENT', clientId: billTo.clientId };
+  const key = billTo.companyName.trim().toLowerCase().replaceAll(/\s+/g, ' ');
+  return { type: 'ONE_OFF', companyNameKey: key };
+}
+
+function safeNumber(v: unknown) {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : Number.NaN;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+function computeInvoiceTotals(items: Invoice['items'], discount: number, tax: number) {
+  const subtotal = round2(items.reduce((sum, it) => sum + safeNumber(it.qty) * safeNumber(it.unitPrice), 0));
+  const safeDiscount = round2(Math.max(0, discount));
+  const safeTax = round2(Math.max(0, tax));
+  const total = round2(Math.max(0, subtotal - safeDiscount + safeTax));
+  return { subtotal, discount: safeDiscount, tax: safeTax, total };
+}
+
+function yyyymmFromYmd(ymd: string) {
+  const m = ymd.match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (!m) return '';
+  return `${m[1]}${m[2]}`;
+}
+
+function parseSeqFromInvoiceNo(invoiceNo: string, prefix: string) {
+  if (!invoiceNo.startsWith(prefix)) return null;
+  const rest = invoiceNo.slice(prefix.length);
+  const m = rest.match(/^(\d{3})/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function issuerPrefix(issuer: Invoice['issuer'], yyyymm: string) {
+  if (issuer === 'BBY_SG') return `BBYSG${yyyymm}`;
+  return `BYBR${yyyymm}`;
+}
+
+async function generateNextInvoiceNo(issuer: Invoice['issuer'], issueDateYmd: string) {
+  const db = await readDb();
+  const yyyymm = yyyymmFromYmd(issueDateYmd) || yyyymmFromYmd(nowIso().slice(0, 10));
+  const prefix = issuerPrefix(issuer, yyyymm);
+  const existingNos = new Set(db.invoices.map((x) => x.invoiceNo));
+  let lastSeq = 0;
+  for (const inv of db.invoices) {
+    if (inv.issuer !== issuer) continue;
+    const seq = parseSeqFromInvoiceNo(inv.invoiceNo, prefix);
+    if (seq && seq > lastSeq) lastSeq = seq;
+  }
+  const nextSeq = lastSeq + 1;
+  const seq3 = String(nextSeq).padStart(3, '0');
+  for (let i = 0; i < 20; i++) {
+    const randDigit = String(Math.floor(Math.random() * 10));
+    const candidate = `${prefix}${seq3}${randDigit}`;
+    if (!existingNos.has(candidate)) return candidate;
+  }
+  return `${prefix}${seq3}${randomBytes(1).toString('hex').toUpperCase().slice(0, 1)}`;
+}
+
+export async function listInvoices() {
+  const db = await readDb();
+  return db.invoices;
+}
+
+export async function findInvoiceById(id: string) {
+  const db = await readDb();
+  return db.invoices.find((x) => x.id === id) ?? null;
+}
+
+function upsertInvoiceEmailHistoryInDb(
+  db: Db,
+  input: {
+    billTo: Invoice['billTo'];
+    toEmails: string[];
+    ccEmails: string[];
+  },
+) {
+  const key = invoiceEmailHistoryKeyOfBillTo(input.billTo);
+  const idx = db.invoiceEmailHistories.findIndex((h) => {
+    if (h.key.type !== key.type) return false;
+    if (key.type === 'CLIENT') return h.key.type === 'CLIENT' && h.key.clientId === key.clientId;
+    return h.key.type === 'ONE_OFF' && h.key.companyNameKey === key.companyNameKey;
+  });
+  const toEmails = uniqEmails(input.toEmails);
+  const ccEmails = uniqEmails(input.ccEmails);
+  const now = nowIso();
+  if (idx >= 0) {
+    const current = db.invoiceEmailHistories[idx];
+    const mergedTo = uniqEmails([...toEmails, ...(current.toEmails ?? [])]);
+    const mergedCc = uniqEmails([...ccEmails, ...(current.ccEmails ?? [])]);
+    db.invoiceEmailHistories[idx] = { ...current, toEmails: mergedTo, ccEmails: mergedCc, updatedAt: now };
+    return db.invoiceEmailHistories[idx];
+  }
+  const history: InvoiceEmailHistory = {
+    id: newId('ieh'),
+    key,
+    toEmails,
+    ccEmails,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.invoiceEmailHistories.unshift(history);
+  return history;
+}
+
+export async function upsertInvoiceEmailHistory(input: {
+  billTo: Invoice['billTo'];
+  toEmails: string[];
+  ccEmails: string[];
+}) {
+  const db = await readDb();
+  const history = upsertInvoiceEmailHistoryInDb(db, input);
+  await writeDb(db);
+  return history;
+}
+
+export async function findInvoiceEmailHistoryByBillTo(billTo: Invoice['billTo']) {
+  const db = await readDb();
+  const key = invoiceEmailHistoryKeyOfBillTo(billTo);
+  return (
+    db.invoiceEmailHistories.find((h) => {
+      if (h.key.type !== key.type) return false;
+      if (key.type === 'CLIENT') return h.key.type === 'CLIENT' && h.key.clientId === key.clientId;
+      return h.key.type === 'ONE_OFF' && h.key.companyNameKey === key.companyNameKey;
+    }) ?? null
+  );
+}
+
+export async function createInvoice(input: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) {
+  const db = await readDb();
+  const createdAt = nowIso();
+  const issueDate = input.issueDate || createdAt.slice(0, 10);
+  const invoiceNo = input.invoiceNo?.trim() ? input.invoiceNo.trim() : await generateNextInvoiceNo(input.issuer, issueDate);
+  if (db.invoices.some((x) => x.invoiceNo === invoiceNo)) {
+    throw new Error('DUPLICATE_INVOICE_NO');
+  }
+  const totals = computeInvoiceTotals(input.items, input.discount ?? 0, input.tax ?? 0);
+  const invoice: Invoice = {
+    ...input,
+    id: newId('inv'),
+    invoiceNo,
+    issueDate,
+    currency: input.currency ?? 'SGD',
+    discount: totals.discount || undefined,
+    tax: totals.tax || undefined,
+    subtotal: totals.subtotal,
+    total: totals.total,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  db.invoices.unshift(invoice);
+  await writeDb(db);
+  return invoice;
+}
+
+export async function updateInvoice(invoiceId: string, next: Omit<Invoice, 'updatedAt'> | Invoice) {
+  const db = await readDb();
+  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
+  if (idx < 0) return null;
+  const now = nowIso();
+  const rest = { ...(next as Invoice) } as Record<string, unknown>;
+  delete rest.updatedAt;
+  const invoice: Invoice = { ...(rest as Invoice), updatedAt: now };
+  db.invoices[idx] = invoice;
+  await writeDb(db);
+  return invoice;
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  const db = await readDb();
+  const idx = db.invoices.findIndex((x) => x.id === invoiceId);
+  if (idx < 0) return null;
+  db.invoices[idx] = { ...db.invoices[idx], deletedAt: nowIso(), updatedAt: nowIso() };
+  await writeDb(db);
+  return db.invoices[idx];
 }

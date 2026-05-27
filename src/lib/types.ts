@@ -6,13 +6,14 @@ export type PermissionAction =
   | 'create'
   | 'update'
   | 'trash'
+  | 'markPaid'
   | 'complete'
   | 'duplicate'
   | 'archive'
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs';
+export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -39,6 +40,7 @@ export type Client = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -46,6 +48,84 @@ export type Client = {
   tags: string[];
   deletedAt?: string;
   createdAt: string;
+};
+
+export type Currency = 'SGD' | 'USD' | 'CNY' | 'MYR';
+
+export type InvoiceIssuer = 'BBY_SG' | 'BYBRIDGE';
+
+export type InvoiceStatus = 'UNPAID' | 'PAID' | 'VOID';
+
+export type InvoiceItem = {
+  id: string;
+  description: string;
+  qty: number;
+  unitPrice: number;
+};
+
+export type InvoiceRecipient = {
+  to: string[];
+  cc: string[];
+};
+
+export type InvoiceBillTo =
+  | {
+      type: 'CLIENT';
+      clientId: string;
+      companyName: string;
+      address?: string;
+      contactNo?: string;
+      email?: string;
+    }
+  | {
+      type: 'ONE_OFF';
+      companyName: string;
+      address?: string;
+      contactNo?: string;
+      email?: string;
+    };
+
+export type Invoice = {
+  id: string;
+  issuer: InvoiceIssuer;
+  invoiceNo: string;
+  billTo: InvoiceBillTo;
+  jobId?: string;
+  issueDate: string;
+  dueDate?: string;
+  creditTerm?: string;
+  doNo?: string;
+  paymentMethod?: string;
+  currency: Currency;
+  fxUsdRate?: number;
+  fxCnyRate?: number;
+  recipients?: InvoiceRecipient;
+  items: InvoiceItem[];
+  discount?: number;
+  tax?: number;
+  subtotal: number;
+  total: number;
+  status: InvoiceStatus;
+  paidAt?: string;
+  sentAt?: string;
+  notes?: string;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+};
+
+export type InvoiceEmailHistoryKey =
+  | { type: 'CLIENT'; clientId: string }
+  | { type: 'ONE_OFF'; companyNameKey: string };
+
+export type InvoiceEmailHistory = {
+  id: string;
+  key: InvoiceEmailHistoryKey;
+  toEmails: string[];
+  ccEmails: string[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type PersonIdType = 'NRIC' | 'PASSPORT' | 'OTHER';
@@ -98,6 +178,10 @@ export type ClientPartyRole = {
   role: ClientPartyRoleType;
   appointmentDate?: string;
   resignationDate?: string;
+  shareClass?: string;
+  shares?: number;
+  fromDate?: string;
+  toDate?: string;
   createdAt: string;
   updatedAt?: string;
 };
@@ -112,6 +196,88 @@ export type CompanyRepresentative = {
   evidenceDocumentId?: string;
   effectiveFrom: string;
   effectiveTo?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR';
+
+export type Document = {
+  id: string;
+  type: DocumentType;
+  title: string;
+  html: string;
+  sha256: string;
+  createdAt: string;
+};
+
+export type SignaturePacketKind = 'RDR' | 'STA' | 'BR';
+
+export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
+
+export type SignaturePacket = {
+  id: string;
+  kind: SignaturePacketKind;
+  relatedType: 'RDR' | 'SHARE_TRANSFER';
+  relatedId: string;
+  documentId: string;
+  status: SignaturePacketStatus;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type SignatureRequestStatus = 'PENDING' | 'OTP_SENT' | 'SIGNED' | 'EXPIRED' | 'REVOKED';
+
+export type SignatureRequest = {
+  id: string;
+  packetId: string;
+  email: string;
+  tokenHash: string;
+  expiresAt: string;
+  status: SignatureRequestStatus;
+  rdrRepresentativeName?: string;
+  rdrRepresentativeEmail?: string;
+  otpHash?: string;
+  otpExpiresAt?: string;
+  otpSentAt?: string;
+  signedAt?: string;
+  signedIp?: string;
+  signedUserAgent?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type RepresentativeDesignationTriggerType = 'AUTO_FOR_CHANGE_REQUEST' | 'MANUAL_MAINTENANCE';
+
+export type RepresentativeDesignationRequestStatus = 'SIGNING' | 'EFFECTIVE' | 'REVOKED';
+
+export type RepresentativeDesignationRequest = {
+  id: string;
+  triggerType: RepresentativeDesignationTriggerType;
+  companyPartyId: string;
+  representativePersonId?: string;
+  representativeName?: string;
+  representativeEmail?: string;
+  packetId: string;
+  status: RepresentativeDesignationRequestStatus;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type ShareTransferStatus = 'SIGNING' | 'BLOCKED_REPRESENTATIVE' | 'SIGNED' | 'APPLIED';
+
+export type ShareTransfer = {
+  id: string;
+  clientId: string;
+  transferorPartyId: string;
+  transfereePartyId: string;
+  shareClass?: string;
+  shares: number;
+  effectiveDate: string;
+  status: ShareTransferStatus;
+  staPacketId: string;
+  brPacketId: string;
+  blockingRdrIds?: string[];
   createdAt: string;
   updatedAt?: string;
 };
@@ -157,11 +323,18 @@ export type Db = {
   users: User[];
   sessions: Session[];
   clients: Client[];
+  invoices: Invoice[];
+  invoiceEmailHistories: InvoiceEmailHistory[];
   persons: Person[];
   parties: Party[];
   externalCompanies: ExternalCompany[];
   clientPartyRoles: ClientPartyRole[];
   companyRepresentatives: CompanyRepresentative[];
+  documents: Document[];
+  signaturePackets: SignaturePacket[];
+  signatureRequests: SignatureRequest[];
+  representativeDesignationRequests: RepresentativeDesignationRequest[];
+  shareTransfers: ShareTransfer[];
   jobs: Job[];
   tasks: JobTask[];
   reservedNames?: string[];

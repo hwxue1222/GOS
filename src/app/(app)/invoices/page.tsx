@@ -29,7 +29,8 @@ export default async function InvoicesPage() {
   const invoices = invoicesAll
     .filter((x) => !x.deletedAt)
     .map((inv) => {
-      const client = clients.find((c) => c.id === inv.clientId) ?? null;
+      const billTo = inv.billTo;
+      const client = billTo.type === 'CLIENT' ? clients.find((c) => c.id === billTo.clientId) ?? null : null;
       return {
         invoice: inv,
         client,
@@ -44,4 +45,3 @@ export default async function InvoicesPage() {
     </div>
   );
 }
-
