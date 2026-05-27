@@ -269,8 +269,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
       </div>
 
       {showAdd ? (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5">
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 max-h-[calc(100vh-2rem)] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold">Add Client</div>
               <button onClick={() => setShowAdd(false)} className="text-black/50 hover:text-black">
