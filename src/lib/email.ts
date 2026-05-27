@@ -69,19 +69,29 @@ export async function sendEmail(input: {
     contentType: a.contentType,
   }));
 
-  const info = await transporter
-    .sendMail({
+  try {
+    const info = await transporter.sendMail({
       from,
       to: normalizeList(input.to).join(','),
       cc: normalizeList(input.cc).join(',') || undefined,
       subject: input.subject,
       html: input.html,
       attachments: attachments.length ? attachments : undefined,
-    })
-    .catch(() => null);
+    });
 
-  if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
-  return { ok: true as const };
+    if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+    return { ok: true as const };
+  } catch (err) {
+    const e = err as { code?: unknown; responseCode?: unknown } | null;
+    const code = typeof e?.code === 'string' ? e.code : '';
+    const responseCode = typeof e?.responseCode === 'number' ? e.responseCode : null;
+
+    if (code === 'EAUTH' || responseCode === 535) return { ok: false as const, error: 'EMAIL_AUTH_FAILED' as const };
+    if (code === 'ETIMEDOUT') return { ok: false as const, error: 'EMAIL_TIMEOUT' as const };
+    if (code === 'ECONNECTION') return { ok: false as const, error: 'EMAIL_CONNECT_FAILED' as const };
+    if (code === 'EENVELOPE') return { ok: false as const, error: 'EMAIL_INVALID_RECIPIENT' as const };
+    return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+  }
 }
 
 export async function sendSigningInvite(input: { to: string; title: string; url: string }) {
