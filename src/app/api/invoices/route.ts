@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
-import { buildInvoicePdf } from '@/lib/invoicePdf';
 import { hasPermission } from '@/lib/permissions';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
 
@@ -236,20 +235,14 @@ export async function POST(req: Request) {
   const subject = fillTemplate(subjectTemplate, vars);
   const html = fillTemplate(htmlTemplate, vars);
 
-  const client = invoice.billTo.type === 'CLIENT' ? await findClientById(invoice.billTo.clientId).catch(() => null) : null;
-  const pdfBuffer = await buildInvoicePdf({ invoice, client });
-  const pdfBytes = pdfBuffer.length;
-  const pdfBase64 = pdfBuffer.toString('base64');
-
   const sendRes = await sendEmail({
     to: toEmails,
     cc: ccEmails.length ? ccEmails : undefined,
     subject,
     html,
-    attachments: [{ filename: `${invoice.invoiceNo}.pdf`, contentBase64: pdfBase64, contentType: 'application/pdf' }],
   });
 
-  if (!sendRes.ok) return NextResponse.json({ ok: true, invoice, send: { ok: false, error: `${sendRes.error}|pdf_bytes=${pdfBytes}` } });
+  if (!sendRes.ok) return NextResponse.json({ ok: true, invoice, send: { ok: false, error: sendRes.error } });
 
   const sentAt = new Date().toISOString();
   const updated = await updateInvoice(invoice.id, { ...invoice, sentAt, recipients: { to: toEmails, cc: ccEmails } });
