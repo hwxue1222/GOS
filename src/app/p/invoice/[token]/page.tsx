@@ -37,8 +37,8 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
         <PrintButtonClient />
       </div>
 
-      <div className="max-w-[860px] mx-auto bg-white px-8 py-8">
-        <div className="flex items-start justify-between gap-6">
+      <div className="max-w-[860px] mx-auto bg-white px-4 sm:px-6 md:px-8 py-6 md:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-md bg-red-600 text-white flex items-center justify-center font-semibold text-2xl">
               B
@@ -48,7 +48,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
               <div className="text-sm font-semibold">{cfg.displayName}</div>
             </div>
           </div>
-          <div className="text-xs text-black/60 text-right">
+          <div className="text-xs text-black/60 sm:text-right">
             {cfg.uen ? <div>{`UEN: ${cfg.uen}`}</div> : null}
           </div>
         </div>
@@ -57,45 +57,48 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
 
         <div className="mt-4 text-center text-xl font-semibold tracking-wide">INVOICE</div>
 
-        <table className="mt-4 w-full text-sm border border-black/30 border-collapse">
-          <tbody>
-            <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Bill To</td>
-              <td className="px-3 py-2 border border-black/20">{billToLabel(billTo)}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice No.</td>
-              <td className="px-3 py-2 border border-black/20">{invoice.invoiceNo}</td>
-            </tr>
-            <tr>
-              <td rowSpan={2} className="w-[120px] px-3 py-2 border border-black/20 font-medium align-top">
-                Address
-              </td>
-              <td rowSpan={2} className="px-3 py-2 border border-black/20 whitespace-pre-wrap align-top">
-                {billToAddress}
-              </td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice Date</td>
-              <td className="px-3 py-2 border border-black/20">{formatDateDmy(invoice.issueDate)}</td>
-            </tr>
-            <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">D/O No.</td>
-              <td className="px-3 py-2 border border-black/20">{invoice.doNo ?? '-'}</td>
-            </tr>
-            <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Contact No.</td>
-              <td className="px-3 py-2 border border-black/20">{billToContact}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Payment Method</td>
-              <td className="px-3 py-2 border border-black/20">{invoice.paymentMethod ?? 'As below'}</td>
-            </tr>
-            <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Email</td>
-              <td className="px-3 py-2 border border-black/20">{billToEmail}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Credit Term</td>
-              <td className="px-3 py-2 border border-black/20">{invoice.creditTerm ?? 'Net 15'}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="mt-4 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm border border-black/30 border-collapse min-w-[620px]">
+            <tbody>
+              <tr>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Bill To</td>
+                <td className="px-3 py-2 border border-black/20">{billToLabel(billTo)}</td>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice No.</td>
+                <td className="px-3 py-2 border border-black/20">{invoice.invoiceNo}</td>
+              </tr>
+              <tr>
+                <td rowSpan={2} className="w-[120px] px-3 py-2 border border-black/20 font-medium align-top">
+                  Address
+                </td>
+                <td rowSpan={2} className="px-3 py-2 border border-black/20 whitespace-pre-wrap align-top">
+                  {billToAddress}
+                </td>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice Date</td>
+                <td className="px-3 py-2 border border-black/20">{formatDateDmy(invoice.issueDate)}</td>
+              </tr>
+              <tr>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">D/O No.</td>
+                <td className="px-3 py-2 border border-black/20">{invoice.doNo ?? '-'}</td>
+              </tr>
+              <tr>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Contact No.</td>
+                <td className="px-3 py-2 border border-black/20">{billToContact}</td>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Payment Method</td>
+                <td className="px-3 py-2 border border-black/20">{invoice.paymentMethod ?? 'As below'}</td>
+              </tr>
+              <tr>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Email</td>
+                <td className="px-3 py-2 border border-black/20 break-words">{billToEmail}</td>
+                <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Credit Term</td>
+                <td className="px-3 py-2 border border-black/20">{invoice.creditTerm ?? 'Net 15'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div className="mt-4 border border-black/30">
-          <div className="grid grid-cols-[60px_1fr_90px_110px] text-sm bg-black/[0.02] border-b border-black/20">
+        <div className="mt-4 border border-black/30 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="min-w-[620px]">
+          <div className="grid grid-cols-[40px_1fr_60px_80px] sm:grid-cols-[60px_1fr_90px_110px] text-xs sm:text-sm bg-black/[0.02] border-b border-black/20">
             <div className="px-3 py-2 font-medium border-r border-black/20">Svc</div>
             <div className="px-3 py-2 font-medium border-r border-black/20">Description</div>
             <div className="px-3 py-2 font-medium border-r border-black/20 text-right">Qty</div>
@@ -104,7 +107,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
           {invoice.items.map((it, idx) => {
             const amount = Math.round(it.qty * it.unitPrice * 100) / 100;
             return (
-              <div key={it.id} className="grid grid-cols-[60px_1fr_90px_110px] text-sm border-b border-black/10">
+              <div key={it.id} className="grid grid-cols-[40px_1fr_60px_80px] sm:grid-cols-[60px_1fr_90px_110px] text-xs sm:text-sm border-b border-black/10">
                 <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
                 <div className="px-3 py-2 border-r border-black/10 whitespace-pre-wrap">{it.description}</div>
                 <div className="px-3 py-2 border-r border-black/10 text-right">{it.qty}</div>
@@ -112,10 +115,11 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
               </div>
             );
           })}
+          </div>
         </div>
 
         <div className="mt-4 flex justify-end">
-          <div className="w-[320px] text-sm">
+          <div className="w-full sm:w-[320px] text-sm">
             {invoice.discount ? (
               <div className="flex items-center justify-between gap-3">
                 <div className="font-semibold">{`Discount in ${invoice.currency}`}</div>
