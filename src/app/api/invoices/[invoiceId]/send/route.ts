@@ -92,6 +92,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
 
   const client = invoice.billTo.type === 'CLIENT' ? await findClientById(invoice.billTo.clientId).catch(() => null) : null;
   const pdfBuffer = await buildInvoicePdf({ invoice, client });
+  const pdfBytes = pdfBuffer.length;
   const pdfBase64 = pdfBuffer.toString('base64');
 
   const sendRes = await sendEmail({
@@ -102,7 +103,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
     attachments: [{ filename: `${invoice.invoiceNo}.pdf`, contentBase64: pdfBase64, contentType: 'application/pdf' }],
   });
 
-  if (!sendRes.ok) return NextResponse.json({ ok: false, error: sendRes.error }, { status: 500 });
+  if (!sendRes.ok) {
+    return NextResponse.json({ ok: false, error: `${sendRes.error}|pdf_bytes=${pdfBytes}` }, { status: 500 });
+  }
 
   const nowIso = new Date().toISOString();
   const updated = await updateInvoice(invoice.id, {
