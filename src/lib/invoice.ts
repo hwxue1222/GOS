@@ -20,9 +20,9 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       displayName: 'BBY.SG PTE LTD',
       displayNameZh: '新加坡百桥咨询有限公司',
       uen: '201608450W',
-      addressLine: '10 Anson Road#10-13A International Plaza Singapore 079903',
+      addressLine: '8 Burn Road#15-03 Trivex Singapore 369977',
       tel: '+65 62215600',
-      email: 'corporate@bybridgecs.com',
+      email: 'info@bby.sg',
       website: 'www.bby.sg',
       paymentMethodsTitle: 'Payment Methods 汇款方式:',
       paymentMethods: [

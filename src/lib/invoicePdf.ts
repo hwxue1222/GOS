@@ -78,6 +78,7 @@ export async function buildInvoicePdf(params: {
 
   const black = rgb(0, 0, 0);
   const gray = rgb(0.35, 0.35, 0.35);
+  const white = rgb(1, 1, 1);
 
   const drawLabelValue = (x: number, y: number, label: string, value: string) => {
     page.drawText(label, { x, y, size: 9, font: fontBold, color: black });
@@ -151,6 +152,20 @@ export async function buildInvoicePdf(params: {
     const v = fx.cny.toFixed(2);
     page.drawText(label, { x: totalsX, y: totalsY - 20, size: 9, font, color: gray });
     page.drawText(v, { x: width - 88 - font.widthOfTextAtSize(v, 9), y: totalsY - 20, size: 9, font, color: gray });
+  }
+
+  const footerTop = 74;
+  page.drawRectangle({ x: 0, y: 0, width, height: footerTop, color: white });
+  const footerAddress = issuerCfg.addressLine ? `Address: ${issuerCfg.addressLine}` : '';
+  const footerParts = [issuerCfg.tel ? `Tel: ${issuerCfg.tel}` : '', issuerCfg.email ? `Email: ${issuerCfg.email}` : '', issuerCfg.website ? `Website: ${issuerCfg.website}` : ''].filter(Boolean);
+  const footerLine2 = footerParts.join('  ');
+  if (footerAddress) {
+    const w1 = font.widthOfTextAtSize(footerAddress, 9);
+    page.drawText(footerAddress, { x: Math.max(20, (width - w1) / 2), y: 48, size: 9, font, color: gray });
+  }
+  if (footerLine2) {
+    const w2 = font.widthOfTextAtSize(footerLine2, 9);
+    page.drawText(footerLine2, { x: Math.max(20, (width - w2) / 2), y: 34, size: 9, font, color: gray });
   }
 
   const pdfBytes = await pdf.save();
