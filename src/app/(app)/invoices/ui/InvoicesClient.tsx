@@ -74,6 +74,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
   const [search, setSearch] = usePersistedState('gos.invoices.search', '');
   const [statusFilter, setStatusFilter] = usePersistedState<InvoiceStatus | ''>('gos.invoices.status', '');
   const [clientFilter, setClientFilter] = usePersistedState('gos.invoices.clientId', '');
+  const [issuerFilter, setIssuerFilter] = usePersistedState<InvoiceIssuer | ''>('gos.invoices.issuer', '');
   const [pageSize, setPageSize] = usePersistedState('gos.invoices.pageSize', 20);
   const [page, setPage] = usePersistedState('gos.invoices.page', 1);
 
@@ -123,6 +124,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     const rows = invoices.filter((row) => {
       const inv = row.invoice;
       if (statusFilter && inv.status !== statusFilter) return false;
+      if (issuerFilter && inv.issuer !== issuerFilter) return false;
       if (clientFilter) {
         const invClientId = inv.billTo.type === 'CLIENT' ? inv.billTo.clientId : '';
         if (invClientId !== clientFilter) return false;
@@ -133,7 +135,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       return textMatch(`${inv.invoiceNo} ${inv.issuer} ${billToText} ${clientText} ${inv.currency} ${inv.status} ${row.createdByName}`, q);
     });
     return rows.sort((a, b) => (b.invoice.issueDate || '').localeCompare(a.invoice.issueDate || '') || b.invoice.createdAt.localeCompare(a.invoice.createdAt));
-  }, [clientFilter, invoices, search, statusFilter]);
+  }, [clientFilter, invoices, issuerFilter, search, statusFilter]);
 
   const total = filtered.length;
   const safePageSize = Math.max(1, Number(pageSize) || 20);
@@ -516,46 +518,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-64 max-w-[60vw] rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
-            placeholder="Find invoice..."
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value as InvoiceStatus | '');
-              setPage(1);
-            }}
-            className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-          >
-            <option value="">All status</option>
-            <option value="UNPAID">Unpaid</option>
-            <option value="PAID">Paid</option>
-            <option value="VOID">Void</option>
-          </select>
-          <select
-            value={clientFilter}
-            onChange={(e) => {
-              setClientFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm max-w-[60vw]"
-          >
-            <option value="">All clients</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.code} {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-black/60">
@@ -568,6 +530,69 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Total</th>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Created by</th>
+              </tr>
+              <tr className="border-b border-black/5 bg-black/[0.02]">
+                <th className="px-4 py-2">
+                  <input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full min-w-[180px] rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none bg-white text-black/80"
+                    placeholder="Search..."
+                  />
+                </th>
+                <th className="px-4 py-2">
+                  <select
+                    value={issuerFilter}
+                    onChange={(e) => {
+                      setIssuerFilter(e.target.value as InvoiceIssuer | '');
+                      setPage(1);
+                    }}
+                    className="w-full min-w-[130px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                  >
+                    <option value="">All issuer</option>
+                    <option value="BBY_SG">BBY.SG</option>
+                    <option value="BYBRIDGE">Bybridge</option>
+                  </select>
+                </th>
+                <th className="px-4 py-2">
+                  <select
+                    value={clientFilter}
+                    onChange={(e) => {
+                      setClientFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full min-w-[220px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                  >
+                    <option value="">All clients</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as InvoiceStatus | '');
+                      setPage(1);
+                    }}
+                    className="w-full min-w-[120px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                  >
+                    <option value="">All status</option>
+                    <option value="UNPAID">Unpaid</option>
+                    <option value="PAID">Paid</option>
+                    <option value="VOID">Void</option>
+                  </select>
+                </th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
