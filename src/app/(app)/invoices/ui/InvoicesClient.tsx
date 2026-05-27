@@ -521,31 +521,31 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-black/60">
-              <tr className="border-b border-black/5">
-                <th className="px-4 py-3 font-medium whitespace-nowrap">
+              <tr className="border-b border-black/10 bg-black/[0.02]">
+                <th className="px-4 py-3 align-top whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <div>Invoice No</div>
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
                     <input
                       value={search}
                       onChange={(e) => {
                         setSearch(e.target.value);
                         setPage(1);
                       }}
-                      className="w-full min-w-[180px] rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none bg-white text-black/80"
-                      placeholder="Search..."
+                      className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
+                      placeholder="Search invoice..."
                     />
                   </div>
                 </th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <div>Issuer</div>
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
                     <select
                       value={issuerFilter}
                       onChange={(e) => {
                         setIssuerFilter(e.target.value as InvoiceIssuer | '');
                         setPage(1);
                       }}
-                      className="w-full min-w-[130px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                      className="h-8 w-full min-w-[130px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All issuer</option>
                       <option value="BBY_SG">BBY.SG</option>
@@ -553,16 +553,16 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <div>Bill To</div>
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
                     <select
                       value={clientFilter}
                       onChange={(e) => {
                         setClientFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="w-full min-w-[220px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                      className="h-8 w-full min-w-[220px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All clients</option>
                       {clients.map((c) => (
@@ -573,19 +573,25 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Issue Date</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Due Date</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Total</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
+                </th>
+                <th className="px-4 py-3 align-top whitespace-nowrap">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
+                </th>
+                <th className="px-4 py-3 align-top whitespace-nowrap">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
+                </th>
+                <th className="px-4 py-3 align-top whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <div>Status</div>
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
                     <select
                       value={statusFilter}
                       onChange={(e) => {
                         setStatusFilter(e.target.value as InvoiceStatus | '');
                         setPage(1);
                       }}
-                      className="w-full min-w-[120px] rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm text-black/80"
+                      className="h-8 w-full min-w-[120px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All status</option>
                       <option value="UNPAID">Unpaid</option>
@@ -594,7 +600,9 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Created by</th>
+                <th className="px-4 py-3 align-top whitespace-nowrap">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
+                </th>
               </tr>
             </thead>
             <tbody>
