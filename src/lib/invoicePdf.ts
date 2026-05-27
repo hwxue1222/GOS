@@ -80,28 +80,6 @@ export async function buildInvoicePdf(params: {
   const gray = rgb(0.35, 0.35, 0.35);
   const white = rgb(1, 1, 1);
 
-  const logoCandidates = [
-    'public/templates/invoice-logo.png',
-    'public/templates/invoice-logo.jpg',
-    'public/templates/invoice-logo.jpeg',
-  ];
-  for (const rel of logoCandidates) {
-    const abs = path.join(process.cwd(), rel);
-    const logoBytes = await readFile(abs).catch(() => null);
-    if (!logoBytes) continue;
-    const ext = path.extname(rel).toLowerCase();
-    const img = ext === '.png' ? await pdf.embedPng(logoBytes) : await pdf.embedJpg(logoBytes);
-    const target = 56;
-    const scale = Math.min(target / img.width, target / img.height);
-    const drawW = img.width * scale;
-    const drawH = img.height * scale;
-    const x = 62;
-    const y = height - 96;
-    page.drawRectangle({ x: x - 2, y: y - 2, width: target + 4, height: target + 4, color: white });
-    page.drawImage(img, { x, y: y + (target - drawH) / 2, width: drawW, height: drawH });
-    break;
-  }
-
   const drawLabelValue = (x: number, y: number, label: string, value: string) => {
     page.drawText(label, { x, y, size: 9, font: fontBold, color: black });
     page.drawText(value, { x: x + 95, y, size: 9, font, color: black });
