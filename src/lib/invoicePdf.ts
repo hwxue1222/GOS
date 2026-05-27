@@ -132,11 +132,11 @@ export async function buildInvoicePdf(params: {
   const totalsX = width - 290;
   const totalsY = 230;
   if (invoice.discount) {
-    page.drawText('Discount in SGD', { x: totalsX, y: totalsY + 40, size: 10, font: fontBold, color: black });
+    page.drawText(`Discount in ${invoice.currency}`, { x: totalsX, y: totalsY + 40, size: 10, font: fontBold, color: black });
     const v = `(${Math.abs(invoice.discount).toFixed(2)})`;
     page.drawText(v, { x: width - 88 - font.widthOfTextAtSize(v, 10), y: totalsY + 40, size: 10, font, color: black });
   }
-  page.drawText('Total Amount in SGD', { x: totalsX, y: totalsY + 14, size: 10, font: fontBold, color: black });
+  page.drawText(`Total Amount in ${invoice.currency}`, { x: totalsX, y: totalsY + 14, size: 10, font: fontBold, color: black });
   const totalText = invoice.total.toFixed(2);
   page.drawText(totalText, { x: width - 88 - font.widthOfTextAtSize(totalText, 10), y: totalsY + 14, size: 10, font, color: black });
 
@@ -156,4 +156,3 @@ export async function buildInvoicePdf(params: {
   const pdfBytes = await pdf.save();
   return Buffer.from(pdfBytes);
 }
-

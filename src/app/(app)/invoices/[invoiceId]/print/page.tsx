@@ -109,7 +109,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             <div className="px-3 py-2 font-medium border-r border-black/20">Svc</div>
             <div className="px-3 py-2 font-medium border-r border-black/20">Description</div>
             <div className="px-3 py-2 font-medium border-r border-black/20 text-right">Qty</div>
-            <div className="px-3 py-2 font-medium text-right">SGD</div>
+            <div className="px-3 py-2 font-medium text-right">{invoice.currency}</div>
           </div>
           {invoice.items.map((it, idx) => {
             const amount = Math.round(it.qty * it.unitPrice * 100) / 100;
@@ -128,13 +128,13 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           <div className="w-[320px] text-sm">
             {invoice.discount ? (
               <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold">Discount in SGD</div>
+                <div className="font-semibold">{`Discount in ${invoice.currency}`}</div>
                 <div className="text-right">{`(${Math.abs(invoice.discount).toFixed(2)})`}</div>
               </div>
             ) : null}
             <div className="mt-2 border-t border-black/30" />
             <div className="mt-2 flex items-center justify-between gap-3 font-semibold">
-              <div>Total Amount in SGD</div>
+              <div>{`Total Amount in ${invoice.currency}`}</div>
               <div className="text-right">{invoice.total.toFixed(2)}</div>
             </div>
             {fx.usd !== null ? (

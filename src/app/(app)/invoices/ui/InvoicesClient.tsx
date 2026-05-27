@@ -803,7 +803,11 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value as Currency }))}
                     className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                   >
-                    <option value="SGD">SGD</option>
+                    {(['MYR', 'SGD', 'USD', 'CNY'] as Currency[]).map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
