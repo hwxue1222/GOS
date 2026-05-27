@@ -39,6 +39,21 @@ function formatMoney(currency: Currency, amount: number) {
   }
 }
 
+function formatDateTimeDMY(input?: string | null) {
+  if (!input) return '-';
+  if (/^(\d{4})-(\d{2})-(\d{2})$/.test(input)) return formatDateDMY(input);
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return input;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
 function statusLabel(status: InvoiceStatus) {
   if (status === 'PAID') return { text: 'Paid', cls: 'bg-green-100 text-green-700' };
   if (status === 'VOID') return { text: 'Void', cls: 'bg-black/10 text-black/70' };
@@ -80,6 +95,11 @@ export default function InvoiceDetailClient({
 
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidDate, setMarkPaidDate] = useState('');
+  const [markPaidTime, setMarkPaidTime] = useState('');
+  const [markPaidNote, setMarkPaidNote] = useState('');
+  const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const successTimerRef = useRef<number | null>(null);
@@ -203,7 +223,7 @@ export default function InvoiceDetailClient({
     };
   }, [canEdit, draft.billToType, draft.clientId, draft.companyName]);
 
-  async function saveInvoice(patch?: Partial<{ status: InvoiceStatus }>) {
+  async function saveInvoice(patch?: Partial<{ status: InvoiceStatus; paidAt: string | null; paymentNote: string | null }>) {
     setError(null);
     setSuccess(null);
     if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
@@ -256,6 +276,8 @@ export default function InvoiceDetailClient({
           paymentMethod: draft.paymentMethod || null,
           currency: draft.currency,
           status,
+          paidAt: patch && 'paidAt' in patch ? patch.paidAt : undefined,
+          paymentNote: patch && 'paymentNote' in patch ? patch.paymentNote : undefined,
           fxUsdRate: draft.fxUsdRate ? safeNumber(draft.fxUsdRate) : undefined,
           fxCnyRate: draft.fxCnyRate ? safeNumber(draft.fxCnyRate) : undefined,
           recipients: { to: toEmails },
@@ -296,6 +318,30 @@ export default function InvoiceDetailClient({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function markPaidConfirm() {
+    setMarkPaidError(null);
+    const ymd = markPaidDate.trim();
+    if (!ymd) {
+      setMarkPaidError('Paid date is required');
+      return;
+    }
+    const time = markPaidTime.trim();
+    if (!time) {
+      setMarkPaidError('Paid time is required');
+      return;
+    }
+    const note = markPaidNote.trim();
+    if (!note) {
+      setMarkPaidError('Payment note is required');
+      return;
+    }
+    await saveInvoice({ status: 'PAID', paidAt: `${ymd}T${time}`, paymentNote: note });
+    setMarkPaidOpen(false);
+    setMarkPaidDate('');
+    setMarkPaidTime('');
+    setMarkPaidNote('');
   }
 
   async function deleteThis() {
@@ -343,6 +389,68 @@ export default function InvoiceDetailClient({
 
   return (
     <div className="flex-1">
+      {markPaidOpen ? (
+        <div
+          className="fixed inset-0 z-[80] bg-black/30 flex items-center justify-center p-4"
+          onMouseDown={() => setMarkPaidOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-lg border border-black/10 overflow-hidden"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
+              <div className="text-base font-semibold">Mark Paid</div>
+              <button onClick={() => setMarkPaidOpen(false)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              {markPaidError ? <div className="mb-3 text-sm text-red-600">{markPaidError}</div> : null}
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <div className="text-xs text-black/60 mb-1">Paid Date</div>
+                  <DateInputDMY
+                    value={markPaidDate}
+                    onChange={(v) => setMarkPaidDate(v)}
+                    inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-black/60 mb-1">Paid Time</div>
+                  <input
+                    value={markPaidTime}
+                    onChange={(e) => setMarkPaidTime(e.target.value)}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
+                    type="time"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-black/60 mb-1">Payment Note</div>
+                  <textarea
+                    value={markPaidNote}
+                    onChange={(e) => setMarkPaidNote(e.target.value)}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
+                    rows={3}
+                    placeholder="e.g. PayNow / bank transfer reference..."
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-black/5 flex items-center justify-end gap-2">
+              <button onClick={() => setMarkPaidOpen(false)} className="rounded-md border border-black/10 bg-white px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button
+                disabled={saving || !canEdit}
+                onClick={() => void markPaidConfirm()}
+                className="rounded-md bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-60"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -395,7 +503,13 @@ export default function InvoiceDetailClient({
             {invoice.status !== 'PAID' ? (
               <button
                 disabled={saving || !canEdit}
-                onClick={() => void saveInvoice({ status: 'PAID' })}
+                onClick={() => {
+                  setMarkPaidError(null);
+                  setMarkPaidDate('');
+                  setMarkPaidTime('');
+                  setMarkPaidNote('');
+                  setMarkPaidOpen(true);
+                }}
                 className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
               >
                 Mark Paid
@@ -403,7 +517,7 @@ export default function InvoiceDetailClient({
             ) : (
               <button
                 disabled={saving || !canEdit}
-                onClick={() => void saveInvoice({ status: 'UNPAID' })}
+                onClick={() => void saveInvoice({ status: 'UNPAID', paidAt: null, paymentNote: null })}
                 className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
               >
                 Mark Unpaid
@@ -916,7 +1030,15 @@ export default function InvoiceDetailClient({
               {invoice.paidAt ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-black/60">Paid at</div>
-                  <div className="text-right">{formatDateDMY(invoice.paidAt)}</div>
+                  <div className="text-right">{formatDateTimeDMY(invoice.paidAt)}</div>
+                </div>
+              ) : null}
+              {invoice.paymentNote ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-black/60">Payment note</div>
+                  <div className="text-right max-w-[220px] truncate" title={invoice.paymentNote}>
+                    {invoice.paymentNote}
+                  </div>
                 </div>
               ) : null}
             </div>

@@ -143,6 +143,7 @@ function normalizeDb(parsed: Db): Db {
           issuer: (inv as Invoice).issuer ?? 'BBY_SG',
           billTo: nextBillTo,
           currency: (inv as Invoice).currency ?? 'SGD',
+          paymentNote: typeof (inv as Invoice).paymentNote === 'string' ? (inv as Invoice).paymentNote : undefined,
           items: Array.isArray((inv as Invoice).items) ? (inv as Invoice).items : [],
           subtotal: typeof (inv as Invoice).subtotal === 'number' ? (inv as Invoice).subtotal : 0,
           total: typeof (inv as Invoice).total === 'number' ? (inv as Invoice).total : 0,

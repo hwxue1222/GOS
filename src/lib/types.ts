@@ -107,6 +107,7 @@ export type Invoice = {
   total: number;
   status: InvoiceStatus;
   paidAt?: string;
+  paymentNote?: string;
   sentAt?: string;
   notes?: string;
   createdByUserId: string;

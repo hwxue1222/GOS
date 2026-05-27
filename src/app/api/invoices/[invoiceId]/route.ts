@@ -94,6 +94,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
         tax?: unknown;
         notes?: string | null;
         paidAt?: string | null;
+        paymentNote?: string | null;
         fxUsdRate?: unknown;
         fxCnyRate?: unknown;
         recipients?: { to?: unknown; cc?: unknown } | null;
@@ -135,15 +136,48 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
   const sentAt = body && 'sentAt' in body ? (body.sentAt ? String(body.sentAt).trim() || undefined : undefined) : current.sentAt;
 
   const totals = computeTotals(items, discount, tax);
-  const now = new Date().toISOString();
-  const paidAt =
-    status === 'PAID'
-      ? body && 'paidAt' in body
-        ? body.paidAt
-          ? String(body.paidAt).trim() || now
-          : now
-        : current.paidAt ?? now
-      : undefined;
+  const ymdRe = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const normalizePaidAt = (v: string) => {
+    const t = v.trim();
+    if (!t) return null;
+    if (ymdRe.test(t)) return t;
+    const d = new Date(t);
+    if (Number.isNaN(d.getTime())) return null;
+    return t;
+  };
+  const isMarkingPaid = wantsStatusChange && status === 'PAID';
+  let paidAt: string | undefined = undefined;
+  let paymentNote: string | undefined = undefined;
+  if (status === 'PAID') {
+    if (isMarkingPaid) {
+      const paidAtRaw = typeof body?.paidAt === 'string' ? body.paidAt : '';
+      const nextPaidAt = paidAtRaw ? normalizePaidAt(paidAtRaw) : null;
+      if (!nextPaidAt) return NextResponse.json({ ok: false, error: 'PAID_AT_REQUIRED' }, { status: 400 });
+
+      const noteRaw = typeof body?.paymentNote === 'string' ? body.paymentNote.trim() : '';
+      if (!noteRaw) return NextResponse.json({ ok: false, error: 'PAYMENT_NOTE_REQUIRED' }, { status: 400 });
+
+      paidAt = nextPaidAt;
+      paymentNote = noteRaw;
+    } else {
+      if (body && 'paidAt' in body) {
+        const raw = body.paidAt ? String(body.paidAt) : '';
+        const nextPaidAt = raw ? normalizePaidAt(raw) : null;
+        if (!nextPaidAt) return NextResponse.json({ ok: false, error: 'INVALID_PAID_AT' }, { status: 400 });
+        paidAt = nextPaidAt;
+      } else {
+        paidAt = current.paidAt;
+      }
+
+      if (body && 'paymentNote' in body) {
+        const note = body.paymentNote ? String(body.paymentNote).trim() : '';
+        if (!note) return NextResponse.json({ ok: false, error: 'PAYMENT_NOTE_REQUIRED' }, { status: 400 });
+        paymentNote = note;
+      } else {
+        paymentNote = current.paymentNote;
+      }
+    }
+  }
 
   let billTo: Invoice['billTo'] = current.billTo;
   if (body && 'billTo' in body && body.billTo) {
@@ -214,6 +248,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
     total: totals.total,
     notes,
     paidAt,
+    paymentNote,
   };
 
   const invoice = await updateInvoice(invoiceId, next);
