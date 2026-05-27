@@ -455,13 +455,12 @@ export default function InvoiceDetailClient({
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
+            <a
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
-              href={`/invoices/${invoice.id}/print`}
-              target="_blank"
+              href={`/api/invoices/${invoice.id}/pdf`}
             >
-              Preview / Print
-            </Link>
+              Download PDF
+            </a>
             <button
               disabled={saving || sendingEmail || !canEdit}
               onClick={() => void sendEmailNow()}
