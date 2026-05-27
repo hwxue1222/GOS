@@ -80,25 +80,35 @@ export async function buildInvoicePdf(params: {
   const gray = rgb(0.35, 0.35, 0.35);
   const white = rgb(1, 1, 1);
 
-  const headerRelPath =
+  const headerCandidates =
     invoice.issuer === 'BBY_SG'
-      ? 'public/templates/invoice-header-bby.png'
+      ? [
+          'public/templates/invoice-header-bby.png',
+          'public/templates/invoice-header-bby.jpg',
+          'public/templates/invoice-header-bby.jpeg',
+        ]
       : invoice.issuer === 'BYBRIDGE'
-        ? 'public/templates/invoice-header-bybridge.png'
-        : null;
+        ? [
+            'public/templates/invoice-header-bybridge.png',
+            'public/templates/invoice-header-bybridge.jpg',
+            'public/templates/invoice-header-bybridge.jpeg',
+          ]
+        : [];
   let headerDrawn = false;
-  if (headerRelPath) {
-    const headerBytes = await readFile(path.join(process.cwd(), headerRelPath)).catch(() => null);
-    if (headerBytes) {
-      const img = await pdf.embedPng(headerBytes);
-      const targetH = 56;
-      const scale = targetH / img.height;
-      const drawW = img.width * scale;
-      const x = 62;
-      const y = height - 96;
-      page.drawImage(img, { x, y, width: drawW, height: targetH });
-      headerDrawn = true;
-    }
+  for (const rel of headerCandidates) {
+    const abs = path.join(process.cwd(), rel);
+    const headerBytes = await readFile(abs).catch(() => null);
+    if (!headerBytes) continue;
+    const ext = path.extname(rel).toLowerCase();
+    const img = ext === '.png' ? await pdf.embedPng(headerBytes) : await pdf.embedJpg(headerBytes);
+    const targetH = 56;
+    const scale = targetH / img.height;
+    const drawW = img.width * scale;
+    const x = 62;
+    const y = height - 96;
+    page.drawImage(img, { x, y, width: drawW, height: targetH });
+    headerDrawn = true;
+    break;
   }
 
   const drawLabelValue = (x: number, y: number, label: string, value: string) => {
