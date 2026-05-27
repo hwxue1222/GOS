@@ -80,6 +80,27 @@ export async function buildInvoicePdf(params: {
   const gray = rgb(0.35, 0.35, 0.35);
   const white = rgb(1, 1, 1);
 
+  const headerRelPath =
+    invoice.issuer === 'BBY_SG'
+      ? 'public/templates/invoice-header-bby.png'
+      : invoice.issuer === 'BYBRIDGE'
+        ? 'public/templates/invoice-header-bybridge.png'
+        : null;
+  let headerDrawn = false;
+  if (headerRelPath) {
+    const headerBytes = await readFile(path.join(process.cwd(), headerRelPath)).catch(() => null);
+    if (headerBytes) {
+      const img = await pdf.embedPng(headerBytes);
+      const targetH = 56;
+      const scale = targetH / img.height;
+      const drawW = img.width * scale;
+      const x = 62;
+      const y = height - 96;
+      page.drawImage(img, { x, y, width: drawW, height: targetH });
+      headerDrawn = true;
+    }
+  }
+
   const drawLabelValue = (x: number, y: number, label: string, value: string) => {
     page.drawText(label, { x, y, size: 9, font: fontBold, color: black });
     page.drawText(value, { x: x + 95, y, size: 9, font, color: black });
@@ -107,7 +128,9 @@ export async function buildInvoicePdf(params: {
   drawLabelValue(rightX, top - 54, 'Payment', safeText(invoice.paymentMethod ?? 'As below'));
   drawLabelValue(rightX, top - 72, 'Credit Term', safeText(invoice.creditTerm ?? 'Net 15'));
 
-  page.drawText(`${issuerCfg.displayName}`, { x: 68, y: height - 120, size: 10, font: fontBold, color: gray });
+  if (!headerDrawn) {
+    page.drawText(`${issuerCfg.displayName}`, { x: 68, y: height - 120, size: 10, font: fontBold, color: gray });
+  }
 
   const tableTopY = height - 390;
   const rowH = 18;
