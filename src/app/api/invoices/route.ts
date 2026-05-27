@@ -3,7 +3,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { buildInvoicePdf } from '@/lib/invoicePdf';
-import { renderUrlToPdf } from '@/lib/printPdf';
 import { hasPermission } from '@/lib/permissions';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
 
@@ -238,15 +237,7 @@ export async function POST(req: Request) {
   const html = fillTemplate(htmlTemplate, vars);
 
   const client = invoice.billTo.type === 'CLIENT' ? await findClientById(invoice.billTo.clientId).catch(() => null) : null;
-  let pdfBuffer: Buffer | null = null;
-  try {
-    pdfBuffer = await renderUrlToPdf({ url: printUrl, cookieHeader: req.headers.get('cookie') });
-  } catch {
-    pdfBuffer = null;
-  }
-  if (!pdfBuffer) {
-    pdfBuffer = await buildInvoicePdf({ invoice, client });
-  }
+  const pdfBuffer = await buildInvoicePdf({ invoice, client });
   const pdfBase64 = pdfBuffer.toString('base64');
 
   const sendRes = await sendEmail({
