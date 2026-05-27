@@ -39,21 +39,6 @@ function formatMoney(currency: Currency, amount: number) {
   }
 }
 
-function formatDateTimeDMY(input?: string | null) {
-  if (!input) return '-';
-  if (/^(\d{4})-(\d{2})-(\d{2})$/.test(input)) return formatDateDMY(input);
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return input;
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(d);
-}
-
 function statusLabel(status: InvoiceStatus) {
   if (status === 'PAID') return { text: 'Paid', cls: 'bg-green-100 text-green-700' };
   if (status === 'VOID') return { text: 'Void', cls: 'bg-black/10 text-black/70' };
@@ -97,7 +82,6 @@ export default function InvoiceDetailClient({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markPaidDate, setMarkPaidDate] = useState('');
-  const [markPaidTime, setMarkPaidTime] = useState('');
   const [markPaidNote, setMarkPaidNote] = useState('');
   const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -327,20 +311,14 @@ export default function InvoiceDetailClient({
       setMarkPaidError('Paid date is required');
       return;
     }
-    const time = markPaidTime.trim();
-    if (!time) {
-      setMarkPaidError('Paid time is required');
-      return;
-    }
     const note = markPaidNote.trim();
     if (!note) {
       setMarkPaidError('Payment note is required');
       return;
     }
-    await saveInvoice({ status: 'PAID', paidAt: `${ymd}T${time}`, paymentNote: note });
+    await saveInvoice({ status: 'PAID', paidAt: ymd, paymentNote: note });
     setMarkPaidOpen(false);
     setMarkPaidDate('');
-    setMarkPaidTime('');
     setMarkPaidNote('');
   }
 
@@ -413,15 +391,6 @@ export default function InvoiceDetailClient({
                     value={markPaidDate}
                     onChange={(v) => setMarkPaidDate(v)}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-black/60 mb-1">Paid Time</div>
-                  <input
-                    value={markPaidTime}
-                    onChange={(e) => setMarkPaidTime(e.target.value)}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
-                    type="time"
                   />
                 </div>
                 <div>
@@ -506,7 +475,6 @@ export default function InvoiceDetailClient({
                 onClick={() => {
                   setMarkPaidError(null);
                   setMarkPaidDate('');
-                  setMarkPaidTime('');
                   setMarkPaidNote('');
                   setMarkPaidOpen(true);
                 }}
@@ -1030,7 +998,7 @@ export default function InvoiceDetailClient({
               {invoice.paidAt ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-black/60">Paid at</div>
-                  <div className="text-right">{formatDateTimeDMY(invoice.paidAt)}</div>
+                  <div className="text-right">{formatDateDMY(invoice.paidAt)}</div>
                 </div>
               ) : null}
               {invoice.paymentNote ? (

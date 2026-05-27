@@ -140,9 +140,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
   const normalizePaidAt = (v: string) => {
     const t = v.trim();
     if (!t) return null;
-    if (ymdRe.test(t)) return t;
-    const d = new Date(t);
-    if (Number.isNaN(d.getTime())) return null;
+    if (!ymdRe.test(t)) return null;
     return t;
   };
   const isMarkingPaid = wantsStatusChange && status === 'PAID';
