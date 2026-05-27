@@ -80,34 +80,25 @@ export async function buildInvoicePdf(params: {
   const gray = rgb(0.35, 0.35, 0.35);
   const white = rgb(1, 1, 1);
 
-  const headerCandidates =
-    invoice.issuer === 'BBY_SG'
-      ? [
-          'public/templates/invoice-header-bby.png',
-          'public/templates/invoice-header-bby.jpg',
-          'public/templates/invoice-header-bby.jpeg',
-        ]
-      : invoice.issuer === 'BYBRIDGE'
-        ? [
-            'public/templates/invoice-header-bybridge.png',
-            'public/templates/invoice-header-bybridge.jpg',
-            'public/templates/invoice-header-bybridge.jpeg',
-          ]
-        : [];
-  let headerDrawn = false;
-  for (const rel of headerCandidates) {
+  const logoCandidates = [
+    'public/templates/invoice-logo.png',
+    'public/templates/invoice-logo.jpg',
+    'public/templates/invoice-logo.jpeg',
+  ];
+  for (const rel of logoCandidates) {
     const abs = path.join(process.cwd(), rel);
-    const headerBytes = await readFile(abs).catch(() => null);
-    if (!headerBytes) continue;
+    const logoBytes = await readFile(abs).catch(() => null);
+    if (!logoBytes) continue;
     const ext = path.extname(rel).toLowerCase();
-    const img = ext === '.png' ? await pdf.embedPng(headerBytes) : await pdf.embedJpg(headerBytes);
-    const targetH = 56;
-    const scale = targetH / img.height;
+    const img = ext === '.png' ? await pdf.embedPng(logoBytes) : await pdf.embedJpg(logoBytes);
+    const target = 56;
+    const scale = Math.min(target / img.width, target / img.height);
     const drawW = img.width * scale;
+    const drawH = img.height * scale;
     const x = 62;
     const y = height - 96;
-    page.drawImage(img, { x, y, width: drawW, height: targetH });
-    headerDrawn = true;
+    page.drawRectangle({ x: x - 2, y: y - 2, width: target + 4, height: target + 4, color: white });
+    page.drawImage(img, { x, y: y + (target - drawH) / 2, width: drawW, height: drawH });
     break;
   }
 
@@ -138,9 +129,7 @@ export async function buildInvoicePdf(params: {
   drawLabelValue(rightX, top - 54, 'Payment', safeText(invoice.paymentMethod ?? 'As below'));
   drawLabelValue(rightX, top - 72, 'Credit Term', safeText(invoice.creditTerm ?? 'Net 15'));
 
-  if (!headerDrawn) {
-    page.drawText(`${issuerCfg.displayName}`, { x: 68, y: height - 120, size: 10, font: fontBold, color: gray });
-  }
+  page.drawText(`${issuerCfg.displayName}`, { x: 68, y: height - 120, size: 10, font: fontBold, color: gray });
 
   const tableTopY = height - 390;
   const rowH = 18;
