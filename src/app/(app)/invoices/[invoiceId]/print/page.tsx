@@ -60,49 +60,42 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         <div className="mt-4 text-center text-xl font-semibold tracking-wide">INVOICE</div>
 
-        <div className="mt-4 grid grid-cols-2 gap-0 text-sm border border-black/30">
-          <div className="border-r border-black/30">
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Bill To</div>
-              <div className="px-3 py-2">{billToLabel(billTo)}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Address</div>
-              <div className="px-3 py-2 whitespace-pre-wrap">{billToAddress}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Contact No.</div>
-              <div className="px-3 py-2">{billToContact}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr]">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Email</div>
-              <div className="px-3 py-2">{billToEmail}</div>
-            </div>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Invoice No.</div>
-              <div className="px-3 py-2">{invoice.invoiceNo}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Invoice Date</div>
-              <div className="px-3 py-2">{formatDateDmy(invoice.issueDate)}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">D/O No.</div>
-              <div className="px-3 py-2">{invoice.doNo ?? '-'}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr] border-b border-black/20">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Payment Method</div>
-              <div className="px-3 py-2">{invoice.paymentMethod ?? 'As below'}</div>
-            </div>
-            <div className="grid grid-cols-[120px_1fr]">
-              <div className="px-3 py-2 border-r border-black/20 font-medium">Credit Term</div>
-              <div className="px-3 py-2">{invoice.creditTerm ?? 'Net 15'}</div>
-            </div>
-          </div>
-        </div>
+        <table className="mt-4 w-full text-sm border border-black/30 border-collapse">
+          <tbody>
+            <tr>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Bill To</td>
+              <td className="px-3 py-2 border border-black/20">{billToLabel(billTo)}</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice No.</td>
+              <td className="px-3 py-2 border border-black/20">{invoice.invoiceNo}</td>
+            </tr>
+            <tr>
+              <td rowSpan={2} className="w-[120px] px-3 py-2 border border-black/20 font-medium align-top">
+                Address
+              </td>
+              <td rowSpan={2} className="px-3 py-2 border border-black/20 whitespace-pre-wrap align-top">
+                {billToAddress}
+              </td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice Date</td>
+              <td className="px-3 py-2 border border-black/20">{formatDateDmy(invoice.issueDate)}</td>
+            </tr>
+            <tr>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">D/O No.</td>
+              <td className="px-3 py-2 border border-black/20">{invoice.doNo ?? '-'}</td>
+            </tr>
+            <tr>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Contact No.</td>
+              <td className="px-3 py-2 border border-black/20">{billToContact}</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Payment Method</td>
+              <td className="px-3 py-2 border border-black/20">{invoice.paymentMethod ?? 'As below'}</td>
+            </tr>
+            <tr>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Email</td>
+              <td className="px-3 py-2 border border-black/20">{billToEmail}</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Credit Term</td>
+              <td className="px-3 py-2 border border-black/20">{invoice.creditTerm ?? 'Net 15'}</td>
+            </tr>
+          </tbody>
+        </table>
 
         <div className="mt-4 border border-black/30">
           <div className="grid grid-cols-[60px_1fr_90px_110px] text-sm bg-black/[0.02] border-b border-black/20">

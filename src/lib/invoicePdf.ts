@@ -97,8 +97,8 @@ export async function buildInvoicePdf(params: {
   addrLines.slice(0, 3).forEach((ln, i) => {
     page.drawText(ln, { x: leftX + 95, y: top - 18 - i * 12, size: 9, font, color: black });
   });
-  drawLabelValue(leftX, top - 60, 'Contact No.', safeText(billToContact));
-  drawLabelValue(leftX, top - 78, 'Email', safeText(billToEmail));
+  drawLabelValue(leftX, top - 54, 'Contact No.', safeText(billToContact));
+  drawLabelValue(leftX, top - 72, 'Email', safeText(billToEmail));
 
   drawLabelValue(rightX, top, 'Invoice No.', safeText(invoice.invoiceNo));
   drawLabelValue(rightX, top - 18, 'Invoice Date', formatDateDmy(safeYmd(invoice.issueDate)));
