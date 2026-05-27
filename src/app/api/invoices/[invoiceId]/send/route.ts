@@ -7,6 +7,7 @@ import { renderUrlToPdf } from '@/lib/printPdf';
 import { hasPermission } from '@/lib/permissions';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function normalizeEmailList(input: unknown) {
   if (!Array.isArray(input)) return [];

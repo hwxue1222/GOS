@@ -21,7 +21,9 @@ export async function renderUrlToPdf(input: { url: string; cookieHeader?: string
     }
  
     const page = await context.newPage();
-    await page.goto(input.url, { waitUntil: 'networkidle' });
+    page.setDefaultTimeout(25000);
+    await page.emulateMedia({ media: 'print' });
+    await page.goto(input.url, { waitUntil: 'load' });
     const pdfBytes = await page.pdf({
       format: 'A4',
       printBackground: true,

@@ -88,7 +88,9 @@ export async function sendEmail(input: {
 
     if (code === 'EAUTH' || responseCode === 535) return { ok: false as const, error: 'EMAIL_AUTH_FAILED' as const };
     if (code === 'ETIMEDOUT') return { ok: false as const, error: 'EMAIL_TIMEOUT' as const };
-    if (code === 'ECONNECTION') return { ok: false as const, error: 'EMAIL_CONNECT_FAILED' as const };
+    if (code === 'ECONNECTION' || code === 'ESOCKET' || code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'EHOSTUNREACH' || code === 'ENOTFOUND') {
+      return { ok: false as const, error: 'EMAIL_CONNECT_FAILED' as const };
+    }
     if (code === 'EENVELOPE') return { ok: false as const, error: 'EMAIL_INVALID_RECIPIENT' as const };
     return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
   }

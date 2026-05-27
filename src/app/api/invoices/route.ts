@@ -8,6 +8,7 @@ import { hasPermission } from '@/lib/permissions';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function todayYmd() {
   return new Date().toISOString().slice(0, 10);
