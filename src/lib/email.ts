@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+
 export type EmailAttachment = { filename: string; contentBase64: string; contentType?: string };
 
 export async function sendEmail(input: {
@@ -9,29 +11,76 @@ export async function sendEmail(input: {
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.EMAIL_FROM?.trim();
-  if (!apiKey || !from) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
+  const smtpHost = process.env.SMTP_HOST?.trim();
+  const smtpPort = Number(process.env.SMTP_PORT) || 0;
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  const smtpSecureEnv = process.env.SMTP_SECURE?.trim();
+  const smtpSecure = smtpSecureEnv ? smtpSecureEnv === 'true' || smtpSecureEnv === '1' : smtpPort === 465;
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
+  if (!from) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
+
+  if (apiKey) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: input.to,
+        cc: input.cc,
+        subject: input.subject,
+        html: input.html,
+        attachments: input.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.contentBase64,
+          content_type: a.contentType,
+        })),
+      }),
+    }).catch(() => null);
+
+    if (!res?.ok) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+    return { ok: true as const };
+  }
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+    return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const normalizeList = (v: string | string[] | undefined) => {
+    if (!v) return [];
+    return (Array.isArray(v) ? v : [v])
+      .map((x) => x.trim())
+      .filter(Boolean);
+  };
+
+  const attachments = (input.attachments ?? []).map((a) => ({
+    filename: a.filename,
+    content: Buffer.from(a.contentBase64, 'base64'),
+    contentType: a.contentType,
+  }));
+
+  const info = await transporter
+    .sendMail({
       from,
-      to: input.to,
-      cc: input.cc,
+      to: normalizeList(input.to).join(','),
+      cc: normalizeList(input.cc).join(',') || undefined,
       subject: input.subject,
       html: input.html,
-      attachments: input.attachments?.map((a) => ({
-        filename: a.filename,
-        content: a.contentBase64,
-        content_type: a.contentType,
-      })),
-    }),
-  }).catch(() => null);
+      attachments: attachments.length ? attachments : undefined,
+    })
+    .catch(() => null);
 
-  if (!res?.ok) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+  if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
   return { ok: true as const };
 }
 
