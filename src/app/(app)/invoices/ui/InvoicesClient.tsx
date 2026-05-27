@@ -107,7 +107,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     tax: '',
     notes: '',
     toEmailsText: '',
-    ccEmailsText: '',
   });
 
   const [suggestions, setSuggestions] = useState<{
@@ -277,7 +276,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       tax: '',
       notes: '',
       toEmailsText: '',
-      ccEmailsText: '',
     });
     setItems([{ id: newTempId(), description: '', qty: 1, unitPrice: 0 }]);
     setNewClientSearch('');
@@ -328,7 +326,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       return out;
     };
     const toEmails = splitEmails(form.toEmailsText);
-    const ccEmails = splitEmails(form.ccEmailsText);
 
     setCreating(true);
     try {
@@ -366,7 +363,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           discount: form.discount ? safeNumber(form.discount) : undefined,
           tax: form.tax ? safeNumber(form.tax) : undefined,
           notes: form.notes || undefined,
-          recipients: { to: toEmails, cc: ccEmails },
+          recipients: { to: toEmails },
           items: normalizedItems,
           sendNow: true,
         }),
@@ -416,7 +413,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       return out;
     };
     const toEmails = splitEmails(form.toEmailsText);
-    const ccEmails = splitEmails(form.ccEmailsText);
     if (!toEmails.length) {
       setError('MISSING_TO');
       return;
@@ -426,7 +422,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       const res = await fetch(`/api/invoices/${createdInvoice.id}/send`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ to: toEmails, cc: ccEmails }),
+        body: JSON.stringify({ to: toEmails }),
       }).catch(() => null);
       if (!res?.ok) {
         const j = await res?.json().catch(() => null);
@@ -800,7 +796,15 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                   <div className="text-xs text-black/60 mb-1">Currency</div>
                   <select
                     value={form.currency}
-                    onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value as Currency }))}
+                    onChange={(e) => {
+                      const next = e.target.value as Currency;
+                      setForm((p) => ({
+                        ...p,
+                        currency: next,
+                        fxUsdRate: next === 'SGD' ? p.fxUsdRate : '',
+                        fxCnyRate: next === 'SGD' ? p.fxCnyRate : '',
+                      }));
+                    }}
                     className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                   >
                     {(['MYR', 'SGD', 'USD', 'CNY'] as Currency[]).map((c) => (
@@ -940,61 +944,30 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </div>
                   ) : null}
                 </div>
-
-                <div className="sm:col-span-2">
-                  <div className="text-xs text-black/60 mb-1">CC Emails (space/comma separated)</div>
-                  <input
-                    value={form.ccEmailsText}
-                    onChange={(e) => setForm((p) => ({ ...p, ccEmailsText: e.target.value }))}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
-                    placeholder="e.g. finance@company.com"
-                  />
-                  {suggestions?.history?.ccEmails?.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {suggestions.history.ccEmails.map((e) => (
-                        <button
-                          key={`cc:${e}`}
-                          type="button"
-                          onClick={() => {
-                            const email = e.trim();
-                            if (!email) return;
-                            setForm((prev) => {
-                              const has = prev.ccEmailsText.toLowerCase().includes(email.toLowerCase());
-                              return has ? prev : { ...prev, ccEmailsText: `${prev.ccEmailsText} ${email}`.trim() };
-                            });
-                          }}
-                          className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70 hover:bg-black/[0.02]"
-                          title="History"
-                        >
-                          {e}
-                        </button>
-                      ))}
+                {form.currency === 'SGD' ? (
+                  <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                    <div>
+                      <div className="text-xs text-black/60 mb-1">USD rate (1 SGD → USD, optional)</div>
+                      <input
+                        value={form.fxUsdRate}
+                        onChange={(e) => setForm((p) => ({ ...p, fxUsdRate: e.target.value }))}
+                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
+                        inputMode="decimal"
+                        placeholder="e.g. 0.80"
+                      />
                     </div>
-                  ) : null}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:col-span-2">
-                  <div>
-                    <div className="text-xs text-black/60 mb-1">USD rate (1 SGD → USD, optional)</div>
-                    <input
-                      value={form.fxUsdRate}
-                      onChange={(e) => setForm((p) => ({ ...p, fxUsdRate: e.target.value }))}
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
-                      inputMode="decimal"
-                      placeholder="e.g. 0.80"
-                    />
+                    <div>
+                      <div className="text-xs text-black/60 mb-1">CNY rate (1 SGD → CNY, optional)</div>
+                      <input
+                        value={form.fxCnyRate}
+                        onChange={(e) => setForm((p) => ({ ...p, fxCnyRate: e.target.value }))}
+                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
+                        inputMode="decimal"
+                        placeholder="e.g. 5.70"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs text-black/60 mb-1">CNY rate (1 SGD → CNY, optional)</div>
-                    <input
-                      value={form.fxCnyRate}
-                      onChange={(e) => setForm((p) => ({ ...p, fxCnyRate: e.target.value }))}
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
-                      inputMode="decimal"
-                      placeholder="e.g. 5.70"
-                    />
-                  </div>
-                </div>
+                ) : null}
 
                 <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                   <div>

@@ -142,8 +142,8 @@ export async function POST(req: Request) {
   const discount = safeNumber(body?.discount);
   const tax = safeNumber(body?.tax);
   const notes = body?.notes?.trim() || undefined;
-  const fxUsdRate = safeNumber(body?.fxUsdRate) || undefined;
-  const fxCnyRate = safeNumber(body?.fxCnyRate) || undefined;
+  const fxUsdRate = currency === 'SGD' ? safeNumber(body?.fxUsdRate) || undefined : undefined;
+  const fxCnyRate = currency === 'SGD' ? safeNumber(body?.fxCnyRate) || undefined : undefined;
   const toEmails = normalizeEmailList(body?.recipients?.to);
   const ccEmails = normalizeEmailList(body?.recipients?.cc);
   const sendNow = body?.sendNow ?? false;

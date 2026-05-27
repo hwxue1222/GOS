@@ -43,8 +43,9 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
   };
 }
 
-export function computeInvoiceFxTotals(inv: Pick<Invoice, 'total' | 'fxUsdRate' | 'fxCnyRate'>) {
+export function computeInvoiceFxTotals(inv: Pick<Invoice, 'currency' | 'total' | 'fxUsdRate' | 'fxCnyRate'>) {
   const round2 = (n: number) => Math.round(n * 100) / 100;
+  if (inv.currency !== 'SGD') return { usd: null, cny: null };
   const usd = typeof inv.fxUsdRate === 'number' && inv.fxUsdRate > 0 ? round2(inv.total * inv.fxUsdRate) : null;
   const cny = typeof inv.fxCnyRate === 'number' && inv.fxCnyRate > 0 ? round2(inv.total * inv.fxCnyRate) : null;
   return { usd, cny };
@@ -57,4 +58,3 @@ export function formatMoney(currency: string, amount: number) {
     return `${currency} ${amount.toFixed(2)}`;
   }
 }
-

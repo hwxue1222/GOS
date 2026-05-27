@@ -128,8 +128,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
   const discount = body && 'discount' in body ? safeNumber(body.discount) : current.discount ?? 0;
   const tax = body && 'tax' in body ? safeNumber(body.tax) : current.tax ?? 0;
   const notes = body && 'notes' in body ? (body.notes ? String(body.notes).trim() || undefined : undefined) : current.notes;
-  const fxUsdRate = body && 'fxUsdRate' in body ? (safeNumber(body.fxUsdRate) || undefined) : current.fxUsdRate;
-  const fxCnyRate = body && 'fxCnyRate' in body ? (safeNumber(body.fxCnyRate) || undefined) : current.fxCnyRate;
+  const fxUsdRate =
+    currency === 'SGD' ? (body && 'fxUsdRate' in body ? safeNumber(body.fxUsdRate) || undefined : current.fxUsdRate) : undefined;
+  const fxCnyRate =
+    currency === 'SGD' ? (body && 'fxCnyRate' in body ? safeNumber(body.fxCnyRate) || undefined : current.fxCnyRate) : undefined;
   const sentAt = body && 'sentAt' in body ? (body.sentAt ? String(body.sentAt).trim() || undefined : undefined) : current.sentAt;
 
   const totals = computeTotals(items, discount, tax);

@@ -112,7 +112,6 @@ export default function InvoiceDetailClient({
     tax: initialInvoice.tax ? String(initialInvoice.tax) : '',
     notes: initialInvoice.notes ?? '',
     toEmailsText: (initialInvoice.recipients?.to ?? []).join(' '),
-    ccEmailsText: (initialInvoice.recipients?.cc ?? []).join(' '),
   });
 
   const [suggestions, setSuggestions] = useState<{
@@ -227,7 +226,6 @@ export default function InvoiceDetailClient({
     try {
       const status = patch?.status ?? draft.status;
       const toEmails = splitEmails(draft.toEmailsText);
-      const ccEmails = splitEmails(draft.ccEmailsText);
       const res = await fetch(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -260,7 +258,7 @@ export default function InvoiceDetailClient({
           status,
           fxUsdRate: draft.fxUsdRate ? safeNumber(draft.fxUsdRate) : undefined,
           fxCnyRate: draft.fxCnyRate ? safeNumber(draft.fxCnyRate) : undefined,
-          recipients: { to: toEmails, cc: ccEmails },
+          recipients: { to: toEmails },
           discount: draft.discount ? safeNumber(draft.discount) : undefined,
           tax: draft.tax ? safeNumber(draft.tax) : undefined,
           notes: draft.notes || null,
@@ -313,7 +311,6 @@ export default function InvoiceDetailClient({
     if (!canEdit) return;
     setError(null);
     const to = splitEmails(draft.toEmailsText);
-    const cc = splitEmails(draft.ccEmailsText);
     if (!to.length) {
       setError('MISSING_TO');
       return;
@@ -323,7 +320,7 @@ export default function InvoiceDetailClient({
       const res = await fetch(`/api/invoices/${invoice.id}/send`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ to, cc }),
+        body: JSON.stringify({ to }),
       }).catch(() => null);
       if (!res?.ok) {
         const j = await res?.json().catch(() => null);
@@ -336,7 +333,6 @@ export default function InvoiceDetailClient({
       setDraft((p) => ({
         ...p,
         toEmailsText: (j.invoice!.recipients?.to ?? []).join(' '),
-        ccEmailsText: (j.invoice!.recipients?.cc ?? []).join(' '),
       }));
       setSuccess('Email sent');
       successTimerRef.current = window.setTimeout(() => setSuccess(null), 2000);
@@ -513,7 +509,15 @@ export default function InvoiceDetailClient({
                 <select
                   disabled={!canEdit}
                   value={draft.currency}
-                  onChange={(e) => setDraft((p) => ({ ...p, currency: e.target.value as Currency }))}
+                  onChange={(e) => {
+                    const next = e.target.value as Currency;
+                    setDraft((p) => ({
+                      ...p,
+                      currency: next,
+                      fxUsdRate: next === 'SGD' ? p.fxUsdRate : '',
+                      fxCnyRate: next === 'SGD' ? p.fxCnyRate : '',
+                    }));
+                  }}
                   className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
                 >
                   {(['MYR', 'SGD', 'USD', 'CNY'] as Currency[]).map((c) => (
@@ -672,61 +676,30 @@ export default function InvoiceDetailClient({
                   </div>
                 ) : null}
               </div>
-
-              <div className="sm:col-span-2">
-                <div className="text-xs text-black/60 mb-1">CC Emails</div>
-                <input
-                  disabled={!canEdit}
-                  value={draft.ccEmailsText}
-                  onChange={(e) => setDraft((p) => ({ ...p, ccEmailsText: e.target.value }))}
-                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
-                />
-                {canEdit && suggestions?.history?.ccEmails?.length ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {suggestions.history.ccEmails.map((e) => (
-                      <button
-                        key={`cc:${e}`}
-                        type="button"
-                        onClick={() => {
-                          const email = e.trim();
-                          if (!email) return;
-                          setDraft((prev) => {
-                            const has = prev.ccEmailsText.toLowerCase().includes(email.toLowerCase());
-                            return has ? prev : { ...prev, ccEmailsText: `${prev.ccEmailsText} ${email}`.trim() };
-                          });
-                        }}
-                        className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70 hover:bg-black/[0.02]"
-                        title="History"
-                      >
-                        {e}
-                      </button>
-                    ))}
+              {draft.currency === 'SGD' ? (
+                <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                  <div>
+                    <div className="text-xs text-black/60 mb-1">USD rate</div>
+                    <input
+                      disabled={!canEdit}
+                      value={draft.fxUsdRate}
+                      onChange={(e) => setDraft((p) => ({ ...p, fxUsdRate: e.target.value }))}
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                      inputMode="decimal"
+                    />
                   </div>
-                ) : null}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:col-span-2">
-                <div>
-                  <div className="text-xs text-black/60 mb-1">USD rate</div>
-                  <input
-                    disabled={!canEdit}
-                    value={draft.fxUsdRate}
-                    onChange={(e) => setDraft((p) => ({ ...p, fxUsdRate: e.target.value }))}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
-                    inputMode="decimal"
-                  />
+                  <div>
+                    <div className="text-xs text-black/60 mb-1">CNY rate</div>
+                    <input
+                      disabled={!canEdit}
+                      value={draft.fxCnyRate}
+                      onChange={(e) => setDraft((p) => ({ ...p, fxCnyRate: e.target.value }))}
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
+                      inputMode="decimal"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs text-black/60 mb-1">CNY rate</div>
-                  <input
-                    disabled={!canEdit}
-                    value={draft.fxCnyRate}
-                    onChange={(e) => setDraft((p) => ({ ...p, fxCnyRate: e.target.value }))}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
-                    inputMode="decimal"
-                  />
-                </div>
-              </div>
+              ) : null}
 
               <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                 <div>
@@ -925,14 +898,6 @@ export default function InvoiceDetailClient({
                   <div className="text-black/60">To</div>
                   <div className="text-right max-w-[220px] truncate" title={invoice.recipients.to.join(', ')}>
                     {invoice.recipients.to.join(', ')}
-                  </div>
-                </div>
-              ) : null}
-              {invoice.recipients?.cc?.length ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-black/60">CC</div>
-                  <div className="text-right max-w-[220px] truncate" title={invoice.recipients.cc.join(', ')}>
-                    {invoice.recipients.cc.join(', ')}
                   </div>
                 </div>
               ) : null}
