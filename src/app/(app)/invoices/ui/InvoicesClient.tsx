@@ -670,10 +670,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
             }}
           >
             <div
-              className="w-full max-w-3xl rounded-2xl bg-white shadow-lg border border-black/10 p-4 sm:p-6"
+              className="w-full max-w-3xl rounded-2xl bg-white shadow-lg border border-black/10 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
+              <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-between">
                 <div className="text-lg font-semibold">New Invoice</div>
                 <button
                   onClick={() => {
@@ -686,9 +686,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 </button>
               </div>
 
-              {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
+                {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-black/60 mb-1">Bill To Type</div>
                   <select
@@ -1125,8 +1126,9 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="mt-5 flex items-center justify-end gap-2">
+              <div className="border-t border-black/5 px-4 sm:px-6 py-4 flex items-center justify-end gap-2">
                 <button
                   onClick={() => {
                     setShowAdd(false);
