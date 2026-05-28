@@ -34,7 +34,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const billToEmail = billTo.email ?? client?.email ?? '';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white no-autolink">
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
         <PrintButtonClient />

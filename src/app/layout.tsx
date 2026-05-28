@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'GOS',
   description: 'GOS 综合管理程序',
+  other: {
+    'format-detection': 'telephone=no,email=no,address=no',
+  },
 };
 
 export const viewport = {
