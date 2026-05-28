@@ -41,7 +41,22 @@ export async function sendEmail(input: {
       }),
     }).catch(() => null);
 
-    if (!res?.ok) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
+    if (!res?.ok) {
+      let detail = res ? `RESEND-${res.status}` : 'RESEND-NETWORK';
+      try {
+        const j = (await res?.json().catch(() => null)) as { error?: unknown; message?: unknown; name?: unknown } | null;
+        const parts = [
+          typeof j?.name === 'string' ? j.name : '',
+          typeof j?.message === 'string' ? j.message : '',
+          typeof j?.error === 'string' ? j.error : '',
+        ]
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .slice(0, 2);
+        if (parts.length) detail += `-${parts.join('-')}`;
+      } catch {}
+      return { ok: false as const, error: (`EMAIL_SEND_FAILED:${detail}`) as const };
+    }
     return { ok: true as const };
   }
 
