@@ -11,6 +11,7 @@ type Client = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
+  fye?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -62,6 +63,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [draft, setDraft] = useState({
     name: initialClient.name,
     companyRegistrationNo: initialClient.companyRegistrationNo ?? '',
+    fye: initialClient.fye ?? '',
     contactPerson: initialClient.contactPerson ?? '',
     address: initialClient.address ?? '',
     phone: initialClient.phone ?? '',
@@ -157,6 +159,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         body: JSON.stringify({
           name: draft.name,
           companyRegistrationNo: draft.companyRegistrationNo,
+          fye: draft.fye,
           contactPerson: draft.contactPerson,
           address: draft.address,
           phone: draft.phone || undefined,
@@ -174,6 +177,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         setDraft({
           name: j.client.name,
           companyRegistrationNo: j.client.companyRegistrationNo ?? '',
+          fye: j.client.fye ?? '',
           contactPerson: j.client.contactPerson ?? '',
           address: j.client.address ?? '',
           phone: j.client.phone ?? '',
@@ -363,6 +367,16 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                     value={draft.companyRegistrationNo}
                     onChange={(e) => setDraft((v) => ({ ...v, companyRegistrationNo: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">FYE (Financial year end)</div>
+                  <input
+                    disabled={!canUpdateClient}
+                    value={draft.fye}
+                    onChange={(e) => setDraft((v) => ({ ...v, fye: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    placeholder="e.g. 31/12"
                   />
                 </label>
                 <label className="text-sm">
