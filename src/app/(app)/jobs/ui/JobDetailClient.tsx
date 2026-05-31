@@ -247,11 +247,14 @@ export default function JobDetailClient({
     setSelectedClientIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  const filteredClients = useMemo(() => {
+  const displayClients = useMemo(() => {
     const q = clientSearch.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q));
-  }, [clientSearch, clients]);
+    const selectedSet = new Set(selectedClientIds);
+    const selected = clients.filter((c) => selectedSet.has(c.id));
+    const unselected = clients.filter((c) => !selectedSet.has(c.id));
+    const filteredUnselected = q ? unselected.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q)) : unselected;
+    return [...selected, ...filteredUnselected];
+  }, [clientSearch, clients, selectedClientIds]);
 
   async function submitDuplicate() {
     if (!canDuplicateJob) return;
@@ -851,7 +854,7 @@ export default function JobDetailClient({
                 />
                 {duplicateErrors.clients ? <div className="mt-2 text-sm text-red-600">{duplicateErrors.clients}</div> : null}
                 <div className="mt-3 max-h-[340px] overflow-y-auto rounded-lg border border-black/5">
-                  {filteredClients.map((c) => (
+                  {displayClients.map((c) => (
                     <label
                       key={c.id}
                       className="flex items-center gap-3 px-3 py-2 border-b border-black/5 last:border-b-0 hover:bg-black/[0.02] cursor-pointer"
@@ -868,7 +871,7 @@ export default function JobDetailClient({
                       </div>
                     </label>
                   ))}
-                  {filteredClients.length === 0 ? (
+                  {displayClients.length === 0 ? (
                     <div className="px-3 py-8 text-sm text-black/50 text-center">No clients</div>
                   ) : null}
                 </div>
