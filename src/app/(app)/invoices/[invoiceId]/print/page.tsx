@@ -3,6 +3,7 @@ import { findInvoiceById, findClientById } from '@/lib/db';
 import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/lib/invoice';
 import type { InvoiceBillTo } from '@/lib/types';
 import PrintButtonClient from '@/app/(app)/invoices/[invoiceId]/print/PrintButtonClient';
+import AutoPrintClient from '@/app/(app)/invoices/[invoiceId]/print/AutoPrintClient';
 
 function formatDateDmy(ymd: string) {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -38,6 +39,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
+      <AutoPrintClient />
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
         <PrintButtonClient />
