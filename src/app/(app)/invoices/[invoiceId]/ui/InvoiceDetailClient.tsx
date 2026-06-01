@@ -80,6 +80,7 @@ export default function InvoiceDetailClient({
 
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markPaidDate, setMarkPaidDate] = useState('');
   const [markPaidNote, setMarkPaidNote] = useState('');
@@ -93,6 +94,34 @@ export default function InvoiceDetailClient({
       if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
     };
   }, []);
+
+  const downloadPdf = async () => {
+    if (downloadingPdf) return;
+    setError(null);
+    setSuccess(null);
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/pdf`, { method: 'GET' });
+      if (!res.ok) {
+        setError('DOWNLOAD_PDF_FAILED');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filenameBase = (invoice.invoiceNo || invoice.id).replaceAll(/[^a-zA-Z0-9._-]+/g, '_');
+      a.download = `${filenameBase}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('DOWNLOAD_PDF_FAILED');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const [draft, setDraft] = useState({
     issuer: initialInvoice.issuer,
@@ -462,13 +491,14 @@ export default function InvoiceDetailClient({
             >
               Preview / Print
             </Link>
-            <Link
-              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
-              href={`/invoices/${invoice.id}/print?auto=1`}
-              target="_blank"
+            <button
+              type="button"
+              disabled={saving || sendingEmail || downloadingPdf}
+              onClick={() => void downloadPdf()}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-60"
             >
-              Download PDF
-            </Link>
+              {downloadingPdf ? 'Preparing PDF...' : 'Download PDF'}
+            </button>
             <button
               disabled={saving || sendingEmail || !canEdit}
               onClick={() => void sendEmailNow()}

@@ -35,7 +35,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const billToEmail = billTo.email ?? client?.email ?? '';
 
   return (
-    <div className="min-h-screen bg-white no-autolink" style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}>
+    <div
+      id="invoice-print-root"
+      className="min-h-screen bg-white no-autolink"
+      style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}
+    >
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
