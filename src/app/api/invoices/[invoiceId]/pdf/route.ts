@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import fs from 'node:fs';
 import { getCurrentUser } from '@/lib/auth';
 import { findInvoiceById } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -6,59 +7,43 @@ import { hasPermission } from '@/lib/permissions';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-type CacheClient = {
-  get: (key: string) => Promise<string | null>;
-  set: (key: string, value: string) => Promise<void>;
-};
+type PdfCache = Map<string, Buffer>;
 
-async function getCacheClient(): Promise<CacheClient | null> {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    const mod = (await import('@vercel/kv')) as unknown as {
-      kv: {
-        get: (key: string) => Promise<unknown>;
-        set: (key: string, value: unknown) => Promise<unknown>;
-      };
-    };
-    return {
-      get: async (key) => {
-        const v = await mod.kv.get(key);
-        return typeof v === 'string' ? v : v ? JSON.stringify(v) : null;
-      },
-      set: async (key, value) => {
-        await mod.kv.set(key, value);
-      },
-    };
+function getPdfCache(): PdfCache {
+  const g = globalThis as unknown as { __gosPdfCache?: PdfCache };
+  if (!g.__gosPdfCache) g.__gosPdfCache = new Map();
+  return g.__gosPdfCache;
+}
+
+function cacheGet(key: string) {
+  const cache = getPdfCache();
+  const v = cache.get(key);
+  if (!v) return null;
+  cache.delete(key);
+  cache.set(key, v);
+  return v;
+}
+
+function cacheSet(key: string, value: Buffer) {
+  const cache = getPdfCache();
+  cache.set(key, value);
+  const max = 20;
+  while (cache.size > max) {
+    const oldest = cache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    cache.delete(oldest);
   }
-
-  if (process.env.REDIS_URL) {
-    const g = globalThis as unknown as { __gosPdfRedisPromise?: Promise<any> };
-    if (!g.__gosPdfRedisPromise) {
-      g.__gosPdfRedisPromise = (async () => {
-        const mod = (await import('redis')) as any;
-        const client = mod.createClient({ url: process.env.REDIS_URL });
-        await client.connect();
-        return client;
-      })();
-    }
-    const client = await g.__gosPdfRedisPromise;
-    return {
-      get: async (key) => {
-        const v = await client.get(key);
-        return typeof v === 'string' ? v : null;
-      },
-      set: async (key, value) => {
-        await client.set(key, value, { EX: 60 * 60 * 24 * 30 });
-      },
-    };
-  }
-
-  return null;
 }
 
 function sanitizeFilenameBase(input: string) {
   const s = input.trim();
   if (!s) return 'invoice';
   return s.replaceAll(/[^a-zA-Z0-9._-]+/g, '_');
+}
+
+function toArrayBuffer(bytes: Uint8Array) {
+  const ab = bytes.buffer as ArrayBuffer;
+  return ab.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }
 
 async function getBrowser() {
@@ -70,7 +55,13 @@ async function getBrowser() {
       const chromium = chromiumMod.default ?? chromiumMod;
       const puppeteer = puppeteerMod.default ?? puppeteerMod;
 
-      const executablePath = await chromium.executablePath();
+      const envPath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || process.env.CHROME_EXECUTABLE_PATH?.trim();
+      const macCandidates = [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      ];
+      const candidate = envPath || macCandidates.find((p) => fs.existsSync(p)) || null;
+      const executablePath = candidate || (await chromium.executablePath());
       return puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -91,22 +82,18 @@ export async function GET(req: Request, ctx: { params: Promise<{ invoiceId: stri
   const invoice = await findInvoiceById(invoiceId);
   if (!invoice || invoice.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  const cacheKey = `gos:invoicePdf:${invoiceId}:${invoice.updatedAt}`;
-  const cache = await getCacheClient();
-  if (cache) {
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      const bytes = Buffer.from(cached, 'base64');
-      const filenameBase = sanitizeFilenameBase(invoice.invoiceNo || invoice.id);
-      return new NextResponse(bytes, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
-          'Cache-Control': 'no-store',
-        },
-      });
-    }
+  const cacheKey = `invoicePdf:${invoiceId}:${invoice.updatedAt}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) {
+    const filenameBase = sanitizeFilenameBase(invoice.invoiceNo || invoice.id);
+    return new Response(new Blob([toArrayBuffer(cached)], { type: 'application/pdf' }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 
   const origin = new URL(req.url).origin;
@@ -131,12 +118,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ invoiceId: stri
       preferCSSPageSize: true,
     });
 
-    if (cache) {
-      await cache.set(cacheKey, Buffer.from(pdf).toString('base64'));
-    }
+    cacheSet(cacheKey, Buffer.from(pdf));
 
     const filenameBase = sanitizeFilenameBase(invoice.invoiceNo || invoice.id);
-    return new NextResponse(Buffer.from(pdf), {
+    return new Response(new Blob([toArrayBuffer(pdf)], { type: 'application/pdf' }), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
