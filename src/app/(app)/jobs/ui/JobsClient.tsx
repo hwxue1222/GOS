@@ -246,6 +246,53 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const pageEnd = Math.min(total, pageStart + safePageSize);
   const visible = sorted.slice(pageStart, pageEnd);
 
+  const exportResultsToExcel = () => {
+    const escape = (v: string) =>
+      v
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+    const rows = sorted.map((it) => {
+      const clientText = it.client ? `${it.client.code} ${it.client.name}` : '-';
+      const manager = it.manager?.name ?? '-';
+      const staff = it.staff?.name ?? (it.staffNames.length ? it.staffNames.join(', ') : '-');
+      const tasks = `${it.tasks.done}/${it.tasks.total}`;
+      const dueDate = it.job.dueDate ? formatDateDMY(it.job.dueDate) : '-';
+      const createdAt = it.job.createdAt ? formatDateDMY(it.job.createdAt) : '-';
+      const status = it.job.completed ? 'Complete' : it.job.status;
+      return [clientText, it.job.name, tasks, dueDate, status, manager, staff, createdAt];
+    });
+
+    const html =
+      `\ufeff<html><head><meta charset="utf-8" /></head><body><table border="1"><thead><tr>` +
+      `<th>${escape('Client')}</th>` +
+      `<th>${escape('Job Name')}</th>` +
+      `<th>${escape('Tasks')}</th>` +
+      `<th>${escape('Due Date')}</th>` +
+      `<th>${escape('Status')}</th>` +
+      `<th>${escape('Manager in charge')}</th>` +
+      `<th>${escape('Staff')}</th>` +
+      `<th>${escape('Created')}</th>` +
+      `</tr></thead><tbody>` +
+      rows
+        .map((r) => `<tr>` + r.map((c) => `<td>${escape(c)}</td>`).join('') + `</tr>`)
+        .join('') +
+      `</tbody></table></body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `jobs-results-${todayYmdNow}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (Number(page) !== safePage) setPage(safePage);
   }, [page, safePage, setPage]);
@@ -423,7 +470,14 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
           </div>
           <div className="flex items-center gap-3">
             {me.role === 'owner' ? (
-              <div className="hidden sm:block text-sm text-black/60">Export results to Excel</div>
+              <button
+                type="button"
+                disabled={sorted.length === 0}
+                onClick={exportResultsToExcel}
+                className="hidden sm:block text-sm text-black/60 hover:text-black disabled:opacity-40 disabled:hover:text-black/60"
+              >
+                Export results to Excel
+              </button>
             ) : null}
             <button
               disabled={!canCreate}
