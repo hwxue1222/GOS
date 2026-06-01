@@ -466,7 +466,7 @@ export default function InvoiceDetailClient({
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
               href={`/api/invoices/${invoice.id}/pdf`}
             >
-              Download PDF / 下载PDF
+              Download PDF
             </a>
             <button
               disabled={saving || sendingEmail || !canEdit}

@@ -34,7 +34,10 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const billToEmail = billTo.email ?? client?.email ?? '';
 
   return (
-    <div className="min-h-screen bg-white no-autolink">
+    <div className="min-h-screen bg-white no-autolink" style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
         <PrintButtonClient />
@@ -58,40 +61,40 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         <div className="mt-3 border-t border-black/70" />
 
-        <div className="mt-4 text-center text-xl font-semibold tracking-wide">INVOICE 发票</div>
+        <div className="mt-4 text-center text-xl font-semibold tracking-wide">INVOICE</div>
 
         <table className="mt-4 w-full text-sm border border-black/30 border-collapse">
           <tbody>
             <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Bill To / 收款方</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Bill To</td>
               <td className="px-3 py-2 border border-black/20">{billToLabel(billTo)}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice No. / 发票号</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice No.</td>
               <td className="px-3 py-2 border border-black/20">{invoice.invoiceNo}</td>
             </tr>
             <tr>
               <td rowSpan={2} className="w-[120px] px-3 py-2 border border-black/20 font-medium align-top">
-                Address / 地址
+                Address
               </td>
               <td rowSpan={2} className="px-3 py-2 border border-black/20 whitespace-pre-wrap align-top">
                 {billToAddress}
               </td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice Date / 开票日期</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Invoice Date</td>
               <td className="px-3 py-2 border border-black/20">{formatDateDmy(invoice.issueDate)}</td>
             </tr>
             <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">D/O No. / 交付单号</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">D/O No.</td>
               <td className="px-3 py-2 border border-black/20">{invoice.doNo ?? '-'}</td>
             </tr>
             <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Contact No. / 联系电话</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Contact No.</td>
               <td className="px-3 py-2 border border-black/20">{billToContact}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Payment Method / 付款方式</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Payment Method</td>
               <td className="px-3 py-2 border border-black/20">{invoice.paymentMethod ?? 'As below'}</td>
             </tr>
             <tr>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Email / 邮箱</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Email</td>
               <td className="px-3 py-2 border border-black/20">{billToEmail}</td>
-              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Credit Term / 账期</td>
+              <td className="w-[120px] px-3 py-2 border border-black/20 font-medium">Credit Term</td>
               <td className="px-3 py-2 border border-black/20">{invoice.creditTerm ?? 'Net 15'}</td>
             </tr>
           </tbody>
@@ -99,9 +102,9 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         <div className="mt-4 border border-black/30">
           <div className="grid grid-cols-[60px_1fr_90px_110px] text-sm bg-black/[0.02] border-b border-black/20">
-            <div className="px-3 py-2 font-medium border-r border-black/20">Svc / 序号</div>
-            <div className="px-3 py-2 font-medium border-r border-black/20">Description / 描述</div>
-            <div className="px-3 py-2 font-medium border-r border-black/20 text-right">Qty / 数量</div>
+            <div className="px-3 py-2 font-medium border-r border-black/20">Svc</div>
+            <div className="px-3 py-2 font-medium border-r border-black/20">Description</div>
+            <div className="px-3 py-2 font-medium border-r border-black/20 text-right">Qty</div>
             <div className="px-3 py-2 font-medium text-right">{invoice.currency}</div>
           </div>
           {invoice.items.map((it, idx) => {
@@ -121,24 +124,24 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           <div className="w-[320px] text-sm">
             {invoice.discount ? (
               <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold">{`Discount in ${invoice.currency} / 折扣`}</div>
+                <div className="font-semibold">{`Discount in ${invoice.currency}`}</div>
                 <div className="text-right">{`(${Math.abs(invoice.discount).toFixed(2)})`}</div>
               </div>
             ) : null}
             <div className="mt-2 border-t border-black/30" />
             <div className="mt-2 flex items-center justify-between gap-3 font-semibold">
-              <div>{`Total Amount in ${invoice.currency} / 总金额`}</div>
+              <div>{`Total Amount in ${invoice.currency}`}</div>
               <div className="text-right">{invoice.total.toFixed(2)}</div>
             </div>
             {fx.usd !== null ? (
               <div className="mt-1 flex items-center justify-between gap-3 italic text-black/70">
-                <div>Total Amount in USD / 美元金额</div>
+                <div>Total Amount in USD</div>
                 <div className="text-right">{formatMoney('USD', fx.usd)}</div>
               </div>
             ) : null}
             {fx.cny !== null ? (
               <div className="mt-1 flex items-center justify-between gap-3 italic text-black/70">
-                <div>Total Amount in CNY / 人民币金额</div>
+                <div>Total Amount in CNY</div>
                 <div className="text-right">{formatMoney('CNY', fx.cny)}</div>
               </div>
             ) : null}
@@ -147,7 +150,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         <div className="mt-6 border border-black/30">
           <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20">
-            {cfg.paymentMethodsTitle ?? 'Payment Methods: / 付款方式'}
+            {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
           </div>
           <div className="text-sm">
             {cfg.paymentMethods.map((line, idx) => (

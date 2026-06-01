@@ -66,6 +66,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ invoiceId: stri
     await page.emulateMediaType('print');
     await page.goto(printUrl, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 45_000 });
     await page.waitForSelector('body', { timeout: 10_000 });
+    await page.evaluate(async () => {
+      const fonts = (document as any).fonts;
+      if (fonts?.ready) await fonts.ready;
+    });
 
     const pdf = await page.pdf({
       format: 'A4',
