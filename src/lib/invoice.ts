@@ -48,7 +48,8 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       paymentMethodsTitle: 'Payment Methods\n汇款方式\n:',
       paymentMethods: [
         'Cheque payable to Bybridge Consultancy Pte. Ltd.',
-        'Bank transfer to Bybridge Consultancy Pte Ltd, CIMB Bank, Bank Account: 200-0788-241, Swift Code: CIBBSGSG',
+        'Bank transfer to Bybridge Consultancy Pte Ltd, CIMB Bank, Bank Account (USD): 2000788241, Bank Account (SGD): 2000766360, Swift Code: CIBBSGSG',
+        'Paynow UEN: 201523304N',
       ],
     };
   }
