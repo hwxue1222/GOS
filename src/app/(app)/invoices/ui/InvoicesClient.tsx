@@ -982,7 +982,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 {form.currency === 'SGD' ? (
                   <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                     <div>
-                      <div className="text-xs text-black/60 mb-1">USD rate (1 SGD → USD, optional)</div>
+                      <div className="text-xs text-black/60 mb-1">USD/SGD rate (optional)</div>
                       <input
                         value={form.fxUsdRate}
                         onChange={(e) => setForm((p) => ({ ...p, fxUsdRate: e.target.value }))}
@@ -992,7 +992,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                       />
                     </div>
                     <div>
-                      <div className="text-xs text-black/60 mb-1">CNY rate (1 SGD → CNY, optional)</div>
+                      <div className="text-xs text-black/60 mb-1">CNY/SGD rate (optional)</div>
                       <input
                         value={form.fxCnyRate}
                         onChange={(e) => setForm((p) => ({ ...p, fxCnyRate: e.target.value }))}

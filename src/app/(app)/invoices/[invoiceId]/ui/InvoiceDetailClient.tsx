@@ -798,7 +798,7 @@ export default function InvoiceDetailClient({
               {draft.currency === 'SGD' ? (
                 <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                   <div>
-                    <div className="text-xs text-black/60 mb-1">USD rate</div>
+                    <div className="text-xs text-black/60 mb-1">USD/SGD rate</div>
                     <input
                       disabled={!canEdit}
                       value={draft.fxUsdRate}
@@ -808,7 +808,7 @@ export default function InvoiceDetailClient({
                     />
                   </div>
                   <div>
-                    <div className="text-xs text-black/60 mb-1">CNY rate</div>
+                    <div className="text-xs text-black/60 mb-1">CNY/SGD rate</div>
                     <input
                       disabled={!canEdit}
                       value={draft.fxCnyRate}
