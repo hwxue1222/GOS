@@ -47,7 +47,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <PrintButtonClient />
       </div>
 
-      <div className="max-w-[860px] mx-auto bg-white px-8 py-8">
+      <div className="max-w-[860px] mx-auto bg-white px-8 py-8 min-h-[297mm] flex flex-col">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-md bg-red-600 text-white flex items-center justify-center font-semibold text-2xl">
@@ -152,33 +152,35 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        <div className="mt-6 border border-black/30">
-          <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20">
-            {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
+        <div className="mt-auto pt-6 break-inside-avoid">
+          <div className="border border-black/30">
+            <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20">
+              {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
+            </div>
+            <div className="text-sm">
+              {cfg.paymentMethods.map((line, idx) => (
+                <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
+                  <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
+                  <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="text-sm">
-            {cfg.paymentMethods.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
-                <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
-                <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
-              </div>
-            ))}
+
+          <div className="mt-5 text-xs italic text-black/70">
+            Thank you for your business. We do expect your payment on time, so please process the invoice within grant period.
+            There will be 1.5% interest charge per month for late payment.
           </div>
-        </div>
 
-        <div className="mt-5 text-xs italic text-black/70">
-          Thank you for your business. We do expect your payment on time, so please process the invoice within grant period.
-          There will be 1.5% interest charge per month for late payment.
-        </div>
+          <div className="mt-3 text-xs text-center text-black/70">This is computer generated and no signature is required.</div>
 
-        <div className="mt-3 text-xs text-center text-black/70">This is computer generated and no signature is required.</div>
-
-        <div className="mt-10 text-[11px] text-center text-black/70">
-          {cfg.addressLine ? <div>{`Address: ${cfg.addressLine}`}</div> : null}
-          <div className="flex items-center justify-center gap-3">
-            {cfg.tel ? <span>{`Tel: ${cfg.tel}`}</span> : null}
-            {cfg.email ? <span>{`Email: ${cfg.email}`}</span> : null}
-            {cfg.website ? <span>{`Website: ${cfg.website}`}</span> : null}
+          <div className="mt-10 text-[11px] text-center text-black/70">
+            {cfg.addressLine ? <div>{`Address: ${cfg.addressLine}`}</div> : null}
+            <div className="flex items-center justify-center gap-3">
+              {cfg.tel ? <span>{`Tel: ${cfg.tel}`}</span> : null}
+              {cfg.email ? <span>{`Email: ${cfg.email}`}</span> : null}
+              {cfg.website ? <span>{`Website: ${cfg.website}`}</span> : null}
+            </div>
           </div>
         </div>
       </div>
