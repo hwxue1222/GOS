@@ -805,7 +805,7 @@ export default function InvoiceDetailClient({
                       onChange={(e) => setDraft((p) => ({ ...p, fxUsdRate: e.target.value }))}
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
                       inputMode="decimal"
-                      placeholder="1.25"
+                      placeholder="e.g. 1.25"
                     />
                   </div>
                   <div>
