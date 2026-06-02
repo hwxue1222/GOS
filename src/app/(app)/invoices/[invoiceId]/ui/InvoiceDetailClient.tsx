@@ -805,16 +805,18 @@ export default function InvoiceDetailClient({
                       onChange={(e) => setDraft((p) => ({ ...p, fxUsdRate: e.target.value }))}
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
                       inputMode="decimal"
+                      placeholder="e.g. 0.70"
                     />
                   </div>
                   <div>
-                    <div className="text-xs text-black/60 mb-1">CNY/SGD rate</div>
+                    <div className="text-xs text-black/60 mb-1">SGD/CNY rate</div>
                     <input
                       disabled={!canEdit}
                       value={draft.fxCnyRate}
                       onChange={(e) => setDraft((p) => ({ ...p, fxCnyRate: e.target.value }))}
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
                       inputMode="decimal"
+                      placeholder="e.g. 0.19"
                     />
                   </div>
                 </div>
