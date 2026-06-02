@@ -519,10 +519,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
         </div>
 
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/10 bg-black/[0.02]">
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[220px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
                     <input
@@ -536,7 +536,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     />
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[160px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
                     <select
@@ -553,7 +553,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[360px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
                     <select
@@ -573,16 +573,16 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[130px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[120px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
                     <select
@@ -600,7 +600,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[200px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
                 </th>
               </tr>
@@ -617,13 +617,17 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                       </Link>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-black/70">{inv.issuer}</td>
-                    <td className="px-4 py-3 whitespace-nowrap max-w-[360px]">
+                    <td className="px-4 py-3 whitespace-nowrap overflow-hidden">
                       {row.client ? (
-                        <Link className="text-[#2f7bdc] hover:underline" href={`/clients/${row.client.id}`}>
-                          {row.client.code} {row.client.name}
-                        </Link>
+                        <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
+                          <Link className="block truncate text-[#2f7bdc] hover:underline" href={`/clients/${row.client.id}`}>
+                            {row.client.code} {row.client.name}
+                          </Link>
+                        </div>
                       ) : (
-                        <span className="text-black/80">{inv.billTo.companyName || '-'}</span>
+                        <div className="truncate text-black/80" title={inv.billTo.companyName || '-'}>
+                          {inv.billTo.companyName || '-'}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatDateDMY(inv.issueDate)}</td>
