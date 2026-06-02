@@ -809,14 +809,14 @@ export default function InvoiceDetailClient({
                     />
                   </div>
                   <div>
-                    <div className="text-xs text-black/60 mb-1">SGD/CNY rate</div>
+                    <div className="text-xs text-black/60 mb-1">SGD/CNY rate (1 SGD → CNY)</div>
                     <input
                       disabled={!canEdit}
                       value={draft.fxCnyRate}
                       onChange={(e) => setDraft((p) => ({ ...p, fxCnyRate: e.target.value }))}
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white disabled:opacity-60"
                       inputMode="decimal"
-                      placeholder="e.g. 0.19"
+                      placeholder="e.g. 5.35"
                     />
                   </div>
                 </div>
