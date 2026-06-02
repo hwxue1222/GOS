@@ -38,10 +38,6 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const billToEmail = billTo.email ?? client?.email ?? '';
 
   if (invoice.issuer === 'BYBRIDGE') {
-    const baseBeforeGst = Math.max(0, invoice.total - (invoice.tax || 0));
-    const gstAmount = Math.max(0, invoice.tax || 0);
-    const gstRate = baseBeforeGst > 0 && gstAmount > 0 ? Math.round((gstAmount / baseBeforeGst) * 1000) / 10 : null;
-
     return (
       <div
         id="invoice-print-root"
@@ -74,10 +70,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
           <div className="mt-3 border-t border-black/70" />
 
-          <div className="mt-4 text-center text-xl font-semibold tracking-wide leading-tight">
-            <div>TAX</div>
-            <div>INVOICE</div>
-          </div>
+          <div className="mt-4 text-center text-xl font-semibold tracking-wide">INVOICE</div>
 
           <table className="mt-4 w-full text-sm border border-black/30 border-collapse">
             <tbody>
@@ -150,15 +143,12 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                   <div className="text-right">{`(${Math.abs(invoice.discount).toFixed(2)})`}</div>
                 </div>
               ) : null}
-              <div className="mt-2 flex items-center justify-between gap-3 font-semibold">
-                <div>Total Amount before GST</div>
-                <div className="text-right">{n2(baseBeforeGst)}</div>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-3 font-semibold">
-                <div>{gstAmount > 0 && gstRate !== null ? `GST Amount at ${gstRate}%` : 'GST Amount'}</div>
-                <div className="text-right">{n2(gstAmount)}</div>
-              </div>
-              <div className="mt-2 border-t border-black/30" />
+              {invoice.tax ? (
+                <div className="mt-2 flex items-center justify-between gap-3 font-semibold">
+                  <div>GST Amount</div>
+                  <div className="text-right">{n2(Math.max(0, invoice.tax || 0))}</div>
+                </div>
+              ) : null}
               <div className="mt-2 flex items-center justify-between gap-3 font-semibold">
                 <div>{`Total Amount in ${invoice.currency}`}</div>
                 <div className="text-right">{invoice.total.toFixed(2)}</div>
