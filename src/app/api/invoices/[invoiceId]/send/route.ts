@@ -27,6 +27,21 @@ function fillTemplate(template: string, vars: Record<string, string>) {
   return template.replaceAll(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '');
 }
 
+function resolveBaseUrl(req: Request) {
+  const env = process.env.APP_BASE_URL?.trim();
+  if (env) return env.replace(/\/+$/, '');
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
+
+  const h = req.headers;
+  const host = h.get('x-forwarded-host') || h.get('host');
+  const proto = (h.get('x-forwarded-proto') || 'https').split(',')[0]!.trim();
+  if (host) return `${proto}://${host}`;
+
+  return new URL(req.url).origin;
+}
+
 const DEFAULT_INVOICE_EMAIL_SUBJECT = 'Invoice 发票 {{invoiceNo}}';
 
 const DEFAULT_INVOICE_EMAIL_HTML =
@@ -68,7 +83,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   const cc = normalizeEmailList(body?.cc);
   if (!to.length) return NextResponse.json({ ok: false, error: 'MISSING_TO' }, { status: 400 });
 
-  const baseUrl = process.env.APP_BASE_URL?.trim() || new URL(req.url).origin;
+  const baseUrl = resolveBaseUrl(req);
   let publicToken = invoice.publicToken;
   if (!publicToken) {
     const token = newPublicToken();
