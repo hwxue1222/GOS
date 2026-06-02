@@ -7,6 +7,7 @@ export type InvoiceIssuerConfig = {
   uen?: string;
   addressLine?: string;
   tel?: string;
+  customerService?: string;
   email?: string;
   website?: string;
   paymentMethodsTitle?: string;
@@ -30,6 +31,24 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
         'Bank transfer to BBY.SG PTE LTD, Maybank Singapore, Bank Account No.: 04011569555, Swift Code: MBBESGS2',
         '人民币汇款：收款人：薛宏伟，收款银行：招商银行南京城西支行，收款账号：6225 8812 5777 1831',
         'Scan Paynow QR code or Paynow to UEN: 201608450W',
+      ],
+    };
+  }
+  if (issuer === 'BYBRIDGE') {
+    return {
+      issuer,
+      displayName: 'Bybridge Consultancy Pte Ltd',
+      displayNameZh: '新加坡百桥咨询有限公司',
+      uen: '201523304N',
+      addressLine: '10 Anson Road#10-13A International Plaza Singapore 079903',
+      tel: '+65 62215600',
+      customerService: '+65 90888596',
+      email: 'info@bby.sg',
+      website: 'www.bybridge.com.sg',
+      paymentMethodsTitle: 'Payment Methods\n汇款方式\n:',
+      paymentMethods: [
+        'Cheque payable to Bybridge Consultancy Pte. Ltd.',
+        'Bank transfer to Bybridge Consultancy Pte Ltd, CIMB Bank, Bank Account: 200-0788-241, Swift Code: CIBBSGSG',
       ],
     };
   }
