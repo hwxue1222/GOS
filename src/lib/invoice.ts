@@ -23,7 +23,7 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       uen: '201608450W',
       addressLine: '8 Burn Road#15-03 Trivex Singapore 369977',
       tel: '+65 62215600',
-      email: 'info@bby.sg',
+      email: 'Luke@bby.sg',
       website: 'www.bby.sg',
       paymentMethodsTitle: 'Payment Methods 汇款方式:',
       paymentMethods: [
@@ -43,7 +43,7 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       addressLine: '10 Anson Road#10-13A International Plaza Singapore 079903',
       tel: '+65 62215600',
       customerService: '+65 90888596',
-      email: 'info@bby.sg',
+      email: 'Luke@bby.sg',
       website: 'www.bybridge.com.sg',
       paymentMethodsTitle: 'Payment Methods\n汇款方式\n:',
       paymentMethods: [
