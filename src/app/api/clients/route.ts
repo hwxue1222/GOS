@@ -62,6 +62,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
+  const existing = (await listClients()).filter((c) => !c.deletedAt);
+  const codeKey = code.toLowerCase();
+  const nameKey = name.toLowerCase();
+  if (existing.some((c) => (c.code || '').trim().toLowerCase() === codeKey)) {
+    return NextResponse.json({ ok: false, error: 'DUPLICATE_CODE' }, { status: 409 });
+  }
+  if (existing.some((c) => (c.name || '').trim().toLowerCase() === nameKey)) {
+    return NextResponse.json({ ok: false, error: 'DUPLICATE_NAME' }, { status: 409 });
+  }
+
   const client = await createClient({ code, name, companyRegistrationNo, fye, contactPerson, address, phone, email, tags });
   return NextResponse.json({ ok: true, client });
 }

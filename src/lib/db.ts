@@ -651,6 +651,11 @@ export async function createClient(input: {
   tags?: string[];
 }) {
   const db = await readDb();
+  const codeKey = input.code.trim().toLowerCase();
+  const nameKey = input.name.trim().toLowerCase();
+  if (!codeKey || !nameKey) throw new Error('INVALID_INPUT');
+  if (db.clients.some((c) => !c.deletedAt && (c.code || '').trim().toLowerCase() === codeKey)) throw new Error('DUPLICATE_CODE');
+  if (db.clients.some((c) => !c.deletedAt && (c.name || '').trim().toLowerCase() === nameKey)) throw new Error('DUPLICATE_NAME');
   const client: Client = {
     id: newId('cli'),
     code: input.code,
