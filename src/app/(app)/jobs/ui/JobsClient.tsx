@@ -26,7 +26,7 @@ type JobListItem = {
     staffUserId?: string;
     createdAt: string;
   };
-  client: { id: string; code: string; name: string } | null;
+  client: { id: string; code: string; name: string; contactPerson?: string } | null;
   tasks: { done: number; total: number };
   staffNames: string[];
   manager: { id: string; name: string } | null;
@@ -212,7 +212,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
         if (it.job.name !== filterJobName) return false;
       }
       if (search.trim()) {
-        const clientText = it.client ? `${it.client.code} ${it.client.name}` : '';
+        const clientText = it.client ? `${it.client.code} ${it.client.name} ${it.client.contactPerson ?? ''}` : '';
         if (!textMatch(`${it.job.name} ${clientText}`, search)) return false;
       }
       return true;
@@ -508,7 +508,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   setPage(1);
                 }}
                 className="w-full sm:max-w-md rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
-                placeholder="Find job or client by name"
+                placeholder="Find job, client, or contact person"
               />
             </div>
 

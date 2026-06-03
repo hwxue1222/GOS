@@ -110,7 +110,7 @@ export default async function JobsPage({
         .sort((a, b) => a.localeCompare(b));
       return {
         job: { ...job, status: job.completed ? 'Complete' : computeJobStatus(tasks) },
-        client: client ? { id: client.id, code: client.code, name: client.name } : null,
+        client: client ? { id: client.id, code: client.code, name: client.name, contactPerson: client.contactPerson } : null,
         tasks: { done, total: tasks.length },
         staffNames,
         manager: manager ? { id: manager.id, name: manager.name } : null,

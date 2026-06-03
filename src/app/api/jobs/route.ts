@@ -78,7 +78,7 @@ export async function GET(req: Request) {
       const status = job.completed ? 'Complete' : computeJobStatus(tasks);
       return {
         job: { ...job, status },
-        client,
+        client: client ? { id: client.id, code: client.code, name: client.name, contactPerson: client.contactPerson } : null,
         tasks: { done, total: tasks.length },
         staffNames,
         manager: manager ? { id: manager.id, name: manager.name } : null,
