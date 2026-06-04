@@ -219,21 +219,28 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
     });
   }, [filterClientId, filterJobName, filterManagerUserId, items, search, view]);
 
-  const dueKey = (dueDate?: string) => {
-    if (!dueDate) return null;
+  const dueSortValue = (dueDate?: string) => {
+    if (!dueDate) return Number.POSITIVE_INFINITY;
     const head = dueDate.trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return null;
-    return head;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(head)) {
+      const t = new Date(`${head}T00:00:00Z`).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(head)) {
+      const [dd, mm, yyyy] = head.split('/');
+      const iso = `${yyyy}-${mm}-${dd}`;
+      const t = new Date(`${iso}T00:00:00Z`).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    }
+    const t = new Date(dueDate).getTime();
+    return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
   };
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const da = dueKey(a.job.dueDate);
-      const db = dueKey(b.job.dueDate);
-      if (!da && !db) return a.job.id.localeCompare(b.job.id);
-      if (!da) return 1;
-      if (!db) return -1;
-      if (da !== db) return da.localeCompare(db);
+      const da = dueSortValue(a.job.dueDate);
+      const db = dueSortValue(b.job.dueDate);
+      if (da !== db) return da - db;
       return a.job.id.localeCompare(b.job.id);
     });
   }, [filtered]);
