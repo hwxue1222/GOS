@@ -58,6 +58,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
     | {
         code?: string;
         name?: string;
+        fka?: string;
         companyRegistrationNo?: string;
         fye?: string;
         contactPerson?: string;
@@ -70,6 +71,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
 
   const code = typeof body?.code === 'string' ? body.code.trim() : undefined;
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
+  const hasFka = typeof body?.fka === 'string';
+  const fka = hasFka ? body!.fka!.trim() || undefined : undefined;
   const hasCompanyRegistrationNo = typeof body?.companyRegistrationNo === 'string';
   const companyRegistrationNo = hasCompanyRegistrationNo ? body!.companyRegistrationNo!.trim() || undefined : undefined;
   const hasFye = typeof body?.fye === 'string';
@@ -91,6 +94,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
   const updated = await updateClient(clientId, {
     ...(code !== undefined ? { code } : {}),
     ...(name !== undefined ? { name } : {}),
+    ...(hasFka ? { fka } : {}),
     ...(hasCompanyRegistrationNo ? { companyRegistrationNo } : {}),
     ...(hasFye ? { fye } : {}),
     ...(hasContactPerson ? { contactPerson } : {}),

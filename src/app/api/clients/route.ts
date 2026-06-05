@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     | {
         code?: string;
         name?: string;
+        fka?: string;
         companyRegistrationNo?: string;
         fye?: string;
         contactPerson?: string;
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
     | null;
   const code = body?.code?.trim() ?? '';
   const name = body?.name?.trim() ?? '';
+  const fka = body?.fka?.trim() || undefined;
   const companyRegistrationNo = body?.companyRegistrationNo?.trim() || undefined;
   const fye = body?.fye?.trim() || undefined;
   const contactPerson = body?.contactPerson?.trim() || undefined;
@@ -72,6 +74,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'DUPLICATE_NAME' }, { status: 409 });
   }
 
-  const client = await createClient({ code, name, companyRegistrationNo, fye, contactPerson, address, phone, email, tags });
+  const client = await createClient({ code, name, fka, companyRegistrationNo, fye, contactPerson, address, phone, email, tags });
   return NextResponse.json({ ok: true, client });
 }

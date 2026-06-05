@@ -12,6 +12,7 @@ type Client = {
   id: string;
   code: string;
   name: string;
+  fka?: string;
   companyRegistrationNo?: string;
   fye?: string;
   contactPerson?: string;
@@ -64,6 +65,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
 
   const [draft, setDraft] = useState({
     name: initialClient.name,
+    fka: initialClient.fka ?? '',
     companyRegistrationNo: initialClient.companyRegistrationNo ?? '',
     fye: initialClient.fye ?? '',
     contactPerson: initialClient.contactPerson ?? '',
@@ -160,6 +162,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: draft.name,
+          fka: draft.fka || undefined,
           companyRegistrationNo: draft.companyRegistrationNo,
           fye: draft.fye,
           contactPerson: draft.contactPerson,
@@ -178,6 +181,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
         setClient(j.client);
         setDraft({
           name: j.client.name,
+          fka: j.client.fka ?? '',
           companyRegistrationNo: j.client.companyRegistrationNo ?? '',
           fye: j.client.fye ?? '',
           contactPerson: j.client.contactPerson ?? '',
@@ -348,7 +352,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           <div className="rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-lg font-semibold break-words">{client.name}</div>
+            <div className="text-lg font-semibold break-words">{client.fka?.trim() ? `${client.name} (fka ${client.fka})` : client.name}</div>
             <div className="mt-1 text-sm text-black/60 break-words">{`Code: ${client.code}`}</div>
 
             <div className="mt-5 rounded-lg bg-black/[0.02] border border-black/5 p-3">
@@ -360,6 +364,16 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                     value={draft.name}
                     onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">FKA (Formerly known as)</div>
+                  <input
+                    disabled={!canUpdateClient}
+                    value={draft.fka}
+                    onChange={(e) => setDraft((v) => ({ ...v, fka: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    placeholder="e.g. Bybridge Sdn Bhd"
                   />
                 </label>
                 <label className="text-sm">

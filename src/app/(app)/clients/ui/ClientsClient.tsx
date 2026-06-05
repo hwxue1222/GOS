@@ -11,6 +11,7 @@ type Client = {
   id: string;
   code: string;
   name: string;
+  fka?: string;
   companyRegistrationNo?: string;
   fye?: string;
   contactPerson?: string;
@@ -45,6 +46,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const [form, setForm] = useState({
     code: '',
     name: '',
+    fka: '',
     companyRegistrationNo: '',
     fye: '',
     contactPerson: '',
@@ -57,7 +59,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     if (!search.trim()) return clients;
     return clients.filter((c) =>
       textMatch(
-        `${c.code} ${c.name} ${c.companyRegistrationNo ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
+        `${c.code} ${c.name} ${c.fka ?? ''} ${c.companyRegistrationNo ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
         search,
       ),
     );
@@ -97,6 +99,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
         body: JSON.stringify({
           code: form.code,
           name: form.name,
+          fka: form.fka || undefined,
           companyRegistrationNo: form.companyRegistrationNo || undefined,
           fye: form.fye || undefined,
           contactPerson: form.contactPerson || undefined,
@@ -113,7 +116,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
       const j = (await res.json().catch(() => null)) as { ok?: boolean; client?: Client } | null;
       if (j?.client) setClients((prev) => [j.client!, ...prev]);
       setShowAdd(false);
-      setForm({ code: '', name: '', companyRegistrationNo: '', fye: '', contactPerson: '', address: '', phone: '', email: '' });
+      setForm({ code: '', name: '', fka: '', companyRegistrationNo: '', fye: '', contactPerson: '', address: '', phone: '', email: '' });
     } finally {
       setCreating(false);
     }
@@ -239,49 +242,6 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
             </tbody>
           </table>
         </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3 text-sm text-black/60">
-          <div className="flex items-center gap-2">
-            <div>
-              {total === 0 ? '0' : `${pageStart + 1}-${pageEnd}`} / {total}
-            </div>
-            <div className="hidden sm:block">per page</div>
-            <select
-              value={safePageSize}
-              onChange={(e) => {
-                const next = Number(e.target.value) || 20;
-                setPageSize(next);
-                setPage(1);
-              }}
-              className="rounded-md border border-black/10 bg-white px-2 py-1 text-sm text-black/70"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={safePage <= 1}
-              onClick={() => setPage(safePage - 1)}
-              className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              Prev
-            </button>
-            <div className="min-w-[72px] text-center">
-              {safePage} / {totalPages}
-            </div>
-            <button
-              disabled={safePage >= totalPages}
-              onClick={() => setPage(safePage + 1)}
-              className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
       </div>
 
       {showAdd ? (
@@ -315,6 +275,15 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                       onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                       placeholder="Client name"
+                    />
+                  </label>
+                  <label className="text-sm sm:col-span-2">
+                    <div className="text-black/70">FKA (Formerly known as)</div>
+                    <input
+                      value={form.fka}
+                      onChange={(e) => setForm((v) => ({ ...v, fka: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      placeholder="e.g. Bybridge Sdn Bhd"
                     />
                   </label>
                   <label className="text-sm sm:col-span-2">

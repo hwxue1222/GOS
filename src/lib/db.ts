@@ -92,6 +92,7 @@ function normalizeDb(parsed: Db): Db {
   const clients = (parsed.clients ?? []).map((c) => ({
     ...c,
     tags: (c as Client).tags ?? [],
+    fka: (c as Client).fka,
     companyRegistrationNo: (c as Client).companyRegistrationNo,
     fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
@@ -1246,6 +1247,7 @@ export async function listUsers() {
 export async function createClient(input: {
   code: string;
   name: string;
+  fka?: string;
   companyRegistrationNo?: string;
   fye?: string;
   contactPerson?: string;
@@ -1272,6 +1274,7 @@ export async function createClient(input: {
     id: newId('cli'),
     code: input.code,
     name: input.name,
+    fka: input.fka,
     companyRegistrationNo: input.companyRegistrationNo,
     fye: input.fye,
     contactPerson: input.contactPerson,
@@ -1311,6 +1314,7 @@ export async function updateClient(
       Client,
       | 'code'
       | 'name'
+      | 'fka'
       | 'companyRegistrationNo'
       | 'fye'
       | 'contactPerson'
