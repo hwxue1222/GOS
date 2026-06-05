@@ -89,7 +89,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
           <thead className="bg-black/2">
             <tr className="text-left text-black/60">
               <th className="px-4 py-3">{t('secretary.companies')}</th>
-              <th className="px-4 py-3 w-[110px]">{t('secretary.member')}</th>
               <th className="px-4 py-3">{t('secretary.regNo')}</th>
               <th className="px-4 py-3">{t('secretary.paidUpCapital')}</th>
               <th className="px-4 py-3">{t('secretary.totalShares')}</th>
@@ -109,7 +108,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                     <Link href={`/secretary/companies/${it.client.id}`}>{it.client.name}</Link>
                   </div>
                 </td>
-                <td className="px-4 py-3 w-[110px]">{it.client.contactPerson ?? '-'}</td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
                 <td className="px-4 py-3">{money(it.client.paidUpCapitalCurrency, it.client.paidUpCapitalAmount)}</td>
                 <td className="px-4 py-3">{typeof it.client.totalShares === 'number' ? it.client.totalShares.toLocaleString() : '-'}</td>
@@ -138,7 +136,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
             ))}
             {items.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-black/50">
+                <td colSpan={10} className="px-4 py-10 text-center text-black/50">
                   {t('common.noResults')}
                 </td>
               </tr>
