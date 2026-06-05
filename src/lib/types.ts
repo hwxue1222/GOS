@@ -45,6 +45,7 @@ export type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  businessActivities?: string;
   paidUpCapitalCurrency?: Currency;
   paidUpCapitalAmount?: number;
   totalShares?: number;

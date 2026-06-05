@@ -10,6 +10,7 @@ type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  businessActivities?: string;
   paidUpCapitalCurrency?: string;
   paidUpCapitalAmount?: number;
   totalShares?: number;
@@ -158,9 +159,17 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
             />
           </label>
+          <label className="text-sm sm:col-span-2">
+            <div className="text-black/60">Business activities</div>
+            <textarea
+              value={client.businessActivities ?? ''}
+              onChange={(e) => onChange({ businessActivities: e.target.value || undefined })}
+              disabled={!canEdit}
+              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5 min-h-[90px]"
+            />
+          </label>
         </div>
       </div>
     </div>
   );
 }
-

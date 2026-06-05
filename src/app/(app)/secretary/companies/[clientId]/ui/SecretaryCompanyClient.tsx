@@ -16,6 +16,7 @@ type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  businessActivities?: string;
   paidUpCapitalCurrency?: string;
   paidUpCapitalAmount?: number;
   totalShares?: number;

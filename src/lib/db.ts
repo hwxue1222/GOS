@@ -653,6 +653,7 @@ export async function createClient(input: {
   address?: string;
   phone?: string;
   email?: string;
+  businessActivities?: string;
   paidUpCapitalCurrency?: Client['paidUpCapitalCurrency'];
   paidUpCapitalAmount?: Client['paidUpCapitalAmount'];
   totalShares?: Client['totalShares'];
@@ -676,6 +677,7 @@ export async function createClient(input: {
     address: input.address,
     phone: input.phone,
     email: input.email,
+    businessActivities: input.businessActivities,
     paidUpCapitalCurrency: input.paidUpCapitalCurrency,
     paidUpCapitalAmount: input.paidUpCapitalAmount,
     totalShares: input.totalShares,
@@ -712,6 +714,7 @@ export async function updateClient(
       | 'address'
       | 'phone'
       | 'email'
+      | 'businessActivities'
       | 'tags'
       | 'paidUpCapitalCurrency'
       | 'paidUpCapitalAmount'

@@ -102,6 +102,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     address: typeof body?.address === 'string' ? body.address.trim() || undefined : undefined,
     phone: typeof body?.phone === 'string' ? body.phone.trim() || undefined : undefined,
     email: typeof body?.email === 'string' ? body.email.trim() || undefined : undefined,
+    businessActivities:
+      typeof body?.businessActivities === 'string' ? body.businessActivities.trim() || undefined : undefined,
     paidUpCapitalCurrency,
     paidUpCapitalAmount:
       typeof body?.paidUpCapitalAmount === 'number'
