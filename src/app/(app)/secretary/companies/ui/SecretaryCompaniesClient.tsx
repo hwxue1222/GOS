@@ -63,7 +63,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">{t('nav.secretary')}</h1>
+          <h1 className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</h1>
           <div className="mt-1 text-sm text-black/60">{t('secretary.companies')}</div>
         </div>
         <div className="flex items-center gap-2 w-full justify-end">
