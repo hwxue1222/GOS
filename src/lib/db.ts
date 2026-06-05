@@ -65,6 +65,7 @@ function emptyDb(): Db {
     jobs: [],
     tasks: [],
     reservedNames: [],
+    seed: {},
   };
 }
 
@@ -97,6 +98,9 @@ function normalizeDb(parsed: Db): Db {
     address: (c as Client).address,
     phone: (c as Client).phone,
     email: (c as Client).email,
+    businessActivities: (c as Client).businessActivities,
+    ssicPrimaryCode: (c as Client).ssicPrimaryCode,
+    ssicSecondaryCode: (c as Client).ssicSecondaryCode,
     paidUpCapitalCurrency: (c as Client).paidUpCapitalCurrency,
     paidUpCapitalAmount: (c as Client).paidUpCapitalAmount,
     totalShares: (c as Client).totalShares,
@@ -371,7 +375,334 @@ function normalizeDb(parsed: Db): Db {
     jobs,
     tasks: tasks as unknown as JobTask[],
     reservedNames: [...reservedSet],
+    seed:
+      typeof (parsed as unknown as { seed?: unknown }).seed === 'object' && (parsed as unknown as { seed?: unknown }).seed
+        ? ((parsed as unknown as { seed?: Record<string, boolean> }).seed ?? {})
+        : {},
   };
+}
+
+const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT = 'secretaryCompanies.screenshotPage.v1';
+
+const SEED_SECRETARY_COMPANIES: Array<{
+  name: string;
+  member: string;
+  regNo: string;
+  paidUpCurrency: 'SGD';
+  paidUpAmount: number;
+  totalShares: number;
+  rorc: string;
+  directors: string[];
+  shareholders: string[];
+  createdDate: string;
+}> = [
+  {
+    name: 'Liyang Engineering Pte Ltd',
+    member: 'TAN YING YING',
+    regNo: '202622672W',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100000,
+    totalShares: 100000,
+    rorc: 'Zang Song',
+    directors: ['Xue Hongwei', 'Zang Song'],
+    shareholders: ['Zang Song', 'Zang Song'],
+    createdDate: '2026-05-21',
+  },
+  {
+    name: 'Edenburg Pte Ltd',
+    member: 'Xu Yongjiang',
+    regNo: '202618128G',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 100000,
+    rorc: 'Xu Yongjiang',
+    directors: ['Xu Yongjiang'],
+    shareholders: ['Xu Yongjiang'],
+    createdDate: '2026-04-23',
+  },
+  {
+    name: 'Stone Group Development Pte Ltd',
+    member: 'Low Seow Pin (Luo Chaobin)',
+    regNo: '202606717Z',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 50000,
+    rorc: 'Low Seow Pin (Luo Chaobin)',
+    directors: ['Low Seow Pin (Luo Chaobin)', 'Shenton Yap Wen Howe'],
+    shareholders: ['Low Seow Pin (Luo Chaobin)', 'Shenton Yap Wen Howe'],
+    createdDate: '2026-02-11',
+  },
+  {
+    name: 'Axera Pte Ltd',
+    member: 'Dai Zaohong',
+    regNo: '202604255D',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Dai Zaohong',
+    directors: ['Chi Zhaofei'],
+    shareholders: ['Dai Zaohong'],
+    createdDate: '2026-01-27',
+  },
+  {
+    name: 'Xing Xin Medical Technology Pte Ltd',
+    member: 'Li Cunkou',
+    regNo: '202503155H',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000,
+    totalShares: 100,
+    rorc: 'Li Cunkou',
+    directors: ['Li Cunkou', 'Li Lu'],
+    shareholders: ['Li Cunkou', 'Li Lu'],
+    createdDate: '2026-01-20',
+  },
+  {
+    name: 'Xin Zhongya Pte Ltd',
+    member: 'Huang Xiaofeng',
+    regNo: '202555883K',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100000,
+    totalShares: 100000,
+    rorc: 'Huang Xiaofeng',
+    directors: ['Xue Hongwei', 'Huang Xiaofeng'],
+    shareholders: ['Xue Hongwei', 'Huang Xiaofeng'],
+    createdDate: '2025-12-17',
+  },
+  {
+    name: 'Neuraedge Technologies Pte Ltd',
+    member: 'TAN YING YING',
+    regNo: '202555225H',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Xue Hongwei',
+    directors: ['Xue Hongwei'],
+    shareholders: ['Xue Hongwei'],
+    createdDate: '2025-12-17',
+  },
+  {
+    name: 'Xin Huanyu Engineering Pte Ltd',
+    member: 'Wen Hao',
+    regNo: '202547920K',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100000,
+    totalShares: 100000,
+    rorc: 'Wen Hao',
+    directors: ['Xue Hongwei', 'Wen Hao'],
+    shareholders: ['Xue Hongwei', 'Wen Hao'],
+    createdDate: '2025-10-30',
+  },
+  {
+    name: 'V7 Construction Pte Ltd',
+    member: 'Wang Weixia',
+    regNo: '202534302M',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 100,
+    rorc: 'Wang Weixia',
+    directors: ['Wang Weixia'],
+    shareholders: ['Wang Weixia'],
+    createdDate: '2025-10-15',
+  },
+  {
+    name: 'Dexupay Global Pte Ltd',
+    member: 'Feng Songtao',
+    regNo: '202538521C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100,
+    totalShares: 100,
+    rorc: 'Feng Songtao',
+    directors: ['Feng Songtao'],
+    shareholders: ['Feng Songtao'],
+    createdDate: '2025-10-07',
+  },
+];
+
+function normalizeNameLite(s: string) {
+  return s.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function dateToIso(dateYmd: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) return `${dateYmd}T00:00:00.000Z`;
+  return nowIso();
+}
+
+function nextScCode(db: Db) {
+  let max = 0;
+  for (const c of db.clients) {
+    const m = String(c.code ?? '').match(/^SC(\d{3})$/);
+    if (!m) continue;
+    max = Math.max(max, Number(m[1]));
+  }
+  return `SC${String(max + 1).padStart(3, '0')}`;
+}
+
+function computeShareAllocation(totalShares: number, names: string[]) {
+  const counts = new Map<string, number>();
+  const order: string[] = [];
+  for (const n of names) {
+    const k = n.trim();
+    if (!k) continue;
+    if (!counts.has(k)) order.push(k);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const weightTotal = order.reduce((sum, k) => sum + (counts.get(k) ?? 0), 0);
+  if (!weightTotal) return new Map<string, number>();
+  const base = Math.floor(totalShares / weightTotal);
+  let rem = totalShares - base * weightTotal;
+  const out = new Map<string, number>();
+  for (const k of order) {
+    const w = counts.get(k) ?? 0;
+    const extra = Math.min(rem, w);
+    rem -= extra;
+    out.set(k, base * w + extra);
+  }
+  return out;
+}
+
+function seedIsActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
+  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
+  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
+  return true;
+}
+
+function ensurePerson(db: Db, name: string, createdIso: string) {
+  const key = normalizeNameLite(name);
+  const hit = db.persons.find((p) => normalizeNameLite(p.fullName) === key) ?? null;
+  if (hit) return hit;
+  const person: Person = {
+    id: newId('per'),
+    fullName: name.trim(),
+    createdAt: createdIso,
+    updatedAt: createdIso,
+  };
+  db.persons.unshift(person);
+  return person;
+}
+
+function ensurePartyForPerson(db: Db, person: Person, createdIso: string) {
+  const hit = db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) ?? null;
+  if (hit) return hit;
+  const party: Party = {
+    id: newId('pty'),
+    type: 'PERSON',
+    displayName: person.fullName,
+    personId: person.id,
+    createdAt: createdIso,
+    updatedAt: createdIso,
+  };
+  db.parties.unshift(party);
+  return party;
+}
+
+function upsertRole(db: Db, input: { clientId: string; partyId: string; role: ClientPartyRole['role']; createdIso: string; shares?: number }) {
+  const active =
+    db.clientPartyRoles.find(
+      (r) => r.clientId === input.clientId && r.partyId === input.partyId && r.role === input.role && seedIsActiveRole(r),
+    ) ?? null;
+  if (active) {
+    if (input.role === 'SHAREHOLDER' && typeof input.shares === 'number' && Number.isFinite(input.shares)) {
+      if (active.shares !== input.shares) {
+        active.shares = input.shares;
+        active.updatedAt = nowIso();
+      }
+    }
+    return;
+  }
+
+  const role: ClientPartyRole = {
+    id: newId('cpr'),
+    clientId: input.clientId,
+    partyId: input.partyId,
+    role: input.role,
+    appointmentDate: input.role === 'DIRECTOR' || input.role === 'SECRETARY' ? input.createdIso.slice(0, 10) : undefined,
+    fromDate: input.role === 'SHAREHOLDER' || input.role === 'RORC' ? input.createdIso.slice(0, 10) : undefined,
+    shares: input.role === 'SHAREHOLDER' ? input.shares : undefined,
+    createdAt: input.createdIso,
+    updatedAt: input.createdIso,
+  };
+  db.clientPartyRoles.unshift(role);
+}
+
+function ensureOwnerHasSecretaryPermission(db: Db) {
+  let changed = false;
+  for (const u of db.users) {
+    if (u.role !== 'owner') continue;
+    if ((u.permissions as any).secretary) continue;
+    (u.permissions as any).secretary = { viewAll: true, viewAssigned: true, create: true, update: true };
+    changed = true;
+  }
+  return changed;
+}
+
+function seedSecretaryCompaniesFromScreenshot(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT]) return false;
+
+  let changed = false;
+  for (const row of SEED_SECRETARY_COMPANIES) {
+    const createdIso = dateToIso(row.createdDate);
+    const regNoKey = row.regNo.trim();
+    const nameKey = normalizeNameLite(row.name);
+    const client =
+      db.clients.find((c) => !c.deletedAt && (c.companyRegistrationNo ?? '').trim() === regNoKey) ??
+      db.clients.find((c) => !c.deletedAt && normalizeNameLite(c.name) === nameKey) ??
+      null;
+
+    if (!client) {
+      const next: Client = {
+        id: newId('cli'),
+        code: nextScCode(db),
+        name: row.name,
+        companyRegistrationNo: row.regNo,
+        contactPerson: row.member,
+        paidUpCapitalCurrency: row.paidUpCurrency,
+        paidUpCapitalAmount: row.paidUpAmount,
+        totalShares: row.totalShares,
+        tags: [],
+        createdAt: createdIso,
+      };
+      db.clients.unshift(next);
+      changed = true;
+    } else {
+      client.name = row.name;
+      client.companyRegistrationNo = row.regNo;
+      client.contactPerson = row.member;
+      client.paidUpCapitalCurrency = row.paidUpCurrency;
+      client.paidUpCapitalAmount = row.paidUpAmount;
+      client.totalShares = row.totalShares;
+      changed = true;
+    }
+
+    const theClient =
+      db.clients.find((c) => !c.deletedAt && (c.companyRegistrationNo ?? '').trim() === regNoKey) ??
+      db.clients.find((c) => !c.deletedAt && normalizeNameLite(c.name) === nameKey) ??
+      null;
+    if (!theClient) continue;
+
+    const rorcPerson = ensurePerson(db, row.rorc, createdIso);
+    const rorcParty = ensurePartyForPerson(db, rorcPerson, createdIso);
+    upsertRole(db, { clientId: theClient.id, partyId: rorcParty.id, role: 'RORC', createdIso });
+    changed = true;
+
+    for (const dn of row.directors) {
+      const p = ensurePerson(db, dn, createdIso);
+      const party = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: theClient.id, partyId: party.id, role: 'DIRECTOR', createdIso });
+      changed = true;
+    }
+
+    const sharesByName = computeShareAllocation(row.totalShares, row.shareholders);
+    for (const [sn, shares] of sharesByName.entries()) {
+      const p = ensurePerson(db, sn, createdIso);
+      const party = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: theClient.id, partyId: party.id, role: 'SHAREHOLDER', createdIso, shares });
+      changed = true;
+    }
+  }
+
+  db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT] = true;
+  return changed;
 }
 
 function sha256Hex(content: string) {
@@ -455,30 +786,37 @@ async function writeDbRaw(db: Db) {
 }
 
 export async function readDb(): Promise<Db> {
-  const db = await readDbRaw();
-  if (db.users.length > 0) return db;
+  let db = await readDbRaw();
+  let changed = false;
 
-  const lukePasswordHash = await hashPassword('123456');
-  const luke: User = {
-    id: newId('usr'),
-    name: 'Luke',
-    email: 'luke@gos.local',
-    position: 'Owner',
-    role: 'owner',
-    permissions: {
-      jobs: { viewAll: true, create: true, update: true, complete: true, duplicate: true, archive: true, trash: true },
-      tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
-      clients: { viewAll: true, create: true, update: true, import: true },
-      staffs: { viewAll: true, create: true, update: true },
-      invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
-    },
-    passwordHash: lukePasswordHash,
-    createdAt: nowIso(),
-  };
+  if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
+  if (ensureOwnerHasSecretaryPermission(db)) changed = true;
 
-  const seeded = { ...db, users: [luke], reservedNames: ['luke'] };
-  await writeDbRaw(seeded);
-  return seeded;
+  if (db.users.length === 0) {
+    const lukePasswordHash = await hashPassword('123456');
+    const luke: User = {
+      id: newId('usr'),
+      name: 'Luke',
+      email: 'luke@gos.local',
+      position: 'Owner',
+      role: 'owner',
+      permissions: {
+        jobs: { viewAll: true, create: true, update: true, complete: true, duplicate: true, archive: true, trash: true },
+        tasks: { viewAll: true, create: true, update: true, complete: true, trash: true },
+        clients: { viewAll: true, create: true, update: true, import: true },
+        staffs: { viewAll: true, create: true, update: true },
+        invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
+        secretary: { viewAll: true, viewAssigned: true, create: true, update: true },
+      } as Permissions,
+      passwordHash: lukePasswordHash,
+      createdAt: nowIso(),
+    };
+    db = { ...db, users: [luke], reservedNames: ['luke'] };
+    changed = true;
+  }
+
+  if (changed) await writeDbRaw(db);
+  return db;
 }
 
 export async function writeDb(db: Db) {

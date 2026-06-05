@@ -350,4 +350,5 @@ export type Db = {
   jobs: Job[];
   tasks: JobTask[];
   reservedNames?: string[];
+  seed?: Record<string, boolean>;
 };
