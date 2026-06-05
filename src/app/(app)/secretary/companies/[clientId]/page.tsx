@@ -68,6 +68,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
   const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
 
   const rows = db.clientPartyRoles
@@ -75,25 +76,33 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
     .filter((r) => isActiveRole(r))
     .map((r) => {
       const party = partyById.get(r.partyId);
-      if (!party || party.type !== 'PERSON' || !party.personId) return null;
-      const person = personById.get(party.personId);
-      if (!person) return null;
-      const emailKey = (person.email ?? '').trim().toLowerCase();
-      const loginUser = emailKey ? userByEmail.get(emailKey) ?? null : null;
-      return { role: r, person: { id: person.id, fullName: person.fullName, email: person.email, phone: person.phone, hasLogin: !!loginUser } };
+      if (!party) return null;
+      if (party.type === 'PERSON' && party.personId) {
+        const person = personById.get(party.personId);
+        if (!person) return null;
+        const emailKey = (person.email ?? '').trim().toLowerCase();
+        const loginUser = emailKey ? userByEmail.get(emailKey) ?? null : null;
+        return { role: r, entity: { type: 'PERSON', person: { id: person.id, fullName: person.fullName, email: person.email, phone: person.phone, hasLogin: !!loginUser } } };
+      }
+      if (party.type === 'COMPANY' && party.clientId) {
+        const c = clientById.get(party.clientId);
+        if (!c || c.deletedAt) return null;
+        return { role: r, entity: { type: 'COMPANY', company: { id: c.id, code: c.code, name: c.name } } };
+      }
+      return null;
     })
-    .filter(
-      (x): x is {
-        role: (typeof db.clientPartyRoles)[number];
-        person: { id: string; fullName: string; email: string | undefined; phone: string | undefined; hasLogin: boolean };
-      } =>
-        x !== null,
-    );
+    .filter(Boolean) as Array<any>;
 
   const byRole = (role: string) => rows.filter((x) => x.role.role === role);
   const peopleOptions = db.persons
     .map((p) => ({ id: p.id, fullName: p.fullName, email: p.email }))
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+  const companyOptions = db.clients
+    .filter((c) => !c.deletedAt)
+    .filter((c) => c.id !== clientId)
+    .map((c) => ({ id: c.id, code: c.code, name: c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -108,6 +117,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
             secretaries: byRole('SECRETARY'),
           }}
           peopleOptions={peopleOptions}
+          companyOptions={companyOptions}
           canEditCompany={canEditCompany}
           canEditRoles={canEditRoles}
         />

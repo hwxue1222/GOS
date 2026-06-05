@@ -26,8 +26,10 @@ type Client = {
 };
 
 type RoleRow = {
-  role: { id: string; role: string };
-  person: { id: string; fullName: string; email?: string; phone?: string; hasLogin: boolean };
+  role: { id: string; role: string; shares?: number };
+  entity:
+    | { type: 'PERSON'; person: { id: string; fullName: string; email?: string; phone?: string; hasLogin: boolean } }
+    | { type: 'COMPANY'; company: { id: string; code: string; name: string } };
 };
 
 type Props = {
@@ -39,6 +41,7 @@ type Props = {
     secretaries: RoleRow[];
   };
   peopleOptions: Array<{ id: string; fullName: string; email?: string }>;
+  companyOptions: Array<{ id: string; code: string; name: string }>;
   canEditCompany: boolean;
   canEditRoles: boolean;
 };
@@ -47,6 +50,7 @@ export default function SecretaryCompanyClient({
   initialClient,
   initialRoles,
   peopleOptions,
+  companyOptions,
   canEditCompany,
   canEditRoles,
 }: Props) {
@@ -97,13 +101,34 @@ export default function SecretaryCompanyClient({
     }
   }
 
-  async function addRole(personId: string, role: 'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY') {
+  async function addRole(input: {
+    role: 'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY';
+    personId?: string;
+    companyClientId?: string;
+    shares?: number;
+  }) {
     if (!canEditRoles) return;
     setError(null);
     const res = await fetch(`/api/secretary/companies/${encodeURIComponent(initialClient.id)}/roles`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ personId, role }),
+      body: JSON.stringify(input),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
+  async function updateShareholderShares(roleId: string, shares: number) {
+    if (!canEditRoles) return;
+    setError(null);
+    const res = await fetch(`/api/secretary/companies/${encodeURIComponent(initialClient.id)}/roles`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ roleId, shares }),
     }).catch(() => null);
     if (!res?.ok) {
       const j = await res?.json().catch(() => null);
@@ -204,11 +229,14 @@ export default function SecretaryCompanyClient({
           <CompanyRolesPanel
             roles={roles}
             peopleOptions={peopleOptions}
+            companyOptions={companyOptions}
+            totalShares={client.totalShares}
             canEditRoles={canEditRoles}
             creatingLoginForPersonId={creatingLoginForPersonId}
             onAddRole={addRole}
             onRemoveRole={removeRole}
             onCreateLogin={createLogin}
+            onUpdateShareholderShares={updateShareholderShares}
           />
         </div>
       </div>

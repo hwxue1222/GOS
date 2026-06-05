@@ -49,15 +49,23 @@ export default async function SecretaryCompaniesPage() {
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
   const rolesByClientId = new Map<string, Array<{ role: string; name: string }>>();
   for (const r of db.clientPartyRoles) {
     if (!isActiveRole(r)) continue;
     const party = partyById.get(r.partyId);
-    if (!party || party.type !== 'PERSON' || !party.personId) continue;
-    const person = personById.get(party.personId);
-    if (!person) continue;
+    if (!party) continue;
+    let name: string | null = null;
+    if (party.type === 'PERSON' && party.personId) {
+      const person = personById.get(party.personId);
+      if (person) name = person.fullName;
+    } else if (party.type === 'COMPANY' && party.clientId) {
+      const c = clientById.get(party.clientId);
+      if (c && !c.deletedAt) name = c.name;
+    }
+    if (!name) continue;
     const list = rolesByClientId.get(r.clientId) ?? [];
-    list.push({ role: r.role, name: person.fullName });
+    list.push({ role: r.role, name });
     rolesByClientId.set(r.clientId, list);
   }
 

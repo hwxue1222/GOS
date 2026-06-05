@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 type RoleRow = {
-  role: { id: string; role: string };
-  person: { id: string; fullName: string; email?: string; phone?: string; hasLogin: boolean };
+  role: { id: string; role: string; shares?: number };
+  entity:
+    | { type: 'PERSON'; person: { id: string; fullName: string; email?: string; phone?: string; hasLogin: boolean } }
+    | { type: 'COMPANY'; company: { id: string; code: string; name: string } };
 };
 
 type Props = {
@@ -16,25 +18,39 @@ type Props = {
     secretaries: RoleRow[];
   };
   peopleOptions: Array<{ id: string; fullName: string; email?: string }>;
+  companyOptions: Array<{ id: string; code: string; name: string }>;
+  totalShares?: number;
   canEditRoles: boolean;
   creatingLoginForPersonId: string | null;
-  onAddRole: (personId: string, role: 'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY') => Promise<void>;
+  onAddRole: (input: {
+    role: 'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY';
+    personId?: string;
+    companyClientId?: string;
+    shares?: number;
+  }) => Promise<void>;
   onRemoveRole: (roleId: string) => Promise<void>;
   onCreateLogin: (personId: string) => Promise<void>;
+  onUpdateShareholderShares: (roleId: string, shares: number) => Promise<void>;
 };
 
 export default function CompanyRolesPanel({
   roles,
   peopleOptions,
+  companyOptions,
+  totalShares,
   canEditRoles,
   creatingLoginForPersonId,
   onAddRole,
   onRemoveRole,
   onCreateLogin,
+  onUpdateShareholderShares,
 }: Props) {
   const [roleTab, setRoleTab] = useState<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>('DIRECTOR');
   const [personQuery, setPersonQuery] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [shareQty, setShareQty] = useState('');
+  const [shareType, setShareType] = useState<'PERSON' | 'COMPANY'>('PERSON');
 
   const filteredPeople = useMemo(() => {
     const q = personQuery.trim().toLowerCase();
@@ -44,7 +60,19 @@ export default function CompanyRolesPanel({
       .slice(0, 30);
   }, [peopleOptions, personQuery]);
 
+  const filteredCompanies = useMemo(() => {
+    const q = personQuery.trim().toLowerCase();
+    if (!q) return companyOptions.slice(0, 60);
+    return companyOptions
+      .filter((c) => `${c.name} ${c.code}`.toLowerCase().includes(q))
+      .slice(0, 60);
+  }, [companyOptions, personQuery]);
+
   const roleRows = roleTab === 'DIRECTOR' ? roles.directors : roleTab === 'SHAREHOLDER' ? roles.shareholders : roleTab === 'RORC' ? roles.rorc : roles.secretaries;
+  const shareSum = useMemo(() => {
+    if (roleTab !== 'SHAREHOLDER') return 0;
+    return roleRows.reduce((sum, r) => sum + (typeof r.role.shares === 'number' && Number.isFinite(r.role.shares) ? r.role.shares : 0), 0);
+  }, [roleRows, roleTab]);
 
   return (
     <div className="rounded-xl bg-white border border-black/5 p-5">
@@ -72,7 +100,7 @@ export default function CompanyRolesPanel({
 
       {canEditRoles ? (
         <div className="mt-4">
-          <div className="text-xs text-black/50">添加人员到当前角色</div>
+          <div className="text-xs text-black/50">{roleTab === 'SHAREHOLDER' ? '添加股东（人员或公司）' : '添加人员到当前角色'}</div>
           <div className="mt-2 grid grid-cols-1 gap-2">
             <input
               value={personQuery}
@@ -80,23 +108,70 @@ export default function CompanyRolesPanel({
               placeholder="搜索姓名/邮箱"
               className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
             />
+            {roleTab === 'SHAREHOLDER' ? (
+              <div className="flex items-center gap-2">
+                <select
+                  value={shareType}
+                  onChange={(e) => setShareType(e.target.value === 'COMPANY' ? 'COMPANY' : 'PERSON')}
+                  className="w-[120px] rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="PERSON">人员</option>
+                  <option value="COMPANY">公司</option>
+                </select>
+                <input
+                  value={shareQty}
+                  onChange={(e) => setShareQty(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="股份数"
+                  className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
+                />
+              </div>
+            ) : null}
             <select
-              value={selectedPersonId}
-              onChange={(e) => setSelectedPersonId(e.target.value)}
+              value={roleTab === 'SHAREHOLDER' && shareType === 'COMPANY' ? selectedCompanyId : selectedPersonId}
+              onChange={(e) => {
+                if (roleTab === 'SHAREHOLDER' && shareType === 'COMPANY') setSelectedCompanyId(e.target.value);
+                else setSelectedPersonId(e.target.value);
+              }}
               className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
             >
               <option value="">请选择</option>
-              {filteredPeople.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.fullName}{p.email ? ` (${p.email})` : ''}
-                </option>
-              ))}
+              {roleTab === 'SHAREHOLDER' && shareType === 'COMPANY'
+                ? filteredCompanies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))
+                : filteredPeople.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.fullName}{p.email ? ` (${p.email})` : ''}
+                    </option>
+                  ))}
             </select>
             <button
               onClick={async () => {
+                if (roleTab === 'SHAREHOLDER') {
+                  const shares = shareQty.trim() ? Number(shareQty) : NaN;
+                  if (!Number.isFinite(shares) || shares < 0) return;
+                  if (shareType === 'COMPANY') {
+                    const cid = selectedCompanyId || '';
+                    if (!cid) return;
+                    await onAddRole({ role: 'SHAREHOLDER', companyClientId: cid, shares });
+                    setSelectedCompanyId('');
+                  } else {
+                    const pid = selectedPersonId || '';
+                    if (!pid) return;
+                    await onAddRole({ role: 'SHAREHOLDER', personId: pid, shares });
+                    setSelectedPersonId('');
+                  }
+                  setShareQty('');
+                  setPersonQuery('');
+                  return;
+                }
+
                 const personId = selectedPersonId || '';
                 if (!personId) return;
-                await onAddRole(personId, roleTab);
+                await onAddRole({ role: roleTab, personId });
                 setSelectedPersonId('');
                 setPersonQuery('');
               }}
@@ -110,49 +185,91 @@ export default function CompanyRolesPanel({
         <div className="mt-4 text-xs text-black/50">只读：你可以查看角色信息。</div>
       )}
 
+      {roleTab === 'SHAREHOLDER' && typeof totalShares === 'number' && Number.isFinite(totalShares) ? (
+        <div className="mt-4 text-xs">
+          <span className="text-black/50">股东股份合计：</span>
+          <span className={shareSum === totalShares ? 'text-[#2a7f3a]' : 'text-red-600'}>{shareSum}</span>
+          <span className="text-black/50"> / 总股数：</span>
+          <span className="text-black/70">{totalShares}</span>
+        </div>
+      ) : null}
+
       <div className="mt-4 rounded-lg border border-black/5 overflow-hidden">
         {roleRows.length === 0 ? (
           <div className="px-3 py-3 text-sm text-black/50">暂无</div>
         ) : (
           <div className="divide-y divide-black/5">
-            {roleRows.map((r) => (
-              <div key={r.role.id} className="px-3 py-3 flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">{r.person.fullName}</div>
-                  <div className="mt-0.5 text-xs text-black/50">
-                    {r.person.email ?? '-'}{r.person.phone ? ` · ${r.person.phone}` : ''}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span
-                      className={[
-                        'text-xs px-2 py-0.5 rounded-full border',
-                        r.person.hasLogin ? 'border-[#46b35a] text-[#2a7f3a]' : 'border-black/10 text-black/50',
-                      ].join(' ')}
-                    >
-                      {r.person.hasLogin ? '可登录' : '未开通登录'}
-                    </span>
-                    {canEditRoles && !r.person.hasLogin && r.person.email ? (
-                      <button
-                        onClick={() => onCreateLogin(r.person.id)}
-                        disabled={creatingLoginForPersonId === r.person.id}
-                        className="text-xs text-[#2f7bdc] hover:underline disabled:opacity-60"
-                      >
-                        {creatingLoginForPersonId === r.person.id ? 'Creating...' : '开通登录'}
-                      </button>
+            {roleRows.map((r) => {
+              const e = r.entity;
+              return (
+                <div key={r.role.id} className="px-3 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    {e.type === 'PERSON' ? (
+                      <>
+                        <div className="text-sm font-medium">{e.person.fullName}</div>
+                        <div className="mt-0.5 text-xs text-black/50">
+                          {e.person.email ?? '-'}{e.person.phone ? ` · ${e.person.phone}` : ''}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span
+                            className={[
+                              'text-xs px-2 py-0.5 rounded-full border',
+                              e.person.hasLogin ? 'border-[#46b35a] text-[#2a7f3a]' : 'border-black/10 text-black/50',
+                            ].join(' ')}
+                          >
+                            {e.person.hasLogin ? '可登录' : '未开通登录'}
+                          </span>
+                          {canEditRoles && !e.person.hasLogin && e.person.email ? (
+                            <button
+                              onClick={() => onCreateLogin(e.person.id)}
+                              disabled={creatingLoginForPersonId === e.person.id}
+                              className="text-xs text-[#2f7bdc] hover:underline disabled:opacity-60"
+                            >
+                              {creatingLoginForPersonId === e.person.id ? 'Creating...' : '开通登录'}
+                            </button>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium">{e.company.name}</div>
+                        <div className="mt-0.5 text-xs text-black/50">{`Company · ${e.company.code}`}</div>
+                      </>
+                    )}
+
+                    {roleTab === 'SHAREHOLDER' ? (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="text-xs text-black/50">股份</div>
+                        {canEditRoles ? (
+                          <input
+                            defaultValue={typeof r.role.shares === 'number' ? String(r.role.shares) : ''}
+                            inputMode="numeric"
+                            className="w-[120px] rounded-md border border-black/10 px-2 py-1 text-xs"
+                            onBlur={async (ev) => {
+                              const v = ev.target.value.trim();
+                              const n = v ? Number(v) : NaN;
+                              if (!Number.isFinite(n) || n < 0) return;
+                              if (n === r.role.shares) return;
+                              await onUpdateShareholderShares(r.role.id, n);
+                            }}
+                          />
+                        ) : (
+                          <div className="text-xs text-black/70">{typeof r.role.shares === 'number' ? r.role.shares : '-'}</div>
+                        )}
+                      </div>
                     ) : null}
                   </div>
+                  {canEditRoles ? (
+                    <button onClick={() => onRemoveRole(r.role.id)} className="text-xs text-red-600 hover:underline">
+                      移除
+                    </button>
+                  ) : null}
                 </div>
-                {canEditRoles ? (
-                  <button onClick={() => onRemoveRole(r.role.id)} className="text-xs text-red-600 hover:underline">
-                    移除
-                  </button>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
-

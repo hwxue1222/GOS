@@ -945,6 +945,121 @@ export async function addClientRoleByPersonId(input: { clientId: string; personI
   return { ok: true as const, role };
 }
 
+function shareSumForClient(db: Db, clientId: string, opts?: { excludeRoleId?: string }) {
+  return db.clientPartyRoles
+    .filter((r) => r.clientId === clientId && r.role === 'SHAREHOLDER')
+    .filter((r) => !r.toDate)
+    .filter((r) => (opts?.excludeRoleId ? r.id !== opts.excludeRoleId : true))
+    .reduce((sum, r) => sum + (typeof r.shares === 'number' && Number.isFinite(r.shares) ? r.shares : 0), 0);
+}
+
+export async function addClientRole(input: {
+  clientId: string;
+  role: ClientPartyRole['role'];
+  personId?: string;
+  companyClientId?: string;
+  shares?: number;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  let party: Party | null = null;
+  if (input.personId) {
+    const person = db.persons.find((p) => p.id === input.personId) ?? null;
+    if (!person) return { ok: false as const, error: 'NOT_FOUND' as const };
+    party = db.parties.find((p) => p.type === 'PERSON' && p.personId === input.personId) ?? null;
+    if (!party) {
+      party = {
+        id: newId('pty'),
+        type: 'PERSON',
+        displayName: person.fullName,
+        personId: person.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.parties.unshift(party);
+    }
+  } else if (input.companyClientId) {
+    const c = db.clients.find((x) => x.id === input.companyClientId) ?? null;
+    if (!c || c.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+    party = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === input.companyClientId) ?? null;
+    if (!party) {
+      party = {
+        id: newId('pty'),
+        type: 'COMPANY',
+        displayName: c.name,
+        clientId: c.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.parties.unshift(party);
+    }
+  }
+
+  if (!party) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const exists = db.clientPartyRoles.some((r) => {
+    if (r.clientId !== input.clientId) return false;
+    if (r.partyId !== party!.id) return false;
+    if (r.role !== input.role) return false;
+    if (input.role === 'DIRECTOR' || input.role === 'SECRETARY') return !r.resignationDate;
+    if (input.role === 'SHAREHOLDER' || input.role === 'RORC') return !r.toDate;
+    return true;
+  });
+  if (exists) {
+    await writeDb(db);
+    return { ok: true as const };
+  }
+
+  const shares =
+    input.role === 'SHAREHOLDER' && typeof input.shares === 'number' && Number.isFinite(input.shares) ? input.shares : undefined;
+  if (input.role === 'SHAREHOLDER' && shares === undefined) {
+    return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
+  if (input.role === 'SHAREHOLDER' && typeof client.totalShares === 'number' && Number.isFinite(client.totalShares)) {
+    const nextSum = shareSumForClient(db, input.clientId) + (shares ?? 0);
+    if (nextSum > client.totalShares) return { ok: false as const, error: 'SHARE_SUM_EXCEEDS_TOTAL' as const };
+  }
+
+  const role: ClientPartyRole = {
+    id: newId('cpr'),
+    clientId: input.clientId,
+    partyId: party.id,
+    role: input.role,
+    appointmentDate: input.role === 'DIRECTOR' || input.role === 'SECRETARY' ? now.slice(0, 10) : undefined,
+    fromDate: input.role === 'SHAREHOLDER' || input.role === 'RORC' ? now.slice(0, 10) : undefined,
+    shares: input.role === 'SHAREHOLDER' ? shares : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.clientPartyRoles.unshift(role);
+  await writeDb(db);
+  return { ok: true as const, role };
+}
+
+export async function updateClientShareholderShares(input: { clientId: string; roleId: string; shares: number }) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const idx = db.clientPartyRoles.findIndex((r) => r.id === input.roleId && r.clientId === input.clientId && r.role === 'SHAREHOLDER');
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const shares = Number(input.shares);
+  if (!Number.isFinite(shares) || shares < 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  if (typeof client.totalShares === 'number' && Number.isFinite(client.totalShares)) {
+    const current = db.clientPartyRoles[idx];
+    const nextSum = shareSumForClient(db, input.clientId, { excludeRoleId: current.id }) + shares;
+    if (nextSum > client.totalShares) return { ok: false as const, error: 'SHARE_SUM_EXCEEDS_TOTAL' as const };
+  }
+
+  db.clientPartyRoles[idx] = { ...db.clientPartyRoles[idx], shares, updatedAt: nowIso() };
+  await writeDb(db);
+  return { ok: true as const, role: db.clientPartyRoles[idx] };
+}
+
 export async function endClientRole(input: { clientId: string; roleId: string }) {
   const db = await readDb();
   const idx = db.clientPartyRoles.findIndex((r) => r.id === input.roleId && r.clientId === input.clientId);
