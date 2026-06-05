@@ -16,6 +16,9 @@ type Person = {
   address?: string;
   memberSince?: string;
   lastLoginDate?: string;
+  roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
+  roleLabels?: string[];
+  companyCount?: number;
   createdAt: string;
 };
 
@@ -28,13 +31,13 @@ export default function PeopleClient() {
   async function refresh() {
     setLoading(true);
     try {
-      const res = await fetch('/api/people', { cache: 'no-store' }).catch(() => null);
+      const res = await fetch('/api/secretary/people', { cache: 'no-store' }).catch(() => null);
       if (!res?.ok) {
         setError(`HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
-      const j = (await res.json().catch(() => null)) as { ok?: boolean; people?: Person[] } | null;
-      setPeople(Array.isArray(j?.people) ? j!.people : []);
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; items?: Person[] } | null;
+      setPeople(Array.isArray(j?.items) ? j!.items : []);
     } finally {
       setLoading(false);
     }

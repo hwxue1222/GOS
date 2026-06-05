@@ -865,6 +865,38 @@ export async function listClientPeopleRoles(clientId: string) {
   };
 }
 
+export async function listPeopleWithRoleTags() {
+  const db = await readDb();
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+
+  const activeRoles = db.clientPartyRoles.filter((r) => {
+    if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
+    if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
+    return true;
+  });
+
+  const tagsByPersonId = new Map<string, Set<ClientPartyRole['role']>>();
+  const clientIdsByPersonId = new Map<string, Set<string>>();
+
+  for (const r of activeRoles) {
+    const party = partyById.get(r.partyId);
+    if (!party || party.type !== 'PERSON' || !party.personId) continue;
+    const personId = party.personId;
+    const t = tagsByPersonId.get(personId) ?? new Set<ClientPartyRole['role']>();
+    t.add(r.role);
+    tagsByPersonId.set(personId, t);
+    const c = clientIdsByPersonId.get(personId) ?? new Set<string>();
+    c.add(r.clientId);
+    clientIdsByPersonId.set(personId, c);
+  }
+
+  return db.persons.map((p) => ({
+    person: p,
+    roleTags: [...(tagsByPersonId.get(p.id) ?? new Set())],
+    companyCount: (clientIdsByPersonId.get(p.id) ?? new Set()).size,
+  }));
+}
+
 export async function addClientRoleByPersonId(input: { clientId: string; personId: string; role: ClientPartyRole['role'] }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
