@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useI18n } from '@/components/I18nProviderClient';
+
 type Row = { code: string; description: string };
 
 type Props = {
@@ -13,11 +15,13 @@ type Props = {
 };
 
 export default function SsicCombobox({ label, value, disabled, onChange, excludeCode }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Row[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string>('');
   const timer = useRef<number | null>(null);
+  const pending = useRef<AbortController | null>(null);
 
   const shownValue = value ?? '';
 
@@ -51,7 +55,9 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
   function scheduleSearch(next: string) {
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      fetch(`/api/ssic?q=${encodeURIComponent(next)}`, { cache: 'no-store' })
+      if (pending.current) pending.current.abort();
+      pending.current = new AbortController();
+      fetch(`/api/ssic?q=${encodeURIComponent(next)}`, { cache: 'no-store', signal: pending.current.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
           const list = Array.isArray(j?.items) ? (j.items as Row[]) : [];
@@ -63,6 +69,29 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
           setOpen(true);
         });
     }, 250);
+  }
+
+  async function tryAutoSelect(next: string) {
+    const s = next.trim();
+    if (!/^\d{5}$/.test(s)) return false;
+    try {
+      if (pending.current) pending.current.abort();
+      pending.current = new AbortController();
+      const res = await fetch(`/api/ssic?code=${encodeURIComponent(s)}`, { cache: 'no-store', signal: pending.current.signal });
+      if (!res.ok) return false;
+      const j = (await res.json().catch(() => null)) as { item?: Row | null } | null;
+      const it = (j?.item ?? null) as Row | null;
+      if (!it) return false;
+      if (excludeCode && it.code === excludeCode) return false;
+      onChange(it.code);
+      setSelectedLabel(`${it.code} - ${it.description}`);
+      setQuery('');
+      setItems([]);
+      setOpen(false);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return (
@@ -79,7 +108,9 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
               setOpen(true);
               return;
             }
-            scheduleSearch(v);
+            void tryAutoSelect(v).then((picked) => {
+              if (!picked) scheduleSearch(v);
+            });
           }}
           onFocus={() => {
             if (disabled) return;
@@ -90,7 +121,7 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
             window.setTimeout(() => setOpen(false), 150);
           }}
           disabled={disabled}
-          placeholder="输入 SSIC code 或关键字"
+          placeholder={t('ssic.placeholder')}
           className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
         />
 
@@ -108,7 +139,7 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
               }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-black/2 text-black/60"
             >
-              清空
+              {t('ssic.clear')}
             </button>
             {filtered.length ? (
               filtered.map((it) => (
@@ -130,7 +161,7 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
                 </button>
               ))
             ) : (
-              <div className="px-3 py-2 text-sm text-black/40">无匹配</div>
+              <div className="px-3 py-2 text-sm text-black/40">{t('common.noMatch')}</div>
             )}
           </div>
         ) : null}
@@ -138,4 +169,3 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
     </label>
   );
 }
-

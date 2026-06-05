@@ -59,6 +59,8 @@ const DICT = {
     'company.totalShares': 'Total shares',
     'company.incorporationDate': 'Incorporation date',
     'company.registeredOfficeAddress': 'Registered office address',
+    'ssic.placeholder': 'Type SSIC code or keywords',
+    'ssic.clear': 'Clear selection',
   },
   zh: {
     'nav.jobs': '工作',
@@ -116,6 +118,8 @@ const DICT = {
     'company.totalShares': '总股数',
     'company.incorporationDate': '成立时间',
     'company.registeredOfficeAddress': '注册地址',
+    'ssic.placeholder': '输入SSIC code或关键字',
+    'ssic.clear': '清除选择',
   },
 } as const;
 
