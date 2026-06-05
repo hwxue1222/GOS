@@ -384,6 +384,8 @@ function normalizeDb(parsed: Db): Db {
 
 const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT = 'secretaryCompanies.screenshotPage.v1';
 
+const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_2 = 'secretaryCompanies.screenshotPage.v2';
+
 const SEED_SECRETARY_COMPANIES: Array<{
   name: string;
   member: string;
@@ -518,8 +520,142 @@ const SEED_SECRETARY_COMPANIES: Array<{
   },
 ];
 
+const SEED_SECRETARY_COMPANIES_2: Array<{
+  name: string;
+  member: string;
+  regNo: string;
+  paidUpCurrency?: 'SGD';
+  paidUpAmount?: number;
+  totalShares?: number;
+  rorc?: string;
+  secretaries?: string[];
+  directors?: string[];
+  shareholders?: string[];
+  createdDate: string;
+}> = [
+  {
+    name: 'Homeiq Technology Pte Ltd',
+    member: 'Zhang Chuanjiang',
+    regNo: '202538403D',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000,
+    totalShares: 1000,
+    rorc: 'Zhang Chuanjiang',
+    secretaries: ['Xue Hongwei'],
+    directors: ['Zhang Chuanjiang', 'Xue Hongwei', 'Liu Xiangyu'],
+    shareholders: ['Zhang Chuanjiang', 'Liu Xiangyu'],
+    createdDate: '2025-08-29',
+  },
+  {
+    name: 'Novalinke Pte Ltd',
+    member: 'Li Xin',
+    regNo: '202534542M',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100000,
+    totalShares: 100000,
+    rorc: 'Luo Yanping',
+    directors: ['Luo Yanping', 'Yao Jun', 'Xue Hongwei'],
+    shareholders: ['Luo Yanping', 'Yao Jun'],
+    createdDate: '2025-08-08',
+  },
+  {
+    name: 'MK Engineering (S) Pte Ltd',
+    member: 'Cai Xing',
+    regNo: '202532813R',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Cai Xing',
+    secretaries: ['Xue Hongwei'],
+    directors: ['Cai Xing'],
+    shareholders: ['Cai Xing'],
+    createdDate: '2025-07-29',
+  },
+  {
+    name: 'Lc Mcn Pte Ltd',
+    member: 'Liu Shiyi',
+    regNo: '202331409G',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 300000,
+    totalShares: 300000,
+    rorc: 'Liu Shiyi',
+    directors: ['Tang Shun'],
+    shareholders: ['Liu Shiyi'],
+    createdDate: '2025-06-26',
+  },
+  {
+    name: 'Yfyx Pte Ltd',
+    member: 'Liu Shiyi',
+    regNo: '202319583M',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 300000,
+    totalShares: 300000,
+    rorc: 'Liu Shiyi',
+    directors: ['Sun Fang', 'Liu Shiyi'],
+    shareholders: ['Sun Fang', 'Liu Shiyi'],
+    createdDate: '2025-06-26',
+  },
+  {
+    name: 'Hydor Capital Pte Ltd',
+    member: 'Feng Songtao',
+    regNo: '202520517E',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000,
+    totalShares: 1000,
+    rorc: 'Deepx Capital Ltd',
+    directors: ['Feng Songtao'],
+    shareholders: ['Deepx Capital Ltd'],
+    createdDate: '2025-05-14',
+  },
+  {
+    name: 'Ainest Technology Pte Ltd',
+    member: 'Zhang Yang',
+    regNo: '202515566C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000000,
+    totalShares: 1000000,
+    rorc: 'Liang Mingfeng',
+    directors: ['Zhang Yang'],
+    shareholders: ['Liang Mingfeng', 'Zhang Yang'],
+    createdDate: '2025-04-10',
+  },
+  {
+    name: 'Guotai Consulting Pte Ltd',
+    member: 'Wang Hongjun',
+    regNo: '202515397W',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Wang Hongjun',
+    directors: ['Dai Jinliang'],
+    shareholders: ['Wang Hongjun'],
+    createdDate: '2025-04-02',
+  },
+  {
+    name: 'Byt Engineering Pte Ltd',
+    member: 'Zhang Yiwen',
+    regNo: '201229604E',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1099403,
+    totalShares: 350310,
+    rorc: 'Byt Holdings Ltd.',
+    directors: ['Zhang Yiwen', 'Ricky Ng See San'],
+    createdDate: '2025-03-13',
+  },
+  {
+    name: 'Byt Holdings Ltd.',
+    member: 'Li Cunkou',
+    regNo: 'T20UF3750K',
+    createdDate: '2025-03-10',
+  },
+];
+
 function normalizeNameLite(s: string) {
   return s.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function looksLikeCompanyName(name: string) {
+  return /\b(pte|ltd|limited|llp|inc|corp|company|holdings)\b/i.test(name);
 }
 
 function dateToIso(dateYmd: string) {
@@ -588,6 +724,36 @@ function ensurePartyForPerson(db: Db, person: Person, createdIso: string) {
     type: 'PERSON',
     displayName: person.fullName,
     personId: person.id,
+    createdAt: createdIso,
+    updatedAt: createdIso,
+  };
+  db.parties.unshift(party);
+  return party;
+}
+
+function ensureClientForCompanyName(db: Db, name: string, createdIso: string) {
+  const key = normalizeNameLite(name);
+  const hit = db.clients.find((c) => !c.deletedAt && normalizeNameLite(c.name) === key) ?? null;
+  if (hit) return hit;
+  const client: Client = {
+    id: newId('cli'),
+    code: nextScCode(db),
+    name: name.trim(),
+    tags: [],
+    createdAt: createdIso,
+  };
+  db.clients.unshift(client);
+  return client;
+}
+
+function ensurePartyForCompany(db: Db, client: Client, createdIso: string) {
+  const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === client.id) ?? null;
+  if (hit) return hit;
+  const party: Party = {
+    id: newId('pty'),
+    type: 'COMPANY',
+    displayName: client.name,
+    clientId: client.id,
     createdAt: createdIso,
     updatedAt: createdIso,
   };
@@ -705,6 +871,100 @@ function seedSecretaryCompaniesFromScreenshot(db: Db) {
   return changed;
 }
 
+function seedSecretaryCompaniesFromScreenshot2(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_2]) return false;
+
+  let changed = false;
+  for (const row of SEED_SECRETARY_COMPANIES_2) {
+    const createdIso = dateToIso(row.createdDate);
+    const regNoKey = row.regNo.trim();
+    const nameKey = normalizeNameLite(row.name);
+    const client =
+      db.clients.find((c) => !c.deletedAt && (c.companyRegistrationNo ?? '').trim() === regNoKey) ??
+      db.clients.find((c) => !c.deletedAt && normalizeNameLite(c.name) === nameKey) ??
+      null;
+
+    if (!client) {
+      const next: Client = {
+        id: newId('cli'),
+        code: nextScCode(db),
+        name: row.name,
+        companyRegistrationNo: row.regNo,
+        contactPerson: row.member,
+        paidUpCapitalCurrency: row.paidUpCurrency,
+        paidUpCapitalAmount: row.paidUpAmount,
+        totalShares: row.totalShares,
+        tags: [],
+        createdAt: createdIso,
+      };
+      db.clients.unshift(next);
+      changed = true;
+    } else {
+      client.name = row.name;
+      client.companyRegistrationNo = row.regNo;
+      client.contactPerson = row.member;
+      if (row.paidUpCurrency) client.paidUpCapitalCurrency = row.paidUpCurrency;
+      if (typeof row.paidUpAmount === 'number') client.paidUpCapitalAmount = row.paidUpAmount;
+      if (typeof row.totalShares === 'number') client.totalShares = row.totalShares;
+      changed = true;
+    }
+
+    const theClient =
+      db.clients.find((c) => !c.deletedAt && (c.companyRegistrationNo ?? '').trim() === regNoKey) ??
+      db.clients.find((c) => !c.deletedAt && normalizeNameLite(c.name) === nameKey) ??
+      null;
+    if (!theClient) continue;
+
+    const rorcName = (row.rorc ?? '').trim();
+    if (rorcName) {
+      if (looksLikeCompanyName(rorcName)) {
+        const c = ensureClientForCompanyName(db, rorcName, createdIso);
+        const pty = ensurePartyForCompany(db, c, createdIso);
+        upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'RORC', createdIso });
+      } else {
+        const p = ensurePerson(db, rorcName, createdIso);
+        const pty = ensurePartyForPerson(db, p, createdIso);
+        upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'RORC', createdIso });
+      }
+      changed = true;
+    }
+
+    for (const sn of row.secretaries ?? []) {
+      const p = ensurePerson(db, sn, createdIso);
+      const pty = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'SECRETARY', createdIso });
+      changed = true;
+    }
+
+    for (const dn of row.directors ?? []) {
+      const p = ensurePerson(db, dn, createdIso);
+      const pty = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'DIRECTOR', createdIso });
+      changed = true;
+    }
+
+    if (typeof row.totalShares === 'number' && Array.isArray(row.shareholders) && row.shareholders.length) {
+      const sharesByName = computeShareAllocation(row.totalShares, row.shareholders);
+      for (const [name, shares] of sharesByName.entries()) {
+        if (looksLikeCompanyName(name)) {
+          const c = ensureClientForCompanyName(db, name, createdIso);
+          const pty = ensurePartyForCompany(db, c, createdIso);
+          upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'SHAREHOLDER', createdIso, shares });
+        } else {
+          const p = ensurePerson(db, name, createdIso);
+          const pty = ensurePartyForPerson(db, p, createdIso);
+          upsertRole(db, { clientId: theClient.id, partyId: pty.id, role: 'SHAREHOLDER', createdIso, shares });
+        }
+        changed = true;
+      }
+    }
+  }
+
+  db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_2] = true;
+  return changed;
+}
+
 function sha256Hex(content: string) {
   return createHash('sha256').update(content).digest('hex');
 }
@@ -790,6 +1050,7 @@ export async function readDb(): Promise<Db> {
   let changed = false;
 
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
+  if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
 
   if (db.users.length === 0) {
