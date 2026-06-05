@@ -23,9 +23,8 @@ export default async function SecretaryPeoplePage() {
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="secretary" />
       <div className="flex-1">
-        <PeopleClient canImport={hasPermission(me, 'people', 'import')} canCreate={hasPermission(me, 'people', 'create')} />
+        <PeopleClient />
       </div>
     </div>
   );
 }
-

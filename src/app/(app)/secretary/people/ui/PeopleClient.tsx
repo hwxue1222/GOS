@@ -2,9 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-
-import CreatePersonCard from '@/app/(app)/secretary/people/ui/CreatePersonCard';
-import ExcelImportCard from '@/app/(app)/secretary/people/ui/ExcelImportCard';
 import PeopleTable from '@/app/(app)/secretary/people/ui/PeopleTable';
 
 type Person = {
@@ -22,17 +19,11 @@ type Person = {
   createdAt: string;
 };
 
-type Props = {
-  canImport: boolean;
-  canCreate: boolean;
-};
-
-export default function PeopleClient({ canImport, canCreate }: Props) {
+export default function PeopleClient() {
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -75,7 +66,7 @@ export default function PeopleClient({ canImport, canCreate }: Props) {
             <span className="text-black/70">People</span>
           </div>
           <h1 className="mt-1 text-xl font-semibold">人员库</h1>
-          <div className="mt-1 text-sm text-black/60">Excel 导入后，在公司详情页选择董事/股东/RORC/秘书。</div>
+          <div className="mt-1 text-sm text-black/60">在公司详情页选择董事/股东/RORC/秘书。</div>
         </div>
         <input
           value={search}
@@ -86,28 +77,6 @@ export default function PeopleClient({ canImport, canCreate }: Props) {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      {ok ? <div className="mt-3 text-sm text-[#46b35a]">{ok}</div> : null}
-
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExcelImportCard
-          canImport={canImport}
-          onError={(m) => setError(m)}
-          onImported={async (m) => {
-            setOk(m);
-            await refresh();
-          }}
-        />
-
-        <CreatePersonCard
-          canCreate={canCreate}
-          onError={(m) => setError(m)}
-          onCreated={async (m) => {
-            setOk(m);
-            await refresh();
-          }}
-        />
-      </div>
-
       <PeopleTable people={filtered} loading={loading} />
     </div>
   );
