@@ -18,7 +18,7 @@ const DICT = {
     'secretary.companyInfo': 'Company Info',
     'secretary.extendedFields': 'Extended fields',
     'secretary.peopleAndRoles': 'People & roles',
-    'secretary.peopleLibrary': 'People',
+    'secretary.peopleLibrary': 'Members',
     'secretary.member': 'Member',
     'secretary.regNo': 'Reg No.',
     'secretary.paidUpCapital': 'Paid-up capital',
