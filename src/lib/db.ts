@@ -105,6 +105,7 @@ function cleanupClientNameStatusSuffixes(db: Db) {
 }
 
 const SEED_KEY_CLIENT_CODE_MIGRATION_V1 = 'clients.codeMigration.v1';
+const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1 = 'clients.dedupeByName.v1';
 
 function migrateClientCodesV1(db: Db) {
   if (!db.seed) db.seed = {};
@@ -134,6 +135,181 @@ function migrateClientCodesV1(db: Db) {
 
   db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V1] = true;
   return true;
+}
+
+function mergeClientInto(db: Db, fromClientId: string, toClientId: string) {
+  if (fromClientId === toClientId) return false;
+  const from = db.clients.find((c) => c.id === fromClientId && !c.deletedAt) ?? null;
+  const to = db.clients.find((c) => c.id === toClientId && !c.deletedAt) ?? null;
+  if (!from || !to) return false;
+
+  let changed = false;
+
+  const mergeScalar = <K extends keyof Client>(key: K) => {
+    const fromVal = from[key];
+    const toVal = to[key];
+    if (toVal === undefined || toVal === '' || toVal === null) {
+      if (fromVal !== undefined && fromVal !== '' && fromVal !== null) {
+        (to as any)[key] = fromVal;
+        changed = true;
+      }
+    }
+  };
+
+  mergeScalar('fka');
+  mergeScalar('companyRegistrationNo');
+  mergeScalar('fye');
+  mergeScalar('contactPerson');
+  mergeScalar('address');
+  mergeScalar('phone');
+  mergeScalar('email');
+  mergeScalar('businessActivities');
+  mergeScalar('ssicPrimaryCode');
+  mergeScalar('ssicSecondaryCode');
+  mergeScalar('paidUpCapitalCurrency');
+  mergeScalar('paidUpCapitalAmount');
+  mergeScalar('totalShares');
+  mergeScalar('incorporationDate');
+  mergeScalar('registeredOfficeAddress');
+
+  const mergedTags = Array.from(new Set([...(to.tags ?? []), ...(from.tags ?? [])].filter(Boolean)));
+  if (JSON.stringify(mergedTags) !== JSON.stringify(to.tags ?? [])) {
+    to.tags = mergedTags;
+    changed = true;
+  }
+
+  const partyFrom = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === from.id) ?? null;
+  const partyTo = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === to.id) ?? null;
+  if (partyFrom && partyTo) {
+    const oldId = partyFrom.id;
+    const newId = partyTo.id;
+    for (const r of db.clientPartyRoles) {
+      if (r.partyId === oldId) {
+        r.partyId = newId;
+        changed = true;
+      }
+    }
+    for (const t of db.shareTransfers) {
+      if (t.transferorPartyId === oldId) {
+        t.transferorPartyId = newId;
+        changed = true;
+      }
+      if (t.transfereePartyId === oldId) {
+        t.transfereePartyId = newId;
+        changed = true;
+      }
+    }
+    for (const cr of db.companyRepresentatives) {
+      if (cr.companyPartyId === oldId) {
+        cr.companyPartyId = newId;
+        changed = true;
+      }
+    }
+    for (const rdr of db.representativeDesignationRequests) {
+      if (rdr.companyPartyId === oldId) {
+        rdr.companyPartyId = newId;
+        changed = true;
+      }
+    }
+    db.parties = db.parties.filter((p) => p.id !== oldId);
+    changed = true;
+  } else if (partyFrom && !partyTo) {
+    partyFrom.clientId = to.id;
+    partyFrom.displayName = to.name;
+    changed = true;
+  }
+
+  for (const p of db.parties) {
+    if (p.clientId === from.id) {
+      p.clientId = to.id;
+      if (p.type === 'COMPANY') p.displayName = to.name;
+      changed = true;
+    }
+  }
+
+  for (const r of db.clientPartyRoles) {
+    if (r.clientId === from.id) {
+      r.clientId = to.id;
+      changed = true;
+    }
+  }
+
+  for (const t of db.shareTransfers) {
+    if (t.clientId === from.id) {
+      t.clientId = to.id;
+      changed = true;
+    }
+  }
+
+  for (const j of db.jobs) {
+    if (j.clientId === from.id) {
+      j.clientId = to.id;
+      changed = true;
+    }
+  }
+
+  for (const inv of db.invoices) {
+    if (inv.billTo?.type === 'CLIENT' && inv.billTo.clientId === from.id) {
+      inv.billTo.clientId = to.id;
+      inv.billTo.companyName = to.name;
+      changed = true;
+    }
+  }
+
+  for (const h of db.invoiceEmailHistories) {
+    if (h.key?.type === 'CLIENT' && h.key.clientId === from.id) {
+      h.key.clientId = to.id;
+      changed = true;
+    }
+  }
+
+  from.deletedAt = nowIso();
+  changed = true;
+  return changed;
+}
+
+function rankClientForDedupe(c: Client) {
+  const code = String(c.code ?? '');
+  const isSc = /^SC\d+$/i.test(code);
+  return {
+    isSc: isSc ? 1 : 0,
+    code,
+    createdAt: c.createdAt ?? '',
+  };
+}
+
+function dedupeClientsByNormalizedNameV1(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1]) return false;
+
+  const active = db.clients.filter((c) => !c.deletedAt);
+  const groups = new Map<string, Client[]>();
+  for (const c of active) {
+    const key = normalizeClientNameForMerge(String(c.name ?? ''));
+    if (!key) continue;
+    const list = groups.get(key) ?? [];
+    list.push(c);
+    groups.set(key, list);
+  }
+
+  let changed = false;
+  for (const list of groups.values()) {
+    if (list.length <= 1) continue;
+    const sorted = [...list].sort((a, b) => {
+      const ra = rankClientForDedupe(a);
+      const rb = rankClientForDedupe(b);
+      if (ra.isSc !== rb.isSc) return ra.isSc - rb.isSc;
+      if (ra.code !== rb.code) return ra.code.localeCompare(rb.code);
+      return ra.createdAt.localeCompare(rb.createdAt);
+    });
+    const primary = sorted[0];
+    for (const dup of sorted.slice(1)) {
+      if (mergeClientInto(db, dup.id, primary.id)) changed = true;
+    }
+  }
+
+  db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1] = true;
+  return changed;
 }
 
 function normalizeDb(parsed: Db): Db {
@@ -2545,6 +2721,7 @@ export async function readDb(): Promise<Db> {
   let changed = false;
 
   if (migrateClientCodesV1(db)) changed = true;
+  if (dedupeClientsByNormalizedNameV1(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
