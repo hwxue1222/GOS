@@ -127,20 +127,6 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
 
         {open && !disabled ? (
           <div className="absolute z-20 mt-1 w-full rounded-lg border border-black/10 bg-white shadow-sm max-h-64 overflow-auto">
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange(undefined);
-                setQuery('');
-                setItems([]);
-                setSelectedLabel('');
-                setOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-black/2 text-black/60"
-            >
-              {t('ssic.clear')}
-            </button>
             {filtered.length ? (
               filtered.map((it) => (
                 <button
