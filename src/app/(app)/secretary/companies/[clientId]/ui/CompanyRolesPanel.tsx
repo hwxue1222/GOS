@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import InlineCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/InlineCombobox';
+
 type RoleRow = {
   role: { id: string; role: string; shares?: number };
   entity:
@@ -46,27 +48,28 @@ export default function CompanyRolesPanel({
   onUpdateShareholderShares,
 }: Props) {
   const [roleTab, setRoleTab] = useState<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>('DIRECTOR');
-  const [personQuery, setPersonQuery] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [shareQty, setShareQty] = useState('');
   const [shareType, setShareType] = useState<'PERSON' | 'COMPANY'>('PERSON');
 
-  const filteredPeople = useMemo(() => {
-    const q = personQuery.trim().toLowerCase();
-    if (!q) return peopleOptions.slice(0, 30);
-    return peopleOptions
-      .filter((p) => `${p.fullName} ${p.email ?? ''}`.toLowerCase().includes(q))
-      .slice(0, 30);
-  }, [peopleOptions, personQuery]);
+  const personCombo = useMemo(() => {
+    return peopleOptions.map((p) => ({
+      value: p.id,
+      label: p.fullName,
+      description: p.email ?? '',
+      searchText: `${p.fullName} ${p.email ?? ''}`.toLowerCase(),
+    }));
+  }, [peopleOptions]);
 
-  const filteredCompanies = useMemo(() => {
-    const q = personQuery.trim().toLowerCase();
-    if (!q) return companyOptions.slice(0, 60);
-    return companyOptions
-      .filter((c) => `${c.name} ${c.code}`.toLowerCase().includes(q))
-      .slice(0, 60);
-  }, [companyOptions, personQuery]);
+  const companyCombo = useMemo(() => {
+    return companyOptions.map((c) => ({
+      value: c.id,
+      label: c.name,
+      description: c.code,
+      searchText: `${c.name} ${c.code}`.toLowerCase(),
+    }));
+  }, [companyOptions]);
 
   const roleRows = roleTab === 'DIRECTOR' ? roles.directors : roleTab === 'SHAREHOLDER' ? roles.shareholders : roleTab === 'RORC' ? roles.rorc : roles.secretaries;
   const shareSum = useMemo(() => {
@@ -102,12 +105,6 @@ export default function CompanyRolesPanel({
         <div className="mt-4">
           <div className="text-xs text-black/50">{roleTab === 'SHAREHOLDER' ? '添加股东（人员或公司）' : '添加人员到当前角色'}</div>
           <div className="mt-2 grid grid-cols-1 gap-2">
-            <input
-              value={personQuery}
-              onChange={(e) => setPersonQuery(e.target.value)}
-              placeholder="搜索姓名/邮箱"
-              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-            />
             {roleTab === 'SHAREHOLDER' ? (
               <div className="flex items-center gap-2">
                 <select
@@ -127,27 +124,25 @@ export default function CompanyRolesPanel({
                 />
               </div>
             ) : null}
-            <select
-              value={roleTab === 'SHAREHOLDER' && shareType === 'COMPANY' ? selectedCompanyId : selectedPersonId}
-              onChange={(e) => {
-                if (roleTab === 'SHAREHOLDER' && shareType === 'COMPANY') setSelectedCompanyId(e.target.value);
-                else setSelectedPersonId(e.target.value);
-              }}
-              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
-            >
-              <option value="">请选择</option>
-              {roleTab === 'SHAREHOLDER' && shareType === 'COMPANY'
-                ? filteredCompanies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))
-                : filteredPeople.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.fullName}{p.email ? ` (${p.email})` : ''}
-                    </option>
-                  ))}
-            </select>
+            {roleTab === 'SHAREHOLDER' && shareType === 'COMPANY' ? (
+              <InlineCombobox
+                label="公司"
+                placeholder="请选择"
+                value={selectedCompanyId || undefined}
+                disabled={!canEditRoles}
+                options={companyCombo}
+                onChange={(v) => setSelectedCompanyId(v ?? '')}
+              />
+            ) : (
+              <InlineCombobox
+                label={roleTab === 'SHAREHOLDER' ? '人员' : undefined}
+                placeholder="请选择"
+                value={selectedPersonId || undefined}
+                disabled={!canEditRoles}
+                options={personCombo}
+                onChange={(v) => setSelectedPersonId(v ?? '')}
+              />
+            )}
             <button
               onClick={async () => {
                 if (roleTab === 'SHAREHOLDER') {
@@ -165,7 +160,6 @@ export default function CompanyRolesPanel({
                     setSelectedPersonId('');
                   }
                   setShareQty('');
-                  setPersonQuery('');
                   return;
                 }
 
@@ -173,7 +167,6 @@ export default function CompanyRolesPanel({
                 if (!personId) return;
                 await onAddRole({ role: roleTab, personId });
                 setSelectedPersonId('');
-                setPersonQuery('');
               }}
               className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium"
             >
