@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import PeopleTable from '@/app/(app)/secretary/people/ui/PeopleTable';
 import { useI18n } from '@/components/I18nProviderClient';
+import { usePersistedState } from '@/lib/usePersistedState';
+import PaginationControls from '@/components/PaginationControls';
 
 type Person = {
   id: string;
@@ -28,6 +30,8 @@ export default function PeopleClient() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = usePersistedState('gos.secretary.people.page', 1);
+  const [pageSize, setPageSize] = usePersistedState('gos.secretary.people.pageSize', 20);
 
   async function refresh() {
     setLoading(true);
@@ -57,6 +61,14 @@ export default function PeopleClient() {
     return people.filter((p) => `${p.fullName} ${p.email ?? ''} ${p.phone ?? ''} ${p.idNo ?? ''}`.toLowerCase().includes(q));
   }, [people, search]);
 
+  const safePageSize = Math.max(5, Math.min(200, Number(pageSize) || 20));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.max(1, Math.min(totalPages, Number(page) || 1));
+  const pageStart = (safePage - 1) * safePageSize;
+  const pageEnd = Math.min(total, pageStart + safePageSize);
+  const visible = useMemo(() => filtered.slice(pageStart, pageEnd), [filtered, pageStart, pageEnd]);
+
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -74,14 +86,30 @@ export default function PeopleClient() {
         </div>
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder={t('people.searchPlaceholder')}
           className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
         />
       </div>
 
+      <div className="mt-3 flex items-center justify-end">
+        <PaginationControls
+          total={total}
+          pageStart={pageStart}
+          pageEnd={pageEnd}
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={safePageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      </div>
+
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <PeopleTable people={filtered} loading={loading} />
+      <PeopleTable people={visible} loading={loading} />
     </div>
   );
 }

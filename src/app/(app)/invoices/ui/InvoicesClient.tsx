@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { usePersistedState } from '@/lib/usePersistedState';
+import PaginationControls from '@/components/PaginationControls';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus, Role } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
@@ -518,6 +519,19 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           </div>
         </div>
 
+        <div className="mt-3 flex items-center justify-end">
+          <PaginationControls
+            total={total}
+            pageStart={pageStart}
+            pageEnd={pageEnd}
+            page={safePage}
+            totalPages={totalPages}
+            pageSize={safePageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
           <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
@@ -651,49 +665,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
               ) : null}
             </tbody>
           </table>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3 text-sm text-black/60">
-          <div className="flex items-center gap-2">
-            <div>
-              {total === 0 ? '0' : `${pageStart + 1}-${pageEnd}`} / {total}
-            </div>
-            <div className="hidden sm:block">per page</div>
-            <select
-              value={safePageSize}
-              onChange={(e) => {
-                const next = Number(e.target.value) || 20;
-                setPageSize(next);
-                setPage(1);
-              }}
-              className="rounded-md border border-black/10 bg-white px-2 py-1 text-sm text-black/70"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={safePage <= 1}
-              onClick={() => setPage(safePage - 1)}
-              className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              Prev
-            </button>
-            <div className="min-w-[72px] text-center">
-              {safePage} / {totalPages}
-            </div>
-            <button
-              disabled={safePage >= totalPages}
-              onClick={() => setPage(safePage + 1)}
-              className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
         </div>
 
         {showAdd ? (

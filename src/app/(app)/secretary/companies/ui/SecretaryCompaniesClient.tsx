@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
+import { usePersistedState } from '@/lib/usePersistedState';
+import PaginationControls from '@/components/PaginationControls';
 
 type CompanyRow = {
   client: {
@@ -38,6 +40,8 @@ function money(currency?: string, amount?: number) {
 export default function SecretaryCompaniesClient({ initialItems, canEdit, canViewPeople }: Props) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
+  const [page, setPage] = usePersistedState('gos.secretary.companies.page', 1);
+  const [pageSize, setPageSize] = usePersistedState('gos.secretary.companies.pageSize', 20);
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -59,6 +63,14 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     });
   }, [initialItems, search]);
 
+  const safePageSize = Math.max(5, Math.min(200, Number(pageSize) || 20));
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.max(1, Math.min(totalPages, Number(page) || 1));
+  const pageStart = (safePage - 1) * safePageSize;
+  const pageEnd = Math.min(total, pageStart + safePageSize);
+  const visible = useMemo(() => items.slice(pageStart, pageEnd), [items, pageStart, pageEnd]);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -77,11 +89,27 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
           ) : null}
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search company, reg no, person"
             className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
           />
         </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-end">
+        <PaginationControls
+          total={total}
+          pageStart={pageStart}
+          pageEnd={pageEnd}
+          page={safePage}
+          totalPages={totalPages}
+          pageSize={safePageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
 
       <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
@@ -101,7 +129,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
             </tr>
           </thead>
           <tbody>
-            {items.map((it) => (
+            {visible.map((it) => (
               <tr key={it.client.id} className="border-t border-black/5">
                 <td className="px-4 py-3">
                   <div className="font-medium text-[#2f7bdc]">
@@ -134,7 +162,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                 </td>
               </tr>
             ))}
-            {items.length === 0 ? (
+            {visible.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-10 text-center text-black/50">
                   {t('common.noResults')}

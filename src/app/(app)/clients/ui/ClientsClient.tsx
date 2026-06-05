@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePersistedState } from '@/lib/usePersistedState';
+import PaginationControls from '@/components/PaginationControls';
 
 import type { Role } from '@/lib/types';
 
@@ -141,6 +142,19 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               + Add Client
             </button>
           </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-end">
+          <PaginationControls
+            total={total}
+            pageStart={pageStart}
+            pageEnd={pageEnd}
+            page={safePage}
+            totalPages={totalPages}
+            pageSize={safePageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
 
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">

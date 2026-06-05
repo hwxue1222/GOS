@@ -8,6 +8,7 @@ import { hasPermission } from '@/lib/permissions';
 import type { Permissions, Role } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
+import PaginationControls from '@/components/PaginationControls';
 
 type JobListItem = {
   job: {
@@ -567,42 +568,17 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                 ))}
               </select>
               <div className="hidden lg:block col-span-2" />
-              <div className="col-span-2 sm:col-span-4 lg:col-span-3 flex items-center justify-end gap-2 text-sm text-black/60">
-                <div className="hidden sm:block">
-                  {total === 0 ? '0' : `${pageStart + 1}-${pageEnd}`} / {total}
-                </div>
-                <select
-                  value={safePageSize}
-                  onChange={(e) => {
-                    const next = Number(e.target.value) || 20;
-                    setPageSize(next);
-                    setPage(1);
-                  }}
-                  className="rounded-md border border-black/10 bg-white px-2 py-2 text-sm text-black/70"
-                >
-                  {[10, 20, 50, 100].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  disabled={safePage <= 1}
-                  onClick={() => setPage(safePage - 1)}
-                  className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-50"
-                >
-                  Prev
-                </button>
-                <div className="min-w-[72px] text-center">
-                  {safePage} / {totalPages}
-                </div>
-                <button
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage(safePage + 1)}
-                  className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-50"
-                >
-                  Next
-                </button>
+              <div className="col-span-2 sm:col-span-4 lg:col-span-3">
+                <PaginationControls
+                  total={total}
+                  pageStart={pageStart}
+                  pageEnd={pageEnd}
+                  page={safePage}
+                  totalPages={totalPages}
+                  pageSize={safePageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
               </div>
             </div>
           </div>
