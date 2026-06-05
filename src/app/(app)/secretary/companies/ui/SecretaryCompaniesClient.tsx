@@ -95,9 +95,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit }: Prop
                   <div className="font-medium text-[#2f7bdc]">
                     <Link href={`/secretary/companies/${it.client.id}`}>{it.client.name}</Link>
                   </div>
-                  <div className="mt-1 text-xs text-[#46b35a]">
-                    <Link href={`/secretary/companies/${it.client.id}`}>使用秘书等服务</Link>
-                  </div>
                 </td>
                 <td className="px-4 py-3">{it.client.contactPerson ?? '-'}</td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
@@ -139,4 +136,3 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit }: Prop
     </div>
   );
 }
-
