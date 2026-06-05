@@ -103,6 +103,38 @@ function cleanupClientNameStatusSuffixes(db: Db) {
   return changed;
 }
 
+const SEED_KEY_CLIENT_CODE_MIGRATION_V1 = 'clients.codeMigration.v1';
+
+function migrateClientCodesV1(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V1]) return false;
+
+  const mapping: Record<string, string> = {
+    SC001: 'DA211',
+    SC002: 'DA210',
+    SC003: 'DA209',
+    SC004: 'DA208',
+    SC005: 'EA007',
+    SC006: 'SC001',
+  };
+
+  const codeToClient = new Map(db.clients.filter((c) => !c.deletedAt).map((c) => [String(c.code ?? ''), c]));
+  for (const [from, to] of Object.entries(mapping)) {
+    const c = codeToClient.get(from);
+    if (!c) continue;
+    const existing = codeToClient.get(to);
+    if (existing && existing.id !== c.id) {
+      continue;
+    }
+    c.code = to;
+    codeToClient.delete(from);
+    codeToClient.set(to, c);
+  }
+
+  db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V1] = true;
+  return true;
+}
+
 function normalizeDb(parsed: Db): Db {
   const keyOfName = (name: string) => name.trim().toLowerCase();
   const users = (parsed.users ?? []).map((u) => ({
@@ -689,6 +721,12 @@ function normalizeNameLite(s: string) {
   return s.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+function normalizeClientNameForMerge(s: string) {
+  const lower = s.trim().toLowerCase();
+  const noDots = lower.replace(/\./g, '');
+  return noDots.replace(/\s+/g, ' ');
+}
+
 function looksLikeCompanyName(name: string) {
   return /\b(pte|ltd|limited|llp|inc|corp|company|holdings)\b/i.test(name);
 }
@@ -1084,6 +1122,7 @@ export async function readDb(): Promise<Db> {
   let db = await readDbRaw();
   let changed = false;
 
+  if (migrateClientCodesV1(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
@@ -1301,10 +1340,43 @@ export async function createClient(input: {
 }) {
   const db = await readDb();
   const codeKey = input.code.trim().toLowerCase();
-  const nameKey = input.name.trim().toLowerCase();
+  const nameKey = normalizeClientNameForMerge(input.name);
   if (!codeKey || !nameKey) throw new Error('INVALID_INPUT');
   if (db.clients.some((c) => !c.deletedAt && (c.code || '').trim().toLowerCase() === codeKey)) throw new Error('DUPLICATE_CODE');
-  if (db.clients.some((c) => !c.deletedAt && (c.name || '').trim().toLowerCase() === nameKey)) throw new Error('DUPLICATE_NAME');
+
+  const existingByName =
+    db.clients.find((c) => !c.deletedAt && normalizeClientNameForMerge((c.name || '').trim()) === nameKey) ?? null;
+  if (existingByName) {
+    const patch: Partial<Client> = {};
+    if (input.fka && !existingByName.fka) patch.fka = input.fka;
+    if (input.companyRegistrationNo && !existingByName.companyRegistrationNo) patch.companyRegistrationNo = input.companyRegistrationNo;
+    if (input.fye && !existingByName.fye) patch.fye = input.fye;
+    if (input.contactPerson && !existingByName.contactPerson) patch.contactPerson = input.contactPerson;
+    if (input.address && !existingByName.address) patch.address = input.address;
+    if (input.phone && !existingByName.phone) patch.phone = input.phone;
+    if (input.email && !existingByName.email) patch.email = input.email;
+    if (input.businessActivities && !existingByName.businessActivities) patch.businessActivities = input.businessActivities;
+    if (input.ssicPrimaryCode && !existingByName.ssicPrimaryCode) patch.ssicPrimaryCode = input.ssicPrimaryCode;
+    if (input.ssicSecondaryCode && !existingByName.ssicSecondaryCode) patch.ssicSecondaryCode = input.ssicSecondaryCode;
+    if (input.paidUpCapitalCurrency && !existingByName.paidUpCapitalCurrency) patch.paidUpCapitalCurrency = input.paidUpCapitalCurrency;
+    if (typeof input.paidUpCapitalAmount === 'number' && existingByName.paidUpCapitalAmount === undefined)
+      patch.paidUpCapitalAmount = input.paidUpCapitalAmount;
+    if (typeof input.totalShares === 'number' && existingByName.totalShares === undefined) patch.totalShares = input.totalShares;
+    if (input.incorporationDate && !existingByName.incorporationDate) patch.incorporationDate = input.incorporationDate;
+    if (input.registeredOfficeAddress && !existingByName.registeredOfficeAddress) patch.registeredOfficeAddress = input.registeredOfficeAddress;
+    if (Array.isArray(input.tags) && input.tags.length) {
+      const merged = Array.from(new Set([...(existingByName.tags ?? []), ...input.tags].filter(Boolean)));
+      patch.tags = merged;
+    }
+    if (Object.keys(patch).length) {
+      const idx = db.clients.findIndex((c) => c.id === existingByName.id);
+      if (idx >= 0) db.clients[idx] = { ...db.clients[idx], ...patch };
+      await writeDb(db);
+      return db.clients[idx];
+    }
+    await writeDb(db);
+    return existingByName;
+  }
   const client: Client = {
     id: newId('cli'),
     code: input.code,
