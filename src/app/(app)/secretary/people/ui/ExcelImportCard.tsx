@@ -247,7 +247,7 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
               ['idNo', 'ID No'],
               ['nationality', 'Nationality'],
               ['dob', 'DOB'],
-              ['address', 'Address'],
+              ['address', '住址'],
               ['memberSince', 'Member since'],
               ['lastLoginDate', 'Last login'],
             ] as Array<[keyof ImportMapping, string]>).map(([k, label]) => (
