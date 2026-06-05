@@ -654,6 +654,8 @@ export async function createClient(input: {
   phone?: string;
   email?: string;
   businessActivities?: string;
+  ssicPrimaryCode?: string;
+  ssicSecondaryCode?: string;
   paidUpCapitalCurrency?: Client['paidUpCapitalCurrency'];
   paidUpCapitalAmount?: Client['paidUpCapitalAmount'];
   totalShares?: Client['totalShares'];
@@ -678,6 +680,8 @@ export async function createClient(input: {
     phone: input.phone,
     email: input.email,
     businessActivities: input.businessActivities,
+    ssicPrimaryCode: input.ssicPrimaryCode,
+    ssicSecondaryCode: input.ssicSecondaryCode,
     paidUpCapitalCurrency: input.paidUpCapitalCurrency,
     paidUpCapitalAmount: input.paidUpCapitalAmount,
     totalShares: input.totalShares,
@@ -715,6 +719,8 @@ export async function updateClient(
       | 'phone'
       | 'email'
       | 'businessActivities'
+      | 'ssicPrimaryCode'
+      | 'ssicSecondaryCode'
       | 'tags'
       | 'paidUpCapitalCurrency'
       | 'paidUpCapitalAmount'

@@ -17,6 +17,8 @@ type Client = {
   phone?: string;
   email?: string;
   businessActivities?: string;
+  ssicPrimaryCode?: string;
+  ssicSecondaryCode?: string;
   paidUpCapitalCurrency?: string;
   paidUpCapitalAmount?: number;
   totalShares?: number;

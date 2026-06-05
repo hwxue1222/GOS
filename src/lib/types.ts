@@ -46,6 +46,8 @@ export type Client = {
   phone?: string;
   email?: string;
   businessActivities?: string;
+  ssicPrimaryCode?: string;
+  ssicSecondaryCode?: string;
   paidUpCapitalCurrency?: Currency;
   paidUpCapitalAmount?: number;
   totalShares?: number;

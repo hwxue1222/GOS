@@ -110,6 +110,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     email: typeof body?.email === 'string' ? body.email.trim() || undefined : undefined,
     businessActivities:
       typeof body?.businessActivities === 'string' ? body.businessActivities.trim() || undefined : undefined,
+    ssicPrimaryCode: typeof body?.ssicPrimaryCode === 'string' ? body.ssicPrimaryCode.trim() || undefined : undefined,
+    ssicSecondaryCode: typeof body?.ssicSecondaryCode === 'string' ? body.ssicSecondaryCode.trim() || undefined : undefined,
     paidUpCapitalCurrency,
     paidUpCapitalAmount:
       typeof body?.paidUpCapitalAmount === 'number'

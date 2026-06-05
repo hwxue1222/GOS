@@ -1,5 +1,7 @@
 'use client';
 
+import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
+
 type Client = {
   id: string;
   code: string;
@@ -11,6 +13,8 @@ type Client = {
   phone?: string;
   email?: string;
   businessActivities?: string;
+  ssicPrimaryCode?: string;
+  ssicSecondaryCode?: string;
   paidUpCapitalCurrency?: string;
   paidUpCapitalAmount?: number;
   totalShares?: number;
@@ -159,15 +163,20 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
             />
           </label>
-          <label className="text-sm sm:col-span-2">
-            <div className="text-black/60">Business activities</div>
-            <textarea
-              value={client.businessActivities ?? ''}
-              onChange={(e) => onChange({ businessActivities: e.target.value || undefined })}
-              disabled={!canEdit}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5 min-h-[90px]"
-            />
-          </label>
+          <SsicCombobox
+            label="Business activities (Primary)"
+            value={client.ssicPrimaryCode}
+            excludeCode={client.ssicSecondaryCode}
+            disabled={!canEdit}
+            onChange={(code) => onChange({ ssicPrimaryCode: code })}
+          />
+          <SsicCombobox
+            label="Business activities (Secondary)"
+            value={client.ssicSecondaryCode}
+            excludeCode={client.ssicPrimaryCode}
+            disabled={!canEdit}
+            onChange={(code) => onChange({ ssicSecondaryCode: code })}
+          />
         </div>
       </div>
     </div>
