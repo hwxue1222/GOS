@@ -69,6 +69,40 @@ function emptyDb(): Db {
   };
 }
 
+function normalizeFkaAppend(existing: string | undefined, next: string) {
+  const cleanNext = next.trim();
+  if (!cleanNext) return existing;
+  const parts = (existing ?? '')
+    .split(/\s*;\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.some((p) => p.toLowerCase() === cleanNext.toLowerCase())) return existing;
+  return [...parts, cleanNext].join('; ');
+}
+
+function cleanupClientNameStatusSuffixes(db: Db) {
+  const statusRegex = /\s*\((resigned|transferred|strike off|transfer out|no reply|deregistered|bvi)\)\s*$/i;
+  let changed = false;
+  for (const c of db.clients) {
+    if (!c || c.deletedAt) continue;
+    const name = String(c.name ?? '');
+    const m = name.match(statusRegex);
+    if (!m) continue;
+    const status = m[1];
+    const nextName = name.replace(statusRegex, '').trim();
+    if (nextName && nextName !== c.name) {
+      c.name = nextName;
+      changed = true;
+    }
+    const nextFka = normalizeFkaAppend(c.fka, status);
+    if (nextFka !== c.fka) {
+      c.fka = nextFka;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function normalizeDb(parsed: Db): Db {
   const keyOfName = (name: string) => name.trim().toLowerCase();
   const users = (parsed.users ?? []).map((u) => ({
@@ -1050,6 +1084,7 @@ export async function readDb(): Promise<Db> {
   let db = await readDbRaw();
   let changed = false;
 
+  if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
