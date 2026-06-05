@@ -30,6 +30,8 @@ export async function POST(req: Request) {
         nationality?: string;
         dob?: string;
         address?: string;
+        memberSince?: string;
+        lastLoginDate?: string;
       }
     | null;
 
@@ -44,7 +46,8 @@ export async function POST(req: Request) {
     nationality: body?.nationality?.trim() || undefined,
     dob: body?.dob?.trim() || undefined,
     address: body?.address?.trim() || undefined,
+    memberSince: body?.memberSince?.trim() || undefined,
+    lastLoginDate: body?.lastLoginDate?.trim() || undefined,
   });
   return NextResponse.json({ ok: true, person });
 }
-

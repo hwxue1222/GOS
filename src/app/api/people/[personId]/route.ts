@@ -24,6 +24,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ personId: str
         nationality?: string;
         dob?: string;
         address?: string;
+        memberSince?: string;
+        lastLoginDate?: string;
       }
     | null;
 
@@ -36,10 +38,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ personId: str
     nationality: typeof body?.nationality === 'string' ? body.nationality.trim() || undefined : undefined,
     dob: typeof body?.dob === 'string' ? body.dob.trim() || undefined : undefined,
     address: typeof body?.address === 'string' ? body.address.trim() || undefined : undefined,
+    memberSince: typeof body?.memberSince === 'string' ? body.memberSince.trim() || undefined : undefined,
+    lastLoginDate: typeof body?.lastLoginDate === 'string' ? body.lastLoginDate.trim() || undefined : undefined,
   };
 
   const updated = await updatePerson(personId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, person: updated });
 }
-

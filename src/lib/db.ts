@@ -759,6 +759,8 @@ export async function createPerson(input: {
   nationality?: string;
   dob?: string;
   address?: string;
+  memberSince?: string;
+  lastLoginDate?: string;
 }) {
   const db = await readDb();
   const createdAt = nowIso();
@@ -772,6 +774,8 @@ export async function createPerson(input: {
     nationality: input.nationality,
     dob: input.dob,
     address: input.address,
+    memberSince: input.memberSince,
+    lastLoginDate: input.lastLoginDate,
     createdAt,
     updatedAt: createdAt,
   };
@@ -782,7 +786,9 @@ export async function createPerson(input: {
 
 export async function updatePerson(
   personId: string,
-  patch: Partial<Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address'>>,
+  patch: Partial<
+    Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address' | 'memberSince' | 'lastLoginDate'>
+  >,
 ) {
   const db = await readDb();
   const idx = db.persons.findIndex((p) => p.id === personId);
@@ -919,7 +925,11 @@ export async function endClientRole(input: { clientId: string; roleId: string })
   return db.clientPartyRoles[idx];
 }
 
-export async function importPersons(input: { items: Array<Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address'>> }) {
+export async function importPersons(input: {
+  items: Array<
+    Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address' | 'memberSince' | 'lastLoginDate'>
+  >;
+}) {
   const db = await readDb();
   const now = nowIso();
   let created = 0;
@@ -935,6 +945,8 @@ export async function importPersons(input: { items: Array<Pick<Person, 'fullName
       nationality: (x.nationality ?? '').trim() || undefined,
       dob: (x.dob ?? '').trim() || undefined,
       address: (x.address ?? '').trim() || undefined,
+      memberSince: (x.memberSince ?? '').trim() || undefined,
+      lastLoginDate: (x.lastLoginDate ?? '').trim() || undefined,
     }))
     .filter((x) => !!x.fullName);
 
@@ -952,6 +964,8 @@ export async function importPersons(input: { items: Array<Pick<Person, 'fullName
         nationality: row.nationality ?? hit.nationality,
         dob: row.dob ?? hit.dob,
         address: row.address ?? hit.address,
+        memberSince: row.memberSince ?? hit.memberSince,
+        lastLoginDate: row.lastLoginDate ?? hit.lastLoginDate,
         updatedAt: now,
       };
       const idx = db.persons.findIndex((p) => p.id === hit.id);
@@ -973,6 +987,8 @@ export async function importPersons(input: { items: Array<Pick<Person, 'fullName
       nationality: row.nationality,
       dob: row.dob,
       address: row.address,
+      memberSince: row.memberSince,
+      lastLoginDate: row.lastLoginDate,
       createdAt: now,
       updatedAt: now,
     };

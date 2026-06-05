@@ -12,6 +12,8 @@ type ImportMapping = {
   nationality?: string;
   dob?: string;
   address?: string;
+  memberSince?: string;
+  lastLoginDate?: string;
 };
 
 type Props = {
@@ -34,10 +36,19 @@ function normalizeHeader(s: string) {
 
 function guessMapping(headers: string[]): ImportMapping {
   const byKey = new Map(headers.map((h) => [normalizeHeader(h), h]));
+  const normalizedHeaders = headers.map((h) => normalizeHeader(h));
   const pick = (keys: string[]) => {
     for (const k of keys) {
       const hit = byKey.get(k);
       if (hit) return hit;
+    }
+    return undefined;
+  };
+  const pickNorm = (keys: string[]) => {
+    for (const k of keys) {
+      const kn = normalizeHeader(k);
+      const idx = normalizedHeaders.indexOf(kn);
+      if (idx >= 0) return headers[idx];
     }
     return undefined;
   };
@@ -48,9 +59,38 @@ function guessMapping(headers: string[]): ImportMapping {
     idType: pick(['id type', '证件类型']),
     idNo: pick(['id no', 'id number', 'nric', 'passport', '证件号', '证件号码']),
     nationality: pick(['nationality', '国籍']),
-    dob: pick(['dob', 'date of birth', '出生日期']),
-    address: pick(['address', '地址']),
+    dob: pick(['dob', 'date of birth', '出生日期', '生日']),
+    address: pick(['address', '地址', '住址']),
+    memberSince: pickNorm(['member since', 'created date', '成为人员的时间']),
+    lastLoginDate: pickNorm(['last login', 'last login date', '上一次登录的时间']),
   };
+}
+
+function toYmd(input?: string) {
+  const s = (input ?? '').trim();
+  if (!s) return undefined;
+  const datePart = (s.split(' ')[0] ?? s).trim();
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(datePart)) {
+    const [y, m, d] = datePart.split('-');
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(datePart)) {
+    const [dd, mm, yyyy] = datePart.split('/');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(datePart)) {
+    const [m, d, yRaw] = datePart.split('/');
+    const mm = String(m).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    if (yRaw.length === 4) return `${yRaw}-${mm}-${dd}`;
+    const yy = Number(yRaw);
+    if (!Number.isFinite(yy)) return undefined;
+    const yyyy = yy >= 70 ? 1900 + yy : 2000 + yy;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  const t = new Date(datePart).getTime();
+  if (!Number.isNaN(t)) return new Date(t).toISOString().slice(0, 10);
+  return undefined;
 }
 
 export default function ExcelImportCard({ canImport, onImported, onError }: Props) {
@@ -64,8 +104,10 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
 
   async function onPickFile(file: File) {
     setFileName(file.name);
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+    const wb = isCsv
+      ? XLSX.read(await file.text(), { type: 'string' })
+      : XLSX.read(await file.arrayBuffer(), { type: 'array' });
     const sheetName = wb.SheetNames[0];
     const ws = sheetName ? wb.Sheets[sheetName] : null;
     if (!ws) {
@@ -73,8 +115,32 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
       return;
     }
     const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false }) as unknown as string[][];
-    const headerRow = Array.isArray(data[0]) ? data[0].map((x) => toStringCell(x).trim()).filter(Boolean) : [];
-    const body = data.slice(1).filter((r) => Array.isArray(r) && r.some((x) => toStringCell(x).trim()));
+    const row0 = Array.isArray(data[0]) ? data[0].map((x) => toStringCell(x).trim()) : [];
+    const hasHeader = row0.some((c) => {
+      const k = normalizeHeader(c);
+      return k === '姓名' || k === 'full name' || k === 'email';
+    });
+    const defaultHeader = [
+      '_id',
+      '姓名',
+      '生日',
+      '国籍',
+      '证件号',
+      '联系电话',
+      'Email',
+      '住址',
+      '成为人员的时间',
+      '上一次登录的时间',
+    ];
+    const headerRow = (hasHeader ? row0 : defaultHeader).filter(Boolean);
+    const body = (hasHeader ? data.slice(1) : data)
+      .filter((r) => Array.isArray(r) && r.some((x) => toStringCell(x).trim()))
+      .map((r) => {
+        if (hasHeader) return r;
+        const rr = [...r];
+        while (rr.length < headerRow.length) rr.push('');
+        return rr;
+      });
     const normalizedRows = body.map((r) => {
       const o: Record<string, string> = {};
       for (let i = 0; i < headerRow.length; i++) {
@@ -87,6 +153,13 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
     setHeaders(headerRow);
     setRows(normalizedRows);
     setMapping(guessMapping(headerRow));
+  }
+
+  function mappingLooksLikeBbyEntitiesCsv() {
+    if (!headers.length) return false;
+    const set = new Set(headers.map((h) => normalizeHeader(h)));
+    const need = ['姓名', '生日', '国籍', '证件号', '联系电话', 'email', '住址', '成为人员的时间', '上一次登录的时间'];
+    return need.every((k) => set.has(normalizeHeader(k)));
   }
 
   async function runImport() {
@@ -104,8 +177,10 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
         idType: mapping.idType ? (r[mapping.idType] ?? '').trim() : undefined,
         idNo: mapping.idNo ? (r[mapping.idNo] ?? '').trim() : undefined,
         nationality: mapping.nationality ? (r[mapping.nationality] ?? '').trim() : undefined,
-        dob: mapping.dob ? (r[mapping.dob] ?? '').trim() : undefined,
+        dob: mapping.dob ? toYmd(r[mapping.dob] ?? '') : undefined,
         address: mapping.address ? (r[mapping.address] ?? '').trim() : undefined,
+        memberSince: mapping.memberSince ? toYmd(r[mapping.memberSince] ?? '') : undefined,
+        lastLoginDate: mapping.lastLoginDate ? toYmd(r[mapping.lastLoginDate] ?? '') : undefined,
       }))
       .filter((x) => !!x.fullName);
     if (items.length === 0) {
@@ -139,13 +214,13 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
   }
 
   return (
-    <div className="rounded-xl bg-white border border-black/5 p-5">
+    <div id="people-import" className="rounded-xl bg-white border border-black/5 p-5">
       <div className="text-sm font-semibold">Excel 导入</div>
-      <div className="mt-3 text-sm text-black/60">支持 .xlsx，第一行作为表头。</div>
+      <div className="mt-3 text-sm text-black/60">支持 .xlsx / .csv（第一行可为表头；bby_entities.csv 无表头也可导入）。</div>
       <div className="mt-4">
         <input
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.csv"
           disabled={!canImport}
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -160,6 +235,9 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
       {headers.length ? (
         <div className="mt-4">
           <div className="text-xs text-black/50">字段映射（至少选择 Full Name）</div>
+          {mappingLooksLikeBbyEntitiesCsv() ? (
+            <div className="mt-2 text-xs text-[#46b35a]">已识别 bby_entities.csv 字段（日期会自动只保留 YYYY-MM-DD）。</div>
+          ) : null}
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {([
               ['fullName', 'Full Name*'],
@@ -170,6 +248,8 @@ export default function ExcelImportCard({ canImport, onImported, onError }: Prop
               ['nationality', 'Nationality'],
               ['dob', 'DOB'],
               ['address', 'Address'],
+              ['memberSince', 'Member since'],
+              ['lastLoginDate', 'Last login'],
             ] as Array<[keyof ImportMapping, string]>).map(([k, label]) => (
               <label key={k} className="text-sm">
                 <div className="text-black/60">{label}</div>

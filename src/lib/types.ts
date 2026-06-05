@@ -147,6 +147,8 @@ export type Person = {
   nationality?: string;
   dob?: string;
   address?: string;
+  memberSince?: string;
+  lastLoginDate?: string;
   createdAt: string;
   updatedAt?: string;
 };

@@ -21,6 +21,8 @@ export async function POST(req: Request) {
           nationality?: string;
           dob?: string;
           address?: string;
+          memberSince?: string;
+          lastLoginDate?: string;
         }>;
       }
     | null;
@@ -38,8 +40,9 @@ export async function POST(req: Request) {
       nationality: x.nationality,
       dob: x.dob,
       address: x.address,
+      memberSince: x.memberSince,
+      lastLoginDate: x.lastLoginDate,
     })),
   });
   return NextResponse.json(r);
 }
-
