@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import InlineCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/InlineCombobox';
 import { useI18n } from '@/components/I18nProviderClient';
@@ -54,6 +54,7 @@ export default function CompanyRolesPanel({
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [shareQty, setShareQty] = useState('');
   const [shareType, setShareType] = useState<'PERSON' | 'COMPANY'>('PERSON');
+  const [sharesDraftByRoleId, setSharesDraftByRoleId] = useState<Record<string, string>>({});
 
   const personCombo = useMemo(() => {
     return peopleOptions.map((p) => ({
@@ -74,10 +75,33 @@ export default function CompanyRolesPanel({
   }, [companyOptions]);
 
   const roleRows = roleTab === 'DIRECTOR' ? roles.directors : roleTab === 'SHAREHOLDER' ? roles.shareholders : roleTab === 'RORC' ? roles.rorc : roles.secretaries;
+
+  useEffect(() => {
+    if (roleTab !== 'SHAREHOLDER') return;
+    setSharesDraftByRoleId((prev) => {
+      const next: Record<string, string> = {};
+      for (const r of roleRows) {
+        const key = r.role.id;
+        const existing = prev[key];
+        if (typeof existing === 'string') {
+          next[key] = existing;
+        } else {
+          next[key] = typeof r.role.shares === 'number' && Number.isFinite(r.role.shares) ? String(r.role.shares) : '';
+        }
+      }
+      return next;
+    });
+  }, [roleTab, roleRows]);
+
   const shareSum = useMemo(() => {
     if (roleTab !== 'SHAREHOLDER') return 0;
-    return roleRows.reduce((sum, r) => sum + (typeof r.role.shares === 'number' && Number.isFinite(r.role.shares) ? r.role.shares : 0), 0);
-  }, [roleRows, roleTab]);
+    return roleRows.reduce((sum, r) => {
+      const raw = sharesDraftByRoleId[r.role.id];
+      const n = raw?.trim() ? Number(raw) : NaN;
+      if (!Number.isFinite(n)) return sum;
+      return sum + n;
+    }, 0);
+  }, [roleRows, roleTab, sharesDraftByRoleId]);
 
   return (
     <div className="rounded-xl bg-white border border-black/5 p-5">
@@ -247,7 +271,11 @@ export default function CompanyRolesPanel({
                         <div className="text-xs text-black/50">股份</div>
                         {canEditRoles ? (
                           <input
-                            defaultValue={typeof r.role.shares === 'number' ? String(r.role.shares) : ''}
+                            value={sharesDraftByRoleId[r.role.id] ?? ''}
+                            onChange={(ev) => {
+                              const v = ev.target.value;
+                              setSharesDraftByRoleId((prev) => ({ ...prev, [r.role.id]: v }));
+                            }}
                             inputMode="numeric"
                             className="w-[120px] rounded-md border border-black/10 px-2 py-1 text-xs"
                             onBlur={async (ev) => {
