@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useI18n } from '@/components/I18nProviderClient';
 
 type CompanyRow = {
   client: {
@@ -35,6 +36,7 @@ function money(currency?: string, amount?: number) {
 }
 
 export default function SecretaryCompaniesClient({ initialItems, canEdit, canViewPeople }: Props) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
 
   const items = useMemo(() => {
@@ -61,8 +63,8 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Secretary</h1>
-          <div className="mt-1 text-sm text-black/60">Companies</div>
+          <h1 className="text-xl font-semibold">{t('nav.secretary')}</h1>
+          <div className="mt-1 text-sm text-black/60">{t('secretary.companies')}</div>
         </div>
         <div className="flex items-center gap-2 w-full justify-end">
           {canViewPeople ? (
@@ -70,7 +72,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
               href="/secretary/people"
               className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
             >
-              人员库
+              {t('secretary.peopleLibrary')}
             </Link>
           ) : null}
           <input
@@ -86,17 +88,17 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="bg-black/2">
             <tr className="text-left text-black/60">
-              <th className="px-4 py-3">公司名称</th>
-              <th className="px-4 py-3">会员</th>
-              <th className="px-4 py-3">注册号</th>
-              <th className="px-4 py-3">注册资本</th>
-              <th className="px-4 py-3">总股数</th>
-              <th className="px-4 py-3">RORC实控人</th>
-              <th className="px-4 py-3">秘书</th>
-              <th className="px-4 py-3">董事</th>
-              <th className="px-4 py-3">股东</th>
-              <th className="px-4 py-3">创建时间</th>
-              <th className="px-4 py-3">操作</th>
+              <th className="px-4 py-3">{t('secretary.companies')}</th>
+              <th className="px-4 py-3">{t('secretary.member')}</th>
+              <th className="px-4 py-3">{t('secretary.regNo')}</th>
+              <th className="px-4 py-3">{t('secretary.paidUpCapital')}</th>
+              <th className="px-4 py-3">{t('secretary.totalShares')}</th>
+              <th className="px-4 py-3">{t('secretary.rorcController')}</th>
+              <th className="px-4 py-3">{t('secretary.secretaryRole')}</th>
+              <th className="px-4 py-3">{t('secretary.directors')}</th>
+              <th className="px-4 py-3">{t('secretary.shareholders')}</th>
+              <th className="px-4 py-3">{t('secretary.createdAt')}</th>
+              <th className="px-4 py-3">{t('secretary.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -122,13 +124,13 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                       href={`/secretary/companies/${it.client.id}`}
                       className="rounded-md bg-[#2f7bdc] text-white px-3 py-1.5 text-xs font-medium"
                     >
-                      {canEdit ? '编辑' : '查看'}
+                      {canEdit ? t('common.edit') : t('common.view')}
                     </Link>
                     <Link
                       href={`/secretary/share-transfers?clientId=${encodeURIComponent(it.client.id)}`}
                       className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium"
                     >
-                      文件
+                      {t('common.files')}
                     </Link>
                   </div>
                 </td>
@@ -137,7 +139,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
             {items.length === 0 ? (
               <tr>
                 <td colSpan={11} className="px-4 py-10 text-center text-black/50">
-                  No results
+                  {t('common.noResults')}
                 </td>
               </tr>
             ) : null}

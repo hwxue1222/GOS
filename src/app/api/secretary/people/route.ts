@@ -3,14 +3,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { listPeopleWithRoleTags } from '@/lib/db';
 
-function roleLabel(role: string) {
-  if (role === 'DIRECTOR') return '董事';
-  if (role === 'SHAREHOLDER') return '股东';
-  if (role === 'RORC') return 'RORC';
-  if (role === 'SECRETARY') return '秘书';
-  return role;
-}
-
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
@@ -27,7 +19,6 @@ export async function GET() {
     items: rows.map((r) => ({
       ...r.person,
       roleTags: r.roleTags,
-      roleLabels: r.roleTags.map(roleLabel),
       companyCount: r.companyCount,
     })),
   });

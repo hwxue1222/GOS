@@ -1,6 +1,7 @@
 'use client';
 
 import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
+import { useI18n } from '@/components/I18nProviderClient';
 
 type Client = {
   id: string;
@@ -34,6 +35,7 @@ function money(currency?: string, amount?: number) {
 }
 
 export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white border border-black/5 p-5">
@@ -106,10 +108,10 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
       </div>
 
       <div className="rounded-xl bg-white border border-black/5 p-5">
-        <div className="text-sm font-semibold">扩展字段</div>
+        <div className="text-sm font-semibold">{t('company.extendedFields')}</div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="text-sm">
-            <div className="text-black/60">注册资本币种</div>
+            <div className="text-black/60">{t('company.paidUpCapitalCurrency')}</div>
             <select
               value={client.paidUpCapitalCurrency ?? ''}
               onChange={(e) => onChange({ paidUpCapitalCurrency: e.target.value || undefined })}
@@ -124,7 +126,7 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
             </select>
           </label>
           <label className="text-sm">
-            <div className="text-black/60">注册资本金额</div>
+            <div className="text-black/60">{t('company.paidUpCapitalAmount')}</div>
             <input
               value={typeof client.paidUpCapitalAmount === 'number' ? String(client.paidUpCapitalAmount) : ''}
               onChange={(e) => onChange({ paidUpCapitalAmount: e.target.value.trim() ? Number(e.target.value) : undefined })}
@@ -135,7 +137,7 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
             <div className="mt-1 text-xs text-black/40">{money(client.paidUpCapitalCurrency, client.paidUpCapitalAmount) || ''}</div>
           </label>
           <label className="text-sm">
-            <div className="text-black/60">总股数</div>
+            <div className="text-black/60">{t('company.totalShares')}</div>
             <input
               value={typeof client.totalShares === 'number' ? String(client.totalShares) : ''}
               onChange={(e) => onChange({ totalShares: e.target.value.trim() ? Number(e.target.value) : undefined })}
@@ -145,7 +147,7 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
             />
           </label>
           <label className="text-sm">
-            <div className="text-black/60">成立时间</div>
+            <div className="text-black/60">{t('company.incorporationDate')}</div>
             <input
               value={client.incorporationDate ?? ''}
               onChange={(e) => onChange({ incorporationDate: e.target.value || undefined })}
@@ -155,7 +157,7 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
             />
           </label>
           <label className="text-sm sm:col-span-2">
-            <div className="text-black/60">注册地址（Registered Office Address）</div>
+            <div className="text-black/60">{t('company.registeredOfficeAddress')}</div>
             <input
               value={client.registeredOfficeAddress ?? ''}
               onChange={(e) => onChange({ registeredOfficeAddress: e.target.value || undefined })}

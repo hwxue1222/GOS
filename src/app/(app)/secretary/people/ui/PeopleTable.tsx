@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/components/I18nProviderClient';
+
 type Person = {
   id: string;
   fullName: string;
@@ -12,16 +14,15 @@ type Person = {
   memberSince?: string;
   lastLoginDate?: string;
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
-  roleLabels?: string[];
   companyCount?: number;
   createdAt: string;
 };
 
-function tagClass(label: string) {
-  if (label === '董事') return 'bg-blue-50 text-blue-700 border-blue-100';
-  if (label === '股东') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-  if (label === '秘书') return 'bg-purple-50 text-purple-700 border-purple-100';
-  if (label === 'RORC') return 'bg-amber-50 text-amber-700 border-amber-100';
+function tagClass(role: string) {
+  if (role === 'DIRECTOR') return 'bg-blue-50 text-blue-700 border-blue-100';
+  if (role === 'SHAREHOLDER') return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (role === 'SECRETARY') return 'bg-purple-50 text-purple-700 border-purple-100';
+  if (role === 'RORC') return 'bg-amber-50 text-amber-700 border-amber-100';
   return 'bg-black/5 text-black/70 border-black/10';
 }
 
@@ -31,13 +32,23 @@ type Props = {
 };
 
 export default function PeopleTable({ people, loading }: Props) {
+  const { t, lang } = useI18n();
+
+  const roleLabel = (role: string) => {
+    if (role === 'DIRECTOR') return t('roles.director');
+    if (role === 'SHAREHOLDER') return t('roles.shareholder');
+    if (role === 'RORC') return t('roles.rorc');
+    if (role === 'SECRETARY') return t('roles.secretary');
+    return role;
+  };
+
   return (
     <div className="mt-6 rounded-xl bg-white border border-black/5 overflow-x-auto">
       <table className="min-w-[1650px] w-full text-sm">
         <thead className="bg-black/2">
           <tr className="text-left text-black/60">
             <th className="px-4 py-3">Name</th>
-            <th className="px-4 py-3">标签</th>
+            <th className="px-4 py-3">{t('people.tags')}</th>
             <th className="px-4 py-3">Email</th>
             <th className="px-4 py-3">Phone</th>
             <th className="px-4 py-3">ID</th>
@@ -63,13 +74,10 @@ export default function PeopleTable({ people, loading }: Props) {
                   <td className="px-4 py-3 font-medium">{p.fullName}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(p.roleLabels ?? []).length ? (
-                        p.roleLabels!.map((t) => (
-                          <span
-                            key={t}
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${tagClass(t)}`}
-                          >
-                            {t}
+                      {(p.roleTags ?? []).length ? (
+                        p.roleTags!.map((r) => (
+                          <span key={r} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${tagClass(r)}`}>
+                            {roleLabel(r)}
                           </span>
                         ))
                       ) : (
@@ -77,7 +85,7 @@ export default function PeopleTable({ people, loading }: Props) {
                       )}
                       {typeof p.companyCount === 'number' && p.companyCount > 0 ? (
                         <span className="inline-flex items-center rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs text-black/60">
-                          {`${p.companyCount}家公司`}
+                          {lang === 'zh' ? `${p.companyCount}${t('people.companyCountSuffix')}` : `${p.companyCount} ${t('people.companyCountSuffix')}`}
                         </span>
                       ) : null}
                     </div>
@@ -105,7 +113,7 @@ export default function PeopleTable({ people, loading }: Props) {
           {!loading && people.length === 0 ? (
             <tr>
               <td colSpan={11} className="px-4 py-10 text-center text-black/50">
-                No results
+                {t('common.noResults')}
               </td>
             </tr>
           ) : null}

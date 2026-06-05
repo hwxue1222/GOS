@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import UserMenuClient from '@/components/UserMenuClient';
 import { canManageTeam } from '@/lib/permissions';
+import LanguageToggleClient from '@/components/LanguageToggleClient';
+import { tServer } from '@/lib/i18n';
+import { getLangFromCookies } from '@/lib/i18n.server';
 
 type Props = {
   active: 'jobs' | 'clients' | 'invoices' | 'reports' | 'secretary';
@@ -32,6 +35,7 @@ function NavLink({
 export default async function AppTopNav({ active }: Props) {
   const user = await getCurrentUser();
   if (!user) return null;
+  const lang = await getLangFromCookies();
 
   return (
     <header className="bg-[#23323d] text-white">
@@ -42,23 +46,26 @@ export default async function AppTopNav({ active }: Props) {
           </div>
           <nav className="flex items-center gap-1 ml-2">
             <NavLink href="/jobs" active={active === 'jobs'}>
-              Jobs
+              {tServer(lang, 'nav.jobs')}
             </NavLink>
             <NavLink href="/clients" active={active === 'clients'}>
-              Clients
+              {tServer(lang, 'nav.clients')}
             </NavLink>
             <NavLink href="/invoices" active={active === 'invoices'}>
-              Invoices
+              {tServer(lang, 'nav.invoices')}
             </NavLink>
             <NavLink href="/secretary/companies" active={active === 'secretary'}>
-              Secretary
+              {tServer(lang, 'nav.secretary')}
             </NavLink>
             <NavLink href="/reports" active={active === 'reports'}>
-              Reports
+              {tServer(lang, 'nav.reports')}
             </NavLink>
           </nav>
         </div>
-        <UserMenuClient user={user} canManageTeam={canManageTeam(user)} />
+        <div className="flex items-center gap-3">
+          <LanguageToggleClient />
+          <UserMenuClient user={user} canManageTeam={canManageTeam(user)} />
+        </div>
       </div>
     </header>
   );

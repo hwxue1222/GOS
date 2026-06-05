@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 
+import { useI18n } from '@/components/I18nProviderClient';
+
 type Option = {
   value: string;
   label: string;
@@ -20,6 +22,7 @@ type Props = {
 };
 
 export default function InlineCombobox({ label, placeholder, value, disabled, options, onChange, maxItems }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const timer = useRef<number | null>(null);
@@ -79,7 +82,7 @@ export default function InlineCombobox({ label, placeholder, value, disabled, op
               }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-black/2 text-black/60"
             >
-              请选择
+              {t('roles.select')}
             </button>
             {filtered.length ? (
               filtered.map((it) => (
@@ -99,7 +102,7 @@ export default function InlineCombobox({ label, placeholder, value, disabled, op
                 </button>
               ))
             ) : (
-              <div className="px-3 py-2 text-sm text-black/40">无匹配</div>
+              <div className="px-3 py-2 text-sm text-black/40">{t('common.noMatch')}</div>
             )}
           </div>
         ) : null}
@@ -107,4 +110,3 @@ export default function InlineCombobox({ label, placeholder, value, disabled, op
     </div>
   );
 }
-

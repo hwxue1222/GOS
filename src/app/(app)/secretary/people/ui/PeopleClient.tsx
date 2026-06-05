@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import PeopleTable from '@/app/(app)/secretary/people/ui/PeopleTable';
+import { useI18n } from '@/components/I18nProviderClient';
 
 type Person = {
   id: string;
@@ -17,12 +18,12 @@ type Person = {
   memberSince?: string;
   lastLoginDate?: string;
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
-  roleLabels?: string[];
   companyCount?: number;
   createdAt: string;
 };
 
 export default function PeopleClient() {
+  const { t } = useI18n();
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -63,18 +64,18 @@ export default function PeopleClient() {
         <div>
           <div className="text-sm text-black/60">
             <Link href="/secretary/companies" className="text-[#2f7bdc] hover:underline">
-              Companies
+              {t('secretary.companies')}
             </Link>
             <span className="mx-2 text-black/30">/</span>
-            <span className="text-black/70">People</span>
+            <span className="text-black/70">{t('secretary.peopleLibrary')}</span>
           </div>
-          <h1 className="mt-1 text-xl font-semibold">人员库</h1>
-          <div className="mt-1 text-sm text-black/60">在公司详情页选择董事/股东/RORC/秘书。</div>
+          <h1 className="mt-1 text-xl font-semibold">{t('secretary.peopleLibrary')}</h1>
+          <div className="mt-1 text-sm text-black/60">{t('people.hint')}</div>
         </div>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name/email/phone/id"
+          placeholder={t('people.searchPlaceholder')}
           className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
         />
       </div>

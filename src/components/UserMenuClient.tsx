@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Role } from '@/lib/types';
+import { useI18n } from '@/components/I18nProviderClient';
 
 type Props = {
   user: { id: string; name: string; email: string; role: Role };
@@ -12,6 +13,7 @@ type Props = {
 
 export default function UserMenuClient({ user, canManageTeam }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,7 +61,7 @@ export default function UserMenuClient({ user, canManageTeam }: Props) {
               }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-white/10"
             >
-              Manage My Team
+              {t('menu.manageTeam')}
             </button>
           ) : null}
           <button
@@ -69,7 +71,7 @@ export default function UserMenuClient({ user, canManageTeam }: Props) {
             }}
             className="w-full text-left px-3 py-2 text-sm hover:bg-white/10"
           >
-            Edit My Profile
+            {t('menu.editProfile')}
           </button>
           <button
             onClick={() => {
@@ -78,11 +80,11 @@ export default function UserMenuClient({ user, canManageTeam }: Props) {
             }}
             className="w-full text-left px-3 py-2 text-sm hover:bg-white/10"
           >
-            Settings
+            {t('menu.settings')}
           </button>
           <div className="border-t border-white/10" />
           <button onClick={signOut} className="w-full text-left px-3 py-2 text-sm hover:bg-white/10">
-            Sign out
+            {t('menu.signOut')}
           </button>
         </div>
       ) : null}

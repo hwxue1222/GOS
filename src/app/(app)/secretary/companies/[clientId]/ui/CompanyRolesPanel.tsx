@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import InlineCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/InlineCombobox';
+import { useI18n } from '@/components/I18nProviderClient';
 
 type RoleRow = {
   role: { id: string; role: string; shares?: number };
@@ -47,6 +48,7 @@ export default function CompanyRolesPanel({
   onCreateLogin,
   onUpdateShareholderShares,
 }: Props) {
+  const { t } = useI18n();
   const [roleTab, setRoleTab] = useState<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>('DIRECTOR');
   const [selectedPersonId, setSelectedPersonId] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
@@ -80,30 +82,40 @@ export default function CompanyRolesPanel({
   return (
     <div className="rounded-xl bg-white border border-black/5 p-5">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold">人员与角色</div>
+        <div className="text-sm font-semibold">{t('secretary.peopleAndRoles')}</div>
         <Link href="/secretary/people" className="text-sm text-[#2f7bdc] hover:underline">
-          人员库
+          {t('secretary.peopleLibrary')}
         </Link>
       </div>
 
       <div className="mt-4 flex items-center gap-2">
-        {(['DIRECTOR', 'SHAREHOLDER', 'RORC', 'SECRETARY'] as const).map((t) => (
+        {(['DIRECTOR', 'SHAREHOLDER', 'RORC', 'SECRETARY'] as const).map((roleKey) => (
           <button
-            key={t}
-            onClick={() => setRoleTab(t)}
+            key={roleKey}
+            onClick={() => setRoleTab(roleKey)}
             className={[
               'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-              roleTab === t ? 'bg-[#23323d] text-white border-[#23323d]' : 'bg-white text-black/70 border-black/10 hover:bg-black/2',
+              roleTab === roleKey
+                ? 'bg-[#23323d] text-white border-[#23323d]'
+                : 'bg-white text-black/70 border-black/10 hover:bg-black/2',
             ].join(' ')}
           >
-            {t === 'DIRECTOR' ? '董事' : t === 'SHAREHOLDER' ? '股东' : t === 'RORC' ? 'RORC' : '秘书'}
+            {roleKey === 'DIRECTOR'
+              ? t('roles.director')
+              : roleKey === 'SHAREHOLDER'
+                ? t('roles.shareholder')
+                : roleKey === 'RORC'
+                  ? t('roles.rorc')
+                  : t('roles.secretary')}
           </button>
         ))}
       </div>
 
       {canEditRoles ? (
         <div className="mt-4">
-          <div className="text-xs text-black/50">{roleTab === 'SHAREHOLDER' ? '添加股东（人员或公司）' : '添加人员到当前角色'}</div>
+          <div className="text-xs text-black/50">
+            {roleTab === 'SHAREHOLDER' ? t('roles.addShareholder') : t('roles.addPerson')}
+          </div>
           <div className="mt-2 grid grid-cols-1 gap-2">
             {roleTab === 'SHAREHOLDER' ? (
               <div className="flex items-center gap-2">
@@ -112,22 +124,22 @@ export default function CompanyRolesPanel({
                   onChange={(e) => setShareType(e.target.value === 'COMPANY' ? 'COMPANY' : 'PERSON')}
                   className="w-[120px] rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
                 >
-                  <option value="PERSON">人员</option>
-                  <option value="COMPANY">公司</option>
+                  <option value="PERSON">{t('roles.person')}</option>
+                  <option value="COMPANY">{t('roles.company')}</option>
                 </select>
                 <input
                   value={shareQty}
                   onChange={(e) => setShareQty(e.target.value)}
                   inputMode="numeric"
-                  placeholder="股份数"
+                  placeholder={t('roles.shares')}
                   className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
               </div>
             ) : null}
             {roleTab === 'SHAREHOLDER' && shareType === 'COMPANY' ? (
               <InlineCombobox
-                label="公司"
-                placeholder="请选择"
+                label={t('roles.company')}
+                placeholder={t('roles.select')}
                 value={selectedCompanyId || undefined}
                 disabled={!canEditRoles}
                 options={companyCombo}
@@ -135,8 +147,8 @@ export default function CompanyRolesPanel({
               />
             ) : (
               <InlineCombobox
-                label={roleTab === 'SHAREHOLDER' ? '人员' : undefined}
-                placeholder="请选择"
+                label={roleTab === 'SHAREHOLDER' ? t('roles.person') : undefined}
+                placeholder={t('roles.select')}
                 value={selectedPersonId || undefined}
                 disabled={!canEditRoles}
                 options={personCombo}
@@ -170,26 +182,26 @@ export default function CompanyRolesPanel({
               }}
               className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium"
             >
-              添加
+              {t('roles.add')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="mt-4 text-xs text-black/50">只读：你可以查看角色信息。</div>
+        <div className="mt-4 text-xs text-black/50">{t('roles.readOnly')}</div>
       )}
 
       {roleTab === 'SHAREHOLDER' && typeof totalShares === 'number' && Number.isFinite(totalShares) ? (
         <div className="mt-4 text-xs">
-          <span className="text-black/50">股东股份合计：</span>
+          <span className="text-black/50">{t('roles.shareSummary')}：</span>
           <span className={shareSum === totalShares ? 'text-[#2a7f3a]' : 'text-red-600'}>{shareSum}</span>
-          <span className="text-black/50"> / 总股数：</span>
+          <span className="text-black/50"> / {t('roles.totalShares')}：</span>
           <span className="text-black/70">{totalShares}</span>
         </div>
       ) : null}
 
       <div className="mt-4 rounded-lg border border-black/5 overflow-hidden">
         {roleRows.length === 0 ? (
-          <div className="px-3 py-3 text-sm text-black/50">暂无</div>
+          <div className="px-3 py-3 text-sm text-black/50">{t('roles.none')}</div>
         ) : (
           <div className="divide-y divide-black/5">
             {roleRows.map((r) => {
