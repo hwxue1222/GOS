@@ -185,7 +185,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                 </div>
 
                 <div className="mt-5 text-xs italic text-black/70 text-center">
-                  "Thank you for your business. We do expect your payment on time, so please process the invoice within grant period. There will be 1.5% interest charge per month for late payment."
+                  &quot;Thank you for your business. We do expect your payment on time, so please process the invoice within grant period. There will be 1.5% interest charge per month for late payment.&quot;
                 </div>
 
                 <div className="mt-3 text-xs text-center text-black/70 italic">This is computer generated and no signature is required.</div>

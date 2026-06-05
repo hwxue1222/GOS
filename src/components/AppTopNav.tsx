@@ -50,7 +50,7 @@ export default async function AppTopNav({ active }: Props) {
             <NavLink href="/invoices" active={active === 'invoices'}>
               Invoices
             </NavLink>
-            <NavLink href="/secretary/share-transfers" active={active === 'secretary'}>
+            <NavLink href="/secretary/companies" active={active === 'secretary'}>
               Secretary
             </NavLink>
             <NavLink href="/reports" active={active === 'reports'}>

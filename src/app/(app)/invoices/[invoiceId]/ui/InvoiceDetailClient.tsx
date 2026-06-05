@@ -4,14 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
-import type { Currency, Invoice, InvoiceIssuer, InvoiceItem, InvoiceStatus } from '@/lib/types';
+import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus, Role } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
 type JobLite = { id: string; name: string };
-type UserLite = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+type CurrentUser = { id: string; name: string; email: string; role: Role };
 
 type Props = {
-  initialMe: UserLite;
+  initialMe: CurrentUser;
   initialInvoice: Invoice;
   initialClients: ClientLite[];
   createdByName: string;
@@ -72,7 +72,7 @@ export default function InvoiceDetailClient({
   createdByName,
   initialJob,
 }: Props) {
-  const [me] = useState<UserLite>(initialMe);
+  const [me] = useState<CurrentUser>(initialMe);
   const [clients] = useState<ClientLite[]>(initialClients);
   const [job] = useState<JobLite | null>(initialJob);
 

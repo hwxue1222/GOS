@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { usePersistedState } from '@/lib/usePersistedState';
-import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
+import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus, Role } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
-type UserLite = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+type UserLite = { id: string; name: string; email: string; role: Role };
 
 type InvoiceRow = {
   invoice: Invoice;

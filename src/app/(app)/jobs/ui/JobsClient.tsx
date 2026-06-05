@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
-import type { Permissions } from '@/lib/types';
+import type { Permissions, Role } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 
@@ -38,7 +38,7 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: 'owner' | 'manager' | 'staff';
+  role: Role;
   permissions?: Permissions;
 };
 

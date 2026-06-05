@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { getCurrentUser } from '@/lib/auth';
 import { findInvoiceById } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import type { Browser } from 'puppeteer-core';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -47,7 +48,7 @@ function toArrayBuffer(bytes: Uint8Array) {
 }
 
 async function getBrowser() {
-  const g = globalThis as unknown as { __gosPdfBrowserPromise?: Promise<any> };
+  const g = globalThis as unknown as { __gosPdfBrowserPromise?: Promise<Browser> };
   if (!g.__gosPdfBrowserPromise) {
     g.__gosPdfBrowserPromise = (async () => {
       const chromiumMod = await import('@sparticuz/chromium');
@@ -108,8 +109,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ invoiceId: stri
     await page.goto(printUrl, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 45_000 });
     await page.waitForSelector('#invoice-print-root', { timeout: 20_000 });
     await page.evaluate(async () => {
-      const fonts = (document as any).fonts;
-      if (fonts?.ready) await fonts.ready;
+      if (document.fonts?.ready) await document.fonts.ready;
     });
 
     const pdf = await page.pdf({

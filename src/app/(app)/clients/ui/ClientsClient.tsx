@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePersistedState } from '@/lib/usePersistedState';
 
+import type { Role } from '@/lib/types';
+
 type Client = {
   id: string;
   code: string;
@@ -18,7 +20,7 @@ type Client = {
   deletedAt?: string;
 };
 
-type User = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+type User = { id: string; name: string; email: string; role: Role };
 
 type Props = {
   initialMe: User;

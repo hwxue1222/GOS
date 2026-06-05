@@ -97,6 +97,11 @@ function normalizeDb(parsed: Db): Db {
     address: (c as Client).address,
     phone: (c as Client).phone,
     email: (c as Client).email,
+    paidUpCapitalCurrency: (c as Client).paidUpCapitalCurrency,
+    paidUpCapitalAmount: (c as Client).paidUpCapitalAmount,
+    totalShares: (c as Client).totalShares,
+    incorporationDate: (c as Client).incorporationDate,
+    registeredOfficeAddress: (c as Client).registeredOfficeAddress,
     deletedAt: (c as Client).deletedAt,
   }));
 
@@ -648,6 +653,11 @@ export async function createClient(input: {
   address?: string;
   phone?: string;
   email?: string;
+  paidUpCapitalCurrency?: Client['paidUpCapitalCurrency'];
+  paidUpCapitalAmount?: Client['paidUpCapitalAmount'];
+  totalShares?: Client['totalShares'];
+  incorporationDate?: Client['incorporationDate'];
+  registeredOfficeAddress?: Client['registeredOfficeAddress'];
   tags?: string[];
 }) {
   const db = await readDb();
@@ -666,6 +676,11 @@ export async function createClient(input: {
     address: input.address,
     phone: input.phone,
     email: input.email,
+    paidUpCapitalCurrency: input.paidUpCapitalCurrency,
+    paidUpCapitalAmount: input.paidUpCapitalAmount,
+    totalShares: input.totalShares,
+    incorporationDate: input.incorporationDate,
+    registeredOfficeAddress: input.registeredOfficeAddress,
     tags: input.tags ?? [],
     createdAt: nowIso(),
   };
@@ -686,7 +701,25 @@ export async function findClientById(id: string) {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<Pick<Client, 'code' | 'name' | 'companyRegistrationNo' | 'fye' | 'contactPerson' | 'address' | 'phone' | 'email' | 'tags'>>,
+  patch: Partial<
+    Pick<
+      Client,
+      | 'code'
+      | 'name'
+      | 'companyRegistrationNo'
+      | 'fye'
+      | 'contactPerson'
+      | 'address'
+      | 'phone'
+      | 'email'
+      | 'tags'
+      | 'paidUpCapitalCurrency'
+      | 'paidUpCapitalAmount'
+      | 'totalShares'
+      | 'incorporationDate'
+      | 'registeredOfficeAddress'
+    >
+  >,
 ) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);
@@ -773,6 +806,217 @@ export async function createPartyForPerson(person: Person) {
   db.parties.unshift(party);
   await writeDb(db);
   return party;
+}
+
+export async function getOrCreatePartyForPersonId(personId: string) {
+  const db = await readDb();
+  const person = db.persons.find((p) => p.id === personId) ?? null;
+  if (!person) return null;
+  const hit = db.parties.find((p) => p.type === 'PERSON' && p.personId === personId) ?? null;
+  if (hit) return hit;
+  const now = nowIso();
+  const party: Party = {
+    id: newId('pty'),
+    type: 'PERSON',
+    displayName: person.fullName,
+    personId: person.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.parties.unshift(party);
+  await writeDb(db);
+  return party;
+}
+
+export async function listClientPeopleRoles(clientId: string) {
+  const db = await readDb();
+  const roles = db.clientPartyRoles
+    .filter((r) => r.clientId === clientId)
+    .filter((r) => {
+      if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
+      if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
+      return true;
+    });
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+
+  const rows = roles
+    .map((r) => {
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) return null;
+      const person = personById.get(party.personId);
+      if (!person) return null;
+      return { role: r, party, person };
+    })
+    .filter((x): x is { role: ClientPartyRole; party: Party; person: Person } => x !== null);
+
+  return {
+    directors: rows.filter((x) => x.role.role === 'DIRECTOR'),
+    shareholders: rows.filter((x) => x.role.role === 'SHAREHOLDER'),
+    rorc: rows.filter((x) => x.role.role === 'RORC'),
+    secretaries: rows.filter((x) => x.role.role === 'SECRETARY'),
+  };
+}
+
+export async function addClientRoleByPersonId(input: { clientId: string; personId: string; role: ClientPartyRole['role'] }) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const person = db.persons.find((p) => p.id === input.personId) ?? null;
+  if (!person) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const party = db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) ?? null;
+  const now = nowIso();
+  const nextParty: Party =
+    party ??
+    ({
+      id: newId('pty'),
+      type: 'PERSON',
+      displayName: person.fullName,
+      personId: person.id,
+      createdAt: now,
+      updatedAt: now,
+    } as const);
+  if (!party) db.parties.unshift(nextParty);
+
+  const exists = db.clientPartyRoles.some((r) => {
+    if (r.clientId !== input.clientId) return false;
+    if (r.partyId !== nextParty.id) return false;
+    if (r.role !== input.role) return false;
+    if (input.role === 'DIRECTOR' || input.role === 'SECRETARY') return !r.resignationDate;
+    if (input.role === 'SHAREHOLDER' || input.role === 'RORC') return !r.toDate;
+    return true;
+  });
+  if (exists) return { ok: true as const };
+
+  const role: ClientPartyRole = {
+    id: newId('cpr'),
+    clientId: input.clientId,
+    partyId: nextParty.id,
+    role: input.role,
+    appointmentDate: input.role === 'DIRECTOR' || input.role === 'SECRETARY' ? now.slice(0, 10) : undefined,
+    fromDate: input.role === 'SHAREHOLDER' || input.role === 'RORC' ? now.slice(0, 10) : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.clientPartyRoles.unshift(role);
+  await writeDb(db);
+  return { ok: true as const, role };
+}
+
+export async function endClientRole(input: { clientId: string; roleId: string }) {
+  const db = await readDb();
+  const idx = db.clientPartyRoles.findIndex((r) => r.id === input.roleId && r.clientId === input.clientId);
+  if (idx < 0) return null;
+  const r = db.clientPartyRoles[idx];
+  const now = nowIso();
+  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') {
+    db.clientPartyRoles[idx] = { ...r, resignationDate: now.slice(0, 10), updatedAt: now };
+  } else {
+    db.clientPartyRoles[idx] = { ...r, toDate: now.slice(0, 10), updatedAt: now };
+  }
+  await writeDb(db);
+  return db.clientPartyRoles[idx];
+}
+
+export async function importPersons(input: { items: Array<Pick<Person, 'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address'>> }) {
+  const db = await readDb();
+  const now = nowIso();
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  const normalized = input.items
+    .map((x) => ({
+      fullName: (x.fullName ?? '').trim(),
+      email: (x.email ?? '').trim() || undefined,
+      phone: (x.phone ?? '').trim() || undefined,
+      idType: x.idType,
+      idNo: (x.idNo ?? '').trim() || undefined,
+      nationality: (x.nationality ?? '').trim() || undefined,
+      dob: (x.dob ?? '').trim() || undefined,
+      address: (x.address ?? '').trim() || undefined,
+    }))
+    .filter((x) => !!x.fullName);
+
+  for (const row of normalized) {
+    const emailKey = row.email?.toLowerCase() ?? '';
+    const hit = emailKey ? db.persons.find((p) => (p.email ?? '').toLowerCase() === emailKey) ?? null : null;
+    if (hit) {
+      const next: Person = {
+        ...hit,
+        fullName: row.fullName || hit.fullName,
+        email: row.email ?? hit.email,
+        phone: row.phone ?? hit.phone,
+        idType: row.idType ?? hit.idType,
+        idNo: row.idNo ?? hit.idNo,
+        nationality: row.nationality ?? hit.nationality,
+        dob: row.dob ?? hit.dob,
+        address: row.address ?? hit.address,
+        updatedAt: now,
+      };
+      const idx = db.persons.findIndex((p) => p.id === hit.id);
+      if (idx >= 0) db.persons[idx] = next;
+      updated++;
+      continue;
+    }
+    if (!row.email && !row.phone && !row.idNo) {
+      skipped++;
+      continue;
+    }
+    const person: Person = {
+      id: newId('per'),
+      fullName: row.fullName,
+      email: row.email,
+      phone: row.phone,
+      idType: row.idType,
+      idNo: row.idNo,
+      nationality: row.nationality,
+      dob: row.dob,
+      address: row.address,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    created++;
+  }
+  await writeDb(db);
+  return { ok: true as const, created, updated, skipped, total: normalized.length };
+}
+
+function makeTempPassword() {
+  return randomBytes(9).toString('base64url');
+}
+
+export async function createClientLoginForPerson(input: { personId: string }) {
+  const db = await readDb();
+  const person = db.persons.find((p) => p.id === input.personId) ?? null;
+  const email = person?.email?.trim() ?? '';
+  if (!person || !email) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const existing = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+  if (existing) return { ok: true as const, user: existing, tempPassword: null as string | null };
+  const baseName = person.fullName.trim() || email;
+  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+  const taken = new Set(db.users.map((u) => u.name.trim().toLowerCase()));
+  let name = baseName;
+  let idx = 1;
+  while (!name.trim() || taken.has(name.trim().toLowerCase()) || reserved.has(name.trim().toLowerCase())) {
+    idx++;
+    name = `${baseName} ${idx}`;
+  }
+  const tempPassword = makeTempPassword();
+  const user: User = {
+    id: newId('usr'),
+    name,
+    email,
+    role: 'client',
+    passwordHash: await hashPassword(tempPassword),
+    createdAt: nowIso(),
+  };
+  db.users.unshift(user);
+  reserved.add(name.trim().toLowerCase());
+  db.reservedNames = [...reserved];
+  await writeDb(db);
+  return { ok: true as const, user, tempPassword };
 }
 
 export async function listClientDirectors(clientId: string, opts?: { includeResigned?: boolean }) {

@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { Role } from '@/lib/types';
+
 type Props = {
-  user: { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+  user: { id: string; name: string; email: string; role: Role };
   canManageTeam: boolean;
 };
 

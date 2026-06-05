@@ -1,4 +1,4 @@
-export type Role = 'owner' | 'manager' | 'staff';
+export type Role = 'owner' | 'manager' | 'staff' | 'client';
 
 export type PermissionAction =
   | 'viewAssigned'
@@ -13,7 +13,7 @@ export type PermissionAction =
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices';
+export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices' | 'secretary' | 'people';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -45,6 +45,11 @@ export type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  paidUpCapitalCurrency?: Currency;
+  paidUpCapitalAmount?: number;
+  totalShares?: number;
+  incorporationDate?: string;
+  registeredOfficeAddress?: string;
   tags: string[];
   deletedAt?: string;
   createdAt: string;
@@ -171,7 +176,7 @@ export type ExternalCompany = {
   updatedAt?: string;
 };
 
-export type ClientPartyRoleType = 'DIRECTOR' | 'SHAREHOLDER';
+export type ClientPartyRoleType = 'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY';
 
 export type ClientPartyRole = {
   id: string;

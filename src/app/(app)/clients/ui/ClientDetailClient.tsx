@@ -6,6 +6,8 @@ import { formatDateDMY } from '@/lib/date';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { DateInputDMY } from '@/components/DateInputDMY';
 
+import type { Role } from '@/lib/types';
+
 type Client = {
   id: string;
   code: string;
@@ -35,7 +37,7 @@ type JobItem = {
   manager: { id: string; name: string } | null;
 };
 
-type User = { id: string; name: string; email: string; role: 'owner' | 'manager' | 'staff' };
+type User = { id: string; name: string; email: string; role: Role };
 
 type DirectorItem = {
   role: { id: string; appointmentDate?: string; resignationDate?: string };

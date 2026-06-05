@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 
+import type { Role } from '@/lib/types';
+
 type Job = {
   id: string;
   clientId: string;
@@ -40,7 +42,7 @@ type Props = {
   initialClient: { id: string; code: string; name: string } | null;
   initialClients: Array<{ id: string; code: string; name: string }>;
   initialTasks: JobTask[];
-  initialUsers: Array<{ id: string; name: string; role: 'owner' | 'manager' | 'staff' }>;
+  initialUsers: Array<{ id: string; name: string; role: Role }>;
   meId: string;
   canDeleteJob: boolean;
   canDuplicateJob: boolean;

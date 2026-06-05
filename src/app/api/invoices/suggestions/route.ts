@@ -41,8 +41,8 @@ export async function GET(req: Request) {
     const personById = new Map(db.persons.map((p) => [p.id, p]));
     const roles = db.clientPartyRoles
       .filter((r) => r.clientId === billTo.clientId)
-      .filter((r) => r.role === 'DIRECTOR' || r.role === 'SHAREHOLDER')
-      .filter((r) => !r.resignationDate);
+      .filter((r): r is typeof r & { role: 'DIRECTOR' | 'SHAREHOLDER' } => r.role === 'DIRECTOR' || r.role === 'SHAREHOLDER')
+      .filter((r) => (r.role === 'DIRECTOR' ? !r.resignationDate : !r.toDate));
 
     const seen = new Set<string>();
     for (const r of roles) {
@@ -64,4 +64,3 @@ export async function GET(req: Request) {
     notifyPeople,
   });
 }
-
