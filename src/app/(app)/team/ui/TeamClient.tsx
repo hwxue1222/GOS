@@ -30,6 +30,11 @@ const PERMISSION_TABLE: Array<{
   actions: PermissionAction[];
 }> = [
   {
+    module: 'secretary',
+    label: 'Secretary',
+    actions: ['viewAssigned', 'viewAll', 'create', 'update'],
+  },
+  {
     module: 'jobs',
     label: 'Jobs',
     actions: ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate'],
@@ -58,6 +63,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, trash: true },
       clients: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
+      secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
     };
   }
   if (role === 'manager') {
@@ -66,6 +72,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
       clients: { viewAssigned: true, viewAll: true, create: true, update: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
+      secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
     };
   }
   return {
@@ -73,6 +80,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
     tasks: { viewAssigned: true, complete: true },
     clients: { viewAssigned: true },
     staffs: {},
+    secretary: {},
   };
 }
 
