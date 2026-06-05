@@ -26,6 +26,7 @@ type CompanyRow = {
 type Props = {
   initialItems: CompanyRow[];
   canEdit: boolean;
+  canViewPeople?: boolean;
 };
 
 function money(currency?: string, amount?: number) {
@@ -33,7 +34,7 @@ function money(currency?: string, amount?: number) {
   return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default function SecretaryCompaniesClient({ initialItems, canEdit }: Props) {
+export default function SecretaryCompaniesClient({ initialItems, canEdit, canViewPeople }: Props) {
   const [search, setSearch] = useState('');
 
   const items = useMemo(() => {
@@ -63,12 +64,22 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit }: Prop
           <h1 className="text-xl font-semibold">Secretary</h1>
           <div className="mt-1 text-sm text-black/60">Companies</div>
         </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search company, reg no, person"
-          className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-        />
+        <div className="flex items-center gap-2 w-full justify-end">
+          {canViewPeople ? (
+            <Link
+              href="/secretary/people"
+              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+            >
+              人员库
+            </Link>
+          ) : null}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search company, reg no, person"
+            className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+          />
+        </div>
       </div>
 
       <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">

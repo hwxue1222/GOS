@@ -14,7 +14,10 @@ function roleLabel(role: string) {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'people', 'viewAll') && !hasPermission(user, 'people', 'viewAssigned')) {
+  if (user.role === 'client') {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+  if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -29,4 +32,3 @@ export async function GET() {
     })),
   });
 }
-
