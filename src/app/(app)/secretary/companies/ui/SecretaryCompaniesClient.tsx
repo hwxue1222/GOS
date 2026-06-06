@@ -137,9 +137,9 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
               <tr key={it.client.id} className="border-t border-black/5">
                 <td className="px-4 py-3">
                   <div className={it.client.isStruckOff ? 'font-medium text-red-600' : 'font-medium text-[#2f7bdc]'}>
-                    <Link href={companyHref(it.client.id)} className={it.client.isStruckOff ? '' : 'hover:underline'}>
+                    <a href={companyHref(it.client.id)} className={it.client.isStruckOff ? '' : 'hover:underline'}>
                       {it.client.name}
-                    </Link>
+                    </a>
                   </div>
                   {it.client.fka?.trim() ? <div className="mt-0.5 text-xs text-black/40">FKA: {it.client.fka}</div> : null}
                 </td>
@@ -153,12 +153,9 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                 <td className="px-4 py-3">{it.client.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Link
-                      href={companyHref(it.client.id)}
-                      className="rounded-md bg-[#2f7bdc] text-white px-3 py-1.5 text-xs font-medium"
-                    >
+                    <a href={companyHref(it.client.id)} className="rounded-md bg-[#2f7bdc] text-white px-3 py-1.5 text-xs font-medium">
                       {canEdit ? t('common.edit') : t('common.view')}
-                    </Link>
+                    </a>
                     <Link
                       href={`/secretary/share-transfers?clientId=${encodeURIComponent(it.client.id)}`}
                       className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium"
