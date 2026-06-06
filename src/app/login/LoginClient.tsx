@@ -13,8 +13,18 @@ export default function LoginClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function waitForSession(maxMs = 2500) {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      const res = await fetch('/api/me', { cache: 'no-store' }).catch(() => null);
+      if (res?.ok) return true;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return false;
+  }
+
   useEffect(() => {
-    fetch('/api/me')
+    fetch('/api/me', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (j?.ok) router.replace('/jobs');
@@ -37,6 +47,7 @@ export default function LoginClient() {
         setError(j?.error ?? `HTTP_${res.status}`);
         return;
       }
+      await waitForSession();
       router.replace(from);
     } catch {
       setError('NETWORK_ERROR');
