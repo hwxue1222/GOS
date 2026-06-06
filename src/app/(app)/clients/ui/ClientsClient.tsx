@@ -74,16 +74,6 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const visible = filtered.slice(pageStart, pageEnd);
 
   const canCreate = me?.role === 'owner' || me?.role === 'manager';
-  const canDelete = me?.role === 'owner';
-
-  async function deleteClientFromList(clientId: string) {
-    if (!canDelete) return;
-    const ok = window.confirm('Delete this client?');
-    if (!ok) return;
-    const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' }).catch(() => null);
-    if (!res?.ok) return;
-    setClients((prev) => prev.filter((c) => c.id !== clientId));
-  }
 
   async function addClient() {
     setError(null);
@@ -172,7 +162,6 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Address</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Phone</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Email</th>
-                <th className="px-2 py-2 font-medium w-20"></th>
               </tr>
             </thead>
             <tbody>
@@ -218,23 +207,11 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                       {c.email?.trim() ? c.email : '-'}
                     </div>
                   </td>
-                  <td className="px-2 py-2 whitespace-nowrap text-right">
-                    {canDelete ? (
-                      <button
-                        onClick={() => void deleteClientFromList(c.id)}
-                        className="rounded-md border border-red-200 bg-white text-red-600 px-2 py-1 text-xs hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
-                    ) : (
-                      <span className="text-black/30">-</span>
-                    )}
-                  </td>
                 </tr>
               ))}
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
                     No clients
                   </td>
                 </tr>
