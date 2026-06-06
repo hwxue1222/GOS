@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
+import { appendAuditLog, createInvoice, findClientById, listInvoices, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { newPublicToken } from '@/lib/id';
 import { hasPermission } from '@/lib/permissions';
@@ -217,6 +217,17 @@ export async function POST(req: Request) {
 
   const invoice = await createInvoice(payload);
 
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'invoices',
+    action: 'create',
+    entityType: 'invoice',
+    entityId: invoice.id,
+    summary: `Create invoice: ${invoice.invoiceNo || invoice.id}`,
+  });
+
   if (!sendNow) return NextResponse.json({ ok: true, invoice });
   if (!toEmails.length) {
     return NextResponse.json({ ok: true, invoice, send: { ok: false, error: 'MISSING_TO' as const } });
@@ -249,6 +260,17 @@ export async function POST(req: Request) {
   const sentAt = new Date().toISOString();
   const updated = await updateInvoice(invoice.id, { ...invoice, sentAt, recipients: { to: toEmails, cc: ccEmails } });
   await upsertInvoiceEmailHistory({ billTo: invoice.billTo, toEmails, ccEmails });
+
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'invoices',
+    action: 'send',
+    entityType: 'invoice',
+    entityId: invoice.id,
+    summary: `Send invoice: ${invoice.invoiceNo || invoice.id}`,
+  });
 
   return NextResponse.json({ ok: true, invoice: updated, send: { ok: true } });
 }

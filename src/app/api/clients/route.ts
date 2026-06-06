@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createClient, listClients, listJobs } from '@/lib/db';
+import { appendAuditLog, createClient, listClients, listJobs } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
@@ -71,5 +71,15 @@ export async function POST(req: Request) {
   }
 
   const client = await createClient({ code, name, fka, companyRegistrationNo, fye, contactPerson, address, phone, email, tags });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'clients',
+    action: 'create',
+    entityType: 'client',
+    entityId: client.id,
+    summary: `Create client: ${client.code} ${client.name}`,
+  });
   return NextResponse.json({ ok: true, client });
 }

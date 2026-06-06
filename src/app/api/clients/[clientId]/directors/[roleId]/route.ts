@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findClientById, updateClientDirector } from '@/lib/db';
+import { appendAuditLog, findClientById, updateClientDirector } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ clientId: string; roleId: string }> }) {
@@ -39,5 +39,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
     rolePatch: Object.keys(rolePatch).length ? rolePatch : undefined,
   });
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'clients',
+    action: 'update_director',
+    entityType: 'client_role',
+    entityId: roleId,
+    summary: `Update director for client: ${clientId}`,
+  });
   return NextResponse.json({ ok: true, director: updated });
 }

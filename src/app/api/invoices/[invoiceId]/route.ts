@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { deleteInvoice, findClientById, findInvoiceById, updateInvoice } from '@/lib/db';
+import { appendAuditLog, deleteInvoice, findClientById, findInvoiceById, updateInvoice } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus } from '@/lib/types';
 
@@ -251,6 +251,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
 
   const invoice = await updateInvoice(invoiceId, next);
   if (!invoice) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'invoices',
+    action: wantsStatusChange && status === 'PAID' ? 'mark_paid' : 'update',
+    entityType: 'invoice',
+    entityId: invoiceId,
+    summary: `${wantsStatusChange && status === 'PAID' ? 'Mark paid' : 'Update'} invoice: ${invoice.invoiceNo || invoice.id}`,
+  });
+
   return NextResponse.json({ ok: true, invoice });
 }
 
@@ -264,5 +276,17 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ invoiceId: 
   const { invoiceId } = await ctx.params;
   const invoice = await deleteInvoice(invoiceId);
   if (!invoice) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'invoices',
+    action: 'delete',
+    entityType: 'invoice',
+    entityId: invoiceId,
+    summary: `Delete invoice: ${invoice.invoiceNo || invoice.id}`,
+  });
+
   return NextResponse.json({ ok: true, invoice });
 }

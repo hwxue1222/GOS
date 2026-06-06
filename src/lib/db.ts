@@ -12,6 +12,7 @@ import type {
   Db,
   Document,
   ExternalCompany,
+  AuditLog,
   Invoice,
   InvoiceEmailHistory,
   Job,
@@ -69,6 +70,7 @@ function emptyDb(): Db {
     shareTransfers: [],
     jobs: [],
     tasks: [],
+    auditLogs: [],
     reservedNames: [],
     seed: {},
   };
@@ -1094,6 +1096,25 @@ function normalizeDb(parsed: Db): Db {
     updatedAt: (t as ShareTransfer).updatedAt ?? (t as ShareTransfer).createdAt,
   }));
 
+  const rawAuditLogs = (parsed as unknown as { auditLogs?: unknown }).auditLogs;
+  const auditLogs: AuditLog[] = Array.isArray(rawAuditLogs)
+    ? (rawAuditLogs as unknown as AuditLog[])
+        .map((l) => ({
+          id: String((l as AuditLog).id ?? ''),
+          createdAt: String((l as AuditLog).createdAt ?? nowIso()),
+          actorUserId: typeof (l as AuditLog).actorUserId === 'string' ? (l as AuditLog).actorUserId : undefined,
+          actorName: typeof (l as AuditLog).actorName === 'string' ? (l as AuditLog).actorName : undefined,
+          actorRole: (l as AuditLog).actorRole,
+          area: (l as AuditLog).area,
+          action: String((l as AuditLog).action ?? ''),
+          entityType: typeof (l as AuditLog).entityType === 'string' ? (l as AuditLog).entityType : undefined,
+          entityId: typeof (l as AuditLog).entityId === 'string' ? (l as AuditLog).entityId : undefined,
+          summary: String((l as AuditLog).summary ?? ''),
+        }))
+        .filter((l) => !!l.id && !!l.createdAt && !!l.area && !!l.action && !!l.summary)
+        .slice(-5000)
+    : [];
+
   return {
     users,
     sessions: parsed.sessions ?? [],
@@ -1112,6 +1133,7 @@ function normalizeDb(parsed: Db): Db {
     shareTransfers,
     jobs,
     tasks: tasks as unknown as JobTask[],
+    auditLogs,
     reservedNames: [...reservedSet],
     seed:
       typeof (parsed as unknown as { seed?: unknown }).seed === 'object' && (parsed as unknown as { seed?: unknown }).seed
@@ -5147,6 +5169,27 @@ export async function readDb(): Promise<Db> {
 
 export async function writeDb(db: Db) {
   await writeDbRaw(db);
+}
+
+export async function appendAuditLog(entry: Omit<AuditLog, 'id' | 'createdAt'> & { createdAt?: string }) {
+  const db = await readDb();
+  const log: AuditLog = {
+    id: newId('log'),
+    createdAt: entry.createdAt ?? nowIso(),
+    actorUserId: entry.actorUserId,
+    actorName: entry.actorName,
+    actorRole: entry.actorRole,
+    area: entry.area,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    summary: entry.summary,
+  };
+  const prev = Array.isArray((db as unknown as { auditLogs?: unknown }).auditLogs) ? ((db as unknown as { auditLogs?: AuditLog[] }).auditLogs ?? []) : [];
+  const next = [...prev, log];
+  db.auditLogs = next.length > 5000 ? next.slice(-5000) : next;
+  await writeDbRaw(db);
+  return log;
 }
 
 export async function findUserByEmail(email: string) {

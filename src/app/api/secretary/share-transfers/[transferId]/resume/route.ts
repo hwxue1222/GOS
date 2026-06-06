@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { resumeShareTransfer } from '@/lib/db';
+import { appendAuditLog, resumeShareTransfer } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
 
 export async function POST(req: Request, { params }: { params: Promise<{ transferId: string }> }) {
@@ -11,6 +11,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ transfe
   const { transferId } = await params;
   const r = await resumeShareTransfer(transferId);
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'resume_share_transfer',
+    entityType: 'share_transfer',
+    entityId: transferId,
+    summary: `Resume share transfer: ${transferId}`,
+  });
 
   const origin = req.headers.get('origin')?.trim();
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();

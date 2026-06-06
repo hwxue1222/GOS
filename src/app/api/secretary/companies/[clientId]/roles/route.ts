@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { addClientRole, endClientRole, readDb, updateClientShareholderShares } from '@/lib/db';
+import { addClientRole, appendAuditLog, endClientRole, readDb, updateClientShareholderShares } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
@@ -65,6 +65,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   }
   const r = await addClientRole({ clientId, role, personId: personId || undefined, companyClientId: companyClientId || undefined, shares });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'add_role',
+    entityType: 'client',
+    entityId: clientId,
+    summary: `Add role ${role} for client: ${clientId}`,
+  });
   return NextResponse.json({ ok: true });
 }
 
@@ -95,6 +105,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
   if (!roleId || !Number.isFinite(shares)) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const r = await updateClientShareholderShares({ clientId, roleId, shares });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'update_shares',
+    entityType: 'client_role',
+    entityId: roleId,
+    summary: `Update shareholder shares for client: ${clientId}`,
+  });
   return NextResponse.json({ ok: true });
 }
 
@@ -118,5 +138,15 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ clientId: st
   if (!roleId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const updated = await endClientRole({ clientId, roleId });
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'end_role',
+    entityType: 'client_role',
+    entityId: roleId,
+    summary: `End role for client: ${clientId}`,
+  });
   return NextResponse.json({ ok: true });
 }

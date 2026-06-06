@@ -160,6 +160,21 @@ export type Person = {
   deletedAt?: string;
 };
 
+export type AuditArea = 'jobs' | 'clients' | 'invoices' | 'secretary' | 'members';
+
+export type AuditLog = {
+  id: string;
+  createdAt: string;
+  actorUserId?: string;
+  actorName?: string;
+  actorRole?: Role;
+  area: AuditArea;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  summary: string;
+};
+
 export type PartyType = 'PERSON' | 'COMPANY';
 
 export type Party = {
@@ -353,6 +368,7 @@ export type Db = {
   shareTransfers: ShareTransfer[];
   jobs: Job[];
   tasks: JobTask[];
+  auditLogs?: AuditLog[];
   reservedNames?: string[];
   seed?: Record<string, boolean>;
 };

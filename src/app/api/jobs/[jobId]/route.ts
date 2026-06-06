@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import {
+  appendAuditLog,
   createJobWithTasks,
   completeAllTasksForJob,
   deleteJob,
@@ -122,6 +123,30 @@ export async function PATCH(
   const updated = await updateJob(jobId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
+  if (typeof body?.completed === 'boolean') {
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'jobs',
+      action: body.completed ? 'complete' : 'uncomplete',
+      entityType: 'job',
+      entityId: jobId,
+      summary: `${body.completed ? 'Complete' : 'Uncomplete'} job: ${updated.name}`,
+    });
+  } else {
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'jobs',
+      action: 'update',
+      entityType: 'job',
+      entityId: jobId,
+      summary: `Update job: ${updated.name}`,
+    });
+  }
+
   const justCompleted = wantsCompleted && body?.completed === true && !job.completed;
   const effectiveRepeat = typeof body?.repeat === 'string' ? repeat : job.repeat;
   const effectiveDueDate = typeof body?.dueDate === 'string' ? dueDate : job.dueDate;
@@ -185,5 +210,15 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ jobI
   const { jobId } = await params;
   const deleted = await deleteJob(jobId);
   if (!deleted) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'jobs',
+    action: 'delete',
+    entityType: 'job',
+    entityId: jobId,
+    summary: `Delete job: ${deleted.name}`,
+  });
   return NextResponse.json({ ok: true });
 }

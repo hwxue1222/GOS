@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { addClientDirector, findClientById, listClientDirectors, listJobs, listTasksByJob } from '@/lib/db';
+import { addClientDirector, appendAuditLog, findClientById, listClientDirectors, listJobs, listTasksByJob } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req: Request, { params }: { params: Promise<{ clientId: string }> }) {
@@ -67,6 +67,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     typeof body?.appointmentDate === 'string' ? body.appointmentDate.trim() || undefined : undefined;
 
   const created = await addClientDirector({ clientId, fullName, email, phone, appointmentDate });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'clients',
+    action: 'add_director',
+    entityType: 'client',
+    entityId: clientId,
+    summary: `Add director for client: ${clientId}`,
+  });
   return NextResponse.json({ ok: true, director: created });
 }
-

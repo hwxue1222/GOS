@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createPerson, listPersons } from '@/lib/db';
+import { appendAuditLog, createPerson, listPersons } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
@@ -48,6 +48,16 @@ export async function POST(req: Request) {
     address: body?.address?.trim() || undefined,
     memberSince: body?.memberSince?.trim() || undefined,
     lastLoginDate: body?.lastLoginDate?.trim() || undefined,
+  });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'members',
+    action: 'create',
+    entityType: 'person',
+    entityId: person.id,
+    summary: `Create member: ${person.fullName}`,
   });
   return NextResponse.json({ ok: true, person });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { deleteClient, findClientById, listJobs, listTasksByJob, updateClient } from '@/lib/db';
+import { appendAuditLog, deleteClient, findClientById, listJobs, listTasksByJob, updateClient } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(_: Request, { params }: { params: Promise<{ clientId: string }> }) {
@@ -104,6 +104,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ client
     ...(tags ? { tags } : {}),
   });
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'clients',
+    action: 'update',
+    entityType: 'client',
+    entityId: clientId,
+    summary: `Update client: ${updated.code} ${updated.name}`,
+  });
   return NextResponse.json({ ok: true, client: updated });
 }
 
@@ -121,5 +131,15 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ clientI
 
   const deleted = await deleteClient(clientId);
   if (!deleted) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'clients',
+    action: 'delete',
+    entityType: 'client',
+    entityId: clientId,
+    summary: `Delete client: ${deleted.code} ${deleted.name}`,
+  });
   return NextResponse.json({ ok: true });
 }

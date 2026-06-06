@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findInvoiceById, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
+import { appendAuditLog, findInvoiceById, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { newPublicToken } from '@/lib/id';
 import { hasPermission } from '@/lib/permissions';
@@ -131,6 +131,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   });
 
   await upsertInvoiceEmailHistory({ billTo: invoice.billTo, toEmails: to, ccEmails: cc });
+
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'invoices',
+    action: 'send',
+    entityType: 'invoice',
+    entityId: invoice.id,
+    summary: `Send invoice: ${invoice.invoiceNo || invoice.id}`,
+  });
 
   return NextResponse.json({ ok: true, invoice: updated });
 }

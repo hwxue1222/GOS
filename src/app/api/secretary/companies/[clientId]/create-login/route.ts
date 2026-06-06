@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createClientLoginForPerson } from '@/lib/db';
+import { appendAuditLog, createClientLoginForPerson } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function POST(req: Request) {
@@ -15,6 +15,15 @@ export async function POST(req: Request) {
   if (!personId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const r = await createClientLoginForPerson({ personId });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'create_login',
+    entityType: 'person',
+    entityId: personId,
+    summary: `Create client login for person: ${personId}`,
+  });
   return NextResponse.json({ ok: true, user: r.user, tempPassword: r.tempPassword });
 }
-

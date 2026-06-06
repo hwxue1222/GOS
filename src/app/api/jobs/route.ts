@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createJobWithRecurringCopy, createJobWithTasks, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
+import { appendAuditLog, createJobWithRecurringCopy, createJobWithTasks, listClients, listJobs, listTasksByJob, listUsers } from '@/lib/db';
 import { computeJobStatus } from '@/lib/jobStatus';
 import type { JobRepeat, TaskStatus } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
@@ -229,9 +229,29 @@ export async function POST(req: Request) {
       recurringJob: { ...baseJob, dueDate: recurringDueDate },
       recurringTasks,
     });
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'jobs',
+      action: 'create',
+      entityType: 'job',
+      entityId: created.job.id,
+      summary: `Create job: ${created.job.name}`,
+    });
     return NextResponse.json({ ok: true, job: created.job });
   }
 
   const created = await createJobWithTasks(baseJob, baseTasks);
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'jobs',
+    action: 'create',
+    entityType: 'job',
+    entityId: created.job.id,
+    summary: `Create job: ${created.job.name}`,
+  });
   return NextResponse.json({ ok: true, job: created.job });
 }

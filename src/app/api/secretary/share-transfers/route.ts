@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createShareTransferRequest, listClients, listShareTransfers } from '@/lib/db';
+import { appendAuditLog, createShareTransferRequest, listClients, listShareTransfers } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
 
 export async function GET() {
@@ -48,6 +48,16 @@ export async function POST(req: Request) {
 
   const r = await createShareTransferRequest({ clientId, transferor, transferee, shares, shareClass, effectiveDate });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'create_share_transfer',
+    entityType: 'share_transfer',
+    entityId: r.transfer.id,
+    summary: `Create share transfer: ${r.transfer.id}`,
+  });
   const origin = req.headers.get('origin')?.trim();
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
   const proto = req.headers.get('x-forwarded-proto')?.trim() || 'https';
