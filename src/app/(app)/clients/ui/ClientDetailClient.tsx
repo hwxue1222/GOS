@@ -98,22 +98,46 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [corpRepPickPersonId, setCorpRepPickPersonId] = useState('');
   const [corpRepSignLinks, setCorpRepSignLinks] = useState<Array<{ email: string; url: string }> | null>(null);
 
+  const dueSortValue = (dueDate?: string) => {
+    if (!dueDate) return Number.POSITIVE_INFINITY;
+    const head = dueDate.trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(head)) {
+      const t = new Date(`${head}T00:00:00Z`).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(head)) {
+      const [dd, mm, yyyy] = head.split('/');
+      const iso = `${yyyy}-${mm}-${dd}`;
+      const t = new Date(`${iso}T00:00:00Z`).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    }
+    const t = new Date(dueDate).getTime();
+    return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return jobs.filter((it) => {
-      if (it.job.deletedAt) return false;
-      const isComplete =
-        !!it.job.completed || it.job.status === 'Complete' || (it.tasks.total > 0 && it.tasks.done === it.tasks.total);
-      if (jobView === 'complete') {
-        if (!isComplete) return false;
-      } else {
-        if (isComplete) return false;
-      }
-      if (q) {
-        if (!`${it.job.name} ${it.job.label ?? ''}`.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
+    return [...jobs]
+      .filter((it) => {
+        if (it.job.deletedAt) return false;
+        const isComplete =
+          !!it.job.completed || it.job.status === 'Complete' || (it.tasks.total > 0 && it.tasks.done === it.tasks.total);
+        if (jobView === 'complete') {
+          if (!isComplete) return false;
+        } else {
+          if (isComplete) return false;
+        }
+        if (q) {
+          if (!`${it.job.name} ${it.job.label ?? ''}`.toLowerCase().includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const da = dueSortValue(a.job.dueDate);
+        const db = dueSortValue(b.job.dueDate);
+        if (da !== db) return da - db;
+        return a.job.id.localeCompare(b.job.id);
+      });
   }, [jobView, jobs, search]);
 
   const todayYmd = new Date().toISOString().slice(0, 10);
