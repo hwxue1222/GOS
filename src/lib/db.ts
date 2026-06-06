@@ -279,6 +279,124 @@ function rankClientForDedupe(c: Client) {
   };
 }
 
+function countClientRefs(db: Db, clientId: string) {
+  let refs = 0;
+  for (const r of db.clientPartyRoles) if (r.clientId === clientId) refs++;
+  for (const j of db.jobs) if (j.clientId === clientId) refs++;
+  for (const t of db.shareTransfers) if (t.clientId === clientId) refs++;
+  for (const inv of db.invoices) if (inv.billTo?.type === 'CLIENT' && inv.billTo.clientId === clientId) refs++;
+  for (const p of db.parties) if (p.clientId === clientId) refs++;
+  return refs;
+}
+
+function countClientFilledFields(c: Client) {
+  const candidates: Array<unknown> = [
+    c.companyRegistrationNo,
+    c.fye,
+    c.contactPerson,
+    c.address,
+    c.phone,
+    c.email,
+    c.businessActivities,
+    c.ssicPrimaryCode,
+    c.ssicSecondaryCode,
+    c.paidUpCapitalCurrency,
+    c.paidUpCapitalAmount,
+    c.totalShares,
+    c.incorporationDate,
+    c.registeredOfficeAddress,
+  ];
+  let filled = 0;
+  for (const v of candidates) {
+    if (v === undefined || v === null) continue;
+    if (typeof v === 'string' && !v.trim()) continue;
+    filled++;
+  }
+  return filled;
+}
+
+function choosePrimaryClientForMerge(db: Db, list: Client[]) {
+  const scored = list.map((c) => {
+    const r = rankClientForDedupe(c);
+    const refs = countClientRefs(db, c.id);
+    const filled = countClientFilledFields(c);
+    const nonScBonus = r.isSc === 1 ? 0 : 50;
+    return { c, score: refs * 10 + filled + nonScBonus };
+  });
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const ra = rankClientForDedupe(a.c);
+    const rb = rankClientForDedupe(b.c);
+    if (ra.isSc !== rb.isSc) return ra.isSc - rb.isSc;
+    if (ra.code !== rb.code) return ra.code.localeCompare(rb.code);
+    return ra.createdAt.localeCompare(rb.createdAt);
+  });
+  return scored[0]?.c ?? list[0];
+}
+
+function dedupeClientsByNormalizedNameAlways(db: Db) {
+  const active = db.clients.filter((c) => !c.deletedAt);
+  const groups = new Map<string, Client[]>();
+  for (const c of active) {
+    const nameKey = normalizeClientNameForMerge(String(c.name ?? ''));
+    if (!nameKey) continue;
+    const list = groups.get(nameKey) ?? [];
+    list.push(c);
+    groups.set(nameKey, list);
+  }
+
+  let changed = false;
+  for (const list of groups.values()) {
+    if (list.length <= 1) continue;
+
+    const regBuckets = new Map<string, Client[]>();
+    const emptyBucket: Client[] = [];
+    const nonEmptyRegSet = new Set<string>();
+
+    for (const c of list) {
+      const reg = (c.companyRegistrationNo ?? '').trim();
+      if (!reg) {
+        emptyBucket.push(c);
+        continue;
+      }
+      nonEmptyRegSet.add(reg);
+      const b = regBuckets.get(reg) ?? [];
+      b.push(c);
+      regBuckets.set(reg, b);
+    }
+
+    for (const bucket of regBuckets.values()) {
+      if (bucket.length <= 1) continue;
+      const primary = choosePrimaryClientForMerge(db, bucket);
+      for (const dup of bucket) {
+        if (dup.id === primary.id) continue;
+        if (mergeClientInto(db, dup.id, primary.id)) changed = true;
+      }
+    }
+
+    if (emptyBucket.length > 1 && nonEmptyRegSet.size === 0) {
+      const primary = choosePrimaryClientForMerge(db, emptyBucket);
+      for (const dup of emptyBucket) {
+        if (dup.id === primary.id) continue;
+        if (mergeClientInto(db, dup.id, primary.id)) changed = true;
+      }
+    }
+
+    if (emptyBucket.length && nonEmptyRegSet.size === 1) {
+      const reg = Array.from(nonEmptyRegSet)[0];
+      const targetBucket = regBuckets.get(reg) ?? [];
+      if (targetBucket.length) {
+        const primary = choosePrimaryClientForMerge(db, targetBucket);
+        for (const dup of emptyBucket) {
+          if (dup.id === primary.id) continue;
+          if (mergeClientInto(db, dup.id, primary.id)) changed = true;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
 function dedupeClientsByNormalizedNameV1(db: Db) {
   if (!db.seed) db.seed = {};
   if (db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1]) return false;
@@ -4642,8 +4760,6 @@ export async function readDb(): Promise<Db> {
   let changed = false;
 
   if (migrateClientCodesV1(db)) changed = true;
-  if (dedupeClientsByNormalizedNameV1(db)) changed = true;
-  if (dedupeClientsByNormalizedNameV2(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
@@ -4652,6 +4768,7 @@ export async function readDb(): Promise<Db> {
   if (seedSecretaryCompaniesFromScreenshot5(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot6(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot7(db)) changed = true;
+  if (dedupeClientsByNormalizedNameAlways(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
 
   if (db.users.length === 0) {
