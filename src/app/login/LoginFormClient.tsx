@@ -61,6 +61,16 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
       await waitForSession();
       const me = await fetch('/api/me', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const role = me?.user?.role as string | undefined;
+      if (mode === 'portal' && role !== 'client') {
+        await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
+        setError('PLEASE_USE_COMPANY_ACCOUNT');
+        return;
+      }
+      if (mode === 'admin' && role === 'client') {
+        await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
+        setError('PLEASE_USE_STAFF_ACCOUNT');
+        return;
+      }
       if (mode === 'portal') {
         router.replace(role === 'client' ? from : '/jobs');
       } else {
@@ -102,7 +112,15 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
           />
         </label>
 
-        {error ? <div className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
+        {error ? (
+          <div className="mt-4 text-sm text-red-600 dark:text-red-400">
+            {error === 'PLEASE_USE_COMPANY_ACCOUNT'
+              ? '请使用公司账号登录前台（Portal）'
+              : error === 'PLEASE_USE_STAFF_ACCOUNT'
+                ? '请使用员工账号登录后台（Admin）'
+                : error}
+          </div>
+        ) : null}
 
         <button
           disabled={loading}
@@ -114,4 +132,3 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
     </main>
   );
 }
-

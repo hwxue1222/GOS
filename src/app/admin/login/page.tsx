@@ -1,6 +1,10 @@
 import { Suspense } from 'react';
 import LoginFormClient from '@/app/login/LoginFormClient';
 
+export const metadata = {
+  title: 'GOS Admin Login',
+};
+
 export default function AdminLoginPage() {
   return (
     <Suspense
@@ -10,4 +14,3 @@ export default function AdminLoginPage() {
     </Suspense>
   );
 }
-
