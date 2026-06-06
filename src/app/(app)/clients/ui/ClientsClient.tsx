@@ -54,8 +54,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     | {
         processed: number;
         updated: Array<{ id: string; code: string; name: string; uen: string }>;
-        mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }>;
-        notFound: Array<{ id: string; code: string; name: string; uen: string }>;
+        mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string; url?: string }>;
+        notFound: Array<{ id: string; code: string; name: string; uen: string; url?: string; httpStatus?: number }>;
         errors: Array<{ id: string; code: string; name: string; uen: string; error: string }>;
       }
     | null
@@ -212,8 +212,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
             ok?: boolean;
             processed?: number;
             updated?: Array<{ id: string; code: string; name: string; uen: string }>;
-            mismatched?: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }>;
-            notFound?: Array<{ id: string; code: string; name: string; uen: string }>;
+            mismatched?: Array<{ id: string; code: string; name: string; uen: string; foundName?: string; url?: string }>;
+            notFound?: Array<{ id: string; code: string; name: string; uen: string; url?: string; httpStatus?: number }>;
             errors?: Array<{ id: string; code: string; name: string; uen: string; error: string }>;
           }
         | null;
@@ -323,6 +323,86 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
           <div className="mt-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-xs text-black/70">
             Processed: {enrichResult.processed} | Updated: {enrichResult.updated.length} | Mismatched: {enrichResult.mismatched.length} | Not found:{' '}
             {enrichResult.notFound.length} | Errors: {enrichResult.errors.length}
+
+            {enrichResult.mismatched.length ? (
+              <div className="mt-2">
+                <div className="font-medium text-black/60">Mismatched (name vs source)</div>
+                <div className="mt-1 max-h-[180px] overflow-auto rounded-lg border border-black/10">
+                  <table className="min-w-full text-xs">
+                    <thead className="text-left text-black/50">
+                      <tr className="border-b border-black/10">
+                        <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
+                        <th className="px-2 py-2 font-medium">Client</th>
+                        <th className="px-2 py-2 font-medium">Found</th>
+                        <th className="px-2 py-2 font-medium whitespace-nowrap">UEN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enrichResult.mismatched.slice(0, 50).map((r) => (
+                        <tr key={r.id} className="border-b border-black/10">
+                          <td className="px-2 py-2 whitespace-nowrap">{r.code}</td>
+                          <td className="px-2 py-2">
+                            <a href={`/secretary/companies/${encodeURIComponent(r.id)}`} className="text-[#2f7bdc] hover:underline">
+                              {r.name}
+                            </a>
+                          </td>
+                          <td className="px-2 py-2">{r.foundName ?? '-'}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {r.url ? (
+                              <a href={r.url} target="_blank" rel="noreferrer" className="text-[#2f7bdc] hover:underline">
+                                {r.uen}
+                              </a>
+                            ) : (
+                              r.uen
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
+            {enrichResult.notFound.length ? (
+              <div className="mt-3">
+                <div className="font-medium text-black/60">Not found / blocked</div>
+                <div className="mt-1 max-h-[180px] overflow-auto rounded-lg border border-black/10">
+                  <table className="min-w-full text-xs">
+                    <thead className="text-left text-black/50">
+                      <tr className="border-b border-black/10">
+                        <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
+                        <th className="px-2 py-2 font-medium">Client</th>
+                        <th className="px-2 py-2 font-medium whitespace-nowrap">UEN</th>
+                        <th className="px-2 py-2 font-medium whitespace-nowrap">HTTP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enrichResult.notFound.slice(0, 50).map((r) => (
+                        <tr key={r.id} className="border-b border-black/10">
+                          <td className="px-2 py-2 whitespace-nowrap">{r.code}</td>
+                          <td className="px-2 py-2">
+                            <a href={`/secretary/companies/${encodeURIComponent(r.id)}`} className="text-[#2f7bdc] hover:underline">
+                              {r.name}
+                            </a>
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {r.url ? (
+                              <a href={r.url} target="_blank" rel="noreferrer" className="text-[#2f7bdc] hover:underline">
+                                {r.uen}
+                              </a>
+                            ) : (
+                              r.uen
+                            )}
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap">{typeof r.httpStatus === 'number' ? String(r.httpStatus) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

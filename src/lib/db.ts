@@ -5559,7 +5559,7 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   const uen = String(client.companyRegistrationNo ?? '').trim().toUpperCase();
   if (!uen) return { status: 'SKIP_NO_UEN' as const };
 
-  const slug = slugifyCompaniesSgName(client.name);
+  const slug = slugifyCompaniesSgName(client.name) || 'x-';
   const url = `https://www.companies.sg/business/${encodeURIComponent(uen)}/${encodeURIComponent(slug)}`;
 
   const controller = new AbortController();
@@ -5572,7 +5572,13 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
     },
   }).finally(() => clearTimeout(t));
 
-  if (!res.ok) return { status: 'NOT_FOUND' as const, url };
+  if (!res.ok) {
+    return {
+      status: 'NOT_FOUND' as const,
+      url,
+      httpStatus: res.status,
+    };
+  }
   const html = await res.text();
 
   const foundName = extractCompaniesSgField(html, 'Entity Name');
@@ -5693,8 +5699,8 @@ export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
     .slice(0, Math.max(1, opts.limit));
 
   const updated: Array<{ id: string; code: string; name: string; uen: string }> = [];
-  const mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }> = [];
-  const notFound: Array<{ id: string; code: string; name: string; uen: string }> = [];
+  const mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string; url?: string }> = [];
+  const notFound: Array<{ id: string; code: string; name: string; uen: string; url?: string; httpStatus?: number }> = [];
   const errors: Array<{ id: string; code: string; name: string; uen: string; error: string }> = [];
 
   const startedAt = Date.now();
@@ -5709,9 +5715,9 @@ export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
         changed = true;
         updated.push({ id: c.id, code: c.code, name: c.name, uen });
       } else if (res.status === 'MISMATCH_NAME') {
-        mismatched.push({ id: c.id, code: c.code, name: c.name, uen, foundName: res.foundName });
+        mismatched.push({ id: c.id, code: c.code, name: c.name, uen, foundName: res.foundName, url: res.url });
       } else if (res.status === 'NOT_FOUND') {
-        notFound.push({ id: c.id, code: c.code, name: c.name, uen });
+        notFound.push({ id: c.id, code: c.code, name: c.name, uen, url: res.url, httpStatus: res.httpStatus });
       }
     } catch (e) {
       errors.push({
