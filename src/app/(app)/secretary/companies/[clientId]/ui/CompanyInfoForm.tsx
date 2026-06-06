@@ -41,7 +41,14 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white border border-black/5 p-5">
-        <div className="text-sm font-semibold">Company Info</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-semibold">Company Info</div>
+          {client.isStruckOff ? (
+            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+              Struck Off
+            </span>
+          ) : null}
+        </div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="text-sm">
             <div className="text-black/60">Company Name</div>
