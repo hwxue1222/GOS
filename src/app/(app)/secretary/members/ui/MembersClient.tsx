@@ -20,6 +20,7 @@ type Member = {
   lastLoginDate?: string;
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
   companyCount?: number;
+  companyNames?: string[];
   createdAt: string;
 };
 

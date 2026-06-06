@@ -6073,6 +6073,7 @@ export async function listClientPeopleRoles(clientId: string) {
 export async function listPeopleWithRoleTags() {
   const db = await readDb();
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
 
   const activeRoles = db.clientPartyRoles.filter((r) => {
     if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -6082,6 +6083,7 @@ export async function listPeopleWithRoleTags() {
 
   const tagsByPersonId = new Map<string, Set<ClientPartyRole['role']>>();
   const clientIdsByPersonId = new Map<string, Set<string>>();
+  const clientNamesByPersonId = new Map<string, Set<string>>();
 
   for (const r of activeRoles) {
     const party = partyById.get(r.partyId);
@@ -6093,12 +6095,20 @@ export async function listPeopleWithRoleTags() {
     const c = clientIdsByPersonId.get(personId) ?? new Set<string>();
     c.add(r.clientId);
     clientIdsByPersonId.set(personId, c);
+
+    const client = clientById.get(r.clientId);
+    if (client && !client.deletedAt) {
+      const names = clientNamesByPersonId.get(personId) ?? new Set<string>();
+      names.add(client.name);
+      clientNamesByPersonId.set(personId, names);
+    }
   }
 
   return db.persons.map((p) => ({
     person: p,
     roleTags: [...(tagsByPersonId.get(p.id) ?? new Set())],
     companyCount: (clientIdsByPersonId.get(p.id) ?? new Set()).size,
+    companyNames: [...(clientNamesByPersonId.get(p.id) ?? new Set())].sort((a, b) => a.localeCompare(b)),
   }));
 }
 

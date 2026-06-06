@@ -20,7 +20,7 @@ export async function GET() {
       ...r.person,
       roleTags: r.roleTags,
       companyCount: r.companyCount,
+      companyNames: (r as unknown as { companyNames?: string[] }).companyNames,
     })),
   });
 }
-

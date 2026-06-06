@@ -15,6 +15,7 @@ type Person = {
   lastLoginDate?: string;
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
   companyCount?: number;
+  companyNames?: string[];
   createdAt: string;
 };
 
@@ -95,7 +96,10 @@ export default function PeopleTable({ people, loading }: Props) {
                         <span className="text-black/40 text-xs">-</span>
                       )}
                       {typeof p.companyCount === 'number' && p.companyCount > 0 ? (
-                        <span className="inline-flex items-center rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs text-black/60">
+                        <span
+                          className="inline-flex items-center rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs text-black/60"
+                          title={(p.companyNames ?? []).length ? p.companyNames!.join('\n') : undefined}
+                        >
                           {lang === 'zh' ? `${p.companyCount}${t('people.companyCountSuffix')}` : `${p.companyCount} ${t('people.companyCountSuffix')}`}
                         </span>
                       ) : null}
