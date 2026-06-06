@@ -49,6 +49,17 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const [bulkText, setBulkText] = useState('');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ updated: number; skippedSc: number; notFound: string[] } | null>(null);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<
+    | {
+        processed: number;
+        updated: Array<{ id: string; code: string; name: string; uen: string }>;
+        mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }>;
+        notFound: Array<{ id: string; code: string; name: string; uen: string }>;
+        errors: Array<{ id: string; code: string; name: string; uen: string; error: string }>;
+      }
+    | null
+  >(null);
 
   const [form, setForm] = useState({
     code: '',
@@ -180,6 +191,55 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     }
   }
 
+  async function runAutoEnrich() {
+    if (!canCreate || enriching) return;
+    const ok = window.confirm('Auto-enrich from public sources? This may take a while and can be repeated.');
+    if (!ok) return;
+    setEnriching(true);
+    setEnrichResult(null);
+    try {
+      const res = await fetch('/api/admin/enrich/clients', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ limit: 20 }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        setEnrichResult({ processed: 0, updated: [], mismatched: [], notFound: [], errors: [] });
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            processed?: number;
+            updated?: Array<{ id: string; code: string; name: string; uen: string }>;
+            mismatched?: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }>;
+            notFound?: Array<{ id: string; code: string; name: string; uen: string }>;
+            errors?: Array<{ id: string; code: string; name: string; uen: string; error: string }>;
+          }
+        | null;
+      if (!j?.ok) {
+        setEnrichResult({ processed: 0, updated: [], mismatched: [], notFound: [], errors: [] });
+        return;
+      }
+      setEnrichResult({
+        processed: Number(j.processed ?? 0) || 0,
+        updated: Array.isArray(j.updated) ? j.updated : [],
+        mismatched: Array.isArray(j.mismatched) ? j.mismatched : [],
+        notFound: Array.isArray(j.notFound) ? j.notFound : [],
+        errors: Array.isArray(j.errors) ? j.errors : [],
+      });
+      if (Array.isArray(j.updated) && j.updated.length) {
+        const res2 = await fetch('/api/clients').catch(() => null);
+        if (res2?.ok) {
+          const j2 = (await res2.json().catch(() => null)) as { ok?: boolean; clients?: Client[] } | null;
+          if (j2?.ok && Array.isArray(j2.clients)) setClients(j2.clients);
+        }
+      }
+    } finally {
+      setEnriching(false);
+    }
+  }
+
   async function addClient() {
     setError(null);
     if (!form.code.trim() || !form.name.trim()) {
@@ -249,8 +309,22 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
             >
               Bulk Update
             </button>
+            <button
+              disabled={!canCreate || enriching}
+              onClick={() => void runAutoEnrich()}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {enriching ? 'Enriching…' : 'Auto Enrich'}
+            </button>
           </div>
         </div>
+
+        {enrichResult ? (
+          <div className="mt-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-xs text-black/70">
+            Processed: {enrichResult.processed} | Updated: {enrichResult.updated.length} | Mismatched: {enrichResult.mismatched.length} | Not found:{' '}
+            {enrichResult.notFound.length} | Errors: {enrichResult.errors.length}
+          </div>
+        ) : null}
 
         <div className="mt-3 flex items-center justify-end">
           <PaginationControls

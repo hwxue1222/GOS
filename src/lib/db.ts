@@ -5448,7 +5448,179 @@ function normalizeDateYmd(input: string | undefined) {
   }
   const fromIso = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
   if (fromIso) return `${fromIso[1]}-${fromIso[2]}-${fromIso[3]}`;
+
+  const dMonY = s.match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})$/);
+  if (dMonY) {
+    const dd = dMonY[1].padStart(2, '0');
+    const monRaw = dMonY[2].toLowerCase();
+    const yyyy = dMonY[3];
+    const monMap: Record<string, string> = {
+      jan: '01',
+      january: '01',
+      feb: '02',
+      february: '02',
+      mar: '03',
+      march: '03',
+      apr: '04',
+      april: '04',
+      may: '05',
+      jun: '06',
+      june: '06',
+      jul: '07',
+      july: '07',
+      aug: '08',
+      august: '08',
+      sep: '09',
+      sept: '09',
+      september: '09',
+      oct: '10',
+      october: '10',
+      nov: '11',
+      november: '11',
+      dec: '12',
+      december: '12',
+    };
+    const mm = monMap[monRaw];
+    if (mm) return `${yyyy}-${mm}-${dd}`;
+  }
   return s;
+}
+
+function slugifyCompaniesSgName(name: string) {
+  const s = String(name ?? '').trim();
+  if (!s) return '';
+  const noDots = s.replace(/\./g, '');
+  const upper = noDots.toUpperCase();
+  const slug = upper
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return slug ? `${slug}-` : '';
+}
+
+function stripTags(input: string) {
+  return input
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractCompaniesSgField(html: string, label: string) {
+  const re = new RegExp(`${label}\\s*<\\/div>\\s*<div[^>]*profile-field-value[^>]*>([\\s\\S]*?)<\\/div>`, 'i');
+  const m = html.match(re);
+  if (!m) return undefined;
+  const raw = m[1];
+  const withNewlines = raw.replace(/<br\s*\/?>/gi, '\n');
+  const text = stripTags(withNewlines);
+  return text || undefined;
+}
+
+export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
+  const db = await readDb();
+  const active = db.clients.filter((c) => !c.deletedAt);
+
+  const candidates = active
+    .filter((c) => !/^SC\d+$/i.test(String(c.code ?? '')))
+    .filter((c) => String(c.companyRegistrationNo ?? '').trim())
+    .filter((c) => {
+      const needAddr = !String(c.registeredOfficeAddress ?? '').trim();
+      const needDate = !String(c.incorporationDate ?? '').trim();
+      const needBiz = !String(c.businessActivities ?? '').trim();
+      return needAddr || needDate || needBiz;
+    })
+    .slice(0, Math.max(1, opts.limit));
+
+  const updated: Array<{ id: string; code: string; name: string; uen: string }> = [];
+  const mismatched: Array<{ id: string; code: string; name: string; uen: string; foundName?: string }> = [];
+  const notFound: Array<{ id: string; code: string; name: string; uen: string }> = [];
+  const errors: Array<{ id: string; code: string; name: string; uen: string; error: string }> = [];
+
+  const startedAt = Date.now();
+  let changed = false;
+
+  for (const c of candidates) {
+    if (Date.now() - startedAt > 12_000) break;
+    const uen = String(c.companyRegistrationNo ?? '').trim().toUpperCase();
+    const slug = slugifyCompaniesSgName(c.name);
+    const url = `https://www.companies.sg/business/${encodeURIComponent(uen)}/${encodeURIComponent(slug)}`;
+
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 10_000);
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'user-agent': 'Mozilla/5.0',
+          accept: 'text/html,application/xhtml+xml',
+        },
+      }).finally(() => clearTimeout(t));
+
+      if (!res.ok) {
+        notFound.push({ id: c.id, code: c.code, name: c.name, uen });
+        continue;
+      }
+
+      const html = await res.text();
+      const foundName = extractCompaniesSgField(html, 'Entity Name');
+      if (foundName) {
+        const keyA = normalizeClientNameForMerge(foundName);
+        const keyB = normalizeClientNameForMerge(c.name);
+        if (keyA && keyB && keyA !== keyB) {
+          mismatched.push({ id: c.id, code: c.code, name: c.name, uen, foundName });
+          continue;
+        }
+      }
+
+      const incRaw = extractCompaniesSgField(html, 'Incorporated');
+      const incorp = normalizeDateYmd(incRaw);
+      const addrRaw = extractCompaniesSgField(html, 'Bussiness Address') ?? extractCompaniesSgField(html, 'Business Address');
+      const addr = addrRaw ? addrRaw.replace(/\s*\n\s*/g, ', ').trim() : undefined;
+      const primary = extractCompaniesSgField(html, 'Primary Ssic Description');
+      const secondary = extractCompaniesSgField(html, 'Secondary Ssic Description');
+
+      const biz =
+        primary && secondary
+          ? `Primary: ${primary}; Secondary: ${secondary}`
+          : primary
+            ? primary
+            : secondary
+              ? secondary
+              : undefined;
+
+      const patch: Partial<Client> = {};
+      if (addr && !String(c.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
+      if (incorp && !String(c.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
+      if (biz && !String(c.businessActivities ?? '').trim()) patch.businessActivities = biz;
+
+      if (Object.keys(patch).length === 0) continue;
+      const idx = db.clients.findIndex((x) => x.id === c.id);
+      if (idx >= 0) {
+        db.clients[idx] = { ...db.clients[idx], ...patch };
+        changed = true;
+        updated.push({ id: c.id, code: c.code, name: c.name, uen });
+      }
+    } catch (e) {
+      errors.push({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        uen,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  if (changed) await writeDb(db);
+  return {
+    processed: candidates.length,
+    updated,
+    mismatched,
+    notFound,
+    errors,
+  };
 }
 
 export async function bulkUpdateClientsByUen(
