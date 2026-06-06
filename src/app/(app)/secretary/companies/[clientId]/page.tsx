@@ -94,14 +94,18 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
     .filter(Boolean) as Array<any>;
 
   const byRole = (role: string) => rows.filter((x) => x.role.role === role);
+  const safeName = (v: unknown) => {
+    const s = typeof v === 'string' ? v.trim() : '';
+    return s || '(No name)';
+  };
   const peopleOptions = db.persons
-    .map((p) => ({ id: p.id, fullName: p.fullName, email: p.email }))
+    .map((p) => ({ id: p.id, fullName: safeName((p as unknown as { fullName?: unknown }).fullName), email: p.email }))
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   const companyOptions = db.clients
     .filter((c) => !c.deletedAt)
     .filter((c) => c.id !== clientId)
-    .map((c) => ({ id: c.id, code: c.code, name: c.name }))
+    .map((c) => ({ id: c.id, code: c.code, name: safeName(c.name) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
