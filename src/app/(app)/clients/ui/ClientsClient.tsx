@@ -193,7 +193,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
 
   async function runAutoEnrich() {
     if (!canCreate || enriching) return;
-    const ok = window.confirm('Auto-enrich from public sources? This may take a while and can be repeated.');
+    const ok = window.confirm('Auto fill from public sources? This may take a while and can be repeated.');
     if (!ok) return;
     setEnriching(true);
     setEnrichResult(null);
@@ -314,7 +314,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               onClick={() => void runAutoEnrich()}
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {enriching ? 'Enriching…' : 'Auto Enrich'}
+              {enriching ? 'Auto filling…' : 'Auto Fill'}
             </button>
           </div>
         </div>
