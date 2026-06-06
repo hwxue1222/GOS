@@ -111,6 +111,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V4 = 'clients.codeMigration.v4';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V5 = 'clients.codeMigration.v5';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V6 = 'clients.codeMigration.v6';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
+const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1 = 'clients.dedupeByName.v1';
 const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V2 = 'clients.dedupeByName.v2';
 
@@ -359,6 +360,50 @@ function migrateClientCodesV7(db: Db) {
   }
 
   db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V7] = true;
+  return changed;
+}
+
+function migrateClientCodesV8(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V8]) return false;
+
+  let changed = false;
+
+  const targetNameKey = normalizeClientNameForMerge('Xing Xin Medical Technology Pte Ltd');
+  const targetUen = '202503155H';
+  const desiredCode = 'DA205';
+
+  const active = db.clients.filter((c) => !c.deletedAt);
+  const match =
+    active.find(
+      (c) =>
+        normalizeClientNameForMerge(String(c.name ?? '')) === targetNameKey &&
+        String(c.companyRegistrationNo ?? '').trim().toUpperCase() === targetUen,
+    ) ?? null;
+  if (!match) {
+    db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V8] = true;
+    return false;
+  }
+
+  const existingDesired = active.find((c) => String(c.code ?? '') === desiredCode) ?? null;
+  if (existingDesired && existingDesired.id !== match.id) {
+    const sameName =
+      normalizeClientNameForMerge(String(existingDesired.name ?? '')) === normalizeClientNameForMerge(String(match.name ?? ''));
+    const sameReg =
+      String(existingDesired.companyRegistrationNo ?? '').trim() === String(match.companyRegistrationNo ?? '').trim();
+    if (sameName && sameReg) {
+      if (mergeClientInto(db, match.id, existingDesired.id)) changed = true;
+    }
+    db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V8] = true;
+    return changed;
+  }
+
+  if (String(match.code ?? '') !== desiredCode) {
+    match.code = desiredCode;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V8] = true;
   return changed;
 }
 
@@ -5056,6 +5101,7 @@ export async function readDb(): Promise<Db> {
   if (migrateClientCodesV5(db)) changed = true;
   if (migrateClientCodesV6(db)) changed = true;
   if (migrateClientCodesV7(db)) changed = true;
+  if (migrateClientCodesV8(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
