@@ -40,15 +40,26 @@ export async function GET() {
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const externalById = new Map(db.externalCompanies.map((c) => [c.id, c]));
   const rolesByClientId = new Map<string, Array<{ role: string; name: string; shares?: number }>>();
   for (const r of db.clientPartyRoles) {
     if (!isActiveRole(r)) continue;
     const party = partyById.get(r.partyId);
-    if (!party || party.type !== 'PERSON' || !party.personId) continue;
-    const person = personById.get(party.personId);
-    if (!person) continue;
+    if (!party) continue;
+    let name: string | null = null;
+    if (party.type === 'PERSON' && party.personId) {
+      name = personById.get(party.personId)?.fullName ?? null;
+    } else if (party.type === 'COMPANY') {
+      if (party.clientId) name = clientById.get(party.clientId)?.name ?? null;
+      else if (party.externalCompanyId) name = externalById.get(party.externalCompanyId)?.name ?? null;
+      else name = party.displayName || null;
+    }
+    if (!name) name = party.displayName || null;
+    if (!name) continue;
+
     const list = rolesByClientId.get(r.clientId) ?? [];
-    list.push({ role: r.role, name: person.fullName, shares: r.role === 'SHAREHOLDER' ? r.shares : undefined });
+    list.push({ role: r.role, name, shares: r.role === 'SHAREHOLDER' ? r.shares : undefined });
     rolesByClientId.set(r.clientId, list);
   }
 
