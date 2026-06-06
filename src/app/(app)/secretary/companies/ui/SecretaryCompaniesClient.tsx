@@ -73,6 +73,8 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
   const pageEnd = Math.min(total, pageStart + safePageSize);
   const visible = useMemo(() => items.slice(pageStart, pageEnd), [items, pageStart, pageEnd]);
 
+  const companyHref = (clientId: string) => `/secretary/companies/${encodeURIComponent(clientId)}`;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -135,7 +137,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
               <tr key={it.client.id} className="border-t border-black/5">
                 <td className="px-4 py-3">
                   <div className={it.client.isStruckOff ? 'font-medium text-red-600' : 'font-medium text-[#2f7bdc]'}>
-                    <Link href={`/secretary/companies/${it.client.id}`} className={it.client.isStruckOff ? '' : 'hover:underline'}>
+                    <Link href={companyHref(it.client.id)} className={it.client.isStruckOff ? '' : 'hover:underline'}>
                       {it.client.name}
                     </Link>
                   </div>
@@ -152,7 +154,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/secretary/companies/${it.client.id}`}
+                      href={companyHref(it.client.id)}
                       className="rounded-md bg-[#2f7bdc] text-white px-3 py-1.5 text-xs font-medium"
                     >
                       {canEdit ? t('common.edit') : t('common.view')}
