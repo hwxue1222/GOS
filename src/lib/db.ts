@@ -5435,6 +5435,89 @@ export async function updateClient(
   return next;
 }
 
+function normalizeDateYmd(input: string | undefined) {
+  const s = (input ?? '').trim();
+  if (!s) return undefined;
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    const dd = dmy[1].padStart(2, '0');
+    const mm = dmy[2].padStart(2, '0');
+    return `${dmy[3]}-${mm}-${dd}`;
+  }
+  const fromIso = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+  if (fromIso) return `${fromIso[1]}-${fromIso[2]}-${fromIso[3]}`;
+  return s;
+}
+
+export async function bulkUpdateClientsByUen(
+  updates: Array<{ uen: string; registeredOfficeAddress?: string; incorporationDate?: string; businessActivities?: string }>,
+) {
+  const db = await readDb();
+  const active = db.clients.filter((c) => !c.deletedAt);
+
+  const byUen = new Map<string, Client[]>();
+  for (const c of active) {
+    const uen = String(c.companyRegistrationNo ?? '').trim().toUpperCase();
+    if (!uen) continue;
+    const list = byUen.get(uen) ?? [];
+    list.push(c);
+    byUen.set(uen, list);
+  }
+
+  const updatedClients: Array<Pick<Client, 'id' | 'registeredOfficeAddress' | 'incorporationDate' | 'businessActivities'>> = [];
+  const notFound: string[] = [];
+  let skippedSc = 0;
+
+  for (const u of updates) {
+    const uenKey = u.uen.trim().toUpperCase();
+    if (!uenKey) continue;
+    const matches = (byUen.get(uenKey) ?? []).filter((c) => !/^SC\d+$/i.test(String(c.code ?? '')));
+    if (matches.length === 0) {
+      if ((byUen.get(uenKey) ?? []).length) skippedSc++;
+      else notFound.push(uenKey);
+      continue;
+    }
+
+    const target = choosePrimaryClientForMerge(db, matches);
+    const idx = db.clients.findIndex((c) => c.id === target.id);
+    if (idx < 0) continue;
+
+    const current = db.clients[idx];
+    const patch: Partial<Client> = {};
+
+    const nextRegOffice = typeof u.registeredOfficeAddress === 'string' ? u.registeredOfficeAddress.trim() : '';
+    if (nextRegOffice) patch.registeredOfficeAddress = nextRegOffice;
+
+    const nextIncorp = normalizeDateYmd(u.incorporationDate);
+    if (nextIncorp) patch.incorporationDate = nextIncorp;
+
+    const nextBiz = typeof u.businessActivities === 'string' ? u.businessActivities.trim() : '';
+    if (nextBiz) patch.businessActivities = nextBiz;
+
+    if (Object.keys(patch).length === 0) continue;
+
+    const next: Client = { ...current, ...patch };
+    db.clients[idx] = next;
+    updatedClients.push({
+      id: next.id,
+      registeredOfficeAddress: next.registeredOfficeAddress,
+      incorporationDate: next.incorporationDate,
+      businessActivities: next.businessActivities,
+    });
+  }
+
+  if (updatedClients.length) await writeDb(db);
+
+  return {
+    updated: updatedClients.length,
+    skippedSc,
+    notFound,
+    updatedClients,
+  };
+}
+
 export async function deleteClient(clientId: string) {
   const db = await readDb();
   const idx = db.clients.findIndex((c) => c.id === clientId);

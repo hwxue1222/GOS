@@ -40,8 +40,12 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const [pageSize, setPageSize] = usePersistedState('gos.clients.pageSize', 20);
   const [page, setPage] = usePersistedState('gos.clients.page', 1);
   const [showAdd, setShowAdd] = useState(false);
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkApplying, setBulkApplying] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ updated: number; skippedSc: number; notFound: string[] } | null>(null);
 
   const [form, setForm] = useState({
     code: '',
@@ -74,6 +78,87 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const visible = filtered.slice(pageStart, pageEnd);
 
   const canCreate = me?.role === 'owner' || me?.role === 'manager';
+
+  function parseBulkUpdates(text: string) {
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const updates: Array<{
+      uen: string;
+      registeredOfficeAddress?: string;
+      incorporationDate?: string;
+      businessActivities?: string;
+    }> = [];
+    for (const line of lines) {
+      const tabParts = line.split('\t');
+      const parts = tabParts.length >= 2 ? tabParts : line.split(',');
+      const [uenRaw, regOfficeRaw, incRaw, bizRaw] = parts.map((p) => (p ?? '').trim());
+      const uen = (uenRaw ?? '').trim();
+      if (!uen) continue;
+      const regOffice = (regOfficeRaw ?? '').trim();
+      const inc = (incRaw ?? '').trim();
+      const biz = (bizRaw ?? '').trim();
+      updates.push({
+        uen,
+        registeredOfficeAddress: regOffice || undefined,
+        incorporationDate: inc || undefined,
+        businessActivities: biz || undefined,
+      });
+    }
+    return updates;
+  }
+
+  async function applyBulkUpdates() {
+    setBulkResult(null);
+    const updates = parseBulkUpdates(bulkText);
+    if (updates.length === 0) {
+      setBulkResult({ updated: 0, skippedSc: 0, notFound: [] });
+      return;
+    }
+    setBulkApplying(true);
+    try {
+      const res = await fetch('/api/admin/bulk-update/clients', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ updates }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        setBulkResult({ updated: 0, skippedSc: 0, notFound: [] });
+        return;
+      }
+      const j = (await res.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            updated?: number;
+            skippedSc?: number;
+            notFound?: string[];
+            updatedClients?: Array<{
+              id: string;
+              registeredOfficeAddress?: string;
+              incorporationDate?: string;
+              businessActivities?: string;
+            }>;
+          }
+        | null;
+      if (!j?.ok) {
+        setBulkResult({ updated: 0, skippedSc: 0, notFound: [] });
+        return;
+      }
+      const updatedClients = Array.isArray(j.updatedClients) ? j.updatedClients : [];
+      const updatedById = new Map(updatedClients.map((c) => [c.id, c]));
+      if (updatedById.size) {
+        setClients((prev) => prev.map((c) => (updatedById.has(c.id) ? { ...c, ...updatedById.get(c.id)! } : c)));
+      }
+      setBulkResult({
+        updated: Number(j.updated ?? 0) || 0,
+        skippedSc: Number(j.skippedSc ?? 0) || 0,
+        notFound: Array.isArray(j.notFound) ? j.notFound : [],
+      });
+    } finally {
+      setBulkApplying(false);
+    }
+  }
 
   async function addClient() {
     setError(null);
@@ -133,6 +218,16 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
             >
               + Add Client
+            </button>
+            <button
+              disabled={!canCreate}
+              onClick={() => {
+                setBulkResult(null);
+                setShowBulkUpdate(true);
+              }}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              Bulk Update
             </button>
           </div>
         </div>
@@ -339,6 +434,59 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {showBulkUpdate ? (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl rounded-xl bg-white p-5 max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">Bulk Update (by UEN)</div>
+              <button onClick={() => setShowBulkUpdate(false)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-2 text-xs text-black/60 leading-relaxed">
+              Paste lines as TSV: <span className="font-mono">UEN\tRegistered office address\tIncorporation date\tBusiness activities</span>
+            </div>
+
+            <textarea
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              className="mt-3 w-full min-h-[260px] rounded-lg border border-black/10 px-3 py-2 text-xs outline-none bg-white font-mono"
+              placeholder={`202503155H\t10 ANSON ROAD #10-11\t2025-01-20\tGeneral trading`}
+            />
+
+            {bulkResult ? (
+              <div className="mt-3 rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs text-black/70">
+                Updated: {bulkResult.updated} | Skipped (SC): {bulkResult.skippedSc} | Not found: {bulkResult.notFound.length}
+              </div>
+            ) : null}
+
+            {bulkResult?.notFound?.length ? (
+              <div className="mt-2 text-xs text-red-600 break-words">Not found: {bulkResult.notFound.join(', ')}</div>
+            ) : null}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  setBulkText('');
+                  setBulkResult(null);
+                }}
+                className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+              >
+                Clear
+              </button>
+              <button
+                disabled={!canCreate || bulkApplying}
+                onClick={() => void applyBulkUpdates()}
+                className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {bulkApplying ? 'Updating…' : 'Update'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
