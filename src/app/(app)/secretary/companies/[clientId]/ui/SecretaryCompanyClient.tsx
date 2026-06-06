@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import CompanyInfoForm from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyInfoForm';
 import CompanyRolesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyRolesPanel';
-import DirectorChangeRequestsPanel from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestsPanel';
+import CorporateSecretaryServicesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CorporateSecretaryServicesPanel';
 
 type Client = {
   id: string;
@@ -235,12 +235,6 @@ export default function SecretaryCompanyClient({
           <div className="mt-1 text-sm text-black/60">{initialClient.code}</div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/secretary/share-transfers?clientId=${encodeURIComponent(initialClient.id)}`}
-            className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium"
-          >
-            Transfer of Shares
-          </Link>
           <button
             disabled={enriching}
             onClick={() => void autoFill()}
@@ -280,7 +274,7 @@ export default function SecretaryCompanyClient({
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <DirectorChangeRequestsPanel
+          <CorporateSecretaryServicesPanel
             clientId={initialClient.id}
             directors={roles.directors
               .map((d) =>
@@ -289,8 +283,8 @@ export default function SecretaryCompanyClient({
                   : null,
               )
               .filter(Boolean) as Array<{ roleId: string; fullName: string; email?: string }>}
-            canSubmit={isClientUser}
-            canApprove={canEditRoles}
+            canSubmitDirectorChange={isClientUser}
+            canApproveDirectorChange={canEditRoles}
           />
           <CompanyInfoForm client={client} canEdit={canEditCompany} onChange={(patch) => setClient((s) => ({ ...s, ...patch }))} />
         </div>

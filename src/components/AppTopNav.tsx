@@ -5,9 +5,19 @@ import { canManageTeam } from '@/lib/permissions';
 import LanguageToggleClient from '@/components/LanguageToggleClient';
 import { tServer } from '@/lib/i18n';
 import { getLangFromCookies } from '@/lib/i18n.server';
+import { readDb } from '@/lib/db';
+import FrontTopNavClient from '@/components/FrontTopNavClient';
 
 type Props = {
-  active: 'jobs' | 'clients' | 'invoices' | 'reports' | 'secretary';
+  active:
+    | 'jobs'
+    | 'clients'
+    | 'invoices'
+    | 'reports'
+    | 'secretary'
+    | 'dashboard'
+    | 'incorporation'
+    | 'corporate-secretary';
 };
 
 function NavLink({
@@ -36,6 +46,41 @@ export default async function AppTopNav({ active }: Props) {
   const user = await getCurrentUser();
   if (!user) return null;
   const lang = await getLangFromCookies();
+
+  if (user.role === 'client') {
+    const db = await readDb();
+    const emailKey = user.email.trim().toLowerCase();
+    const partyById = new Map(db.parties.map((p) => [p.id, p]));
+    const personById = new Map(db.persons.map((p) => [p.id, p]));
+    const allowed = new Set<string>();
+    for (const r of db.clientPartyRoles) {
+      if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') {
+        if (r.resignationDate) continue;
+      } else if (r.role === 'SHAREHOLDER' || r.role === 'RORC') {
+        if (r.toDate) continue;
+      }
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) continue;
+      const person = personById.get(party.personId);
+      if (!person) continue;
+      if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+      allowed.add(r.clientId);
+    }
+    const companies = db.clients
+      .filter((c) => !c.deletedAt)
+      .filter((c) => allowed.has(c.id))
+      .map((c) => ({ id: c.id, name: c.name, code: c.code }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const frontActive: 'dashboard' | 'incorporation' | 'corporate-secretary' =
+      active === 'incorporation'
+        ? 'incorporation'
+        : active === 'corporate-secretary' || active === 'secretary'
+          ? 'corporate-secretary'
+          : 'dashboard';
+
+    return <FrontTopNavClient active={frontActive} user={user} companies={companies} />;
+  }
 
   return (
     <header className="bg-[#23323d] text-white">

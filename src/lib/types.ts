@@ -340,6 +340,29 @@ export type ShareTransfer = {
   updatedAt?: string;
 };
 
+export type SecretaryServiceApplicationType = 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'TRANSFER_COMPANY_SECRETARY';
+
+export type SecretaryServiceApplicationStatus =
+  | 'DRAFT'
+  | 'SIGNING'
+  | 'PENDING_REVIEW'
+  | 'PROCESSING'
+  | 'NEED_MORE_INFO'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'COMPLETE';
+
+export type SecretaryServiceApplicationRow = {
+  id: string;
+  type: SecretaryServiceApplicationType;
+  companyId: string;
+  companyName: string;
+  applicationDate: string;
+  editDate: string;
+  status: SecretaryServiceApplicationStatus;
+  source: { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string } | { kind: 'SHARE_TRANSFER'; id: string };
+};
+
 export type JobStatus = 'Pending' | 'Processing' | 'Complete';
 
 export type JobRepeat = 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';

@@ -634,9 +634,9 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     <td className="px-4 py-3 whitespace-nowrap overflow-hidden">
                       {row.client ? (
                         <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
-                          <Link className="block truncate text-[#2f7bdc] hover:underline" href={`/clients/${row.client.id}`}>
-                            {row.client.code} {row.client.name}
-                          </Link>
+                        <div className="block truncate text-black/80">
+                          {row.client.code} {row.client.name}
+                        </div>
                         </div>
                       ) : (
                         <div className="truncate text-black/80" title={inv.billTo.companyName || '-'}>
