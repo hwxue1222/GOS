@@ -5503,13 +5503,48 @@ function stripTags(input: string) {
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
+    .replace(/&#0*39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+function extractMetaDescription(html: string) {
+  const m = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  if (!m) return undefined;
+  return stripTags(m[1]);
+}
+
+function extractIncorporationDateFromMeta(desc: string | undefined) {
+  const s = (desc ?? '').trim();
+  if (!s) return undefined;
+  const m1 = s.match(/incorporated\s+on\s+(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i);
+  if (m1) return normalizeDateYmd(m1[1]);
+  const m2 = s.match(/incorporated\s+on\s+(\d{4}-\d{2}-\d{2})/i);
+  if (m2) return normalizeDateYmd(m2[1]);
+  return undefined;
+}
+
 function extractCompaniesSgField(html: string, label: string) {
   const re = new RegExp(`${label}\\s*<\\/div>\\s*<div[^>]*profile-field-value[^>]*>([\\s\\S]*?)<\\/div>`, 'i');
+  const m = html.match(re);
+  if (!m) return undefined;
+  const raw = m[1];
+  const withNewlines = raw.replace(/<br\s*\/?>/gi, '\n');
+  const text = stripTags(withNewlines);
+  return text || undefined;
+}
+
+function extractCompaniesSgValueAfterLabelContains(html: string, contains: string[]) {
+  const keys = contains.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const nameRe = keys.map((k) => `(?=[\\s\\S]*${k})`).join('');
+  const re = new RegExp(
+    `<div[^>]*profile-field-name[^>]*>${nameRe}[\\s\\S]*?<\\/div>\\s*<div[^>]*profile-field-value[^>]*>([\\s\\S]*?)<\\/div>`,
+    'i',
+  );
   const m = html.match(re);
   if (!m) return undefined;
   const raw = m[1];
@@ -5574,12 +5609,24 @@ export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
         }
       }
 
-      const incRaw = extractCompaniesSgField(html, 'Incorporated');
-      const incorp = normalizeDateYmd(incRaw);
+      const metaDesc = extractMetaDescription(html);
+      const incRaw =
+        extractCompaniesSgField(html, 'Incorporated') ??
+        extractCompaniesSgValueAfterLabelContains(html, ['incorpor', 'date']);
+      const incorp = normalizeDateYmd(incRaw) ?? extractIncorporationDateFromMeta(metaDesc);
       const addrRaw = extractCompaniesSgField(html, 'Bussiness Address') ?? extractCompaniesSgField(html, 'Business Address');
       const addr = addrRaw ? addrRaw.replace(/\s*\n\s*/g, ', ').trim() : undefined;
-      const primary = extractCompaniesSgField(html, 'Primary Ssic Description');
-      const secondary = extractCompaniesSgField(html, 'Secondary Ssic Description');
+
+      const primary =
+        extractCompaniesSgField(html, 'Primary Ssic Description') ??
+        extractCompaniesSgField(html, 'Primary SSIC Description') ??
+        extractCompaniesSgValueAfterLabelContains(html, ['primary', 'ssic', 'description']) ??
+        extractCompaniesSgValueAfterLabelContains(html, ['primary', 'activity']);
+      const secondary =
+        extractCompaniesSgField(html, 'Secondary Ssic Description') ??
+        extractCompaniesSgField(html, 'Secondary SSIC Description') ??
+        extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'ssic', 'description']) ??
+        extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'activity']);
 
       const biz =
         primary && secondary
