@@ -6239,6 +6239,7 @@ export async function listPeopleWithRoleTags() {
   const tagsByPersonId = new Map<string, Set<ClientPartyRole['role']>>();
   const clientIdsByPersonId = new Map<string, Set<string>>();
   const clientNamesByPersonId = new Map<string, Set<string>>();
+  const rolesByPersonIdByClientId = new Map<string, Map<string, Set<ClientPartyRole['role']>>>();
 
   for (const r of activeRoles) {
     const party = partyById.get(r.partyId);
@@ -6257,6 +6258,12 @@ export async function listPeopleWithRoleTags() {
       const names = clientNamesByPersonId.get(personId) ?? new Set<string>();
       names.add(client.name);
       clientNamesByPersonId.set(personId, names);
+
+      const m = rolesByPersonIdByClientId.get(personId) ?? new Map<string, Set<ClientPartyRole['role']>>();
+      const set = m.get(client.id) ?? new Set<ClientPartyRole['role']>();
+      set.add(r.role);
+      m.set(client.id, set);
+      rolesByPersonIdByClientId.set(personId, m);
     }
   }
 
@@ -6265,6 +6272,23 @@ export async function listPeopleWithRoleTags() {
     roleTags: [...(tagsByPersonId.get(p.id) ?? new Set())],
     companyCount: (clientIdsByPersonId.get(p.id) ?? new Set()).size,
     companyNames: [...(clientNamesByPersonId.get(p.id) ?? new Set())].sort((a, b) => a.localeCompare(b)),
+    companyRoles: (() => {
+      const m = rolesByPersonIdByClientId.get(p.id);
+      if (!m) return [];
+      const rows = [...m.entries()]
+        .map(([clientId, roles]) => {
+          const client = clientById.get(clientId);
+          if (!client || client.deletedAt) return null;
+          return {
+            clientId,
+            clientName: client.name,
+            roles: [...roles].sort((a, b) => a.localeCompare(b)),
+          };
+        })
+        .filter(Boolean) as Array<{ clientId: string; clientName: string; roles: ClientPartyRole['role'][] }>;
+      rows.sort((a, b) => a.clientName.localeCompare(b.clientName));
+      return rows;
+    })(),
   }));
 }
 

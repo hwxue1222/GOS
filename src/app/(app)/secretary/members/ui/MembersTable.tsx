@@ -16,6 +16,7 @@ type Member = {
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
   companyCount?: number;
   companyNames?: string[];
+  companyRoles?: Array<{ clientId: string; clientName: string; roles: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'> }>;
   createdAt: string;
 };
 
@@ -120,7 +121,15 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                       {typeof p.companyCount === 'number' && p.companyCount > 0 ? (
                         <span
                           className="inline-flex items-center rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs text-black/60"
-                          title={(p.companyNames ?? []).length ? p.companyNames!.join('\n') : undefined}
+                          title={
+                            (p.companyRoles ?? []).length
+                              ? p.companyRoles!
+                                  .map((cr) => `${cr.clientName} — ${cr.roles.map((r) => roleLabel(r)).join(', ')}`)
+                                  .join('\n')
+                              : (p.companyNames ?? []).length
+                                ? p.companyNames!.join('\n')
+                                : undefined
+                          }
                         >
                           {lang === 'zh' ? `${p.companyCount}${t('people.companyCountSuffix')}` : `${p.companyCount} ${t('people.companyCountSuffix')}`}
                         </span>

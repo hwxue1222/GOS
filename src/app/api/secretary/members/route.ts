@@ -21,6 +21,7 @@ export async function GET() {
       roleTags: r.roleTags,
       companyCount: r.companyCount,
       companyNames: (r as unknown as { companyNames?: string[] }).companyNames,
+      companyRoles: (r as unknown as { companyRoles?: unknown }).companyRoles,
     })),
   });
 }

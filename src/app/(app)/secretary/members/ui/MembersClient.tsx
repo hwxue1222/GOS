@@ -21,6 +21,7 @@ type Member = {
   roleTags?: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'>;
   companyCount?: number;
   companyNames?: string[];
+  companyRoles?: Array<{ clientId: string; clientName: string; roles: Array<'DIRECTOR' | 'SHAREHOLDER' | 'RORC' | 'SECRETARY'> }>;
   createdAt: string;
 };
 
