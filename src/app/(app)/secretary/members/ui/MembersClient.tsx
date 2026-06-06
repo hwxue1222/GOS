@@ -43,6 +43,8 @@ export default function MembersClient() {
     address: '',
   });
 
+  const normalizeCarToSar = (v: string) => v.replace(/\bcar\b/gi, 'sar');
+
   async function refresh() {
     const res = await fetch('/api/secretary/members').catch(() => null);
     if (!res?.ok) {
@@ -99,7 +101,7 @@ export default function MembersClient() {
           email: form.email.trim() || undefined,
           phone: form.phone.trim() || undefined,
           idNo: form.idNo.trim() || undefined,
-          nationality: form.nationality.trim() || undefined,
+          nationality: form.nationality.trim() ? normalizeCarToSar(form.nationality.trim()) : undefined,
           dob: form.dob.trim() || undefined,
           address: form.address.trim() || undefined,
         }),

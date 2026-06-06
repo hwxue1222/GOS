@@ -44,6 +44,8 @@ export default function PeopleClient() {
     address: '',
   });
 
+  const normalizeCarToSar = (v: string) => v.replace(/\bcar\b/gi, 'sar');
+
   async function refresh() {
     setLoading(true);
     try {
@@ -89,7 +91,7 @@ export default function PeopleClient() {
           email: form.email.trim() || undefined,
           phone: form.phone.trim() || undefined,
           idNo: form.idNo.trim() || undefined,
-          nationality: form.nationality.trim() || undefined,
+          nationality: form.nationality.trim() ? normalizeCarToSar(form.nationality.trim()) : undefined,
           dob: form.dob.trim() || undefined,
           address: form.address.trim() || undefined,
         }),

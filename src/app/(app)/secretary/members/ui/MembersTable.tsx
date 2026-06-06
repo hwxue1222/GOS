@@ -26,6 +26,12 @@ function tagClass(role: string) {
   return 'bg-black/5 text-black/70 border-black/10';
 }
 
+function normalizeCarToSar(value: string | undefined) {
+  const s = String(value ?? '').trim();
+  if (!s) return undefined;
+  return s.replace(/\bcar\b/gi, 'sar');
+}
+
 type Props = {
   members: Member[];
   loading: boolean;
@@ -93,7 +99,7 @@ export default function MembersTable({ members, loading }: Props) {
                   <td className="px-4 py-3">{p.email ?? '-'}</td>
                   <td className="px-4 py-3">{p.phone ?? '-'}</td>
                   <td className="px-4 py-3">{p.idNo ?? '-'}</td>
-                  <td className="px-4 py-3">{p.nationality ?? '-'}</td>
+                  <td className="px-4 py-3">{normalizeCarToSar(p.nationality) ?? '-'}</td>
                   <td className="px-4 py-3">{p.dob ?? '-'}</td>
                   <td className="px-4 py-3 max-w-[420px]">
                     {p.address ? (
@@ -122,4 +128,3 @@ export default function MembersTable({ members, loading }: Props) {
     </div>
   );
 }
-
