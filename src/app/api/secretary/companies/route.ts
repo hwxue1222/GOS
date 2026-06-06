@@ -40,7 +40,7 @@ export async function GET() {
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
-  const rolesByClientId = new Map<string, Array<{ role: string; name: string }>>();
+  const rolesByClientId = new Map<string, Array<{ role: string; name: string; shares?: number }>>();
   for (const r of db.clientPartyRoles) {
     if (!isActiveRole(r)) continue;
     const party = partyById.get(r.partyId);
@@ -48,7 +48,7 @@ export async function GET() {
     const person = personById.get(party.personId);
     if (!person) continue;
     const list = rolesByClientId.get(r.clientId) ?? [];
-    list.push({ role: r.role, name: person.fullName });
+    list.push({ role: r.role, name: person.fullName, shares: r.role === 'SHAREHOLDER' ? r.shares : undefined });
     rolesByClientId.set(r.clientId, list);
   }
 
@@ -58,8 +58,12 @@ export async function GET() {
       const names = (role: string) =>
         roles
           .filter((x) => x.role === role)
-          .map((x) => x.name)
-          .sort((a, b) => a.localeCompare(b));
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((x) => {
+            if (role !== 'SHAREHOLDER') return x.name;
+            const shares = typeof x.shares === 'number' && Number.isFinite(x.shares) ? x.shares : undefined;
+            return shares !== undefined ? `${x.name} (${shares.toLocaleString()})` : x.name;
+          });
       return {
         client: c,
         directors: names('DIRECTOR'),
@@ -72,4 +76,3 @@ export async function GET() {
 
   return NextResponse.json({ ok: true, items });
 }
-

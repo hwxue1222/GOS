@@ -230,12 +230,19 @@ export default function CompanyRolesPanel({
           <div className="divide-y divide-black/5">
             {roleRows.map((r) => {
               const e = r.entity;
+              const shareSuffix =
+                roleTab === 'SHAREHOLDER' && typeof r.role.shares === 'number' && Number.isFinite(r.role.shares)
+                  ? ` (${r.role.shares.toLocaleString()})`
+                  : '';
               return (
                 <div key={r.role.id} className="px-3 py-3 flex items-start justify-between gap-3">
                   <div>
                     {e.type === 'PERSON' ? (
                       <>
-                        <div className="text-sm font-medium">{e.person.fullName}</div>
+                        <div className="text-sm font-medium">
+                          {e.person.fullName}
+                          {shareSuffix}
+                        </div>
                         <div className="mt-0.5 text-xs text-black/50">
                           {e.person.email ?? '-'}{e.person.phone ? ` · ${e.person.phone}` : ''}
                         </div>
@@ -261,7 +268,10 @@ export default function CompanyRolesPanel({
                       </>
                     ) : (
                       <>
-                        <div className="text-sm font-medium">{e.company.name}</div>
+                        <div className="text-sm font-medium">
+                          {e.company.name}
+                          {shareSuffix}
+                        </div>
                         <div className="mt-0.5 text-xs text-black/50">{`Company · ${e.company.code}`}</div>
                       </>
                     )}
