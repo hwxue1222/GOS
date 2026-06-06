@@ -57,6 +57,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     | null
   >(null);
   const stopRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -91,6 +92,8 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     const ok = window.confirm('Auto fill all companies? This will run in batches and may take time.');
     if (!ok) return;
     stopRef.current = false;
+    abortRef.current?.abort();
+    abortRef.current = null;
     setAutoFilling(true);
     setAutoFillProgress({ processed: 0, updated: 0, mismatched: 0, notFound: 0, errors: 0, remaining: 0 });
 
@@ -105,10 +108,13 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
     try {
       for (let i = 0; i < 500; i++) {
         if (stopRef.current) break;
+        const controller = new AbortController();
+        abortRef.current = controller;
         const res = await fetch('/api/admin/enrich/clients/run-all', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ cursor, limit: 10 }),
+          signal: controller.signal,
         }).catch(() => null);
         const j = (await res?.json().catch(() => null)) as
           | {
@@ -124,6 +130,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
             }
           | null;
         if (!res?.ok || !j?.ok) break;
+        if (stopRef.current) break;
 
         processed += Number(j.processed ?? 0) || 0;
         updated += Number(j.updated ?? 0) || 0;
@@ -140,6 +147,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
         if ((Number(j.processed ?? 0) || 0) === 0) break;
       }
     } finally {
+      abortRef.current = null;
       setAutoFilling(false);
       await refresh();
     }
@@ -182,6 +190,9 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                 <button
                   onClick={() => {
                     stopRef.current = true;
+                    abortRef.current?.abort();
+                    abortRef.current = null;
+                    setAutoFilling(false);
                   }}
                   className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
                 >
