@@ -40,9 +40,10 @@ function date10(value: unknown) {
 type Props = {
   members: Member[];
   loading: boolean;
+  onFillMissing?: (memberId: string) => void;
 };
 
-export default function MembersTable({ members, loading }: Props) {
+export default function MembersTable({ members, loading, onFillMissing }: Props) {
   const { t, lang } = useI18n();
 
   const roleLabel = (role: string) => {
@@ -82,7 +83,16 @@ export default function MembersTable({ members, loading }: Props) {
           {!loading
             ? members.map((p) => (
                 <tr key={p.id} className="border-t border-black/5">
-                  <td className="px-4 py-3 font-medium">{p.fullName || '-'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={p.fullName ? 'font-medium' : 'font-medium text-black/40'}>{p.fullName || '-'}</span>
+                      {!p.fullName && onFillMissing ? (
+                        <button type="button" onClick={() => onFillMissing(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
+                          Fill
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(p.roleTags ?? []).length ? (

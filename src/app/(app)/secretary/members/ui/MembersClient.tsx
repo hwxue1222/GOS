@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
-import MembersTable from '@/app/(app)/secretary/members/ui/MembersTable';
+import MembersTable from './MembersTable';
 
 type Member = {
   id: string;
@@ -222,6 +222,49 @@ export default function MembersClient() {
     }
   }
 
+  async function fillMissing(memberId: string) {
+    setError(null);
+    const ok = window.confirm('Fill missing member info for this row?');
+    if (!ok) return;
+    const fullName = window.prompt('Name', 'Wai Kwok Fung');
+    if (fullName === null) return;
+    const email = window.prompt('Email', 'kfwai123@gmail.com');
+    if (email === null) return;
+    const phone = window.prompt('Phone', '+85269761883');
+    if (phone === null) return;
+    const idNo = window.prompt('ID', 'HJ2089994');
+    if (idNo === null) return;
+
+    const patch = {
+      fullName: fullName.trim() || undefined,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      idNo: idNo.trim() || undefined,
+    };
+    if (!patch.fullName) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    if (patch.phone && !/^\+\d{6,15}$/.test(patch.phone)) {
+      setError('INVALID_PHONE');
+      return;
+    }
+
+    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(patch),
+      },
+    ).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -275,7 +318,7 @@ export default function MembersClient() {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <MembersTable members={visible} loading={loading} />
+      <MembersTable members={visible} loading={loading} onFillMissing={(id: string) => void fillMissing(id)} />
 
       {showAdd ? (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
