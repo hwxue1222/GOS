@@ -157,6 +157,7 @@ export type Person = {
   lastLoginDate?: string;
   createdAt: string;
   updatedAt?: string;
+  deletedAt?: string;
 };
 
 export type PartyType = 'PERSON' | 'COMPANY';

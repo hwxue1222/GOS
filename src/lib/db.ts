@@ -984,6 +984,7 @@ function normalizeDb(parsed: Db): Db {
     dob: (p as Person).dob,
     address: (p as Person).address,
     updatedAt: (p as Person).updatedAt ?? (p as Person).createdAt,
+    deletedAt: (p as Person).deletedAt,
   }));
 
   const parties = (parsed.parties ?? []).map((p) => ({
@@ -5947,12 +5948,21 @@ export async function deleteClient(clientId: string) {
 
 export async function listPersons() {
   const db = await readDb();
-  return db.persons;
+  return db.persons.filter((p) => !(p as Person).deletedAt);
 }
 
 export async function findPersonById(id: string) {
   const db = await readDb();
   return db.persons.find((p) => p.id === id) ?? null;
+}
+
+export async function deletePerson(personId: string) {
+  const db = await readDb();
+  const idx = db.persons.findIndex((p) => p.id === personId);
+  if (idx < 0) return null;
+  db.persons[idx] = { ...db.persons[idx], deletedAt: nowIso(), updatedAt: nowIso() };
+  await writeDb(db);
+  return db.persons[idx];
 }
 
 export async function createPerson(input: {
@@ -6072,6 +6082,8 @@ export async function listClientPeopleRoles(clientId: string) {
 
 export async function listPeopleWithRoleTags() {
   const db = await readDb();
+  const activePersons = db.persons.filter((p) => !(p as Person).deletedAt);
+  const activePersonIdSet = new Set(activePersons.map((p) => p.id));
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
 
@@ -6089,6 +6101,7 @@ export async function listPeopleWithRoleTags() {
     const party = partyById.get(r.partyId);
     if (!party || party.type !== 'PERSON' || !party.personId) continue;
     const personId = party.personId;
+    if (!activePersonIdSet.has(personId)) continue;
     const t = tagsByPersonId.get(personId) ?? new Set<ClientPartyRole['role']>();
     t.add(r.role);
     tagsByPersonId.set(personId, t);
@@ -6104,7 +6117,7 @@ export async function listPeopleWithRoleTags() {
     }
   }
 
-  return db.persons.map((p) => ({
+  return activePersons.map((p) => ({
     person: p,
     roleTags: [...(tagsByPersonId.get(p.id) ?? new Set())],
     companyCount: (clientIdsByPersonId.get(p.id) ?? new Set()).size,

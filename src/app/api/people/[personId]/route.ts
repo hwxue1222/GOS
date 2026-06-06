@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findPersonById, updatePerson } from '@/lib/db';
+import { deletePerson, findPersonById, updatePerson } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ personId: string }> }) {
@@ -45,4 +45,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ personId: str
   const updated = await updatePerson(personId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, person: updated });
+}
+
+export async function DELETE(_req: Request, ctx: { params: Promise<{ personId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(user, 'people', 'update')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { personId } = await ctx.params;
+  const existing = await findPersonById(personId);
+  if (!existing) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  const deleted = await deletePerson(personId);
+  if (!deleted) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

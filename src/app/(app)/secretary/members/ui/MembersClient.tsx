@@ -88,6 +88,15 @@ function normalizePhone(countryCode: string, local: string) {
   return `${countryCode}${digits}`;
 }
 
+function splitPhone(phone: string | undefined) {
+  const s = String(phone ?? '').trim();
+  if (!s.startsWith('+')) return { code: '+65', local: s.replace(/\D/g, '') };
+  const codes = [...new Set(PHONE_COUNTRY_CODES.map((c) => c.value))].sort((a, b) => b.length - a.length);
+  const hit = codes.find((c) => s.startsWith(c));
+  if (!hit) return { code: '+65', local: s.replace(/\D/g, '') };
+  return { code: hit, local: s.slice(hit.length).replace(/\D/g, '') };
+}
+
 export default function MembersClient() {
   const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
@@ -98,6 +107,8 @@ export default function MembersClient() {
   const [pageSize, setPageSize] = usePersistedState('gos.secretary.members.pageSize', 20);
   const [showAdd, setShowAdd] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -111,6 +122,18 @@ export default function MembersClient() {
   });
 
   const normalizeCarToSar = (v: string) => v.replace(/\bcar\b/gi, 'sar');
+
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    email: '',
+    phoneCountryCode: '+65',
+    phoneLocal: '',
+    idNo: '',
+    nationality: 'Singapore',
+    nationalityOther: '',
+    dob: '',
+    address: '',
+  });
 
   async function refresh() {
     const res = await fetch('/api/secretary/members').catch(() => null);
@@ -266,6 +289,100 @@ export default function MembersClient() {
     await refresh();
   }
 
+  function openEdit(memberId: string) {
+    const m = members.find((x) => x.id === memberId);
+    if (!m) return;
+    const { code, local } = splitPhone(m.phone);
+    const nat = (m.nationality ?? '').trim();
+    const inList = (NATIONALITY_OPTIONS as readonly string[]).includes(nat);
+    const nationality = nat ? (inList ? nat : 'Others (please specify)') : 'Singapore';
+    setEditForm({
+      fullName: m.fullName ?? '',
+      email: m.email ?? '',
+      phoneCountryCode: code,
+      phoneLocal: local,
+      idNo: m.idNo ?? '',
+      nationality,
+      nationalityOther: nationality === 'Others (please specify)' ? nat : '',
+      dob: m.dob ?? '',
+      address: m.address ?? '',
+    });
+    setEditingMemberId(memberId);
+  }
+
+  async function saveEdit() {
+    if (!editingMemberId) return;
+    setError(null);
+    const fullName = editForm.fullName.trim();
+    if (!fullName) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    const nationalitySelected = String(editForm.nationality ?? '').trim();
+    const nationalityRaw =
+      nationalitySelected === 'Others (please specify)'
+        ? editForm.nationalityOther.trim()
+        : nationalitySelected;
+    if (nationalitySelected === 'Others (please specify)' && !nationalityRaw) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    if (nationalityRaw && !isEnglishOnly(nationalityRaw)) {
+      setError('ENGLISH_ONLY');
+      return;
+    }
+    const phone = normalizePhone(editForm.phoneCountryCode, editForm.phoneLocal);
+    if (phone && !/^\+\d{6,15}$/.test(phone)) {
+      setError('INVALID_PHONE');
+      return;
+    }
+    const dob = editForm.dob.trim();
+    if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+      setError('INVALID_DOB');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(editingMemberId)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          email: editForm.email.trim(),
+          phone: phone ?? '',
+          idNo: editForm.idNo.trim(),
+          nationality: nationalityRaw ? normalizeCarToSar(nationalityRaw) : '',
+          dob,
+          address: editForm.address.trim(),
+        }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      setEditingMemberId(null);
+      await refresh();
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function deleteMember(memberId: string) {
+    const m = members.find((x) => x.id === memberId);
+    const ok = window.confirm(`Delete member${m?.fullName ? `: ${m.fullName}` : ''}?`);
+    if (!ok) return;
+    setError(null);
+    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -319,7 +436,13 @@ export default function MembersClient() {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <MembersTable members={visible} loading={loading} onFillMissing={(id: string) => void fillMissing(id)} />
+      <MembersTable
+        members={visible}
+        loading={loading}
+        onFillMissing={(id: string) => void fillMissing(id)}
+        onEdit={(id: string) => openEdit(id)}
+        onDelete={(id: string) => void deleteMember(id)}
+      />
 
       {showAdd ? (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
@@ -444,6 +567,135 @@ export default function MembersClient() {
                 className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
               >
                 {creating ? 'Saving...' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editingMemberId ? (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">Edit Member</div>
+              <button onClick={() => setEditingMemberId(null)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-sm sm:col-span-2">
+                <div className="text-black/60">Name</div>
+                <input
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm((v) => ({ ...v, fullName: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="Full name"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/60">Email</div>
+                <input
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((v) => ({ ...v, email: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="email@example.com"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/60">Phone</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    value={editForm.phoneCountryCode}
+                    onChange={(e) => setEditForm((v) => ({ ...v, phoneCountryCode: e.target.value }))}
+                    className="h-10 rounded-lg border border-black/10 bg-white px-2 text-sm text-black/70"
+                  >
+                    {PHONE_COUNTRY_CODES.map((c) => (
+                      <option key={`${c.label}-${c.value}`} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={editForm.phoneLocal}
+                    onChange={(e) => setEditForm((v) => ({ ...v, phoneLocal: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                    placeholder="Phone number"
+                  />
+                </div>
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <div className="text-black/60">ID</div>
+                <input
+                  value={editForm.idNo}
+                  onChange={(e) => setEditForm((v) => ({ ...v, idNo: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="NRIC / Passport"
+                />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/60">Nationality</div>
+                <select
+                  value={editForm.nationality}
+                  onChange={(e) =>
+                    setEditForm((v) => ({
+                      ...v,
+                      nationality: e.target.value,
+                      nationalityOther: e.target.value === 'Others (please specify)' ? v.nationalityOther : '',
+                    }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  {NATIONALITY_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <div className="text-black/60">DOB</div>
+                <input
+                  value={editForm.dob}
+                  onChange={(e) => setEditForm((v) => ({ ...v, dob: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="YYYY-MM-DD"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <div className="text-black/60">Address</div>
+                <input
+                  value={editForm.address}
+                  onChange={(e) => setEditForm((v) => ({ ...v, address: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="Address"
+                />
+              </label>
+              {editForm.nationality === 'Others (please specify)' ? (
+                <label className="text-sm sm:col-span-2">
+                  <div className="text-black/60">Other nationality</div>
+                  <input
+                    value={editForm.nationalityOther}
+                    onChange={(e) => setEditForm((v) => ({ ...v, nationalityOther: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    placeholder="Please specify in English"
+                  />
+                </label>
+              ) : null}
+            </div>
+
+            {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button onClick={() => setEditingMemberId(null)} className="rounded-lg border border-black/10 px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button
+                disabled={savingEdit}
+                onClick={() => void saveEdit()}
+                className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+              >
+                {savingEdit ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
