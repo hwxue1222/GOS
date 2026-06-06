@@ -356,16 +356,57 @@ function dedupeClientsByNormalizedNameAlways(db: Db) {
     groups.set(nameKey, list);
   }
 
+  const deletedNonScByNameKey = new Map<string, Client[]>();
+  for (const c of db.clients) {
+    if (!c.deletedAt) continue;
+    const nameKey = normalizeClientNameForMerge(String(c.name ?? ''));
+    if (!nameKey) continue;
+    const code = String(c.code ?? '');
+    const isSc = /^SC\d+$/i.test(code);
+    if (isSc) continue;
+    const list = deletedNonScByNameKey.get(nameKey) ?? [];
+    list.push(c);
+    deletedNonScByNameKey.set(nameKey, list);
+  }
+
   let changed = false;
-  for (const list of groups.values()) {
-    if (list.length <= 1) continue;
+  for (const [nameKey, list] of groups.entries()) {
+    const isSc = (c: Client) => /^SC\d+$/i.test(String(c.code ?? ''));
 
-    const scClients = list.filter((c) => /^SC\d+$/i.test(String(c.code ?? '')));
-    const nonScClients = list.filter((c) => !/^SC\d+$/i.test(String(c.code ?? '')));
+    const scOnly = list.length === 1 && isSc(list[0]);
+    if (scOnly) {
+      const deletedNonSc = deletedNonScByNameKey.get(nameKey) ?? [];
+      if (deletedNonSc.length) {
+        const restored = choosePrimaryClientForMerge(db, deletedNonSc);
+        if (restored.deletedAt) {
+          restored.deletedAt = undefined;
+          changed = true;
+        }
+      }
+    }
 
-    if (scClients.length && nonScClients.length) {
-      const primary = choosePrimaryClientForMerge(db, nonScClients);
-      for (const sc of scClients) {
+    const activeNow = list.filter((c) => !c.deletedAt);
+    const scClients = activeNow.filter((c) => isSc(c));
+    const nonScClients = activeNow.filter((c) => !isSc(c));
+
+    if (scClients.length && nonScClients.length === 0) {
+      const deletedNonSc = deletedNonScByNameKey.get(nameKey) ?? [];
+      if (deletedNonSc.length) {
+        const restored = choosePrimaryClientForMerge(db, deletedNonSc);
+        if (restored.deletedAt) {
+          restored.deletedAt = undefined;
+          changed = true;
+        }
+      }
+    }
+
+    const activeAfterRestore = list.filter((c) => !c.deletedAt);
+    const scAfter = activeAfterRestore.filter((c) => isSc(c));
+    const nonScAfter = activeAfterRestore.filter((c) => !isSc(c));
+
+    if (scAfter.length && nonScAfter.length) {
+      const primary = choosePrimaryClientForMerge(db, nonScAfter);
+      for (const sc of scAfter) {
         if (sc.id === primary.id) continue;
         if (mergeClientInto(db, sc.id, primary.id)) changed = true;
       }
@@ -375,7 +416,10 @@ function dedupeClientsByNormalizedNameAlways(db: Db) {
     const emptyBucket: Client[] = [];
     const nonEmptyRegSet = new Set<string>();
 
-    for (const c of list) {
+    const activeForBuckets = list.filter((c) => !c.deletedAt);
+    if (activeForBuckets.length <= 1) continue;
+
+    for (const c of activeForBuckets) {
       const reg = (c.companyRegistrationNo ?? '').trim();
       if (!reg) {
         emptyBucket.push(c);
