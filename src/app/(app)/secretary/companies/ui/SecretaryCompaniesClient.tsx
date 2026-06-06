@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
@@ -40,30 +40,14 @@ function money(currency?: string, amount?: number) {
 
 export default function SecretaryCompaniesClient({ initialItems, canEdit, canViewPeople }: Props) {
   const { t } = useI18n();
-  const [itemsState, setItemsState] = useState<CompanyRow[]>(initialItems);
   const [search, setSearch] = useState('');
   const [page, setPage] = usePersistedState('gos.secretary.companies.page', 1);
   const [pageSize, setPageSize] = usePersistedState('gos.secretary.companies.pageSize', 20);
-  const [autoFilling, setAutoFilling] = useState(false);
-  const [autoFillProgress, setAutoFillProgress] = useState<
-    | {
-        processed: number;
-        updated: number;
-        mismatched: number;
-        notFound: number;
-        errors: number;
-        remaining: number;
-      }
-    | null
-  >(null);
-  const stopRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const src = itemsState;
-    if (!q) return src;
-    return src.filter((it) => {
+    if (!q) return initialItems;
+    return initialItems.filter((it) => {
       const hay = [
         it.client.name,
         it.client.code,
@@ -78,80 +62,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [itemsState, search]);
-
-  async function refresh() {
-    const res = await fetch('/api/secretary/companies', { cache: 'no-store' }).catch(() => null);
-    if (!res?.ok) return;
-    const j = (await res.json().catch(() => null)) as { ok?: boolean; items?: CompanyRow[] } | null;
-    if (j?.ok && Array.isArray(j.items)) setItemsState(j.items);
-  }
-
-  async function runAutoFillAll() {
-    if (!canEdit || autoFilling) return;
-    const ok = window.confirm('Auto fill all companies? This will run in batches and may take time.');
-    if (!ok) return;
-    stopRef.current = false;
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setAutoFilling(true);
-    setAutoFillProgress({ processed: 0, updated: 0, mismatched: 0, notFound: 0, errors: 0, remaining: 0 });
-
-    let cursor: string | null = null;
-    let processed = 0;
-    let updated = 0;
-    let mismatched = 0;
-    let notFound = 0;
-    let errors = 0;
-    let remaining = 0;
-
-    try {
-      for (let i = 0; i < 500; i++) {
-        if (stopRef.current) break;
-        const controller = new AbortController();
-        abortRef.current = controller;
-        const res = await fetch('/api/admin/enrich/clients/run-all', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ cursor, limit: 10 }),
-          signal: controller.signal,
-        }).catch(() => null);
-        const j = (await res?.json().catch(() => null)) as
-          | {
-              ok?: boolean;
-              processed?: number;
-              updated?: number;
-              mismatched?: number;
-              notFound?: number;
-              errors?: number;
-              nextCursor?: string | null;
-              done?: boolean;
-              remaining?: number;
-            }
-          | null;
-        if (!res?.ok || !j?.ok) break;
-        if (stopRef.current) break;
-
-        processed += Number(j.processed ?? 0) || 0;
-        updated += Number(j.updated ?? 0) || 0;
-        mismatched += Number(j.mismatched ?? 0) || 0;
-        notFound += Number(j.notFound ?? 0) || 0;
-        errors += Number(j.errors ?? 0) || 0;
-        remaining = Number(j.remaining ?? 0) || 0;
-        setAutoFillProgress({ processed, updated, mismatched, notFound, errors, remaining });
-
-        cursor = typeof j.nextCursor === 'string' ? j.nextCursor : null;
-        const done = Boolean(j.done);
-        if (done) break;
-        if (!cursor) break;
-        if ((Number(j.processed ?? 0) || 0) === 0) break;
-      }
-    } finally {
-      abortRef.current = null;
-      setAutoFilling(false);
-      await refresh();
-    }
-  }
+  }, [initialItems, search]);
 
   const safePageSize = Math.max(5, Math.min(200, Number(pageSize) || 20));
   const total = items.length;
@@ -177,30 +88,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
               {t('secretary.peopleLibrary')}
             </Link>
           ) : null}
-          {canEdit ? (
-            <>
-              <button
-                disabled={autoFilling}
-                onClick={() => void runAutoFillAll()}
-                className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium disabled:opacity-60"
-              >
-                {autoFilling ? 'Auto filling…' : 'Auto Fill All'}
-              </button>
-              {autoFilling ? (
-                <button
-                  onClick={() => {
-                    stopRef.current = true;
-                    abortRef.current?.abort();
-                    abortRef.current = null;
-                    setAutoFilling(false);
-                  }}
-                  className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                >
-                  Stop
-                </button>
-              ) : null}
-            </>
-          ) : null}
           <input
             value={search}
             onChange={(e) => {
@@ -212,13 +99,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
           />
         </div>
       </div>
-
-      {autoFillProgress ? (
-        <div className="mt-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-xs text-black/70">
-          Processed: {autoFillProgress.processed} | Updated: {autoFillProgress.updated} | Mismatched: {autoFillProgress.mismatched} | Not found:{' '}
-          {autoFillProgress.notFound} | Errors: {autoFillProgress.errors} | Remaining: {autoFillProgress.remaining}
-        </div>
-      ) : null}
 
       <div className="mt-3 flex items-center justify-end">
         <PaginationControls
