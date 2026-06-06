@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/sign', '/p'];
+const publicPaths = ['/login', '/admin/login', '/portal/login', '/sign', '/p'];
+
+function loginPathFor(pathname: string) {
+  if (
+    pathname === '/dashboard' ||
+    pathname.startsWith('/dashboard/') ||
+    pathname === '/incorporation' ||
+    pathname.startsWith('/incorporation/') ||
+    pathname === '/corporate-secretary' ||
+    pathname.startsWith('/corporate-secretary/') ||
+    pathname === '/portal' ||
+    pathname.startsWith('/portal/')
+  ) {
+    return '/portal/login';
+  }
+  return '/admin/login';
+}
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -16,7 +32,7 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('gos_session')?.value;
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = loginPathFor(pathname);
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
