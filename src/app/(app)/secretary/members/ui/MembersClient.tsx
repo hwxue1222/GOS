@@ -222,71 +222,6 @@ export default function MembersClient() {
     }
   }
 
-  async function updateNationality(memberId: string, current: string | undefined) {
-    setError(null);
-    const next = window.prompt('Nationality', current ?? '');
-    if (next === null) return;
-    const trimmed = next.trim();
-    const nationality = trimmed ? normalizeCarToSar(trimmed) : undefined;
-    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nationality }),
-    }).catch(() => null);
-    if (!res?.ok) {
-      const j = await res?.json().catch(() => null);
-      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-      return;
-    }
-    await refresh();
-  }
-
-  async function setEp(memberId: string) {
-    setError(null);
-    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nationality: 'EP' }),
-    }).catch(() => null);
-    if (!res?.ok) {
-      const j = await res?.json().catch(() => null);
-      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-      return;
-    }
-    await refresh();
-  }
-
-  async function updateTextField(memberId: string, field: 'fullName' | 'email' | 'phone' | 'idNo', current: string | undefined) {
-    setError(null);
-    const next = window.prompt(`Edit ${field}`, current ?? '');
-    if (next === null) return;
-    const value = next.trim();
-    if (field === 'fullName' && !value) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    const patch: Record<string, unknown> = {};
-    patch[field] = value || undefined;
-    if (field === 'phone') {
-      const v = String(patch.phone ?? '');
-      if (v && !/^\+\d{6,15}$/.test(v)) {
-        setError('INVALID_PHONE');
-        return;
-      }
-    }
-    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(patch),
-    }).catch(() => null);
-    if (!res?.ok) {
-      const j = await res?.json().catch(() => null);
-      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-      return;
-    }
-    await refresh();
-  }
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -340,13 +275,7 @@ export default function MembersClient() {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <MembersTable
-        members={visible}
-        loading={loading}
-        onEditTextField={(id, field, cur) => void updateTextField(id, field, cur)}
-        onEditNationality={(id, cur) => void updateNationality(id, cur)}
-        onSetEp={(id) => void setEp(id)}
-      />
+      <MembersTable members={visible} loading={loading} />
 
       {showAdd ? (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">

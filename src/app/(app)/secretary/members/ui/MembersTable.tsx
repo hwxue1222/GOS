@@ -40,12 +40,9 @@ function date10(value: unknown) {
 type Props = {
   members: Member[];
   loading: boolean;
-  onEditTextField: (memberId: string, field: 'fullName' | 'email' | 'phone' | 'idNo', currentValue: string | undefined) => void;
-  onEditNationality: (memberId: string, currentNationality: string | undefined) => void;
-  onSetEp: (memberId: string) => void;
 };
 
-export default function MembersTable({ members, loading, onEditTextField, onEditNationality, onSetEp }: Props) {
+export default function MembersTable({ members, loading }: Props) {
   const { t, lang } = useI18n();
 
   const roleLabel = (role: string) => {
@@ -85,20 +82,7 @@ export default function MembersTable({ members, loading, onEditTextField, onEdit
           {!loading
             ? members.map((p) => (
                 <tr key={p.id} className="border-t border-black/5">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={p.fullName.trim() ? 'font-medium' : 'font-medium text-black/40'}>
-                        {p.fullName.trim() ? p.fullName : '(No name)'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onEditTextField(p.id, 'fullName', p.fullName)}
-                        className="text-xs text-[#2f7bdc] hover:underline"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </td>
+                  <td className="px-4 py-3 font-medium">{p.fullName || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(p.roleTags ?? []).length ? (
@@ -117,59 +101,10 @@ export default function MembersTable({ members, loading, onEditTextField, onEdit
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span>{p.email ?? '-'}</span>
-                      <button
-                        type="button"
-                        onClick={() => onEditTextField(p.id, 'email', p.email)}
-                        className="text-xs text-[#2f7bdc] hover:underline"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span>{p.phone ?? '-'}</span>
-                      <button
-                        type="button"
-                        onClick={() => onEditTextField(p.id, 'phone', p.phone)}
-                        className="text-xs text-[#2f7bdc] hover:underline"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span>{p.idNo ?? '-'}</span>
-                      <button
-                        type="button"
-                        onClick={() => onEditTextField(p.id, 'idNo', p.idNo)}
-                        className="text-xs text-[#2f7bdc] hover:underline"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span>{normalizeCarToSar(p.nationality) ?? '-'}</span>
-                      <button
-                        type="button"
-                        onClick={() => onEditNationality(p.id, p.nationality)}
-                        className="text-xs text-[#2f7bdc] hover:underline"
-                      >
-                        Edit
-                      </button>
-                      {String(p.nationality ?? '') === 'Singapore PR/EP' ? (
-                        <button type="button" onClick={() => onSetEp(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
-                          Set EP
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
+                  <td className="px-4 py-3">{p.email ?? '-'}</td>
+                  <td className="px-4 py-3">{p.phone ?? '-'}</td>
+                  <td className="px-4 py-3">{p.idNo ?? '-'}</td>
+                  <td className="px-4 py-3">{normalizeCarToSar(p.nationality) ?? '-'}</td>
                   <td className="px-4 py-3">{p.dob ?? '-'}</td>
                   <td className="px-4 py-3 max-w-[420px]">
                     {p.address ? (
