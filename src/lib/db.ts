@@ -669,6 +669,7 @@ const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_3 = 'secretaryCompanies.screenshot
 const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_4 = 'secretaryCompanies.screenshotPage.v4';
 const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_5 = 'secretaryCompanies.screenshotPage.v5';
 const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_6 = 'secretaryCompanies.screenshotPage.v6';
+const SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_7 = 'secretaryCompanies.screenshotPage.v7';
 
 const SEED_SECRETARY_COMPANIES: Array<{
   name: string;
@@ -3412,6 +3413,500 @@ function seedSecretaryCompaniesFromScreenshot6(db: Db) {
   return changed;
 }
 
+const SEED_SECRETARY_COMPANIES_7: Array<{
+  name: string;
+  member?: string;
+  regNo?: string;
+  paidUpCurrency?: Currency;
+  paidUpAmount?: number;
+  totalShares?: number;
+  rorc?: string;
+  secretaries?: string[];
+  directors?: string[];
+  shareholders?: string[];
+  createdDate: string;
+}> = [
+  {
+    name: 'Gohan Pte Ltd',
+    member: 'Ze Ying',
+    regNo: '202038137D',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Ze Ying',
+    secretaries: ['Ze Ying'],
+    directors: ['Ze Ying'],
+    shareholders: ['Ze Ying'],
+    createdDate: '2021-02-09',
+  },
+  {
+    name: 'Chengkai Holdings Pte Ltd',
+    member: 'Feng Songtao',
+    regNo: '201923597E',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Hou Chuanbiao',
+    secretaries: ['Feng Songtao'],
+    directors: ['Yue Yan'],
+    shareholders: ['Hou Chuanbiao', 'Xiang Peng', 'Zhang Qiaoli', 'Becs Technology Pte Ltd'],
+    createdDate: '2019-12-25',
+  },
+  {
+    name: 'Sinma Global Pte Ltd',
+    member: 'Wang Yueru',
+    regNo: '201413517C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100000,
+    totalShares: 100000,
+    rorc: 'Wang Yueru',
+    secretaries: ['Wang Yueru'],
+    directors: ['Zheng Jiayu'],
+    shareholders: ['Wang Yueru'],
+    createdDate: '2019-12-23',
+  },
+  {
+    name: 'Sinlea Technology Pte. Ltd.',
+    member: 'WANG DONG',
+    regNo: '202000227Z',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 200000,
+    totalShares: 200000,
+    rorc: 'Li Dandan',
+    secretaries: ['Li Dandan'],
+    directors: ['Wang Dong'],
+    shareholders: ['Wang Dong'],
+    createdDate: '2019-12-23',
+  },
+  {
+    name: 'Zu Yi Sheng Shou Zu Hu Li Pte Ltd',
+    member: 'Chen Haiyan',
+    regNo: '201832858G',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Chen Haiyan',
+    secretaries: ['Chen Haiyan'],
+    directors: ['Chen Haiyan'],
+    shareholders: ['Chen Haiyan'],
+    createdDate: '2019-12-18',
+  },
+  {
+    name: 'Regal Aquafarm Pte Ltd',
+    member: 'Zhao Xian',
+    regNo: '201940825E',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000,
+    totalShares: 1000,
+    rorc: 'Zhao Xian',
+    secretaries: ['Zhao Xian'],
+    directors: ['Zhao Xian'],
+    shareholders: ['Zhao Xian'],
+    createdDate: '2019-12-02',
+  },
+  {
+    name: 'Nissii Hash Tech Pte. Ltd.',
+    member: 'Fan Mengying',
+    regNo: '201932044W',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Fan Mengying',
+    secretaries: ['Fan Mengying'],
+    directors: ['Fan Mengying'],
+    shareholders: ['Fan Mengying'],
+    createdDate: '2019-11-28',
+  },
+  {
+    name: 'Toyou Travel Pte. Ltd.',
+    member: 'Huang Xiaohuan',
+    regNo: '201409697D',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100200,
+    totalShares: 100200,
+    rorc: 'Huang Xiaohuan',
+    secretaries: ['Huang Xiaohuan'],
+    directors: ['Huang Xiaohuan'],
+    shareholders: ['Huang Xiaohuan'],
+    createdDate: '2019-11-14',
+  },
+  {
+    name: 'Aitime Holdings Pte. Ltd.',
+    member: 'Cao Gaoqi',
+    regNo: '201936638C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Chen Lei',
+    secretaries: ['Cao Gaoqi', 'Tan Sook Mei'],
+    directors: ['Chen Lei'],
+    shareholders: ['Cao Gaoqi'],
+    createdDate: '2019-10-31',
+  },
+  {
+    name: 'Finfab Holdings Pte. Ltd.',
+    member: 'Wu Can',
+    regNo: '201936621M',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Wu Can',
+    secretaries: ['Wu Can'],
+    directors: ['Wu Can'],
+    shareholders: ['Wu Can', 'Chen Changhua'],
+    createdDate: '2019-10-31',
+  },
+  {
+    name: 'Central Media Pte. Ltd.',
+    member: 'Wang Kai',
+    regNo: '201211983K',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10,
+    totalShares: 10,
+    rorc: 'Yang Yong',
+    secretaries: ['Wang Kai'],
+    directors: ['Yang Yong'],
+    shareholders: ['Yang Yong'],
+    createdDate: '2019-10-18',
+  },
+  {
+    name: 'Singapore Em Pte. Ltd.',
+    member: 'Lin Cheng',
+    regNo: '201623704R',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10,
+    totalShares: 10,
+    rorc: 'Lin Cheng',
+    secretaries: ['Lin Cheng'],
+    directors: ['Lin Cheng'],
+    shareholders: ['Lin Cheng'],
+    createdDate: '2019-10-18',
+  },
+  {
+    name: 'Accscience Publishing Pte Ltd',
+    member: 'Guo Feng',
+    regNo: '201613066N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Guo Feng',
+    secretaries: ['Guo Feng'],
+    directors: ['Guo Feng', 'Xue Hongwei'],
+    shareholders: ['Guo Feng', 'Xue Hongwei'],
+    createdDate: '2019-10-16',
+  },
+  {
+    name: 'Yunan Pte. Ltd.',
+    member: 'LIU QINGFA',
+    regNo: '201829506N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 0,
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Songning Pte. Ltd.',
+    member: 'LIU QINGFA',
+    regNo: '201831115E',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 0,
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Suxin Renovation Private Limited',
+    member: 'LIU QINGFA',
+    regNo: '201722871N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 150000,
+    totalShares: 150000,
+    rorc: 'Liu Qingfa',
+    secretaries: ['Liu Qingfa'],
+    directors: ['Liu Qingfa'],
+    shareholders: ['Liu Qingfa'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Sinjin International Pte. Ltd.',
+    member: 'LIU QINGFA',
+    regNo: '201627613H',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 50000,
+    rorc: 'Gao Hongmei',
+    secretaries: ['Gao Hongmei'],
+    directors: ['Gao Hongmei'],
+    shareholders: ['Gao Hongmei'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'We17 Pte. Ltd.',
+    member: 'Chi Zhaofei',
+    regNo: '201934905C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 500000,
+    totalShares: 500000,
+    rorc: 'Wang Chenxi',
+    secretaries: ['Chi Zhaofei'],
+    directors: ['Wang Chenxi'],
+    shareholders: ['Wang Chenxi'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Luxegreen Wealth Academy Pte Ltd',
+    member: 'Liu Wei',
+    regNo: '201835209R',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100,
+    totalShares: 100,
+    rorc: 'Liu Wei',
+    secretaries: ['Liu Wei'],
+    directors: ['Liu Wei'],
+    shareholders: ['Liu Wei'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Luxegreen Pte Ltd',
+    member: 'Cindy Qi Xinyi',
+    regNo: '201624542M',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 200000,
+    totalShares: 200000,
+    rorc: 'Cindy Qi Xinyi',
+    secretaries: ['Liu Wei'],
+    directors: ['Cindy Qi Xinyi'],
+    shareholders: ['Cindy Qi Xinyi'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Native Mandarin Services Pte Ltd',
+    member: 'Li Yilin',
+    regNo: '201728527K',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 1000,
+    totalShares: 1000,
+    rorc: 'Li Yilin',
+    secretaries: ['Li Yilin'],
+    directors: ['Shen Feifei', 'Sun Boyu'],
+    shareholders: ['Li Yilin', 'Sun Boyu'],
+    createdDate: '2019-10-14',
+  },
+  {
+    name: 'Hong Valley Holdings Pte. Ltd.',
+    regNo: '201512467D',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 200000,
+    totalShares: 200000,
+    rorc: 'Xu Jiageng',
+    secretaries: ['Lim Kee Eng'],
+    directors: ['Xu Jiageng', 'Wu Jing'],
+    shareholders: ['Wu Jing', 'Xu Jiageng'],
+    createdDate: '2019-10-13',
+  },
+  {
+    name: 'Soon Da Pte Ltd',
+    member: 'Tang Xiaojing',
+    regNo: '201719408Z',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 200000,
+    totalShares: 200000,
+    rorc: 'Lim Kee Eng',
+    secretaries: ['Lim Kee Eng'],
+    directors: ['Lim Kee Eng'],
+    shareholders: ['Tang Xiaojing'],
+    createdDate: '2019-10-13',
+  },
+  {
+    name: 'Express It Service Pte. Ltd.',
+    member: 'Cao Zhanghua',
+    regNo: '201530506N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Cao Zhanghua',
+    secretaries: ['Cao Zhanghua'],
+    directors: ['Cao Zhanghua'],
+    shareholders: ['Zhou Xichun', 'Chen Rongfang'],
+    createdDate: '2019-10-13',
+  },
+  {
+    name: 'Bybridge Consultancy Pte Ltd',
+    regNo: '201523304N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Chen Rongfang',
+    secretaries: ['Chen Rongfang'],
+    directors: ['Li Xin', 'Yu Kun', 'Ricky Ng See San'],
+    shareholders: ['Li Cunkou', 'Yuen Shui Wai'],
+    createdDate: '2019-10-11',
+  },
+  {
+    name: 'Biliao Foundation Ltd',
+    member: 'HUANG XIUYUAN',
+    regNo: '201807815K',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 0,
+    totalShares: 0,
+    createdDate: '2019-10-11',
+  },
+  {
+    name: 'Boston Medical Technology Health Management Pte Ltd',
+    member: 'Zhou Pengwu',
+    regNo: '201934915N',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 100,
+    totalShares: 100,
+    rorc: 'Xue Hongwei',
+    secretaries: ['Zhou Pengwu'],
+    directors: ['Zhou Pengwu'],
+    shareholders: ['Zhou Pengwu'],
+    createdDate: '2019-10-11',
+  },
+  {
+    name: 'Bybridge Consulting Pte Ltd',
+    regNo: '201118452Z',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 20000,
+    totalShares: 20000,
+    rorc: 'Cheng Ying',
+    secretaries: ['Xue Hongwei'],
+    directors: ['Chen Rongfang'],
+    createdDate: '2019-10-11',
+  },
+  {
+    name: 'You Lin Trading Company Ltd油鑫贸易有限公司_BVI公司',
+    member: '隋永梅',
+    regNo: '1998712',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 50000,
+    totalShares: 0,
+    rorc: 'Sui Yongmei',
+    secretaries: ['Sui Yongmei'],
+    directors: ['Sui Yongmei'],
+    createdDate: '2019-10-11',
+  },
+  {
+    name: 'Tuo Yan Education Technology Pte. Ltd.',
+    member: 'Zhang Yiwen',
+    regNo: '201826929C',
+    paidUpCurrency: 'SGD',
+    paidUpAmount: 10000,
+    totalShares: 10000,
+    rorc: 'Zhang Yiwen',
+    secretaries: ['Zhang Yiwen'],
+    directors: ['Zhang Yiwen'],
+    shareholders: ['Zheng Jiabao', 'Wang Shixian', 'Zhang Yiwen'],
+    createdDate: '2019-10-10',
+  },
+];
+
+function seedSecretaryCompaniesFromScreenshot7(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_7]) return false;
+
+  let changed = false;
+  for (const row of SEED_SECRETARY_COMPANIES_7) {
+    const createdIso = dateToIso(row.createdDate);
+    const regNoKey = (row.regNo ?? '').trim() || undefined;
+    const existing = safeFindClientByNameAndRegNo(db, row.name, regNoKey);
+
+    if (!existing) {
+      const client: Client = {
+        id: newId('cli'),
+        code: nextScCode(db),
+        name: row.name,
+        companyRegistrationNo: regNoKey,
+        contactPerson: row.member?.trim() || undefined,
+        paidUpCapitalCurrency: row.paidUpCurrency,
+        paidUpCapitalAmount: row.paidUpAmount,
+        totalShares: row.totalShares,
+        tags: [],
+        createdAt: createdIso,
+      };
+      db.clients.unshift(client);
+      changed = true;
+    } else {
+      if (regNoKey && !existing.companyRegistrationNo) {
+        existing.companyRegistrationNo = regNoKey;
+        changed = true;
+      }
+      if (row.member?.trim() && !existing.contactPerson) {
+        existing.contactPerson = row.member.trim();
+        changed = true;
+      }
+      if (row.paidUpCurrency && existing.paidUpCapitalCurrency !== row.paidUpCurrency) {
+        existing.paidUpCapitalCurrency = row.paidUpCurrency;
+        changed = true;
+      }
+      if (typeof row.paidUpAmount === 'number' && existing.paidUpCapitalAmount !== row.paidUpAmount) {
+        existing.paidUpCapitalAmount = row.paidUpAmount;
+        changed = true;
+      }
+      if (typeof row.totalShares === 'number' && existing.totalShares !== row.totalShares) {
+        existing.totalShares = row.totalShares;
+        changed = true;
+      }
+    }
+
+    const target = safeFindClientByNameAndRegNo(db, row.name, regNoKey);
+    if (!target) continue;
+
+    const rorcName = (row.rorc ?? '').trim();
+    if (rorcName && rorcName !== '--') {
+      if (looksLikeCompanyName(rorcName)) {
+        const c = ensureClientForCompanyName(db, rorcName, createdIso);
+        const pty = ensurePartyForCompany(db, c, createdIso);
+        upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'RORC', createdIso });
+      } else {
+        const p = ensurePerson(db, rorcName, createdIso);
+        const pty = ensurePartyForPerson(db, p, createdIso);
+        upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'RORC', createdIso });
+      }
+      changed = true;
+    }
+
+    for (const sn of row.secretaries ?? []) {
+      const name = sn.trim();
+      if (!name) continue;
+      const p = ensurePerson(db, name, createdIso);
+      const pty = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'SECRETARY', createdIso });
+      changed = true;
+    }
+
+    for (const dn of row.directors ?? []) {
+      const name = dn.trim();
+      if (!name || name === '—' || name === '无') continue;
+      const p = ensurePerson(db, name, createdIso);
+      const pty = ensurePartyForPerson(db, p, createdIso);
+      upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'DIRECTOR', createdIso });
+      changed = true;
+    }
+
+    if (typeof row.totalShares === 'number' && Array.isArray(row.shareholders) && row.shareholders.length) {
+      const sharesByName = computeShareAllocation(row.totalShares, row.shareholders);
+      for (const [nameRaw, shares] of sharesByName.entries()) {
+        const name = nameRaw.trim();
+        if (!name || name === '—' || name === '无') continue;
+        if (looksLikeCompanyName(name)) {
+          const c = ensureClientForCompanyName(db, name, createdIso);
+          const pty = ensurePartyForCompany(db, c, createdIso);
+          upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'SHAREHOLDER', createdIso, shares });
+        } else {
+          const p = ensurePerson(db, name, createdIso);
+          const pty = ensurePartyForPerson(db, p, createdIso);
+          upsertRole(db, { clientId: target.id, partyId: pty.id, role: 'SHAREHOLDER', createdIso, shares });
+        }
+        changed = true;
+      }
+    }
+  }
+
+  db.seed[SEED_KEY_SECRETARY_COMPANIES_SCREENSHOT_7] = true;
+  return changed;
+}
+
 const SEED_SECRETARY_COMPANIES_4: Array<{
   name: string;
   member?: string;
@@ -4156,6 +4651,7 @@ export async function readDb(): Promise<Db> {
   if (seedSecretaryCompaniesFromScreenshot4(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot5(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot6(db)) changed = true;
+  if (seedSecretaryCompaniesFromScreenshot7(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
 
   if (db.users.length === 0) {
