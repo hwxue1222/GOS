@@ -58,6 +58,7 @@ export default function SecretaryCompanyClient({
 }: Props) {
   const [client, setClient] = useState<Client>(initialClient);
   const [saving, setSaving] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
@@ -100,6 +101,27 @@ export default function SecretaryCompanyClient({
       await refresh();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function autoFill() {
+    if (enriching) return;
+    setEnriching(true);
+    setError(null);
+    setOk(false);
+    try {
+      const res = await fetch(`/api/admin/enrich/clients/${encodeURIComponent(initialClient.id)}`, {
+        method: 'POST',
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = await res?.json().catch(() => null);
+        setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      await refresh();
+      setOk(true);
+    } finally {
+      setEnriching(false);
     }
   }
 
@@ -201,6 +223,13 @@ export default function SecretaryCompanyClient({
           >
             Transfer of Shares
           </Link>
+          <button
+            disabled={enriching}
+            onClick={() => void autoFill()}
+            className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium disabled:opacity-60"
+          >
+            {enriching ? 'Auto filling...' : 'Auto Fill'}
+          </button>
           <button
             disabled={!canEditCompany || saving}
             onClick={saveCompany}

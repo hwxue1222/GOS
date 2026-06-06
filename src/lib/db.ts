@@ -5528,6 +5528,97 @@ function extractIncorporationDateFromMeta(desc: string | undefined) {
   return undefined;
 }
 
+async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
+  const uen = String(client.companyRegistrationNo ?? '').trim().toUpperCase();
+  if (!uen) return { status: 'SKIP_NO_UEN' as const };
+
+  const slug = slugifyCompaniesSgName(client.name);
+  const url = `https://www.companies.sg/business/${encodeURIComponent(uen)}/${encodeURIComponent(slug)}`;
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 10_000);
+  const res = await fetch(url, {
+    signal: controller.signal,
+    headers: {
+      'user-agent': 'Mozilla/5.0',
+      accept: 'text/html,application/xhtml+xml',
+    },
+  }).finally(() => clearTimeout(t));
+
+  if (!res.ok) return { status: 'NOT_FOUND' as const, url };
+  const html = await res.text();
+
+  const foundName = extractCompaniesSgField(html, 'Entity Name');
+  if (foundName) {
+    const keyA = normalizeClientNameForMerge(foundName);
+    const keyB = normalizeClientNameForMerge(client.name);
+    if (keyA && keyB && keyA !== keyB) {
+      return { status: 'MISMATCH_NAME' as const, url, foundName };
+    }
+  }
+
+  const metaDesc = extractMetaDescription(html);
+  const incRaw =
+    extractCompaniesSgField(html, 'Incorporated') ?? extractCompaniesSgValueAfterLabelContains(html, ['incorpor', 'date']);
+  const incorp = normalizeDateYmd(incRaw) ?? extractIncorporationDateFromMeta(metaDesc);
+
+  const addrRaw = extractCompaniesSgField(html, 'Bussiness Address') ?? extractCompaniesSgField(html, 'Business Address');
+  const addr = addrRaw ? addrRaw.replace(/\s*\n\s*/g, ', ').trim() : undefined;
+
+  const primary =
+    extractCompaniesSgField(html, 'Primary Ssic Description') ??
+    extractCompaniesSgField(html, 'Primary SSIC Description') ??
+    extractCompaniesSgValueAfterLabelContains(html, ['primary', 'ssic', 'description']) ??
+    extractCompaniesSgValueAfterLabelContains(html, ['primary', 'activity']);
+  const secondary =
+    extractCompaniesSgField(html, 'Secondary Ssic Description') ??
+    extractCompaniesSgField(html, 'Secondary SSIC Description') ??
+    extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'ssic', 'description']) ??
+    extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'activity']);
+
+  const biz =
+    primary && secondary
+      ? `Primary: ${primary}; Secondary: ${secondary}`
+      : primary
+        ? primary
+        : secondary
+          ? secondary
+          : undefined;
+
+  const patch: Partial<Client> = {};
+  if (addr && !String(client.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
+  if (incorp && !String(client.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
+  if (biz && !String(client.businessActivities ?? '').trim()) patch.businessActivities = biz;
+
+  if (Object.keys(patch).length === 0) return { status: 'NO_CHANGE' as const, url };
+
+  const idx = db.clients.findIndex((x) => x.id === client.id);
+  if (idx < 0) return { status: 'NOT_FOUND_LOCAL' as const };
+  db.clients[idx] = { ...db.clients[idx], ...patch };
+  return { status: 'UPDATED' as const, url };
+}
+
+export async function enrichClientFromCompaniesSgById(clientId: string) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === clientId) ?? null;
+  if (!client || client.deletedAt) return { status: 'NOT_FOUND_LOCAL' as const };
+  if (/^SC\d+$/i.test(String(client.code ?? ''))) return { status: 'SKIP_SC' as const };
+
+  try {
+    const res = await enrichOneClientFromCompaniesSg(db, client);
+    if (res.status === 'UPDATED') await writeDb(db);
+    return { ...res, clientId: client.id, code: client.code, name: client.name };
+  } catch (e) {
+    return {
+      status: 'ERROR' as const,
+      clientId: client.id,
+      code: client.code,
+      name: client.name,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
 function extractCompaniesSgField(html: string, label: string) {
   const re = new RegExp(`${label}\\s*<\\/div>\\s*<div[^>]*profile-field-value[^>]*>([\\s\\S]*?)<\\/div>`, 'i');
   const m = html.match(re);
@@ -5579,75 +5670,15 @@ export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
   for (const c of candidates) {
     if (Date.now() - startedAt > 12_000) break;
     const uen = String(c.companyRegistrationNo ?? '').trim().toUpperCase();
-    const slug = slugifyCompaniesSgName(c.name);
-    const url = `https://www.companies.sg/business/${encodeURIComponent(uen)}/${encodeURIComponent(slug)}`;
-
     try {
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 10_000);
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'user-agent': 'Mozilla/5.0',
-          accept: 'text/html,application/xhtml+xml',
-        },
-      }).finally(() => clearTimeout(t));
-
-      if (!res.ok) {
-        notFound.push({ id: c.id, code: c.code, name: c.name, uen });
-        continue;
-      }
-
-      const html = await res.text();
-      const foundName = extractCompaniesSgField(html, 'Entity Name');
-      if (foundName) {
-        const keyA = normalizeClientNameForMerge(foundName);
-        const keyB = normalizeClientNameForMerge(c.name);
-        if (keyA && keyB && keyA !== keyB) {
-          mismatched.push({ id: c.id, code: c.code, name: c.name, uen, foundName });
-          continue;
-        }
-      }
-
-      const metaDesc = extractMetaDescription(html);
-      const incRaw =
-        extractCompaniesSgField(html, 'Incorporated') ??
-        extractCompaniesSgValueAfterLabelContains(html, ['incorpor', 'date']);
-      const incorp = normalizeDateYmd(incRaw) ?? extractIncorporationDateFromMeta(metaDesc);
-      const addrRaw = extractCompaniesSgField(html, 'Bussiness Address') ?? extractCompaniesSgField(html, 'Business Address');
-      const addr = addrRaw ? addrRaw.replace(/\s*\n\s*/g, ', ').trim() : undefined;
-
-      const primary =
-        extractCompaniesSgField(html, 'Primary Ssic Description') ??
-        extractCompaniesSgField(html, 'Primary SSIC Description') ??
-        extractCompaniesSgValueAfterLabelContains(html, ['primary', 'ssic', 'description']) ??
-        extractCompaniesSgValueAfterLabelContains(html, ['primary', 'activity']);
-      const secondary =
-        extractCompaniesSgField(html, 'Secondary Ssic Description') ??
-        extractCompaniesSgField(html, 'Secondary SSIC Description') ??
-        extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'ssic', 'description']) ??
-        extractCompaniesSgValueAfterLabelContains(html, ['secondary', 'activity']);
-
-      const biz =
-        primary && secondary
-          ? `Primary: ${primary}; Secondary: ${secondary}`
-          : primary
-            ? primary
-            : secondary
-              ? secondary
-              : undefined;
-
-      const patch: Partial<Client> = {};
-      if (addr && !String(c.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
-      if (incorp && !String(c.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
-      if (biz && !String(c.businessActivities ?? '').trim()) patch.businessActivities = biz;
-
-      if (Object.keys(patch).length === 0) continue;
-      const idx = db.clients.findIndex((x) => x.id === c.id);
-      if (idx >= 0) {
-        db.clients[idx] = { ...db.clients[idx], ...patch };
+      const res = await enrichOneClientFromCompaniesSg(db, c);
+      if (res.status === 'UPDATED') {
         changed = true;
         updated.push({ id: c.id, code: c.code, name: c.name, uen });
+      } else if (res.status === 'MISMATCH_NAME') {
+        mismatched.push({ id: c.id, code: c.code, name: c.name, uen, foundName: res.foundName });
+      } else if (res.status === 'NOT_FOUND') {
+        notFound.push({ id: c.id, code: c.code, name: c.name, uen });
       }
     } catch (e) {
       errors.push({
