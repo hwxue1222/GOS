@@ -316,7 +316,18 @@ function countClientFilledFields(c: Client) {
 }
 
 function choosePrimaryClientForMerge(db: Db, list: Client[]) {
-  const scored = list.map((c) => {
+  const hasNonSc = list.some((c) => {
+    const code = String(c.code ?? '');
+    return !/^SC\d+$/i.test(code);
+  });
+  const candidates = hasNonSc
+    ? list.filter((c) => {
+        const code = String(c.code ?? '');
+        return !/^SC\d+$/i.test(code);
+      })
+    : list;
+
+  const scored = candidates.map((c) => {
     const r = rankClientForDedupe(c);
     const refs = countClientRefs(db, c.id);
     const filled = countClientFilledFields(c);
@@ -348,6 +359,17 @@ function dedupeClientsByNormalizedNameAlways(db: Db) {
   let changed = false;
   for (const list of groups.values()) {
     if (list.length <= 1) continue;
+
+    const scClients = list.filter((c) => /^SC\d+$/i.test(String(c.code ?? '')));
+    const nonScClients = list.filter((c) => !/^SC\d+$/i.test(String(c.code ?? '')));
+
+    if (scClients.length && nonScClients.length) {
+      const primary = choosePrimaryClientForMerge(db, nonScClients);
+      for (const sc of scClients) {
+        if (sc.id === primary.id) continue;
+        if (mergeClientInto(db, sc.id, primary.id)) changed = true;
+      }
+    }
 
     const regBuckets = new Map<string, Client[]>();
     const emptyBucket: Client[] = [];
