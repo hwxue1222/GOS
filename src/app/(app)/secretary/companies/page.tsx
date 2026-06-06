@@ -50,7 +50,8 @@ export default async function SecretaryCompaniesPage() {
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
-  const rolesByClientId = new Map<string, Array<{ role: string; name: string }>>();
+  const externalById = new Map(db.externalCompanies.map((c) => [c.id, c]));
+  const rolesByClientId = new Map<string, Array<{ role: string; name: string; shares?: number }>>();
   for (const r of db.clientPartyRoles) {
     if (!isActiveRole(r)) continue;
     const party = partyById.get(r.partyId);
@@ -59,13 +60,20 @@ export default async function SecretaryCompaniesPage() {
     if (party.type === 'PERSON' && party.personId) {
       const person = personById.get(party.personId);
       if (person) name = person.fullName;
-    } else if (party.type === 'COMPANY' && party.clientId) {
-      const c = clientById.get(party.clientId);
-      if (c && !c.deletedAt) name = c.name;
+    } else if (party.type === 'COMPANY') {
+      if (party.clientId) {
+        const c = clientById.get(party.clientId);
+        if (c && !c.deletedAt) name = c.name;
+      } else if (party.externalCompanyId) {
+        name = externalById.get(party.externalCompanyId)?.name ?? null;
+      } else {
+        name = party.displayName || null;
+      }
     }
+    if (!name) name = party.displayName || null;
     if (!name) continue;
     const list = rolesByClientId.get(r.clientId) ?? [];
-    list.push({ role: r.role, name });
+    list.push({ role: r.role, name, shares: r.role === 'SHAREHOLDER' ? r.shares : undefined });
     rolesByClientId.set(r.clientId, list);
   }
 
@@ -75,8 +83,12 @@ export default async function SecretaryCompaniesPage() {
       const names = (role: string) =>
         roles
           .filter((x) => x.role === role)
-          .map((x) => x.name)
-          .sort((a, b) => a.localeCompare(b));
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((x) => {
+            if (role !== 'SHAREHOLDER') return x.name;
+            const shares = typeof x.shares === 'number' && Number.isFinite(x.shares) ? x.shares : undefined;
+            return shares !== undefined ? `${x.name} (${shares.toLocaleString()})` : x.name;
+          });
       return {
         client: c,
         directors: names('DIRECTOR'),
