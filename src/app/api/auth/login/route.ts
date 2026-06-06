@@ -3,6 +3,11 @@ import { createSession, findUserByEmailOrName } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { SESSION_COOKIE } from '@/lib/auth';
 
+function isHttpsRequest(req: Request) {
+  const proto = (req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '')).split(',')[0]!.trim();
+  return proto === 'https';
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => null)) as
@@ -26,7 +31,7 @@ export async function POST(req: Request) {
     res.cookies.set(SESSION_COOKIE, session.token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttpsRequest(req),
       path: '/',
       expires: new Date(session.expiresAt),
     });
