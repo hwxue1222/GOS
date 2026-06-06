@@ -29,21 +29,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ memberId: str
       }
     | null;
 
-  const patch = {
-    fullName: typeof body?.fullName === 'string' ? body.fullName.trim() : undefined,
-    email: typeof body?.email === 'string' ? body.email.trim() || undefined : undefined,
-    phone: typeof body?.phone === 'string' ? body.phone.trim() || undefined : undefined,
-    idType: body?.idType,
-    idNo: typeof body?.idNo === 'string' ? body.idNo.trim() || undefined : undefined,
-    nationality: typeof body?.nationality === 'string' ? body.nationality.trim() || undefined : undefined,
-    dob: typeof body?.dob === 'string' ? body.dob.trim() || undefined : undefined,
-    address: typeof body?.address === 'string' ? body.address.trim() || undefined : undefined,
-    memberSince: typeof body?.memberSince === 'string' ? body.memberSince.trim() || undefined : undefined,
-    lastLoginDate: typeof body?.lastLoginDate === 'string' ? body.lastLoginDate.trim() || undefined : undefined,
-  };
+  const patch: Parameters<typeof updatePerson>[1] = {};
+  const has = (k: string) => !!body && Object.prototype.hasOwnProperty.call(body, k);
+  if (has('fullName') && typeof body?.fullName === 'string') patch.fullName = body.fullName.trim();
+  if (has('email') && typeof body?.email === 'string') patch.email = body.email.trim() || undefined;
+  if (has('phone') && typeof body?.phone === 'string') patch.phone = body.phone.trim() || undefined;
+  if (has('idType')) patch.idType = body?.idType;
+  if (has('idNo') && typeof body?.idNo === 'string') patch.idNo = body.idNo.trim() || undefined;
+  if (has('nationality') && typeof body?.nationality === 'string') patch.nationality = body.nationality.trim() || undefined;
+  if (has('dob') && typeof body?.dob === 'string') patch.dob = body.dob.trim() || undefined;
+  if (has('address') && typeof body?.address === 'string') patch.address = body.address.trim() || undefined;
+  if (has('memberSince') && typeof body?.memberSince === 'string') patch.memberSince = body.memberSince.trim() || undefined;
+  if (has('lastLoginDate') && typeof body?.lastLoginDate === 'string') patch.lastLoginDate = body.lastLoginDate.trim() || undefined;
 
   const updated = await updatePerson(memberId, patch);
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, member: updated });
 }
-

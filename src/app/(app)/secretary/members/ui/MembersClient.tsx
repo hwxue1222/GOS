@@ -23,6 +23,70 @@ type Member = {
   createdAt: string;
 };
 
+const PHONE_COUNTRY_CODES = [
+  { label: 'SG +65', value: '+65' },
+  { label: 'CN +86', value: '+86' },
+  { label: 'HK +852', value: '+852' },
+  { label: 'TW +886', value: '+886' },
+  { label: 'MY +60', value: '+60' },
+  { label: 'ID +62', value: '+62' },
+  { label: 'TH +66', value: '+66' },
+  { label: 'VN +84', value: '+84' },
+  { label: 'PH +63', value: '+63' },
+  { label: 'JP +81', value: '+81' },
+  { label: 'KR +82', value: '+82' },
+  { label: 'US +1', value: '+1' },
+  { label: 'CA +1', value: '+1' },
+  { label: 'AU +61', value: '+61' },
+  { label: 'NZ +64', value: '+64' },
+  { label: 'UK +44', value: '+44' },
+  { label: 'DE +49', value: '+49' },
+  { label: 'FR +33', value: '+33' },
+  { label: 'IT +39', value: '+39' },
+  { label: 'ES +34', value: '+34' },
+  { label: 'NL +31', value: '+31' },
+  { label: 'CH +41', value: '+41' },
+  { label: 'VU +678', value: '+678' },
+];
+
+const NATIONALITY_OPTIONS = [
+  'Singapore',
+  'Singapore PR',
+  'EP',
+  'China',
+  'Chinese/hongkong sar',
+  'South Korea',
+  'Japan',
+  'Malaysia',
+  'Indonesia',
+  'Thailand',
+  'Vietnam',
+  'Philippines',
+  'United States',
+  'Canada',
+  'Australia',
+  'New Zealand',
+  'United Kingdom',
+  'Germany',
+  'France',
+  'Italy',
+  'Spain',
+  'Netherlands',
+  'Switzerland',
+  'Vanuatu',
+  'Others (please specify)',
+] as const;
+
+function isEnglishOnly(s: string) {
+  return !/[\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u30FF\uAC00-\uD7AF]/.test(s);
+}
+
+function normalizePhone(countryCode: string, local: string) {
+  const digits = local.replace(/\D/g, '');
+  if (!digits) return undefined;
+  return `${countryCode}${digits}`;
+}
+
 export default function MembersClient() {
   const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
@@ -36,9 +100,11 @@ export default function MembersClient() {
   const [form, setForm] = useState({
     fullName: '',
     email: '',
-    phone: '',
+    phoneCountryCode: '+65',
+    phoneLocal: '',
     idNo: '',
-    nationality: '',
+    nationality: 'Singapore',
+    nationalityOther: '',
     dob: '',
     address: '',
   });
@@ -91,6 +157,33 @@ export default function MembersClient() {
       setError('INVALID_INPUT');
       return;
     }
+
+    const nationalitySelected = String(form.nationality ?? '').trim();
+    const nationality =
+      nationalitySelected === 'Others (please specify)'
+        ? form.nationalityOther.trim()
+        : nationalitySelected;
+    if (nationalitySelected === 'Others (please specify)' && !nationality) {
+      setError('INVALID_INPUT');
+      return;
+    }
+    if (nationality && !isEnglishOnly(nationality)) {
+      setError('ENGLISH_ONLY');
+      return;
+    }
+
+    const phone = normalizePhone(form.phoneCountryCode, form.phoneLocal);
+    if (phone && !/^\+\d{6,15}$/.test(phone)) {
+      setError('INVALID_PHONE');
+      return;
+    }
+
+    const dob = form.dob.trim() || undefined;
+    if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+      setError('INVALID_DOB');
+      return;
+    }
+
     setCreating(true);
     try {
       const res = await fetch('/api/members', {
@@ -99,10 +192,10 @@ export default function MembersClient() {
         body: JSON.stringify({
           fullName,
           email: form.email.trim() || undefined,
-          phone: form.phone.trim() || undefined,
+          phone,
           idNo: form.idNo.trim() || undefined,
-          nationality: form.nationality.trim() ? normalizeCarToSar(form.nationality.trim()) : undefined,
-          dob: form.dob.trim() || undefined,
+          nationality: nationality ? normalizeCarToSar(nationality) : undefined,
+          dob,
           address: form.address.trim() || undefined,
         }),
       }).catch(() => null);
@@ -112,7 +205,17 @@ export default function MembersClient() {
         return;
       }
       setShowAdd(false);
-      setForm({ fullName: '', email: '', phone: '', idNo: '', nationality: '', dob: '', address: '' });
+      setForm({
+        fullName: '',
+        email: '',
+        phoneCountryCode: '+65',
+        phoneLocal: '',
+        idNo: '',
+        nationality: 'Singapore',
+        nationalityOther: '',
+        dob: '',
+        address: '',
+      });
       await refresh();
     } finally {
       setCreating(false);
@@ -144,6 +247,33 @@ export default function MembersClient() {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ nationality: 'EP' }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
+  async function updateTextField(memberId: string, field: 'email' | 'phone' | 'idNo', current: string | undefined) {
+    setError(null);
+    const next = window.prompt(`Edit ${field}`, current ?? '');
+    if (next === null) return;
+    const value = next.trim();
+    const patch: Record<string, unknown> = {};
+    patch[field] = value || undefined;
+    if (field === 'phone') {
+      const v = String(patch.phone ?? '');
+      if (v && !/^\+\d{6,15}$/.test(v)) {
+        setError('INVALID_PHONE');
+        return;
+      }
+    }
+    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
     }).catch(() => null);
     if (!res?.ok) {
       const j = await res?.json().catch(() => null);
@@ -206,7 +336,13 @@ export default function MembersClient() {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <MembersTable members={visible} loading={loading} onEditNationality={(id, cur) => void updateNationality(id, cur)} onSetEp={(id) => void setEp(id)} />
+      <MembersTable
+        members={visible}
+        loading={loading}
+        onEditTextField={(id, field, cur) => void updateTextField(id, field, cur)}
+        onEditNationality={(id, cur) => void updateNationality(id, cur)}
+        onSetEp={(id) => void setEp(id)}
+      />
 
       {showAdd ? (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
@@ -239,12 +375,25 @@ export default function MembersClient() {
               </label>
               <label className="text-sm">
                 <div className="text-black/60">Phone</div>
-                <input
-                  value={form.phone}
-                  onChange={(e) => setForm((v) => ({ ...v, phone: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  placeholder="+65..."
-                />
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    value={form.phoneCountryCode}
+                    onChange={(e) => setForm((v) => ({ ...v, phoneCountryCode: e.target.value }))}
+                    className="h-10 rounded-lg border border-black/10 bg-white px-2 text-sm text-black/70"
+                  >
+                    {PHONE_COUNTRY_CODES.map((c) => (
+                      <option key={`${c.label}-${c.value}`} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={form.phoneLocal}
+                    onChange={(e) => setForm((v) => ({ ...v, phoneLocal: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                    placeholder="Phone number"
+                  />
+                </div>
               </label>
               <label className="text-sm sm:col-span-2">
                 <div className="text-black/60">ID</div>
@@ -257,12 +406,23 @@ export default function MembersClient() {
               </label>
               <label className="text-sm">
                 <div className="text-black/60">Nationality</div>
-                <input
+                <select
                   value={form.nationality}
-                  onChange={(e) => setForm((v) => ({ ...v, nationality: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  placeholder="Singaporean"
-                />
+                  onChange={(e) =>
+                    setForm((v) => ({
+                      ...v,
+                      nationality: e.target.value,
+                      nationalityOther: e.target.value === 'Others (please specify)' ? v.nationalityOther : '',
+                    }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  {NATIONALITY_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="text-sm">
                 <div className="text-black/60">DOB</div>
@@ -282,6 +442,17 @@ export default function MembersClient() {
                   placeholder="Address"
                 />
               </label>
+              {form.nationality === 'Others (please specify)' ? (
+                <label className="text-sm sm:col-span-2">
+                  <div className="text-black/60">Other nationality</div>
+                  <input
+                    value={form.nationalityOther}
+                    onChange={(e) => setForm((v) => ({ ...v, nationalityOther: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    placeholder="Please specify in English"
+                  />
+                </label>
+              ) : null}
             </div>
 
             {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}

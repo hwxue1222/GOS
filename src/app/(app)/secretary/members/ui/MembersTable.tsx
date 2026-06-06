@@ -35,11 +35,12 @@ function normalizeCarToSar(value: string | undefined) {
 type Props = {
   members: Member[];
   loading: boolean;
+  onEditTextField: (memberId: string, field: 'email' | 'phone' | 'idNo', currentValue: string | undefined) => void;
   onEditNationality: (memberId: string, currentNationality: string | undefined) => void;
   onSetEp: (memberId: string) => void;
 };
 
-export default function MembersTable({ members, loading, onEditNationality, onSetEp }: Props) {
+export default function MembersTable({ members, loading, onEditTextField, onEditNationality, onSetEp }: Props) {
   const { t, lang } = useI18n();
 
   const roleLabel = (role: string) => {
@@ -98,9 +99,42 @@ export default function MembersTable({ members, loading, onEditNationality, onSe
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-4 py-3">{p.email ?? '-'}</td>
-                  <td className="px-4 py-3">{p.phone ?? '-'}</td>
-                  <td className="px-4 py-3">{p.idNo ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span>{p.email ?? '-'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditTextField(p.id, 'email', p.email)}
+                        className="text-xs text-[#2f7bdc] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span>{p.phone ?? '-'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditTextField(p.id, 'phone', p.phone)}
+                        className="text-xs text-[#2f7bdc] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span>{p.idNo ?? '-'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditTextField(p.id, 'idNo', p.idNo)}
+                        className="text-xs text-[#2f7bdc] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span>{normalizeCarToSar(p.nationality) ?? '-'}</span>
