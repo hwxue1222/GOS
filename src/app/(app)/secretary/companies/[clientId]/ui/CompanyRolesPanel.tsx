@@ -107,7 +107,7 @@ export default function CompanyRolesPanel({
     <div className="rounded-xl bg-white border border-black/5 p-5">
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold">{t('secretary.peopleAndRoles')}</div>
-        <Link href="/secretary/people" className="text-sm text-[#2f7bdc] hover:underline">
+        <Link href="/secretary/members" className="text-sm text-[#2f7bdc] hover:underline">
           {t('secretary.peopleLibrary')}
         </Link>
       </div>

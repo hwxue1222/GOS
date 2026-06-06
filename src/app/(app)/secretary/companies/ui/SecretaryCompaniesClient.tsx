@@ -83,7 +83,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
         <div className="flex items-center gap-2 w-full justify-end">
           {canViewPeople ? (
             <Link
-              href="/secretary/people"
+              href="/secretary/members"
               className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
             >
               {t('secretary.peopleLibrary')}
