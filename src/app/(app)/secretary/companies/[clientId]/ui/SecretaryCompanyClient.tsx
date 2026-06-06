@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import CompanyInfoForm from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyInfoForm';
 import CompanyRolesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyRolesPanel';
+import DirectorChangeRequestsPanel from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestsPanel';
 
 type Client = {
   id: string;
@@ -49,6 +50,7 @@ type Props = {
   companyOptions: Array<{ id: string; code: string; name: string }>;
   canEditCompany: boolean;
   canEditRoles: boolean;
+  isClientUser: boolean;
 };
 
 export default function SecretaryCompanyClient({
@@ -58,6 +60,7 @@ export default function SecretaryCompanyClient({
   companyOptions,
   canEditCompany,
   canEditRoles,
+  isClientUser,
 }: Props) {
   const [client, setClient] = useState<Client>(initialClient);
   const [saving, setSaving] = useState(false);
@@ -277,6 +280,18 @@ export default function SecretaryCompanyClient({
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
+          <DirectorChangeRequestsPanel
+            clientId={initialClient.id}
+            directors={roles.directors
+              .map((d) =>
+                d.entity.type === 'PERSON'
+                  ? { roleId: d.role.id, fullName: d.entity.person.fullName, email: d.entity.person.email }
+                  : null,
+              )
+              .filter(Boolean) as Array<{ roleId: string; fullName: string; email?: string }>}
+            canSubmit={isClientUser}
+            canApprove={canEditRoles}
+          />
           <CompanyInfoForm client={client} canEdit={canEditCompany} onChange={(patch) => setClient((s) => ({ ...s, ...patch }))} />
         </div>
 

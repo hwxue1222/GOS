@@ -10,6 +10,7 @@ import type {
   CompanyRepresentative,
   Currency,
   Db,
+  DirectorChangeRequest,
   Document,
   ExternalCompany,
   AuditLog,
@@ -68,6 +69,7 @@ function emptyDb(): Db {
     signatureRequests: [],
     representativeDesignationRequests: [],
     shareTransfers: [],
+    directorChangeRequests: [],
     jobs: [],
     tasks: [],
     auditLogs: [],
@@ -1096,6 +1098,38 @@ function normalizeDb(parsed: Db): Db {
     updatedAt: (t as ShareTransfer).updatedAt ?? (t as ShareTransfer).createdAt,
   }));
 
+  const rawDirectorChangeRequests = (parsed as unknown as { directorChangeRequests?: unknown }).directorChangeRequests;
+  const directorChangeRequests: DirectorChangeRequest[] = Array.isArray(rawDirectorChangeRequests)
+    ? (rawDirectorChangeRequests as unknown as DirectorChangeRequest[]).map((r) => ({
+        id: String((r as DirectorChangeRequest).id ?? ''),
+        clientId: String((r as DirectorChangeRequest).clientId ?? ''),
+        createdByUserId: String((r as DirectorChangeRequest).createdByUserId ?? ''),
+        status: (r as DirectorChangeRequest).status ?? 'DRAFT',
+        effectiveDate: String((r as DirectorChangeRequest).effectiveDate ?? ''),
+        message: typeof (r as DirectorChangeRequest).message === 'string' ? (r as DirectorChangeRequest).message : undefined,
+        removeDirectorRoleIds: Array.isArray((r as DirectorChangeRequest).removeDirectorRoleIds)
+          ? (r as DirectorChangeRequest).removeDirectorRoleIds.map((x) => String(x)).filter(Boolean)
+          : [],
+        addDirectors: Array.isArray((r as DirectorChangeRequest).addDirectors)
+          ? (r as DirectorChangeRequest).addDirectors
+              .map((x) => ({
+                fullName: typeof x?.fullName === 'string' ? x.fullName : '',
+                email: typeof x?.email === 'string' ? x.email : undefined,
+              }))
+              .filter((x) => !!x.fullName)
+          : [],
+        packetId: String((r as DirectorChangeRequest).packetId ?? ''),
+        createdAt: String((r as DirectorChangeRequest).createdAt ?? nowIso()),
+        updatedAt: typeof (r as DirectorChangeRequest).updatedAt === 'string' ? (r as DirectorChangeRequest).updatedAt : undefined,
+        submittedAt: typeof (r as DirectorChangeRequest).submittedAt === 'string' ? (r as DirectorChangeRequest).submittedAt : undefined,
+        signedAt: typeof (r as DirectorChangeRequest).signedAt === 'string' ? (r as DirectorChangeRequest).signedAt : undefined,
+        decidedAt: typeof (r as DirectorChangeRequest).decidedAt === 'string' ? (r as DirectorChangeRequest).decidedAt : undefined,
+        decidedByUserId:
+          typeof (r as DirectorChangeRequest).decidedByUserId === 'string' ? (r as DirectorChangeRequest).decidedByUserId : undefined,
+        decisionNote: typeof (r as DirectorChangeRequest).decisionNote === 'string' ? (r as DirectorChangeRequest).decisionNote : undefined,
+      }))
+    : [];
+
   const rawAuditLogs = (parsed as unknown as { auditLogs?: unknown }).auditLogs;
   const auditLogs: AuditLog[] = Array.isArray(rawAuditLogs)
     ? (rawAuditLogs as unknown as AuditLog[])
@@ -1131,6 +1165,7 @@ function normalizeDb(parsed: Db): Db {
     signatureRequests,
     representativeDesignationRequests,
     shareTransfers,
+    directorChangeRequests,
     jobs,
     tasks: tasks as unknown as JobTask[],
     auditLogs,
@@ -6798,6 +6833,22 @@ async function maybeFinalizeShareTransferIfReady(db: Db, packet: SignaturePacket
   }
 }
 
+async function finalizeDirectorChangeIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'DIRECTOR_CHANGE') return;
+  if (packet.status !== 'SIGNED') return;
+
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === packet.relatedId);
+  if (idx < 0) return;
+  const r = list[idx];
+  if (r.status !== 'PENDING_SIGNATURES') return;
+  const now = nowIso();
+  list[idx] = { ...r, status: 'PENDING_REVIEW', signedAt: now, updatedAt: now };
+  (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+}
+
 export async function signByToken(input: {
   token: string;
   otp: string;
@@ -6869,6 +6920,7 @@ export async function signByToken(input: {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNED', updatedAt: now };
     await finalizeRdrIfReady(db, db.signaturePackets[packetIdx]);
     await maybeFinalizeShareTransferIfReady(db, db.signaturePackets[packetIdx]);
+    await finalizeDirectorChangeIfReady(db, db.signaturePackets[packetIdx]);
   } else if (packet.status === 'DRAFT') {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
   }
@@ -7263,6 +7315,228 @@ export async function resumeShareTransfer(transferId: string) {
 
   await writeDb(db);
   return { ok: true as const, signLinks: links };
+}
+
+export async function listDirectorChangeRequestsByClient(clientId: string) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  return list
+    .filter((r) => r.clientId === clientId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getDirectorChangeRequestContext(requestId: string) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  const request = list.find((r) => r.id === requestId) ?? null;
+  if (!request) return null;
+  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
+  if (!packet) return null;
+  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
+  if (!document) return null;
+  const signatures = db.signatureRequests
+    .filter((r) => r.packetId === packet.id)
+    .sort((a, b) => a.email.localeCompare(b.email));
+  return { request, packet, document, signatures };
+}
+
+export async function createDirectorChangeRequest(input: {
+  clientId: string;
+  createdByUserId: string;
+  effectiveDate: string;
+  message?: string;
+  removeDirectorRoleIds: string[];
+  addDirectors: Array<{ fullName: string; email?: string }>;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const effectiveDate = input.effectiveDate.trim();
+  if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const removeDirectorRoleIds = Array.isArray(input.removeDirectorRoleIds)
+    ? input.removeDirectorRoleIds.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  const addDirectors = Array.isArray(input.addDirectors)
+    ? input.addDirectors
+        .map((x) => ({
+          fullName: String(x?.fullName ?? '').trim(),
+          email: typeof x?.email === 'string' ? x.email.trim() || undefined : undefined,
+        }))
+        .filter((x) => !!x.fullName)
+    : [];
+  if (!removeDirectorRoleIds.length && !addDirectors.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const directors = await listClientDirectors(input.clientId);
+  const activeDirectorRoleIds = new Set(directors.map((d) => d.role.id));
+  if (removeDirectorRoleIds.some((id) => !activeDirectorRoleIds.has(id))) {
+    return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
+  const signerEmails = Array.from(
+    new Set(
+      directors
+        .map((d) => (d.person.email ?? '').trim())
+        .filter(Boolean)
+        .map((e) => e.toLowerCase()),
+    ),
+  );
+  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const now = nowIso();
+  const id = newId('dcr');
+
+  const removed = directors
+    .filter((d) => removeDirectorRoleIds.includes(d.role.id))
+    .map((d) => ({ fullName: d.person.fullName, email: d.person.email }));
+
+  const html = (await import('@/lib/docTemplates')).renderDirectorChangeRequestHtml({
+    companyName: client.name,
+    effectiveDate,
+    message: input.message,
+    addDirectors,
+    removeDirectors: removed,
+  });
+
+  const doc: Document = {
+    id: newId('doc'),
+    type: 'DIR_CHG',
+    title: `Director Change - ${client.name}`,
+    html,
+    sha256: sha256Hex(html),
+    createdAt: now,
+  };
+  db.documents.unshift(doc);
+
+  const packet: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'DIR_CHG',
+    relatedType: 'DIRECTOR_CHANGE',
+    relatedId: id,
+    documentId: doc.id,
+    status: 'SIGNING',
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.signaturePackets.unshift(packet);
+
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const signLinks: Array<{ email: string; url: string }> = [];
+  for (const emailKey of signerEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: packet.id,
+      email: emailKey,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+  }
+
+  const request: DirectorChangeRequest = {
+    id,
+    clientId: input.clientId,
+    createdByUserId: input.createdByUserId,
+    status: 'PENDING_SIGNATURES',
+    effectiveDate,
+    message: typeof input.message === 'string' ? input.message : undefined,
+    removeDirectorRoleIds,
+    addDirectors,
+    packetId: packet.id,
+    createdAt: now,
+    updatedAt: now,
+    submittedAt: now,
+  };
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  list.unshift(request);
+  (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+
+  await writeDb(db);
+  return { ok: true as const, request, packetId: packet.id, signLinks };
+}
+
+export async function decideDirectorChangeRequest(input: {
+  requestId: string;
+  decidedByUserId: string;
+  decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO';
+  note?: string;
+}) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
+  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
+
+  if (input.decision === 'APPROVE') {
+    if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+    if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+    for (const roleId of r.removeDirectorRoleIds) {
+      const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'DIRECTOR');
+      if (roleIdx >= 0) {
+        db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], resignationDate: r.effectiveDate, updatedAt: now };
+      }
+    }
+
+    for (const d of r.addDirectors) {
+      const fullName = d.fullName.trim();
+      if (!fullName) continue;
+      const email = typeof d.email === 'string' ? d.email.trim() || undefined : undefined;
+      const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+      const role: ClientPartyRole = {
+        id: newId('cpr'),
+        clientId: r.clientId,
+        partyId: party.id,
+        role: 'DIRECTOR',
+        appointmentDate: r.effectiveDate,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.persons.unshift(person);
+      db.parties.unshift(party);
+      db.clientPartyRoles.unshift(role);
+    }
+
+    list[idx] = {
+      ...r,
+      status: 'APPROVED',
+      decidedAt: now,
+      decidedByUserId: input.decidedByUserId,
+      decisionNote: note,
+      updatedAt: now,
+    };
+  } else if (input.decision === 'NEED_MORE_INFO') {
+    if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+    list[idx] = { ...r, status: 'NEED_MORE_INFO', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  } else {
+    if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+    list[idx] = { ...r, status: 'REJECTED', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  }
+
+  (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: list[idx] };
 }
 
 export async function createJob(input: Omit<Job, 'id' | 'createdAt'>) {

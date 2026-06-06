@@ -124,6 +124,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
           companyOptions={companyOptions}
           canEditCompany={canEditCompany}
           canEditRoles={canEditRoles}
+          isClientUser={me.role === 'client'}
         />
       </div>
     </div>

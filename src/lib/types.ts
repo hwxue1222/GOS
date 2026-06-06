@@ -231,7 +231,7 @@ export type CompanyRepresentative = {
   updatedAt?: string;
 };
 
-export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR';
+export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG';
 
 export type Document = {
   id: string;
@@ -242,19 +242,46 @@ export type Document = {
   createdAt: string;
 };
 
-export type SignaturePacketKind = 'RDR' | 'STA' | 'BR';
+export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 
 export type SignaturePacket = {
   id: string;
   kind: SignaturePacketKind;
-  relatedType: 'RDR' | 'SHARE_TRANSFER';
+  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE';
   relatedId: string;
   documentId: string;
   status: SignaturePacketStatus;
   createdAt: string;
   updatedAt?: string;
+};
+
+export type DirectorChangeRequestStatus =
+  | 'DRAFT'
+  | 'PENDING_SIGNATURES'
+  | 'PENDING_REVIEW'
+  | 'NEED_MORE_INFO'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export type DirectorChangeRequest = {
+  id: string;
+  clientId: string;
+  createdByUserId: string;
+  status: DirectorChangeRequestStatus;
+  effectiveDate: string;
+  message?: string;
+  removeDirectorRoleIds: string[];
+  addDirectors: Array<{ fullName: string; email?: string }>;
+  packetId: string;
+  createdAt: string;
+  updatedAt?: string;
+  submittedAt?: string;
+  signedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
 };
 
 export type SignatureRequestStatus = 'PENDING' | 'OTP_SENT' | 'SIGNED' | 'EXPIRED' | 'REVOKED';
@@ -366,6 +393,7 @@ export type Db = {
   signatureRequests: SignatureRequest[];
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
+  directorChangeRequests?: DirectorChangeRequest[];
   jobs: Job[];
   tasks: JobTask[];
   auditLogs?: AuditLog[];
