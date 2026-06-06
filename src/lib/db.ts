@@ -48,6 +48,24 @@ function getDbFilePath() {
 
 const DB_FILE = getDbFilePath();
 
+type DbCache = {
+  db: Db;
+  ts: number;
+};
+
+function getDbCacheTtlMs() {
+  const v = Number(process.env.GOS_DB_CACHE_TTL_MS ?? '1000');
+  if (!Number.isFinite(v) || v < 0) return 0;
+  return v;
+}
+
+function getGlobalDbCache() {
+  return globalThis as unknown as {
+    __gosDbCache?: DbCache;
+    __gosDbCachePromise?: Promise<Db>;
+  };
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -5167,19 +5185,32 @@ async function writeDbRaw(db: Db) {
   if (await hasKv()) {
     const mod = (await import('@vercel/kv')) as unknown as { kv: { set: (key: string, value: unknown) => Promise<unknown> } };
     await mod.kv.set(KV_DB_KEY, db);
+    const g = getGlobalDbCache();
+    g.__gosDbCache = { db, ts: Date.now() };
     return;
   }
   if (await hasRedis()) {
     const redis = await getRedisClient();
     await redis.set(KV_DB_KEY, JSON.stringify(db));
+    const g = getGlobalDbCache();
+    g.__gosDbCache = { db, ts: Date.now() };
     return;
   }
   await ensureDir();
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+  const g = getGlobalDbCache();
+  g.__gosDbCache = { db, ts: Date.now() };
 }
 
 export async function readDb(): Promise<Db> {
-  let db = await readDbRaw();
+  const ttl = getDbCacheTtlMs();
+  const g = getGlobalDbCache();
+  const cached = g.__gosDbCache;
+  if (cached && ttl > 0 && Date.now() - cached.ts < ttl) return cached.db;
+  if (g.__gosDbCachePromise) return g.__gosDbCachePromise;
+
+  g.__gosDbCachePromise = (async () => {
+    let db = await readDbRaw();
   let changed = false;
 
   if (migrateClientCodesV1(db)) changed = true;
@@ -5225,7 +5256,15 @@ export async function readDb(): Promise<Db> {
   }
 
   if (changed) await writeDbRaw(db);
+  g.__gosDbCache = { db, ts: Date.now() };
   return db;
+  })();
+
+  try {
+    return await g.__gosDbCachePromise;
+  } finally {
+    g.__gosDbCachePromise = undefined;
+  }
 }
 
 export async function writeDb(db: Db) {
