@@ -18,6 +18,9 @@ type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  businessActivities?: string;
+  incorporationDate?: string;
+  registeredOfficeAddress?: string;
   tags: string[];
   deletedAt?: string;
 };
@@ -78,6 +81,23 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   const visible = filtered.slice(pageStart, pageEnd);
 
   const canCreate = me?.role === 'owner' || me?.role === 'manager';
+
+  const bulkCandidates = useMemo(() => {
+    return clients.filter((c) => {
+      if (c.deletedAt) return false;
+      if (/^SC\d+$/i.test(String(c.code ?? ''))) return false;
+      return !!String(c.companyRegistrationNo ?? '').trim();
+    });
+  }, [clients]);
+
+  const bulkCandidatesMissing = useMemo(() => {
+    return bulkCandidates.filter((c) => {
+      const okAddr = !!String(c.registeredOfficeAddress ?? '').trim();
+      const okDate = !!String(c.incorporationDate ?? '').trim();
+      const okBiz = !!String(c.businessActivities ?? '').trim();
+      return !(okAddr && okDate && okBiz);
+    });
+  }, [bulkCandidates]);
 
   function parseBulkUpdates(text: string) {
     const lines = text
@@ -451,6 +471,65 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
             <div className="mt-2 text-xs text-black/60 leading-relaxed">
               Paste lines as TSV: <span className="font-mono">UEN\tRegistered office address\tIncorporation date\tBusiness activities</span>
             </div>
+
+            <div className="mt-3 rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs text-black/70">
+              Candidates (non-SC with UEN): {bulkCandidates.length} | Missing fields: {bulkCandidatesMissing.length}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="text-[11px] text-black/60">Open Google for each company, verify UEN matches, then fill TSV.</div>
+              <button
+                onClick={() => {
+                  const lines = bulkCandidatesMissing.map((c) => `${String(c.companyRegistrationNo ?? '').trim()}\t\t\t`);
+                  setBulkText(lines.join('\n'));
+                  setBulkResult(null);
+                }}
+                className="rounded-md border border-black/10 bg-white px-3 py-2 text-xs font-medium"
+              >
+                Fill Template
+              </button>
+            </div>
+
+            {bulkCandidatesMissing.length ? (
+              <div className="mt-2 max-h-[160px] overflow-auto rounded-lg border border-black/10">
+                <table className="min-w-full text-xs">
+                  <thead className="text-left text-black/50">
+                    <tr className="border-b border-black/10">
+                      <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
+                      <th className="px-2 py-2 font-medium">Client</th>
+                      <th className="px-2 py-2 font-medium whitespace-nowrap">UEN</th>
+                      <th className="px-2 py-2 font-medium whitespace-nowrap"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkCandidatesMissing.slice(0, 50).map((c) => {
+                      const q = encodeURIComponent(`${c.name} ${c.companyRegistrationNo ?? ''}`.trim());
+                      return (
+                        <tr key={c.id} className="border-b border-black/10">
+                          <td className="px-2 py-2 whitespace-nowrap">{c.code}</td>
+                          <td className="px-2 py-2">
+                            <div className="truncate max-w-[380px]" title={c.name}>
+                              {c.name}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap">{c.companyRegistrationNo}</td>
+                          <td className="px-2 py-2 whitespace-nowrap text-right">
+                            <a
+                              href={`https://www.google.com/search?q=${q}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#2f7bdc] hover:underline"
+                            >
+                              Google
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
 
             <textarea
               value={bulkText}
