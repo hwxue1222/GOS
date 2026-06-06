@@ -35,7 +35,7 @@ function normalizeCarToSar(value: string | undefined) {
 type Props = {
   members: Member[];
   loading: boolean;
-  onEditTextField: (memberId: string, field: 'email' | 'phone' | 'idNo', currentValue: string | undefined) => void;
+  onEditTextField: (memberId: string, field: 'fullName' | 'email' | 'phone' | 'idNo', currentValue: string | undefined) => void;
   onEditNationality: (memberId: string, currentNationality: string | undefined) => void;
   onSetEp: (memberId: string) => void;
 };
@@ -80,7 +80,18 @@ export default function MembersTable({ members, loading, onEditTextField, onEdit
           {!loading
             ? members.map((p) => (
                 <tr key={p.id} className="border-t border-black/5">
-                  <td className="px-4 py-3 font-medium">{p.fullName}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{p.fullName}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditTextField(p.id, 'fullName', p.fullName)}
+                        className="text-xs text-[#2f7bdc] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(p.roleTags ?? []).length ? (

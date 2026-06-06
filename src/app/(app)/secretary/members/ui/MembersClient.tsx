@@ -256,11 +256,15 @@ export default function MembersClient() {
     await refresh();
   }
 
-  async function updateTextField(memberId: string, field: 'email' | 'phone' | 'idNo', current: string | undefined) {
+  async function updateTextField(memberId: string, field: 'fullName' | 'email' | 'phone' | 'idNo', current: string | undefined) {
     setError(null);
     const next = window.prompt(`Edit ${field}`, current ?? '');
     if (next === null) return;
     const value = next.trim();
+    if (field === 'fullName' && !value) {
+      setError('INVALID_INPUT');
+      return;
+    }
     const patch: Record<string, unknown> = {};
     patch[field] = value || undefined;
     if (field === 'phone') {
