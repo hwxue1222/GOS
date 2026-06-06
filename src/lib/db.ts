@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { createHash, randomBytes } from 'crypto';
+import ssic from '@/data/ssic.json';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
 import type {
@@ -26,6 +27,9 @@ import type {
   SignatureRequest,
   User,
 } from '@/lib/types';
+
+type SsicRow = { code: string; description: string };
+const SSIC_ROWS = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
 
 const KV_DB_KEY = process.env.GOS_KV_DB_KEY?.trim() || 'gos:db';
 
@@ -5528,6 +5532,29 @@ function extractIncorporationDateFromMeta(desc: string | undefined) {
   return undefined;
 }
 
+function normalizeSsicText(s: string) {
+  return s
+    .toLowerCase()
+    .replace(/^\d+\s*-\s*/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findSsicCodeByDescription(desc: string | undefined) {
+  const q = normalizeSsicText(desc ?? '');
+  if (!q) return undefined;
+  const exact = SSIC_ROWS.find((r) => normalizeSsicText(r.description) === q);
+  if (exact) return exact.code;
+
+  const hits = SSIC_ROWS.filter((r) => {
+    const d = normalizeSsicText(r.description);
+    return d.includes(q) || q.includes(d);
+  });
+  if (hits.length === 1) return hits[0].code;
+  return undefined;
+}
+
 async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   const uen = String(client.companyRegistrationNo ?? '').trim().toUpperCase();
   if (!uen) return { status: 'SKIP_NO_UEN' as const };
@@ -5589,6 +5616,12 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   if (addr && !String(client.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
   if (incorp && !String(client.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
   if (biz && !String(client.businessActivities ?? '').trim()) patch.businessActivities = biz;
+
+  const primaryCode = findSsicCodeByDescription(primary);
+  if (primaryCode && !String(client.ssicPrimaryCode ?? '').trim()) patch.ssicPrimaryCode = primaryCode;
+
+  const secondaryCode = findSsicCodeByDescription(secondary);
+  if (secondaryCode && !String(client.ssicSecondaryCode ?? '').trim()) patch.ssicSecondaryCode = secondaryCode;
 
   if (Object.keys(patch).length === 0) return { status: 'NO_CHANGE' as const, url };
 
