@@ -106,6 +106,7 @@ function cleanupClientNameStatusSuffixes(db: Db) {
 
 const SEED_KEY_CLIENT_CODE_MIGRATION_V1 = 'clients.codeMigration.v1';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V2 = 'clients.codeMigration.v2';
+const SEED_KEY_CLIENT_CODE_MIGRATION_V3 = 'clients.codeMigration.v3';
 const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1 = 'clients.dedupeByName.v1';
 const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V2 = 'clients.dedupeByName.v2';
 
@@ -172,6 +173,42 @@ function migrateClientCodesV2(db: Db) {
   }
 
   db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V2] = true;
+  return changed;
+}
+
+function migrateClientCodesV3(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V3]) return false;
+
+  const mapping: Record<string, string> = {
+    SC015: 'DA135',
+  };
+
+  let changed = false;
+  const activeClients = db.clients.filter((c) => !c.deletedAt);
+  const codeToClient = new Map(activeClients.map((c) => [String(c.code ?? ''), c]));
+  for (const [from, to] of Object.entries(mapping)) {
+    const c = codeToClient.get(from);
+    if (!c) continue;
+
+    const existing = codeToClient.get(to);
+    if (existing && existing.id !== c.id) {
+      const sameName =
+        normalizeClientNameForMerge(String(existing.name ?? '')) === normalizeClientNameForMerge(String(c.name ?? ''));
+      const sameReg = String(existing.companyRegistrationNo ?? '').trim() === String(c.companyRegistrationNo ?? '').trim();
+      if (sameName && sameReg) {
+        if (mergeClientInto(db, c.id, existing.id)) changed = true;
+      }
+      continue;
+    }
+
+    c.code = to;
+    codeToClient.delete(from);
+    codeToClient.set(to, c);
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CLIENT_CODE_MIGRATION_V3] = true;
   return changed;
 }
 
@@ -4864,6 +4901,7 @@ export async function readDb(): Promise<Db> {
 
   if (migrateClientCodesV1(db)) changed = true;
   if (migrateClientCodesV2(db)) changed = true;
+  if (migrateClientCodesV3(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
