@@ -32,6 +32,11 @@ function normalizeCarToSar(value: string | undefined) {
   return s.replace(/\bcar\b/gi, 'sar');
 }
 
+function date10(value: unknown) {
+  const s = typeof value === 'string' ? value : '';
+  return s ? s.slice(0, 10) : '-';
+}
+
 type Props = {
   people: Person[];
   loading: boolean;
@@ -110,9 +115,9 @@ export default function PeopleTable({ people, loading }: Props) {
                       '-'
                     )}
                   </td>
-                  <td className="px-4 py-3">{p.memberSince ?? '-'}</td>
-                  <td className="px-4 py-3">{p.lastLoginDate ?? '-'}</td>
-                  <td className="px-4 py-3">{p.createdAt.slice(0, 10)}</td>
+                  <td className="px-4 py-3">{date10(p.memberSince)}</td>
+                  <td className="px-4 py-3">{date10(p.lastLoginDate)}</td>
+                  <td className="px-4 py-3">{date10(p.createdAt)}</td>
                 </tr>
               ))
             : null}
