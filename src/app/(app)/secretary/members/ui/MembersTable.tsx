@@ -73,13 +73,12 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
             <th className="px-4 py-3">Member since</th>
             <th className="px-4 py-3">Last login</th>
             <th className="px-4 py-3">Created</th>
-            <th className="px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={12} className="px-4 py-10 text-center text-black/50">
+              <td colSpan={11} className="px-4 py-10 text-center text-black/50">
                 Loading...
               </td>
             </tr>
@@ -89,6 +88,16 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                 <tr key={p.id} className="border-t border-black/5">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      {onEdit ? (
+                        <button type="button" onClick={() => onEdit(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
+                          Edit
+                        </button>
+                      ) : null}
+                      {onDelete ? (
+                        <button type="button" onClick={() => onDelete(p.id)} className="text-xs text-red-600 hover:underline">
+                          Delete
+                        </button>
+                      ) : null}
                       <span className={p.fullName ? 'font-medium' : 'font-medium text-black/40'}>{p.fullName || '-'}</span>
                       {!p.fullName && onFillMissing ? (
                         <button type="button" onClick={() => onFillMissing(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
@@ -135,26 +144,12 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                   <td className="px-4 py-3">{date10(p.memberSince)}</td>
                   <td className="px-4 py-3">{date10(p.lastLoginDate)}</td>
                   <td className="px-4 py-3">{date10(p.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {onEdit ? (
-                        <button type="button" onClick={() => onEdit(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
-                          Edit
-                        </button>
-                      ) : null}
-                      {onDelete ? (
-                        <button type="button" onClick={() => onDelete(p.id)} className="text-xs text-red-600 hover:underline">
-                          Delete
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
                 </tr>
               ))
             : null}
           {!loading && members.length === 0 ? (
             <tr>
-              <td colSpan={12} className="px-4 py-10 text-center text-black/50">
+              <td colSpan={11} className="px-4 py-10 text-center text-black/50">
                 {t('common.noResults')}
               </td>
             </tr>
