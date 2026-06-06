@@ -35,9 +35,11 @@ function normalizeCarToSar(value: string | undefined) {
 type Props = {
   members: Member[];
   loading: boolean;
+  onEditNationality: (memberId: string, currentNationality: string | undefined) => void;
+  onSetEp: (memberId: string) => void;
 };
 
-export default function MembersTable({ members, loading }: Props) {
+export default function MembersTable({ members, loading, onEditNationality, onSetEp }: Props) {
   const { t, lang } = useI18n();
 
   const roleLabel = (role: string) => {
@@ -99,7 +101,23 @@ export default function MembersTable({ members, loading }: Props) {
                   <td className="px-4 py-3">{p.email ?? '-'}</td>
                   <td className="px-4 py-3">{p.phone ?? '-'}</td>
                   <td className="px-4 py-3">{p.idNo ?? '-'}</td>
-                  <td className="px-4 py-3">{normalizeCarToSar(p.nationality) ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span>{normalizeCarToSar(p.nationality) ?? '-'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditNationality(p.id, p.nationality)}
+                        className="text-xs text-[#2f7bdc] hover:underline"
+                      >
+                        Edit
+                      </button>
+                      {String(p.nationality ?? '') === 'Singapore PR/EP' ? (
+                        <button type="button" onClick={() => onSetEp(p.id)} className="text-xs text-[#2f7bdc] hover:underline">
+                          Set EP
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">{p.dob ?? '-'}</td>
                   <td className="px-4 py-3 max-w-[420px]">
                     {p.address ? (

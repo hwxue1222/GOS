@@ -119,6 +119,40 @@ export default function MembersClient() {
     }
   }
 
+  async function updateNationality(memberId: string, current: string | undefined) {
+    setError(null);
+    const next = window.prompt('Nationality', current ?? '');
+    if (next === null) return;
+    const trimmed = next.trim();
+    const nationality = trimmed ? normalizeCarToSar(trimmed) : undefined;
+    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nationality }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
+  async function setEp(memberId: string) {
+    setError(null);
+    const res = await fetch(`/api/members/${encodeURIComponent(memberId)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nationality: 'EP' }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const j = await res?.json().catch(() => null);
+      setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+      return;
+    }
+    await refresh();
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between gap-3">
@@ -172,7 +206,7 @@ export default function MembersClient() {
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      <MembersTable members={visible} loading={loading} />
+      <MembersTable members={visible} loading={loading} onEditNationality={(id, cur) => void updateNationality(id, cur)} onSetEp={(id) => void setEp(id)} />
 
       {showAdd ? (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
