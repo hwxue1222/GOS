@@ -105,7 +105,6 @@ export default async function SecretaryCompaniesPage() {
       <div className="flex-1">
         <SecretaryCompaniesClient
           initialItems={items}
-          canEdit={hasPermission(me, 'secretary', 'update') && me.role !== 'client'}
           canViewPeople={me.role !== 'client'}
         />
       </div>

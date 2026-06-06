@@ -30,7 +30,6 @@ type CompanyRow = {
 
 type Props = {
   initialItems: CompanyRow[];
-  canEdit: boolean;
   canViewPeople?: boolean;
 };
 
@@ -39,7 +38,7 @@ function money(currency?: string, amount?: number) {
   return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default function SecretaryCompaniesClient({ initialItems, canEdit, canViewPeople }: Props) {
+export default function SecretaryCompaniesClient({ initialItems, canViewPeople }: Props) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [page, setPage] = usePersistedState('gos.secretary.companies.page', 1);
@@ -153,9 +152,6 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                 <td className="px-4 py-3">{it.client.createdAt.slice(0, 10)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <a href={companyHref(it.client.id)} className="rounded-md bg-[#2f7bdc] text-white px-3 py-1.5 text-xs font-medium">
-                      {canEdit ? t('common.edit') : t('common.view')}
-                    </a>
                     <Link
                       href={`/secretary/share-transfers?clientId=${encodeURIComponent(it.client.id)}`}
                       className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium"
