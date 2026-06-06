@@ -21,6 +21,8 @@ type Client = {
   totalShares?: number;
   incorporationDate?: string;
   registeredOfficeAddress?: string;
+  entityStatus?: string;
+  isStruckOff?: boolean;
 };
 
 type Props = {
@@ -47,7 +49,9 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
               value={client.name}
               onChange={(e) => onChange({ name: e.target.value })}
               disabled={!canEdit}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
+              className={`mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5 ${
+                client.isStruckOff ? 'text-red-600' : ''
+              }`}
             />
           </label>
           <label className="text-sm">

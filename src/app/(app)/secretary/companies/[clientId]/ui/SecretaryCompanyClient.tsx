@@ -24,6 +24,8 @@ type Client = {
   totalShares?: number;
   incorporationDate?: string;
   registeredOfficeAddress?: string;
+  entityStatus?: string;
+  isStruckOff?: boolean;
   createdAt: string;
 };
 
@@ -223,7 +225,7 @@ export default function SecretaryCompanyClient({
               Companies
             </Link>
             <span className="mx-2 text-black/30">/</span>
-            <span className="text-black/70">{initialClient.name}</span>
+            <span className={client.isStruckOff ? 'text-red-600' : 'text-black/70'}>{client.name}</span>
           </div>
           <h1 className="mt-1 text-xl font-semibold">Company Detail</h1>
           <div className="mt-1 text-sm text-black/60">{initialClient.code}</div>

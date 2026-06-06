@@ -54,6 +54,8 @@ export type Client = {
   totalShares?: number;
   incorporationDate?: string;
   registeredOfficeAddress?: string;
+  entityStatus?: string;
+  isStruckOff?: boolean;
   tags: string[];
   deletedAt?: string;
   createdAt: string;

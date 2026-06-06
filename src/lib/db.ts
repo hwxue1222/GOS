@@ -5532,6 +5532,14 @@ function extractIncorporationDateFromMeta(desc: string | undefined) {
   return undefined;
 }
 
+function extractEntityStatusFromMeta(desc: string | undefined) {
+  const s = (desc ?? '').trim();
+  if (!s) return undefined;
+  const m = s.match(/current\s+operating\s+status\s+is\s+([^\.]+)\./i);
+  if (m) return m[1].trim();
+  return undefined;
+}
+
 function normalizeSsicText(s: string) {
   return s
     .toLowerCase()
@@ -5635,6 +5643,13 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
     extractCompaniesSgField(html, 'Incorporated') ?? extractCompaniesSgValueAfterLabelContains(html, ['incorpor', 'date']);
   const incorp = normalizeDateYmd(incRaw) ?? extractIncorporationDateFromMeta(metaDesc);
 
+  const statusRaw =
+    extractCompaniesSgField(html, 'Entity Status Description') ??
+    extractCompaniesSgField(html, 'Entity Status') ??
+    extractEntityStatusFromMeta(metaDesc);
+  const status = statusRaw ? statusRaw.trim() : undefined;
+  const struckOff = status ? /struck\s*off/i.test(status) : false;
+
   const addrRaw = extractCompaniesSgField(html, 'Bussiness Address') ?? extractCompaniesSgField(html, 'Business Address');
   const addr = addrRaw ? addrRaw.replace(/\s*\n\s*/g, ', ').trim() : undefined;
 
@@ -5665,6 +5680,9 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   if (addr && !String(client.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
   if (incorp && !String(client.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
   if (biz && !String(client.businessActivities ?? '').trim()) patch.businessActivities = biz;
+
+  if (status && status !== String(client.entityStatus ?? '')) patch.entityStatus = status;
+  if (status && struckOff !== Boolean(client.isStruckOff)) patch.isStruckOff = struckOff;
 
   const primaryCode = findSsicCodeByDescription(primary);
   if (primaryCode && !String(client.ssicPrimaryCode ?? '').trim()) patch.ssicPrimaryCode = primaryCode;
