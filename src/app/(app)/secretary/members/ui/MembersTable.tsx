@@ -82,7 +82,9 @@ export default function MembersTable({ members, loading, onEditTextField, onEdit
                 <tr key={p.id} className="border-t border-black/5">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{p.fullName}</span>
+                      <span className={p.fullName.trim() ? 'font-medium' : 'font-medium text-black/40'}>
+                        {p.fullName.trim() ? p.fullName : '(No name)'}
+                      </span>
                       <button
                         type="button"
                         onClick={() => onEditTextField(p.id, 'fullName', p.fullName)}
