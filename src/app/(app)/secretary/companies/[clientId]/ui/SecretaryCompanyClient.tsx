@@ -10,6 +10,7 @@ type Client = {
   id: string;
   code: string;
   name: string;
+  fka?: string;
   companyRegistrationNo?: string;
   fye?: string;
   contactPerson?: string;

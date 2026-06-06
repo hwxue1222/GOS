@@ -11,6 +11,7 @@ type CompanyRow = {
     id: string;
     code: string;
     name: string;
+    fka?: string;
     companyRegistrationNo?: string;
     contactPerson?: string;
     paidUpCapitalCurrency?: string;
@@ -138,6 +139,7 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
                       {it.client.name}
                     </Link>
                   </div>
+                  {it.client.fka?.trim() ? <div className="mt-0.5 text-xs text-black/40">FKA: {it.client.fka}</div> : null}
                 </td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
                 <td className="px-4 py-3">{money(it.client.paidUpCapitalCurrency, it.client.paidUpCapitalAmount)}</td>
