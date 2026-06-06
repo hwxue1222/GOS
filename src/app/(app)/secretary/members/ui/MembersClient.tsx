@@ -97,6 +97,20 @@ function splitPhone(phone: string | undefined) {
   return { code: hit, local: s.slice(hit.length).replace(/\D/g, '') };
 }
 
+function titleCaseWords(input: string) {
+  const s = input.replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  return s
+    .split(' ')
+    .map((w) => {
+      const lower = w.toLowerCase();
+      const m = lower.match(/^([a-z])([\s\S]*)$/);
+      if (!m) return lower;
+      return m[1].toUpperCase() + m[2];
+    })
+    .join(' ');
+}
+
 export default function MembersClient() {
   const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
@@ -176,7 +190,7 @@ export default function MembersClient() {
 
   async function addMember() {
     setError(null);
-    const fullName = form.fullName.trim();
+    const fullName = titleCaseWords(form.fullName);
     if (!fullName) {
       setError('INVALID_INPUT');
       return;
@@ -313,7 +327,7 @@ export default function MembersClient() {
   async function saveEdit() {
     if (!editingMemberId) return;
     setError(null);
-    const fullName = editForm.fullName.trim();
+    const fullName = titleCaseWords(editForm.fullName);
     if (!fullName) {
       setError('INVALID_INPUT');
       return;
@@ -459,7 +473,7 @@ export default function MembersClient() {
                 <div className="text-black/60">Name</div>
                 <input
                   value={form.fullName}
-                  onChange={(e) => setForm((v) => ({ ...v, fullName: e.target.value }))}
+                  onChange={(e) => setForm((v) => ({ ...v, fullName: titleCaseWords(e.target.value) }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   placeholder="Full name"
                 />
@@ -588,7 +602,7 @@ export default function MembersClient() {
                 <div className="text-black/60">Name</div>
                 <input
                   value={editForm.fullName}
-                  onChange={(e) => setEditForm((v) => ({ ...v, fullName: e.target.value }))}
+                  onChange={(e) => setEditForm((v) => ({ ...v, fullName: titleCaseWords(e.target.value) }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   placeholder="Full name"
                 />
