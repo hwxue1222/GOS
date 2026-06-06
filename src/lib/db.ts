@@ -5801,6 +5801,74 @@ export async function enrichClientsFromCompaniesSg(opts: { limit: number }) {
   };
 }
 
+export async function enrichClientsFromCompaniesSgBatch(opts: { cursor: string | null; limit: number }) {
+  const db = await readDb();
+  const active = db.clients.filter((c) => !c.deletedAt);
+
+  const shouldTry = (c: Client) => {
+    const uen = String(c.companyRegistrationNo ?? '').trim();
+    if (!uen) return false;
+    const needAddr = !String(c.registeredOfficeAddress ?? '').trim();
+    const needDate = !String(c.incorporationDate ?? '').trim();
+    const needBiz = !String(c.businessActivities ?? '').trim();
+    const needStatus = !String((c as unknown as { entityStatus?: string }).entityStatus ?? '').trim();
+    const needStruckOff = typeof (c as unknown as { isStruckOff?: boolean }).isStruckOff !== 'boolean';
+    return needAddr || needDate || needBiz || needStatus || needStruckOff;
+  };
+
+  const ordered = active
+    .filter(shouldTry)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+  let startIndex = 0;
+  if (opts.cursor) {
+    const idx = ordered.findIndex((c) => c.id === opts.cursor);
+    if (idx >= 0) startIndex = idx + 1;
+  }
+
+  const batch = ordered.slice(startIndex, startIndex + Math.max(1, opts.limit));
+  let changed = false;
+
+  let updated = 0;
+  let mismatched = 0;
+  let notFound = 0;
+  let errors = 0;
+
+  let lastId: string | null = null;
+  for (const c of batch) {
+    lastId = c.id;
+    try {
+      const res = await enrichOneClientFromCompaniesSg(db, c);
+      if (res.status === 'UPDATED') {
+        changed = true;
+        updated++;
+      } else if (res.status === 'MISMATCH_NAME') {
+        mismatched++;
+      } else if (res.status === 'NOT_FOUND') {
+        notFound++;
+      }
+    } catch {
+      errors++;
+    }
+  }
+
+  if (changed) await writeDb(db);
+
+  const nextCursor = lastId;
+  const done = startIndex + batch.length >= ordered.length;
+
+  return {
+    processed: batch.length,
+    updated,
+    mismatched,
+    notFound,
+    errors,
+    nextCursor,
+    done,
+    remaining: Math.max(0, ordered.length - (startIndex + batch.length)),
+  };
+}
+
 export async function bulkUpdateClientsByUen(
   updates: Array<{ uen: string; registeredOfficeAddress?: string; incorporationDate?: string; businessActivities?: string }>,
 ) {
