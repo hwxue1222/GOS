@@ -62,6 +62,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
   const [error, setError] = useState<string | null>(null);
   const [jobView, setJobView] = usePersistedState<'uncomplete' | 'complete'>(`gos.client.${initialClient.id}.jobs.view`, 'uncomplete');
   const canDeleteJob = me.role === 'owner';
+  const canModifyJob = (job: JobItem['job']) => me.role === 'owner' || (me.role === 'manager' && job.managerUserId === me.id);
 
   const [draft, setDraft] = useState({
     name: initialClient.name,
@@ -226,6 +227,61 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) return;
     setJobs((prev) => prev.filter((x) => x.job.id !== jobId));
+  }
+
+  async function reloadJobsOnly() {
+    const res = await fetch('/api/jobs').catch(() => null);
+    if (!res?.ok) return;
+    const j = (await res.json().catch(() => null)) as { ok?: boolean; items?: unknown[] } | null;
+    const items = Array.isArray(j?.items) ? j!.items : [];
+    const mapped = items
+      .map((it) => it as any)
+      .filter((it) => it?.job?.clientId === client.id)
+      .map(
+        (it) =>
+          ({
+            job: {
+              id: String(it.job.id),
+              name: String(it.job.name),
+              label: typeof it.job.label === 'string' ? it.job.label : undefined,
+              dueDate: typeof it.job.dueDate === 'string' ? it.job.dueDate : undefined,
+              status: (it.job.status === 'Processing' || it.job.status === 'Complete' ? it.job.status : 'Pending') as JobItem['job']['status'],
+              completed: !!it.job.completed,
+              deletedAt: typeof it.job.deletedAt === 'string' ? it.job.deletedAt : undefined,
+              recurringFromJobId: typeof it.job.recurringFromJobId === 'string' ? it.job.recurringFromJobId : undefined,
+              managerUserId: typeof it.job.managerUserId === 'string' ? it.job.managerUserId : undefined,
+            },
+            tasks: {
+              done: Number(it.tasks?.done) || 0,
+              total: Number(it.tasks?.total) || 0,
+            },
+            manager: it.manager && typeof it.manager.id === 'string' && typeof it.manager.name === 'string' ? { id: it.manager.id, name: it.manager.name } : null,
+          }) satisfies JobItem,
+      );
+    setJobs(mapped);
+  }
+
+  async function toggleJobCompleted(jobId: string, nextCompleted: boolean) {
+    const res = await fetch(`/api/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ completed: nextCompleted }),
+    }).catch(() => null);
+    if (!res?.ok) return;
+    const j = (await res.json().catch(() => null)) as { ok?: boolean; job?: { completed?: boolean } } | null;
+    if (!j?.ok) return;
+    setJobs((prev) =>
+      prev.map((it) => {
+        if (it.job.id !== jobId) return it;
+        const completed = j.job?.completed ?? nextCompleted;
+        return {
+          ...it,
+          job: { ...it.job, completed, status: completed ? 'Complete' : it.job.status },
+          tasks: completed ? { ...it.tasks, done: it.tasks.total } : it.tasks,
+        };
+      }),
+    );
+    await reloadJobsOnly();
   }
 
   async function createDirector() {
@@ -510,6 +566,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
               <table className="min-w-full text-sm">
                 <thead className="text-left text-black/60">
                   <tr className="border-b border-black/5">
+                    <th className="px-4 py-3 font-medium w-10"></th>
                     <th className="px-4 py-3 font-medium">Job Name</th>
                     <th className="px-4 py-3 font-medium">Tasks</th>
                     <th className="px-4 py-3 font-medium">Due Date</th>
@@ -521,6 +578,21 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                 <tbody>
                   {filtered.map((it) => (
                     <tr key={it.job.id} className="border-b border-black/5 hover:bg-black/[0.02]">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={!!it.job.completed}
+                          disabled={!canModifyJob(it.job)}
+                          onChange={(e) => {
+                            if (!canModifyJob(it.job)) return;
+                            if (e.target.checked && it.tasks.total > 0 && it.tasks.done < it.tasks.total) {
+                              const ok = window.confirm('有未完成的 tasks。确定要完成该 job 并自动完成所有 tasks 吗？');
+                              if (!ok) return;
+                            }
+                            void toggleJobCompleted(it.job.id, e.target.checked);
+                          }}
+                        />
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap max-w-[380px]">
                         <Link
                           className="text-[#2f7bdc] hover:underline truncate inline-block max-w-[380px]"
@@ -570,7 +642,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                   ))}
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-black/50">
+                      <td colSpan={7} className="px-4 py-10 text-center text-black/50">
                         No jobs
                       </td>
                     </tr>
