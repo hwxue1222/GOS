@@ -61,6 +61,7 @@ export default function SecretaryCompanyClient({
   const [enriching, setEnriching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [autoFillInfo, setAutoFillInfo] = useState<{ status: string; url?: string; foundName?: string } | null>(null);
 
   const [roles, setRoles] = useState(initialRoles);
   const [creatingLoginForPersonId, setCreatingLoginForPersonId] = useState<string | null>(null);
@@ -109,6 +110,7 @@ export default function SecretaryCompanyClient({
     setEnriching(true);
     setError(null);
     setOk(false);
+    setAutoFillInfo(null);
     try {
       const res = await fetch(`/api/admin/enrich/clients/${encodeURIComponent(initialClient.id)}`, {
         method: 'POST',
@@ -118,8 +120,18 @@ export default function SecretaryCompanyClient({
         setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
+      const j = (await res.json().catch(() => null)) as
+        | {
+            status?: string;
+            url?: string;
+            foundName?: string;
+          }
+        | null;
+      const status = String(j?.status ?? '');
+      setAutoFillInfo({ status, url: j?.url, foundName: j?.foundName });
       await refresh();
-      setOk(true);
+      if (status === 'UPDATED' || status === 'NO_CHANGE') setOk(true);
+      else if (status) setError(status);
     } finally {
       setEnriching(false);
     }
@@ -242,6 +254,15 @@ export default function SecretaryCompanyClient({
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
       {ok ? <div className="mt-3 text-sm text-[#46b35a]">Saved.</div> : null}
+      {autoFillInfo?.url ? (
+        <div className="mt-2 text-xs text-black/50">
+          Source:{' '}
+          <a href={autoFillInfo.url} target="_blank" rel="noreferrer" className="text-[#2f7bdc] hover:underline">
+            {autoFillInfo.url}
+          </a>
+          {autoFillInfo.foundName ? <span className="ml-2">Found: {autoFillInfo.foundName}</span> : null}
+        </div>
+      ) : null}
 
       {tempPassword ? (
         <div className="mt-4 rounded-xl bg-[#fff7ed] border border-[#fed7aa] p-4 text-sm">

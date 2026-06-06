@@ -5555,6 +5555,44 @@ function findSsicCodeByDescription(desc: string | undefined) {
   return undefined;
 }
 
+function stripCompanySuffixesForMatch(s: string) {
+  return normalizeClientNameForMerge(s)
+    .replace(/\b(private|pte|ltd|limited|company|co|inc|corp|corporation)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function namesLooselyMatch(a: string, b: string) {
+  const aa = stripCompanySuffixesForMatch(a);
+  const bb = stripCompanySuffixesForMatch(b);
+  if (!aa || !bb) return false;
+  if (aa === bb) return true;
+  const minLen = 12;
+  if (aa.length >= minLen && bb.length >= minLen) {
+    if (aa.startsWith(bb) || bb.startsWith(aa)) return true;
+    if (aa.includes(bb) || bb.includes(aa)) return true;
+  }
+  return false;
+}
+
+function titleCaseCompanyNameIfAllCaps(s: string) {
+  const input = String(s ?? '').trim();
+  if (!input) return input;
+  if (/[a-z]/.test(input)) return input;
+  const upperWords = new Set(['PTE', 'LTD', 'LLP', 'LLC', 'PLC', 'INC', 'CO', 'LP']);
+  return input
+    .split(/\s+/)
+    .map((w) => {
+      const clean = w.replace(/[^A-Z0-9.]/g, '');
+      const bare = clean.replace(/\./g, '');
+      if (upperWords.has(bare)) return w.toUpperCase();
+      if (/^\d+$/.test(bare)) return w;
+      const lower = w.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
 async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   const uen = String(client.companyRegistrationNo ?? '').trim().toUpperCase();
   if (!uen) return { status: 'SKIP_NO_UEN' as const };
@@ -5585,7 +5623,9 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
   if (foundName) {
     const keyA = normalizeClientNameForMerge(foundName);
     const keyB = normalizeClientNameForMerge(client.name);
-    if (keyA && keyB && keyA !== keyB) {
+    const exactMatch = keyA && keyB && keyA === keyB;
+    const looseMatch = namesLooselyMatch(foundName, client.name);
+    if (!exactMatch && !looseMatch) {
       return { status: 'MISMATCH_NAME' as const, url, foundName };
     }
   }
@@ -5619,6 +5659,9 @@ async function enrichOneClientFromCompaniesSg(db: Db, client: Client) {
           : undefined;
 
   const patch: Partial<Client> = {};
+  if (foundName && normalizeClientNameForMerge(foundName) !== normalizeClientNameForMerge(client.name)) {
+    patch.name = titleCaseCompanyNameIfAllCaps(foundName);
+  }
   if (addr && !String(client.registeredOfficeAddress ?? '').trim()) patch.registeredOfficeAddress = addr;
   if (incorp && !String(client.incorporationDate ?? '').trim()) patch.incorporationDate = incorp;
   if (biz && !String(client.businessActivities ?? '').trim()) patch.businessActivities = biz;
