@@ -363,6 +363,59 @@ export type SecretaryServiceApplicationRow = {
   source: { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string } | { kind: 'SHARE_TRANSFER'; id: string };
 };
 
+export type IncorporationApplicationType = 'REGISTER_COMPANY' | 'TRANSFER_COMPANY_SECRETARY';
+
+export type IncorporationApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'PROCESSING'
+  | 'NEED_MORE_INFO'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+export type IncorporationApplication = {
+  id: string;
+  type: IncorporationApplicationType;
+  status: IncorporationApplicationStatus;
+  title: string;
+  companyId?: string;
+  companyName?: string;
+  payload: Record<string, unknown>;
+  createdByUserId: string;
+  assignedToUserId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  submittedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
+};
+
+export type IncorporationApplicationEvent = {
+  id: string;
+  applicationId: string;
+  fromStatus?: IncorporationApplicationStatus;
+  toStatus: IncorporationApplicationStatus;
+  note?: string;
+  actorUserId: string;
+  actorName: string;
+  actorRole: Role;
+  createdAt: string;
+};
+
+export type IncorporationApplicationFile = {
+  id: string;
+  applicationId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  dataBase64: string;
+  uploadedByUserId: string;
+  uploadedByName: string;
+  uploadedAt: string;
+};
+
 export type JobStatus = 'Pending' | 'Processing' | 'Complete';
 
 export type JobRepeat = 'none' | 'monthly' | 'quarterly' | 'yearly' | '2-yearly';
@@ -417,6 +470,9 @@ export type Db = {
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
   directorChangeRequests?: DirectorChangeRequest[];
+  incorporationApplications?: IncorporationApplication[];
+  incorporationApplicationEvents?: IncorporationApplicationEvent[];
+  incorporationApplicationFiles?: IncorporationApplicationFile[];
   jobs: Job[];
   tasks: JobTask[];
   auditLogs?: AuditLog[];

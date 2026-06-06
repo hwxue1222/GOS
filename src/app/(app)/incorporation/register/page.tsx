@@ -1,5 +1,6 @@
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
+import RegisterCompanyApplicationClient from '@/app/(app)/incorporation/ui/RegisterCompanyApplicationClient';
 
 export default async function RegisterCompanyPage() {
   const me = await getCurrentUser();
@@ -11,10 +12,11 @@ export default async function RegisterCompanyPage() {
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <h1 className="text-xl font-semibold">Register Company</h1>
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">Coming soon.</div>
+          <div className="mt-4">
+            <RegisterCompanyApplicationClient />
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

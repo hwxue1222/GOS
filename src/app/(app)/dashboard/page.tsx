@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import Link from 'next/link';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
+import { buildIncorporationApplications } from '@/lib/incorporationApplications';
 
 export default async function DashboardPage() {
   const me = await getCurrentUser();
@@ -37,6 +38,9 @@ export default async function DashboardPage() {
   const apps = buildSecretaryServiceApplications(db, allowedClientIds);
   const csRows = apps.slice(0, 10);
 
+  const incApps = buildIncorporationApplications(db, allowedClientIds, me.role === 'client' ? me.id : null);
+  const incRows = incApps.slice(0, 10);
+
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="dashboard" />
@@ -47,13 +51,83 @@ export default async function DashboardPage() {
           <div className="mt-6 space-y-4">
             <div className="rounded-xl bg-white border border-black/5 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-base font-semibold">Incorporation of Company</div>
-                <Link href="/incorporation/register" className="text-sm text-[#2f7bdc] hover:underline">
-                  New
-                </Link>
+                <div>
+                  <div className="text-base font-semibold">Incorporation of Company</div>
+                  <div className="mt-0.5 text-sm text-black/50">Applications</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/corporate-secretary/applications"
+                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                  >
+                    View all
+                  </Link>
+                  <Link
+                    href="/incorporation/register"
+                    className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
+                  >
+                    Register
+                  </Link>
+                  <Link
+                    href="/incorporation/transfer-secretary"
+                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                  >
+                    Transfer
+                  </Link>
+                </div>
               </div>
-              <div className="mt-4 rounded-lg border border-black/5 p-8 text-center text-sm text-black/40">
-                No data
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-left text-black/60">
+                    <tr className="border-b border-black/5">
+                      <th className="px-3 py-2 font-medium">ID</th>
+                      <th className="px-3 py-2 font-medium">Type</th>
+                      <th className="px-3 py-2 font-medium">Company Name</th>
+                      <th className="px-3 py-2 font-medium">Application Date</th>
+                      <th className="px-3 py-2 font-medium">Edit Date</th>
+                      <th className="px-3 py-2 font-medium">Status</th>
+                      <th className="px-3 py-2 font-medium">Operate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incRows.map((r) => {
+                      const detailsHref = `/incorporation/applications/${encodeURIComponent(r.sourceId)}`;
+                      const typeLabel = r.type === 'REGISTER_COMPANY' ? 'Register Company' : 'Transfer of Company Secretary';
+                      return (
+                        <tr key={r.id} className="border-b border-black/5">
+                          <td className="px-3 py-2">{r.id}</td>
+                          <td className="px-3 py-2">{typeLabel}</td>
+                          <td className="px-3 py-2">{r.companyName}</td>
+                          <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
+                          <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>
+                          <td className="px-3 py-2">
+                            <span className={r.status === 'REJECTED' ? 'text-red-600' : r.status === 'NEED_MORE_INFO' ? 'text-[#d97706]' : 'text-[#16a34a]'}>
+                              {r.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Link href={`${detailsHref}#documents`} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
+                                Documents
+                              </Link>
+                              <Link href={detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
+                                Details
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {incRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-10 text-center text-black/40">
+                          No data
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </div>
 

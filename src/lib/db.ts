@@ -16,6 +16,10 @@ import type {
   AuditLog,
   Invoice,
   InvoiceEmailHistory,
+  IncorporationApplication,
+  IncorporationApplicationEvent,
+  IncorporationApplicationFile,
+  IncorporationApplicationStatus,
   Job,
   JobTask,
   Party,
@@ -70,6 +74,9 @@ function emptyDb(): Db {
     representativeDesignationRequests: [],
     shareTransfers: [],
     directorChangeRequests: [],
+    incorporationApplications: [],
+    incorporationApplicationEvents: [],
+    incorporationApplicationFiles: [],
     jobs: [],
     tasks: [],
     auditLogs: [],
@@ -1149,6 +1156,22 @@ function normalizeDb(parsed: Db): Db {
         .slice(-5000)
     : [];
 
+  const incorporationApplications: IncorporationApplication[] = Array.isArray(
+    (parsed as unknown as { incorporationApplications?: unknown }).incorporationApplications,
+  )
+    ? (((parsed as unknown as { incorporationApplications?: IncorporationApplication[] }).incorporationApplications ?? []) as IncorporationApplication[])
+    : [];
+  const incorporationApplicationEvents: IncorporationApplicationEvent[] = Array.isArray(
+    (parsed as unknown as { incorporationApplicationEvents?: unknown }).incorporationApplicationEvents,
+  )
+    ? (((parsed as unknown as { incorporationApplicationEvents?: IncorporationApplicationEvent[] }).incorporationApplicationEvents ?? []) as IncorporationApplicationEvent[])
+    : [];
+  const incorporationApplicationFiles: IncorporationApplicationFile[] = Array.isArray(
+    (parsed as unknown as { incorporationApplicationFiles?: unknown }).incorporationApplicationFiles,
+  )
+    ? (((parsed as unknown as { incorporationApplicationFiles?: IncorporationApplicationFile[] }).incorporationApplicationFiles ?? []) as IncorporationApplicationFile[])
+    : [];
+
   return {
     users,
     sessions: parsed.sessions ?? [],
@@ -1166,6 +1189,9 @@ function normalizeDb(parsed: Db): Db {
     representativeDesignationRequests,
     shareTransfers,
     directorChangeRequests,
+    incorporationApplications,
+    incorporationApplicationEvents,
+    incorporationApplicationFiles,
     jobs,
     tasks: tasks as unknown as JobTask[],
     auditLogs,
@@ -8044,4 +8070,191 @@ export async function deleteInvoice(invoiceId: string) {
   db.invoices[idx] = { ...db.invoices[idx], deletedAt: nowIso(), updatedAt: nowIso() };
   await writeDb(db);
   return db.invoices[idx];
+}
+
+export async function listIncorporationApplications() {
+  const db = await readDb();
+  return db.incorporationApplications ?? [];
+}
+
+export async function findIncorporationApplicationById(applicationId: string) {
+  const db = await readDb();
+  const list = db.incorporationApplications ?? [];
+  return list.find((a) => a.id === applicationId) ?? null;
+}
+
+export async function listIncorporationApplicationEvents(applicationId: string) {
+  const db = await readDb();
+  const list = db.incorporationApplicationEvents ?? [];
+  return list
+    .filter((e) => e.applicationId === applicationId)
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+}
+
+export async function listIncorporationApplicationFiles(applicationId: string) {
+  const db = await readDb();
+  const list = db.incorporationApplicationFiles ?? [];
+  return list
+    .filter((f) => f.applicationId === applicationId)
+    .sort((a, b) => (b.uploadedAt ?? '').localeCompare(a.uploadedAt ?? ''));
+}
+
+export async function getIncorporationApplicationDetail(applicationId: string) {
+  const db = await readDb();
+  const application = (db.incorporationApplications ?? []).find((a) => a.id === applicationId) ?? null;
+  if (!application) return null;
+  const events = (db.incorporationApplicationEvents ?? [])
+    .filter((e) => e.applicationId === applicationId)
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  const files = (db.incorporationApplicationFiles ?? [])
+    .filter((f) => f.applicationId === applicationId)
+    .sort((a, b) => (b.uploadedAt ?? '').localeCompare(a.uploadedAt ?? ''));
+  return { application, events, files };
+}
+
+export async function createIncorporationApplication(input: {
+  type: 'REGISTER_COMPANY' | 'TRANSFER_COMPANY_SECRETARY';
+  status: 'DRAFT' | 'SUBMITTED';
+  title: string;
+  companyId?: string;
+  companyName?: string;
+  payload: Record<string, unknown>;
+  createdByUserId: string;
+  assignedToUserId?: string;
+  actor: { id: string; name: string; role: Role };
+  note?: string;
+}) {
+  const db = await readDb();
+  if (!db.incorporationApplications) db.incorporationApplications = [];
+  if (!db.incorporationApplicationEvents) db.incorporationApplicationEvents = [];
+
+  const now = nowIso();
+  const appId = newId('inc');
+  const application: IncorporationApplication = {
+    id: appId,
+    type: input.type,
+    status: input.status,
+    title: input.title,
+    companyId: input.companyId,
+    companyName: input.companyName,
+    payload: input.payload,
+    createdByUserId: input.createdByUserId,
+    assignedToUserId: input.assignedToUserId,
+    createdAt: now,
+    updatedAt: now,
+    submittedAt: input.status === 'SUBMITTED' ? now : undefined,
+  };
+  db.incorporationApplications.unshift(application);
+
+  const ev: IncorporationApplicationEvent = {
+    id: newId('incev'),
+    applicationId: appId,
+    toStatus: input.status,
+    note: input.note,
+    actorUserId: input.actor.id,
+    actorName: input.actor.name,
+    actorRole: input.actor.role,
+    createdAt: now,
+  };
+  db.incorporationApplicationEvents.unshift(ev);
+
+  await writeDb(db);
+  return application;
+}
+
+export async function updateIncorporationApplication(applicationId: string, patch: Partial<IncorporationApplication>) {
+  const db = await readDb();
+  const list = db.incorporationApplications ?? [];
+  const idx = list.findIndex((a) => a.id === applicationId);
+  if (idx < 0) return null;
+  const now = nowIso();
+  const prev = list[idx];
+  const next: IncorporationApplication = {
+    ...prev,
+    ...patch,
+    id: prev.id,
+    createdAt: prev.createdAt,
+    createdByUserId: prev.createdByUserId,
+    updatedAt: now,
+  };
+  list[idx] = next;
+  db.incorporationApplications = list;
+  await writeDb(db);
+  return next;
+}
+
+export async function transitionIncorporationApplicationStatus(input: {
+  applicationId: string;
+  toStatus: IncorporationApplicationStatus;
+  actor: { id: string; name: string; role: Role };
+  note?: string;
+  decided?: boolean;
+}) {
+  const db = await readDb();
+  if (!db.incorporationApplicationEvents) db.incorporationApplicationEvents = [];
+  const list = db.incorporationApplications ?? [];
+  const idx = list.findIndex((a) => a.id === input.applicationId);
+  if (idx < 0) return null;
+  const prev = list[idx];
+  const now = nowIso();
+
+  const next: IncorporationApplication = {
+    ...prev,
+    status: input.toStatus,
+    updatedAt: now,
+    submittedAt: input.toStatus === 'SUBMITTED' ? (prev.submittedAt ?? now) : prev.submittedAt,
+    decidedAt: input.decided ? now : prev.decidedAt,
+    decidedByUserId: input.decided ? input.actor.id : prev.decidedByUserId,
+    decisionNote: input.decided ? input.note : prev.decisionNote,
+  };
+  list[idx] = next;
+  db.incorporationApplications = list;
+
+  const ev: IncorporationApplicationEvent = {
+    id: newId('incev'),
+    applicationId: input.applicationId,
+    fromStatus: prev.status,
+    toStatus: input.toStatus,
+    note: input.note,
+    actorUserId: input.actor.id,
+    actorName: input.actor.name,
+    actorRole: input.actor.role,
+    createdAt: now,
+  };
+  db.incorporationApplicationEvents.unshift(ev);
+
+  await writeDb(db);
+  return next;
+}
+
+export async function addIncorporationApplicationFile(input: {
+  applicationId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  dataBase64: string;
+  uploadedBy: { id: string; name: string };
+}) {
+  const db = await readDb();
+  if (!db.incorporationApplicationFiles) db.incorporationApplicationFiles = [];
+  const now = nowIso();
+  const f: IncorporationApplicationFile = {
+    id: newId('incf'),
+    applicationId: input.applicationId,
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    size: input.size,
+    dataBase64: input.dataBase64,
+    uploadedByUserId: input.uploadedBy.id,
+    uploadedByName: input.uploadedBy.name,
+    uploadedAt: now,
+  };
+  db.incorporationApplicationFiles.unshift(f);
+  await writeDb(db);
+  return f;
+}
+
+export async function findIncorporationApplicationFileById(fileId: string) {
+  const db = await readDb();
+  return (db.incorporationApplicationFiles ?? []).find((f) => f.id === fileId) ?? null;
 }
