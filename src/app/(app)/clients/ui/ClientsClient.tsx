@@ -18,6 +18,7 @@ type Client = {
   address?: string;
   phone?: string;
   email?: string;
+  isStruckOff?: boolean;
   businessActivities?: string;
   incorporationDate?: string;
   registeredOfficeAddress?: string;
@@ -173,7 +174,9 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                   <td className="px-2 py-2 whitespace-nowrap">{c.code}</td>
                   <td className="px-2 py-2 min-w-[180px] max-w-[280px]">
                     <Link
-                      className="text-[#2f7bdc] hover:underline block leading-tight break-words"
+                      className={`${
+                        c.isStruckOff ? 'text-red-600' : 'text-[#2f7bdc] hover:underline'
+                      } block leading-tight break-words`}
                       href={`/clients/${c.id}`}
                       title={`${c.name} (Code: ${c.code})`}
                     >

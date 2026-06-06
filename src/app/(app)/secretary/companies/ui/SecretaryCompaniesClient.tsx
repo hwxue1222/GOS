@@ -18,6 +18,7 @@ type CompanyRow = {
     totalShares?: number;
     incorporationDate?: string;
     registeredOfficeAddress?: string;
+    isStruckOff?: boolean;
     createdAt: string;
   };
   directors: string[];
@@ -132,8 +133,10 @@ export default function SecretaryCompaniesClient({ initialItems, canEdit, canVie
             {visible.map((it) => (
               <tr key={it.client.id} className="border-t border-black/5">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-[#2f7bdc]">
-                    <Link href={`/secretary/companies/${it.client.id}`}>{it.client.name}</Link>
+                  <div className={it.client.isStruckOff ? 'font-medium text-red-600' : 'font-medium text-[#2f7bdc]'}>
+                    <Link href={`/secretary/companies/${it.client.id}`} className={it.client.isStruckOff ? '' : 'hover:underline'}>
+                      {it.client.name}
+                    </Link>
                   </div>
                 </td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
