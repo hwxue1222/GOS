@@ -276,10 +276,16 @@ export function renderCompanyUpdateRequestHtml(input: {
       .map((d) => String(d.fullName ?? '').trim())
       .filter(Boolean);
 
-    const signatureBlocks = (directorNames.length ? directorNames : ['']).
-      map((name) => {
-        const nameHtml = name ? `<div style="margin-top: 12px;"><strong>${esc(name)}</strong></div>` : '<div style="margin-top: 12px;">________________</div>';
-        return `<div style="margin-top: 18px;">Director:</div><div style="margin-top: 10px;">_____________</div>${nameHtml}`;
+    const signatureBlocks = (directorNames.length ? directorNames : [''])
+      .map((name) => {
+        const nameHtml = name ? `<div class="sig-name"><strong>${esc(name)}</strong></div>` : '<div class="sig-name">________________</div>';
+        return `
+<div class="sig-block">
+  <div>Director:</div>
+  <div class="sig-line"><span class="sig-mark"></span></div>
+  ${nameHtml}
+</div>
+`.trim();
       })
       .join('');
 
@@ -297,12 +303,18 @@ export function renderCompanyUpdateRequestHtml(input: {
       .title { font-size: 18px; font-weight: 700; margin: 0; }
       .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
       .block { margin-top: 14px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #444; }
+      .sig-name { margin-top: 2px; }
     </style>
   </head>
   <body>
     <div class="title">${companyName}</div>
-    <div class="block"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
     <div class="muted">(Incorporated in the Republic of Singapore)</div>
+
+    <div style="height: 14px;"></div>
 
     <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
