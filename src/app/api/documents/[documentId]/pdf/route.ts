@@ -236,7 +236,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
                 if (!key) continue;
                 const el = byEmail.get(key);
                 if (!el) continue;
-                el.textContent = `Signed ${toDdMmYyyy(String(it.signedAt || ''))}`;
+                const email = String(it.signerEmail || '').trim();
+                el.textContent = email ? `Signed ${toDdMmYyyy(String(it.signedAt || ''))} (${email})` : `Signed ${toDdMmYyyy(String(it.signedAt || ''))}`;
               }
               return;
             }
