@@ -22,6 +22,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
   const [error, setError] = useState<string | null>(null);
 
   async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO') {
+    if (busyId) return;
     setError(null);
     setBusyId(row.id);
     try {
@@ -78,21 +79,21 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                       Details
                     </Link>
                     <button
-                      disabled={busyId === r.id}
+                      disabled={!!busyId}
                       onClick={() => void decide(r, 'APPROVE')}
                       className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
                       Approve
                     </button>
                     <button
-                      disabled={busyId === r.id}
+                      disabled={!!busyId}
                       onClick={() => void decide(r, 'NEED_MORE_INFO')}
                       className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
                       Need more info
                     </button>
                     <button
-                      disabled={busyId === r.id}
+                      disabled={!!busyId}
                       onClick={() => void decide(r, 'REJECT')}
                       className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
