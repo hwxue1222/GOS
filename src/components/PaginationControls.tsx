@@ -45,8 +45,11 @@ export default function PaginationControls({
   const canPrev = page > 1;
   const canNext = page < totalPages;
 
+  const showingText = total > 0 ? `Showing ${pageStart}-${pageEnd} of ${total}` : '0 results';
+
   return (
     <div className="flex items-center justify-end gap-3 text-sm">
+      <div className="mr-auto text-black/50">{showingText}</div>
       <div className="flex items-center gap-1 text-black/60">
         <button
           type="button"

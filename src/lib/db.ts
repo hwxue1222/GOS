@@ -5,6 +5,7 @@ import ssic from '@/data/ssic.json';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
 import type {
+  AnnualGeneralMeetingRequest,
   Client,
   ClientPartyRole,
   CompanyUpdateRequest,
@@ -29,6 +30,7 @@ import type {
   Person,
   RepresentativeDesignationRequest,
   Role,
+  RorcDeclarationRequest,
   Session,
   ShareTransfer,
   SignaturePacket,
@@ -45,7 +47,7 @@ function getDbFilePath() {
   const fromEnv = process.env.GOS_DB_PATH?.trim();
   if (fromEnv) return fromEnv;
   if (process.env.VERCEL) return path.join('/tmp', 'gos', 'db.json');
-  return path.join(process.cwd(), '.gos', 'db.json');
+  return path.resolve('.gos', 'db.json');
 }
 
 const DB_FILE = getDbFilePath();
@@ -94,6 +96,9 @@ function emptyDb(): Db {
     representativeDesignationRequests: [],
     shareTransfers: [],
     directorChangeRequests: [],
+    companyUpdateRequests: [],
+    rorcDeclarationRequests: [],
+    annualGeneralMeetingRequests: [],
     incorporationApplications: [],
     incorporationApplicationEvents: [],
     incorporationApplicationFiles: [],
@@ -147,8 +152,6 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V5 = 'clients.codeMigration.v5';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V6 = 'clients.codeMigration.v6';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
-const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1 = 'clients.dedupeByName.v1';
-const SEED_KEY_CLIENT_DEDUPE_BY_NAME_V2 = 'clients.dedupeByName.v2';
 
 function migrateClientCodesV1(db: Db) {
   if (!db.seed) db.seed = {};
@@ -767,74 +770,6 @@ function dedupeClientsByNormalizedNameAlways(db: Db) {
   return changed;
 }
 
-function dedupeClientsByNormalizedNameV1(db: Db) {
-  if (!db.seed) db.seed = {};
-  if (db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1]) return false;
-
-  const active = db.clients.filter((c) => !c.deletedAt);
-  const groups = new Map<string, Client[]>();
-  for (const c of active) {
-    const key = normalizeClientNameForMerge(String(c.name ?? ''));
-    if (!key) continue;
-    const list = groups.get(key) ?? [];
-    list.push(c);
-    groups.set(key, list);
-  }
-
-  let changed = false;
-  for (const list of groups.values()) {
-    if (list.length <= 1) continue;
-    const sorted = [...list].sort((a, b) => {
-      const ra = rankClientForDedupe(a);
-      const rb = rankClientForDedupe(b);
-      if (ra.isSc !== rb.isSc) return ra.isSc - rb.isSc;
-      if (ra.code !== rb.code) return ra.code.localeCompare(rb.code);
-      return ra.createdAt.localeCompare(rb.createdAt);
-    });
-    const primary = sorted[0];
-    for (const dup of sorted.slice(1)) {
-      if (mergeClientInto(db, dup.id, primary.id)) changed = true;
-    }
-  }
-
-  db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V1] = true;
-  return changed;
-}
-
-function dedupeClientsByNormalizedNameV2(db: Db) {
-  if (!db.seed) db.seed = {};
-  if (db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V2]) return false;
-
-  const active = db.clients.filter((c) => !c.deletedAt);
-  const groups = new Map<string, Client[]>();
-  for (const c of active) {
-    const nameKey = normalizeClientNameForMerge(String(c.name ?? ''));
-    const regKey = (c.companyRegistrationNo ?? '').trim();
-    const key = `${nameKey}::${regKey || '_'}`;
-    const list = groups.get(key) ?? [];
-    list.push(c);
-    groups.set(key, list);
-  }
-
-  let changed = false;
-  for (const list of groups.values()) {
-    if (list.length <= 1) continue;
-    const sorted = [...list].sort((a, b) => {
-      const ra = rankClientForDedupe(a);
-      const rb = rankClientForDedupe(b);
-      if (ra.isSc !== rb.isSc) return ra.isSc - rb.isSc;
-      if (ra.code !== rb.code) return ra.code.localeCompare(rb.code);
-      return ra.createdAt.localeCompare(rb.createdAt);
-    });
-    const primary = sorted[0];
-    for (const dup of sorted.slice(1)) {
-      if (mergeClientInto(db, dup.id, primary.id)) changed = true;
-    }
-  }
-
-  db.seed[SEED_KEY_CLIENT_DEDUPE_BY_NAME_V2] = true;
-  return changed;
-}
 
 function normalizeDb(parsed: Db): Db {
   const keyOfName = (name: string) => name.trim().toLowerCase();
@@ -1521,22 +1456,6 @@ function safeFindClientByNameAndRegNo(db: Db, name: string, regNo?: string) {
 
 function looksLikeCompanyName(name: string) {
   return /\b(pte|ltd|limited|llp|llc|inc|corp|co|company|holdings)\b/i.test(name);
-}
-
-function parseMoneyText(input: string) {
-  const s = input.trim();
-  const m = s.match(/^(SGD|USD|CNY|MYR)\s+([0-9,]+(?:\.[0-9]+)?)$/i);
-  if (m) {
-    const currency = m[1].toUpperCase() as Currency;
-    const amount = Number(m[2].replace(/,/g, ''));
-    return { currency, amount: Number.isFinite(amount) ? amount : undefined };
-  }
-  const m2 = s.match(/^\$\s*([0-9,]+(?:\.[0-9]+)?)$/);
-  if (m2) {
-    const amount = Number(m2[1].replace(/,/g, ''));
-    return { currency: 'USD' as Currency, amount: Number.isFinite(amount) ? amount : undefined };
-  }
-  return { currency: undefined, amount: undefined };
 }
 
 function dateToIso(dateYmd: string) {
@@ -6954,6 +6873,38 @@ async function finalizeCompanyUpdateIfReady(db: Db, packet: SignaturePacket) {
   (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
 }
 
+async function finalizeRorcDeclarationIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'RORC_DECLARATION') return;
+  if (packet.status !== 'SIGNED') return;
+
+  const list = Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
+    ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === packet.relatedId);
+  if (idx < 0) return;
+  const r = list[idx];
+  if (r.status !== 'PENDING_SIGNATURES') return;
+  const now = nowIso();
+  list[idx] = { ...r, status: 'PENDING_REVIEW', signedAt: now, updatedAt: now };
+  (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+}
+
+async function finalizeAgmIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'ANNUAL_GENERAL_MEETING') return;
+  if (packet.status !== 'SIGNED') return;
+
+  const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
+    ? (((db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests ?? []) as AnnualGeneralMeetingRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === packet.relatedId);
+  if (idx < 0) return;
+  const r = list[idx];
+  if (r.status !== 'PENDING_SIGNATURES') return;
+  const now = nowIso();
+  list[idx] = { ...r, status: 'PENDING_REVIEW', signedAt: now, updatedAt: now };
+  (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+}
+
 export async function signByToken(input: {
   token: string;
   otp: string;
@@ -7027,6 +6978,8 @@ export async function signByToken(input: {
     await maybeFinalizeShareTransferIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeDirectorChangeIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeCompanyUpdateIfReady(db, db.signaturePackets[packetIdx]);
+    await finalizeRorcDeclarationIfReady(db, db.signaturePackets[packetIdx]);
+    await finalizeAgmIfReady(db, db.signaturePackets[packetIdx]);
   } else if (packet.status === 'DRAFT') {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
   }
@@ -7710,6 +7663,9 @@ export async function createCompanyUpdateRequest(input: {
     const addSecretaries = Array.isArray(p.addSecretaries) ? p.addSecretaries : [];
     const hasAdd = addSecretaries.some((x) => String((x as { fullName?: unknown }).fullName ?? '').trim());
     if (!removeSecretaryRoleId && !hasAdd) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else if (type === 'TRANSFER_COMPANY_SECRETARY') {
+    const newSecretaryName = String(p.newSecretaryName ?? '').trim();
+    if (!newSecretaryName) return { ok: false as const, error: 'INVALID_INPUT' as const };
   } else {
     return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
@@ -7726,6 +7682,8 @@ export async function createCompanyUpdateRequest(input: {
             ? 'Change of Business Activities'
             : type === 'CHANGE_SECRETARY'
               ? 'Change of Secretary'
+            : type === 'TRANSFER_COMPANY_SECRETARY'
+              ? 'Transfer of Company Secretary'
               : type;
 
   const html = (await import('@/lib/docTemplates')).renderCompanyUpdateRequestHtml({
@@ -7897,12 +7855,459 @@ export async function decideCompanyUpdateRequest(input: {
       db.parties.unshift(party);
       db.clientPartyRoles.unshift(role);
     }
+  } else if (r.type === 'TRANSFER_COMPANY_SECRETARY') {
+    const payload = p as {
+      effectiveDate?: unknown;
+      newSecretaryName?: unknown;
+      newSecretaryEmail?: unknown;
+    };
+    const effectiveDate = String(payload.effectiveDate ?? '').trim() || now.slice(0, 10);
+    const newSecretaryName = String(payload.newSecretaryName ?? '').trim();
+    if (!newSecretaryName) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const newSecretaryEmail = typeof payload.newSecretaryEmail === 'string' ? payload.newSecretaryEmail.trim() || undefined : undefined;
+
+    for (let i = 0; i < db.clientPartyRoles.length; i += 1) {
+      const role = db.clientPartyRoles[i];
+      if (role.clientId !== r.clientId) continue;
+      if (role.role !== 'SECRETARY') continue;
+      if (role.resignationDate) continue;
+      db.clientPartyRoles[i] = { ...role, resignationDate: effectiveDate, updatedAt: now };
+    }
+
+    const person: Person = { id: newId('per'), fullName: newSecretaryName, email: newSecretaryEmail, createdAt: now, updatedAt: now };
+    const party: Party = {
+      id: newId('pty'),
+      type: 'PERSON',
+      displayName: newSecretaryName,
+      personId: person.id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const role: ClientPartyRole = {
+      id: newId('cpr'),
+      clientId: r.clientId,
+      partyId: party.id,
+      role: 'SECRETARY',
+      appointmentDate: effectiveDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    db.parties.unshift(party);
+    db.clientPartyRoles.unshift(role);
   } else {
     return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
 
   list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
   (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: list[idx] };
+}
+
+function getRorcDeclarationRequestList(db: Db) {
+  return Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
+    ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
+    : [];
+}
+
+export async function listRorcDeclarationRequestsByClient(clientId: string) {
+  const db = await readDb();
+  return getRorcDeclarationRequestList(db)
+    .filter((r) => r.clientId === clientId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getRorcDeclarationRequestContext(requestId: string) {
+  const db = await readDb();
+  const request = getRorcDeclarationRequestList(db).find((r) => r.id === requestId) ?? null;
+  if (!request) return null;
+  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
+  if (!packet) return null;
+  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
+  if (!document) return null;
+  const signatures = db.signatureRequests
+    .filter((r) => r.packetId === packet.id)
+    .sort((a, b) => a.email.localeCompare(b.email));
+  return { request, packet, document, signatures };
+}
+
+export async function createRorcDeclarationRequest(input: {
+  clientId: string;
+  createdByUserId: string;
+  effectiveDate: string;
+  message?: string;
+  removeRorcRoleIds: string[];
+  addControllers: Array<{ fullName: string; email?: string }>;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const effectiveDate = input.effectiveDate.trim();
+  if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const removeRorcRoleIds = Array.isArray(input.removeRorcRoleIds)
+    ? input.removeRorcRoleIds.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  const addControllers = Array.isArray(input.addControllers)
+    ? input.addControllers
+        .map((x) => ({
+          fullName: String(x?.fullName ?? '').trim(),
+          email: typeof x?.email === 'string' ? x.email.trim() || undefined : undefined,
+        }))
+        .filter((x) => !!x.fullName)
+    : [];
+  if (!removeRorcRoleIds.length && !addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const directors = await listClientDirectors(input.clientId);
+  const signerEmails = Array.from(
+    new Set(
+      directors
+        .map((d) => (d.person.email ?? '').trim())
+        .filter(Boolean)
+        .map((e) => e.toLowerCase()),
+    ),
+  );
+  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const activeControllers = db.clientPartyRoles
+    .filter((r) => r.clientId === input.clientId)
+    .filter((r) => r.role === 'RORC' && !r.toDate)
+    .map((r) => {
+      const party = partyById.get(r.partyId);
+      if (!party) return null;
+      if (party.type === 'PERSON' && party.personId) {
+        const person = personById.get(party.personId);
+        if (!person) return null;
+        return { roleId: r.id, fullName: person.fullName, email: person.email };
+      }
+      if (party.type === 'COMPANY' && party.clientId) {
+        const c = clientById.get(party.clientId);
+        if (!c || c.deletedAt) return null;
+        return { roleId: r.id, fullName: c.name };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{ roleId: string; fullName: string; email?: string }>;
+
+  const activeRoleIds = new Set(activeControllers.map((x) => x.roleId));
+  if (removeRorcRoleIds.some((id) => !activeRoleIds.has(id))) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const removed = activeControllers.filter((x) => removeRorcRoleIds.includes(x.roleId)).map((x) => ({ fullName: x.fullName, email: x.email }));
+
+  const now = nowIso();
+  const id = newId('rrc');
+
+  const html = (await import('@/lib/docTemplates')).renderRorcDeclarationHtml({
+    companyName: client.name,
+    effectiveDate,
+    message: input.message,
+    addControllers,
+    removeControllers: removed,
+  });
+
+  const doc: Document = {
+    id: newId('doc'),
+    type: 'RORC_DECL',
+    title: `RORC Declaration - ${client.name}`,
+    html,
+    sha256: sha256Hex(html),
+    createdAt: now,
+  };
+  db.documents.unshift(doc);
+
+  const packet: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'RORC_DECL',
+    relatedType: 'RORC_DECLARATION',
+    relatedId: id,
+    documentId: doc.id,
+    status: 'SIGNING',
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.signaturePackets.unshift(packet);
+
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const signLinks: Array<{ email: string; url: string }> = [];
+  for (const emailKey of signerEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: packet.id,
+      email: emailKey,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+  }
+
+  const request: RorcDeclarationRequest = {
+    id,
+    clientId: input.clientId,
+    status: 'PENDING_SIGNATURES',
+    effectiveDate,
+    message: typeof input.message === 'string' ? input.message.trim() || undefined : undefined,
+    removeRorcRoleIds,
+    addControllers,
+    createdByUserId: input.createdByUserId,
+    packetId: packet.id,
+    createdAt: now,
+    updatedAt: now,
+    submittedAt: now,
+  };
+
+  const list = getRorcDeclarationRequestList(db);
+  list.unshift(request);
+  (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request, signLinks };
+}
+
+export async function decideRorcDeclarationRequest(input: {
+  requestId: string;
+  decidedByUserId: string;
+  decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO';
+  note?: string;
+}) {
+  const db = await readDb();
+  const list = getRorcDeclarationRequestList(db);
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
+  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
+  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
+
+  if (input.decision === 'NEED_MORE_INFO') {
+    list[idx] = { ...r, status: 'NEED_MORE_INFO', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (input.decision === 'REJECT') {
+    list[idx] = { ...r, status: 'REJECTED', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+  for (const roleId of r.removeRorcRoleIds) {
+    const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'RORC');
+    if (roleIdx >= 0 && !db.clientPartyRoles[roleIdx].toDate) {
+      db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], toDate: r.effectiveDate, updatedAt: now };
+    }
+  }
+
+  for (const c of r.addControllers) {
+    const fullName = c.fullName.trim();
+    if (!fullName) continue;
+    const email = typeof c.email === 'string' ? c.email.trim() || undefined : undefined;
+    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+    const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+    const role: ClientPartyRole = {
+      id: newId('cpr'),
+      clientId: r.clientId,
+      partyId: party.id,
+      role: 'RORC',
+      fromDate: r.effectiveDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    db.parties.unshift(party);
+    db.clientPartyRoles.unshift(role);
+  }
+
+  list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: list[idx] };
+}
+
+function getAnnualGeneralMeetingRequestList(db: Db) {
+  return Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
+    ? (((db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests ??
+        []) as AnnualGeneralMeetingRequest[])
+    : [];
+}
+
+export async function listAnnualGeneralMeetingRequestsByClient(clientId: string) {
+  const db = await readDb();
+  return getAnnualGeneralMeetingRequestList(db)
+    .filter((r) => r.clientId === clientId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getAnnualGeneralMeetingRequestContext(requestId: string) {
+  const db = await readDb();
+  const request = getAnnualGeneralMeetingRequestList(db).find((r) => r.id === requestId) ?? null;
+  if (!request) return null;
+  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
+  if (!packet) return null;
+  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
+  if (!document) return null;
+  const signatures = db.signatureRequests
+    .filter((r) => r.packetId === packet.id)
+    .sort((a, b) => a.email.localeCompare(b.email));
+  return { request, packet, document, signatures };
+}
+
+export async function createAnnualGeneralMeetingRequest(input: {
+  clientId: string;
+  createdByUserId: string;
+  meetingDate: string;
+  meetingVenue: string;
+  chairman: string;
+  agendaSummary?: string;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const meetingDate = input.meetingDate.trim();
+  const meetingVenue = input.meetingVenue.trim();
+  const chairman = input.chairman.trim();
+  const agendaSummary = typeof input.agendaSummary === 'string' ? input.agendaSummary.trim() || undefined : undefined;
+  if (!meetingDate || !meetingVenue || !chairman) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const directors = await listClientDirectors(input.clientId);
+  const signerEmails = Array.from(
+    new Set(
+      directors
+        .map((d) => (d.person.email ?? '').trim())
+        .filter(Boolean)
+        .map((e) => e.toLowerCase()),
+    ),
+  );
+  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const now = nowIso();
+  const id = newId('agm');
+
+  const html = (await import('@/lib/docTemplates')).renderAnnualGeneralMeetingMinutesHtml({
+    companyName: client.name,
+    meetingDate,
+    meetingVenue,
+    chairman,
+    agendaSummary,
+  });
+
+  const doc: Document = {
+    id: newId('doc'),
+    type: 'AGM_MIN',
+    title: `AGM Minutes - ${client.name}`,
+    html,
+    sha256: sha256Hex(html),
+    createdAt: now,
+  };
+  db.documents.unshift(doc);
+
+  const packet: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'AGM_MIN',
+    relatedType: 'ANNUAL_GENERAL_MEETING',
+    relatedId: id,
+    documentId: doc.id,
+    status: 'SIGNING',
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.signaturePackets.unshift(packet);
+
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const signLinks: Array<{ email: string; url: string }> = [];
+  for (const emailKey of signerEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: packet.id,
+      email: emailKey,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+  }
+
+  const request: AnnualGeneralMeetingRequest = {
+    id,
+    clientId: input.clientId,
+    status: 'PENDING_SIGNATURES',
+    meetingDate,
+    meetingVenue,
+    chairman,
+    agendaSummary,
+    createdByUserId: input.createdByUserId,
+    packetId: packet.id,
+    createdAt: now,
+    updatedAt: now,
+    submittedAt: now,
+  };
+
+  const list = getAnnualGeneralMeetingRequestList(db);
+  list.unshift(request);
+  (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request, signLinks };
+}
+
+export async function decideAnnualGeneralMeetingRequest(input: {
+  requestId: string;
+  decidedByUserId: string;
+  decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO';
+  note?: string;
+}) {
+  const db = await readDb();
+  const list = getAnnualGeneralMeetingRequestList(db);
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
+  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
+  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
+
+  if (input.decision === 'NEED_MORE_INFO') {
+    list[idx] = { ...r, status: 'NEED_MORE_INFO', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (input.decision === 'REJECT') {
+    list[idx] = { ...r, status: 'REJECTED', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+  list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
   await writeDb(db);
   return { ok: true as const, request: list[idx] };
 }

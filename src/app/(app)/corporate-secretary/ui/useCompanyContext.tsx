@@ -14,6 +14,7 @@ type CompanyApiResponse = {
   };
   roles: {
     directors: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
+    rorc: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } | { type: 'COMPANY'; company: { name: string } } }>;
     secretaries: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
   };
 };
@@ -66,4 +67,3 @@ export function useCompanyContext() {
 
   return { companyId, loading, error, client: data?.client ?? null, roles: data?.roles ?? null, closeHref };
 }
-

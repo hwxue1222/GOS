@@ -14,6 +14,7 @@ function typeLabel(t: string) {
   if (t === 'CHANGE_REGISTERED_OFFICE_ADDRESS') return 'Change of Registered Office Address';
   if (t === 'CHANGE_BUSINESS_ACTIVITIES') return 'Change of Business Activities';
   if (t === 'CHANGE_SECRETARY') return 'Change of Secretary';
+  if (t === 'TRANSFER_COMPANY_SECRETARY') return 'Transfer of Company Secretary';
   return t;
 }
 

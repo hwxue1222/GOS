@@ -119,6 +119,14 @@ async function canClientAccessDocument(user: { email: string }, documentId: stri
       const cur = (db.companyUpdateRequests ?? []).find((x) => x.id === p.relatedId) ?? null;
       if (cur && allowedClientIds.has(cur.clientId)) return true;
     }
+    if (p.relatedType === 'RORC_DECLARATION') {
+      const rorc = (db.rorcDeclarationRequests ?? []).find((x) => x.id === p.relatedId) ?? null;
+      if (rorc && allowedClientIds.has(rorc.clientId)) return true;
+    }
+    if (p.relatedType === 'ANNUAL_GENERAL_MEETING') {
+      const agm = (db.annualGeneralMeetingRequests ?? []).find((x) => x.id === p.relatedId) ?? null;
+      if (agm && allowedClientIds.has(agm.clientId)) return true;
+    }
   }
 
   return false;

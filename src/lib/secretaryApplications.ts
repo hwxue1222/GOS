@@ -1,4 +1,12 @@
-import type { CompanyUpdateRequest, Db, DirectorChangeRequest, SecretaryServiceApplicationRow, ShareTransfer } from '@/lib/types';
+import type {
+  AnnualGeneralMeetingRequest,
+  CompanyUpdateRequest,
+  Db,
+  DirectorChangeRequest,
+  RorcDeclarationRequest,
+  SecretaryServiceApplicationRow,
+  ShareTransfer,
+} from '@/lib/types';
 
 function iso(s: string | undefined) {
   const v = String(s ?? '').trim();
@@ -24,6 +32,24 @@ function statusFromShareTransfer(t: ShareTransfer): SecretaryServiceApplicationR
 }
 
 function statusFromCompanyUpdateRequest(r: CompanyUpdateRequest): SecretaryServiceApplicationRow['status'] {
+  if (r.status === 'PENDING_SIGNATURES') return 'SIGNING';
+  if (r.status === 'PENDING_REVIEW') return 'PENDING_REVIEW';
+  if (r.status === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
+  if (r.status === 'REJECTED') return 'REJECTED';
+  if (r.status === 'COMPLETE') return 'COMPLETE';
+  return 'PROCESSING';
+}
+
+function statusFromRorcDeclaration(r: RorcDeclarationRequest): SecretaryServiceApplicationRow['status'] {
+  if (r.status === 'PENDING_SIGNATURES') return 'SIGNING';
+  if (r.status === 'PENDING_REVIEW') return 'PENDING_REVIEW';
+  if (r.status === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
+  if (r.status === 'REJECTED') return 'REJECTED';
+  if (r.status === 'COMPLETE') return 'COMPLETE';
+  return 'PROCESSING';
+}
+
+function statusFromAgm(r: AnnualGeneralMeetingRequest): SecretaryServiceApplicationRow['status'] {
   if (r.status === 'PENDING_SIGNATURES') return 'SIGNING';
   if (r.status === 'PENDING_REVIEW') return 'PENDING_REVIEW';
   if (r.status === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
@@ -88,6 +114,42 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
       editDate,
       status: statusFromCompanyUpdateRequest(r),
       source: { kind: 'COMPANY_UPDATE_REQUEST', id: r.id },
+    });
+  }
+
+  for (const r of db.rorcDeclarationRequests ?? []) {
+    const client = clientById.get(r.clientId);
+    if (!client || client.deletedAt) continue;
+    if (allowedClientIds && !allowedClientIds.has(r.clientId)) continue;
+    const applicationDate = iso(r.submittedAt || r.createdAt);
+    const editDate = iso(r.updatedAt || r.createdAt);
+    rows.push({
+      id: `RORC-${r.id}`,
+      type: 'RORC_DECLARATION',
+      companyId: r.clientId,
+      companyName: client.name,
+      applicationDate,
+      editDate,
+      status: statusFromRorcDeclaration(r),
+      source: { kind: 'RORC_DECLARATION_REQUEST', id: r.id },
+    });
+  }
+
+  for (const r of db.annualGeneralMeetingRequests ?? []) {
+    const client = clientById.get(r.clientId);
+    if (!client || client.deletedAt) continue;
+    if (allowedClientIds && !allowedClientIds.has(r.clientId)) continue;
+    const applicationDate = iso(r.submittedAt || r.createdAt);
+    const editDate = iso(r.updatedAt || r.createdAt);
+    rows.push({
+      id: `AGM-${r.id}`,
+      type: 'ANNUAL_GENERAL_MEETING',
+      companyId: r.clientId,
+      companyName: client.name,
+      applicationDate,
+      editDate,
+      status: statusFromAgm(r),
+      source: { kind: 'ANNUAL_GENERAL_MEETING_REQUEST', id: r.id },
     });
   }
 

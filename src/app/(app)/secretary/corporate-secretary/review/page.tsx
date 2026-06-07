@@ -114,7 +114,45 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
       };
     });
 
-  const rows = [...companyUpdateRows, ...pendingDirectorRows].sort(
+  const rorcRows = (db.rorcDeclarationRequests ?? [])
+    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
+    .map((r) => {
+      const company = db.clients.find((c) => c.id === r.clientId);
+      const companyName = company?.name ?? r.clientId;
+      return {
+        id: `RORC-${r.id}`,
+        typeLabel: 'Declaration of Company Controller (RORC)',
+        companyId: r.clientId,
+        companyName,
+        applicationDate: r.createdAt,
+        editDate: r.updatedAt ?? r.createdAt,
+        status: r.status,
+        detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.id)}`,
+        decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/rorc-declaration-requests/${encodeURIComponent(r.id)}/decision`,
+      };
+    });
+
+  const agmRows = (db.annualGeneralMeetingRequests ?? [])
+    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
+    .map((r) => {
+      const company = db.clients.find((c) => c.id === r.clientId);
+      const companyName = company?.name ?? r.clientId;
+      return {
+        id: `AGM-${r.id}`,
+        typeLabel: 'Annual General Meeting',
+        companyId: r.clientId,
+        companyName,
+        applicationDate: r.createdAt,
+        editDate: r.updatedAt ?? r.createdAt,
+        status: r.status,
+        detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.id)}`,
+        decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/annual-general-meeting-requests/${encodeURIComponent(r.id)}/decision`,
+      };
+    });
+
+  const rows = [...companyUpdateRows, ...rorcRows, ...agmRows, ...pendingDirectorRows].sort(
     (a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''),
   );
 

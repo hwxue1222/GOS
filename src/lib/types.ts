@@ -231,7 +231,7 @@ export type CompanyRepresentative = {
   updatedAt?: string;
 };
 
-export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD';
+export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
 
 export type Document = {
   id: string;
@@ -242,14 +242,14 @@ export type Document = {
   createdAt: string;
 };
 
-export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD';
+export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 
 export type SignaturePacket = {
   id: string;
   kind: SignaturePacketKind;
-  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'COMPANY_UPDATE';
+  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'COMPANY_UPDATE' | 'RORC_DECLARATION' | 'ANNUAL_GENERAL_MEETING';
   relatedId: string;
   documentId: string;
   status: SignaturePacketStatus;
@@ -344,6 +344,8 @@ export type SecretaryServiceApplicationType =
   | 'SHARE_TRANSFER'
   | 'DIRECTOR_CHANGE'
   | 'TRANSFER_COMPANY_SECRETARY'
+  | 'RORC_DECLARATION'
+  | 'ANNUAL_GENERAL_MEETING'
   | 'CHANGE_COMPANY_NAME'
   | 'CHANGE_FINANCIAL_YEAR_END'
   | 'CHANGE_REGISTERED_OFFICE_ADDRESS'
@@ -371,7 +373,9 @@ export type SecretaryServiceApplicationRow = {
   source:
     | { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string }
     | { kind: 'SHARE_TRANSFER'; id: string }
-    | { kind: 'COMPANY_UPDATE_REQUEST'; id: string };
+    | { kind: 'COMPANY_UPDATE_REQUEST'; id: string }
+    | { kind: 'RORC_DECLARATION_REQUEST'; id: string }
+    | { kind: 'ANNUAL_GENERAL_MEETING_REQUEST'; id: string };
 };
 
 export type CompanyUpdateRequestType =
@@ -379,7 +383,8 @@ export type CompanyUpdateRequestType =
   | 'CHANGE_FINANCIAL_YEAR_END'
   | 'CHANGE_REGISTERED_OFFICE_ADDRESS'
   | 'CHANGE_BUSINESS_ACTIVITIES'
-  | 'CHANGE_SECRETARY';
+  | 'CHANGE_SECRETARY'
+  | 'TRANSFER_COMPANY_SECRETARY';
 
 export type CompanyUpdateRequestStatus =
   | 'PENDING_SIGNATURES'
@@ -394,6 +399,58 @@ export type CompanyUpdateRequest = {
   type: CompanyUpdateRequestType;
   status: CompanyUpdateRequestStatus;
   payload: Record<string, unknown>;
+  createdByUserId: string;
+  packetId: string;
+  createdAt: string;
+  updatedAt?: string;
+  submittedAt?: string;
+  signedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
+};
+
+export type RorcDeclarationRequestStatus =
+  | 'PENDING_SIGNATURES'
+  | 'PENDING_REVIEW'
+  | 'NEED_MORE_INFO'
+  | 'REJECTED'
+  | 'COMPLETE';
+
+export type RorcDeclarationRequest = {
+  id: string;
+  clientId: string;
+  status: RorcDeclarationRequestStatus;
+  effectiveDate: string;
+  message?: string;
+  removeRorcRoleIds: string[];
+  addControllers: Array<{ fullName: string; email?: string }>;
+  createdByUserId: string;
+  packetId: string;
+  createdAt: string;
+  updatedAt?: string;
+  submittedAt?: string;
+  signedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
+};
+
+export type AnnualGeneralMeetingRequestStatus =
+  | 'PENDING_SIGNATURES'
+  | 'PENDING_REVIEW'
+  | 'NEED_MORE_INFO'
+  | 'REJECTED'
+  | 'COMPLETE';
+
+export type AnnualGeneralMeetingRequest = {
+  id: string;
+  clientId: string;
+  status: AnnualGeneralMeetingRequestStatus;
+  meetingDate: string;
+  meetingVenue: string;
+  chairman: string;
+  agendaSummary?: string;
   createdByUserId: string;
   packetId: string;
   createdAt: string;
@@ -513,6 +570,8 @@ export type Db = {
   shareTransfers: ShareTransfer[];
   directorChangeRequests?: DirectorChangeRequest[];
   companyUpdateRequests?: CompanyUpdateRequest[];
+  rorcDeclarationRequests?: RorcDeclarationRequest[];
+  annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[];
   incorporationApplications?: IncorporationApplication[];
   incorporationApplicationEvents?: IncorporationApplicationEvent[];
   incorporationApplicationFiles?: IncorporationApplicationFile[];

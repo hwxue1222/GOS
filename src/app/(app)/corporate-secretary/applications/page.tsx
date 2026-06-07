@@ -56,6 +56,14 @@ export default async function CorporateSecretaryApplicationsPage({
           const detailsHref = `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`;
           return { typeKey: 'share_transfer', typeLabel: 'Transfer of Shares', detailsHref, hasDocuments: true };
         }
+        if (r.type === 'ANNUAL_GENERAL_MEETING') {
+          const detailsHref = `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'agm', typeLabel: 'Annual General Meeting', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'RORC_DECLARATION') {
+          const detailsHref = `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'rorc', typeLabel: 'Declaration of Company Controller (RORC)', detailsHref, hasDocuments: true };
+        }
         if (r.type === 'CHANGE_COMPANY_NAME') {
           const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
           return { typeKey: 'change_company_name', typeLabel: 'Change of Company Name', detailsHref, hasDocuments: true };
@@ -80,6 +88,15 @@ export default async function CorporateSecretaryApplicationsPage({
         if (r.type === 'CHANGE_SECRETARY') {
           const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
           return { typeKey: 'change_secretary', typeLabel: 'Change of Secretary', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'TRANSFER_COMPANY_SECRETARY') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return {
+            typeKey: 'transfer_company_secretary',
+            typeLabel: 'Transfer of Company Secretary',
+            detailsHref,
+            hasDocuments: true,
+          };
         }
         const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
         return { typeKey: 'company_update', typeLabel: r.type, detailsHref, hasDocuments: true };
@@ -137,6 +154,18 @@ export default async function CorporateSecretaryApplicationsPage({
                 New Director Change
               </Link>
               <Link
+                href="/corporate-secretary/rorc"
+                className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium"
+              >
+                New RORC
+              </Link>
+              <Link
+                href="/corporate-secretary/agm"
+                className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium"
+              >
+                New AGM
+              </Link>
+              <Link
                 href={filterCompanyId ? `/secretary/share-transfers?clientId=${encodeURIComponent(filterCompanyId)}` : '/secretary/share-transfers'}
                 className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium"
               >
@@ -184,6 +213,24 @@ export default async function CorporateSecretaryApplicationsPage({
               ].join(' ')}
             >
               Transfer of Shares
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=rorc${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'rorc' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              RORC
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=agm${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'agm' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              AGM
             </Link>
             <Link
               href={`/corporate-secretary/applications?type=register_company${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}

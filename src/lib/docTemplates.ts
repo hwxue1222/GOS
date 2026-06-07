@@ -201,7 +201,8 @@ export function renderCompanyUpdateRequestHtml(input: {
     | 'CHANGE_FINANCIAL_YEAR_END'
     | 'CHANGE_REGISTERED_OFFICE_ADDRESS'
     | 'CHANGE_BUSINESS_ACTIVITIES'
-    | 'CHANGE_SECRETARY';
+    | 'CHANGE_SECRETARY'
+    | 'TRANSFER_COMPANY_SECRETARY';
   original: {
     fye?: string;
     registeredOfficeAddress?: string;
@@ -221,6 +222,7 @@ export function renderCompanyUpdateRequestHtml(input: {
     if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') return 'Change of Registered Office Address';
     if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') return 'Change of Business Activities';
     if (input.type === 'CHANGE_SECRETARY') return 'Change of Secretary';
+    if (input.type === 'TRANSFER_COMPANY_SECRETARY') return 'Transfer of Company Secretary';
     return input.type;
   })();
 
@@ -287,6 +289,21 @@ export function renderCompanyUpdateRequestHtml(input: {
       );
     }
 
+    if (input.type === 'TRANSFER_COMPANY_SECRETARY') {
+      const effectiveDate = String(p.effectiveDate ?? '').trim();
+      const newSecretaryName = String(p.newSecretaryName ?? '').trim();
+      const newSecretaryEmail = String(p.newSecretaryEmail ?? '').trim();
+      const reason = String(p.reason ?? '').trim();
+      const notes = String(p.notes ?? '').trim();
+      return (
+        row('Effective date', effectiveDate || '-') +
+        row('New secretary name', newSecretaryName || '-') +
+        row('New secretary email', newSecretaryEmail || '-') +
+        row('Reason', reason || '-') +
+        row('Notes', notes || '-')
+      );
+    }
+
     return '';
   })();
 
@@ -311,6 +328,112 @@ export function renderCompanyUpdateRequestHtml(input: {
     <div class="box" style="margin-top: 12px;">
       <div><strong>Company</strong>: ${companyName}${companyRegistrationNo ? ` (${companyRegistrationNo})` : ''}</div>
       ${body}
+      <div class="sig">
+        <div>Signed by Directors of the Company:</div>
+        <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
+      </div>
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderRorcDeclarationHtml(input: {
+  companyName: string;
+  effectiveDate: string;
+  message?: string;
+  addControllers: Array<{ fullName: string; email?: string }>;
+  removeControllers: Array<{ fullName: string; email?: string }>;
+}) {
+  const companyName = esc(input.companyName);
+  const effectiveDate = esc(input.effectiveDate);
+  const message = typeof input.message === 'string' ? esc(input.message) : '';
+
+  const fmt = (x: { fullName: string; email?: string }) => {
+    const name = esc(x.fullName);
+    const email = x.email ? esc(x.email) : '';
+    return email ? `${name} &lt;${email}&gt;` : name;
+  };
+
+  const addList = input.addControllers.length
+    ? `<ul style="margin:8px 0 0 18px;">${input.addControllers.map((x) => `<li>${fmt(x)}</li>`).join('')}</ul>`
+    : '<div class="muted" style="margin-top:6px;">None</div>';
+  const removeList = input.removeControllers.length
+    ? `<ul style="margin:8px 0 0 18px;">${input.removeControllers.map((x) => `<li>${fmt(x)}</li>`).join('')}</ul>`
+    : '<div class="muted" style="margin-top:6px;">None</div>';
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Declaration of Company Controller (RORC)</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      h1 { font-size: 18px; margin: 0 0 16px; }
+      h2 { font-size: 14px; margin: 16px 0 6px; }
+      .muted { color: #555; font-size: 12px; }
+      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+      .sig { margin-top: 18px; padding-top: 18px; border-top: 1px dashed #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>Declaration of Company Controller (RORC)</h1>
+    <div class="muted">Effective Date: ${effectiveDate}</div>
+    <div class="box" style="margin-top: 12px;">
+      <div><strong>Company</strong>: ${companyName}</div>
+      ${message ? `<div style="margin-top:10px;"><strong>Message</strong>:</div><div style="margin-top:6px; white-space: pre-wrap;">${message}</div>` : ''}
+      <h2>Add Controllers</h2>
+      ${addList}
+      <h2>Remove Controllers</h2>
+      ${removeList}
+      <div class="sig">
+        <div>Signed by Directors of the Company:</div>
+        <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
+      </div>
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderAnnualGeneralMeetingMinutesHtml(input: {
+  companyName: string;
+  meetingDate: string;
+  meetingVenue: string;
+  chairman: string;
+  agendaSummary?: string;
+}) {
+  const companyName = esc(input.companyName);
+  const meetingDate = esc(input.meetingDate);
+  const meetingVenue = esc(input.meetingVenue);
+  const chairman = esc(input.chairman);
+  const agendaSummary = typeof input.agendaSummary === 'string' ? esc(input.agendaSummary) : '';
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Annual General Meeting Minutes</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      h1 { font-size: 18px; margin: 0 0 16px; }
+      .muted { color: #555; font-size: 12px; }
+      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+      .sig { margin-top: 18px; padding-top: 18px; border-top: 1px dashed #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>Annual General Meeting Minutes</h1>
+    <div class="muted">Meeting Date: ${meetingDate}</div>
+    <div class="box" style="margin-top: 12px;">
+      <div><strong>Company</strong>: ${companyName}</div>
+      <div style="margin-top: 10px;"><strong>Chairman</strong>: ${chairman}</div>
+      <div style="margin-top: 10px;"><strong>Venue</strong>: ${meetingVenue}</div>
+      ${agendaSummary ? `<div style="margin-top: 10px;"><strong>Agenda Summary</strong>:</div><div style="margin-top:6px; white-space: pre-wrap;">${agendaSummary}</div>` : ''}
       <div class="sig">
         <div>Signed by Directors of the Company:</div>
         <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>

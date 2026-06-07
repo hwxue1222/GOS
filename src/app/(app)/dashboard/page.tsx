@@ -168,19 +168,56 @@ export default async function DashboardPage() {
                   </thead>
                   <tbody>
                     {csRows.map((r) => {
-                      const detailsHref =
-                        r.type === 'DIRECTOR_CHANGE'
-                          ? `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`
-                          : `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`;
+                      const map = (() => {
+                        if (r.type === 'DIRECTOR_CHANGE') {
+                          const detailsHref = `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Director', detailsHref };
+                        }
+                        if (r.type === 'SHARE_TRANSFER') {
+                          const detailsHref = `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Transfer of Shares', detailsHref };
+                        }
+                        if (r.type === 'CHANGE_COMPANY_NAME') {
+                          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Company Name', detailsHref };
+                        }
+                        if (r.type === 'CHANGE_FINANCIAL_YEAR_END') {
+                          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Financial Year End (FYE)', detailsHref };
+                        }
+                        if (r.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+                          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Registered Office Address', detailsHref };
+                        }
+                        if (r.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+                          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Business Activities', detailsHref };
+                        }
+                        if (r.type === 'CHANGE_SECRETARY') {
+                          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Change of Secretary', detailsHref };
+                        }
+                        if (r.type === 'RORC_DECLARATION') {
+                          const detailsHref = `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Declaration of Company Controller (RORC)', detailsHref };
+                        }
+                        if (r.type === 'ANNUAL_GENERAL_MEETING') {
+                          const detailsHref = `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`;
+                          return { typeLabel: 'Annual General Meeting', detailsHref };
+                        }
+                        const detailsHref = `/corporate-secretary/applications`;
+                        return { typeLabel: r.type, detailsHref };
+                      })();
+                      const detailsHref = map.detailsHref;
                       return (
                         <tr key={r.id} className="border-b border-black/5">
                           <td className="px-3 py-2">{r.id}</td>
-                          <td className="px-3 py-2">{r.type === 'DIRECTOR_CHANGE' ? 'Change of Director' : 'Transfer of Shares'}</td>
+                          <td className="px-3 py-2">{map.typeLabel}</td>
                           <td className="px-3 py-2">{r.companyName}</td>
                           <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
                           <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>
                           <td className="px-3 py-2">
-                            <span className={r.status === 'REJECTED' ? 'text-red-600' : r.status === 'APPROVED' ? 'text-[#16a34a]' : 'text-[#16a34a]'}>
+                            <span className={r.status === 'REJECTED' ? 'text-red-600' : r.status === 'NEED_MORE_INFO' ? 'text-[#d97706]' : 'text-[#16a34a]'}>
                               {r.status}
                             </span>
                           </td>

@@ -1,8 +1,8 @@
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
-import AgmClient from '@/app/(app)/corporate-secretary/agm/ui/AgmClient';
+import TransferCompanySecretaryClient from '@/app/(app)/corporate-secretary/transfer-company-secretary/ui/TransferCompanySecretaryClient';
 
-export default async function AgmPage() {
+export default async function TransferCompanySecretaryPage() {
   const me = await getCurrentUser();
   if (!me) return null;
 
@@ -10,8 +10,9 @@ export default async function AgmPage() {
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
       <div className="flex-1 relative">
-        <AgmClient />
+        <TransferCompanySecretaryClient />
       </div>
     </div>
   );
 }
+

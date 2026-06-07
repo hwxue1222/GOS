@@ -1,5 +1,6 @@
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
+import RorcClient from '@/app/(app)/corporate-secretary/rorc/ui/RorcClient';
 
 export default async function RorcPage() {
   const me = await getCurrentUser();
@@ -8,13 +9,9 @@ export default async function RorcPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-xl font-semibold">Declaration of Company Controller (RORC)</h1>
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">Coming soon.</div>
-        </div>
+      <div className="flex-1 relative">
+        <RorcClient />
       </div>
     </div>
   );
 }
-

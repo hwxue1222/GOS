@@ -137,7 +137,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
               <button
                 onClick={() => {
                   setOpen(null);
-                  router.push('/incorporation/transfer-secretary');
+                  router.push('/corporate-secretary/transfer-company-secretary');
                 }}
                 className={itemClass()}
               >

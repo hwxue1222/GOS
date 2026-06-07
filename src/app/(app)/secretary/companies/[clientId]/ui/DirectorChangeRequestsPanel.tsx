@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DirectorChangeRequestForm from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestForm';
 import DirectorChangeRequestsHistory from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestsHistory';
 
@@ -52,7 +52,7 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
 
   const directorByRoleId = useMemo(() => new Map(directors.map((d) => [d.roleId, d])), [directors]);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -68,11 +68,11 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
     } finally {
       setLoading(false);
     }
-  }
+  }, [clientId]);
 
   useEffect(() => {
     void refresh();
-  }, [clientId]);
+  }, [refresh]);
 
   async function decide(requestId: string, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO', note?: string) {
     if (!canApprove) return;
@@ -142,4 +142,3 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
     </div>
   );
 }
-
