@@ -4,6 +4,7 @@ import { readDb } from '@/lib/db';
 import Link from 'next/link';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 import { buildIncorporationApplications } from '@/lib/incorporationApplications';
+import DeleteActionClient from '@/components/DeleteActionClient';
 
 export default async function DashboardPage() {
   const me = await getCurrentUser();
@@ -209,6 +210,30 @@ export default async function DashboardPage() {
                         return { typeLabel: r.type, detailsHref };
                       })();
                       const detailsHref = map.detailsHref;
+                      const deleteUrl = (() => {
+                        if (me.role !== 'client') return '';
+                        if (r.status !== 'SIGNING') return '';
+                        if (r.type === 'DIRECTOR_CHANGE') {
+                          return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}`;
+                        }
+                        if (r.type === 'RORC_DECLARATION') {
+                          return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/rorc-declaration-requests/${encodeURIComponent(r.source.id)}`;
+                        }
+                        if (r.type === 'ANNUAL_GENERAL_MEETING') {
+                          return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}`;
+                        }
+                        if (
+                          r.type === 'CHANGE_COMPANY_NAME' ||
+                          r.type === 'CHANGE_FINANCIAL_YEAR_END' ||
+                          r.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS' ||
+                          r.type === 'CHANGE_BUSINESS_ACTIVITIES' ||
+                          r.type === 'CHANGE_SECRETARY' ||
+                          r.type === 'TRANSFER_COMPANY_SECRETARY'
+                        ) {
+                          return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/company-update-requests/${encodeURIComponent(r.source.id)}`;
+                        }
+                        return '';
+                      })();
                       return (
                         <tr key={r.id} className="border-b border-black/5">
                           <td className="px-3 py-2">{r.id}</td>
@@ -235,6 +260,14 @@ export default async function DashboardPage() {
                               >
                                 Details
                               </Link>
+                              {deleteUrl ? (
+                                <DeleteActionClient
+                                  deleteUrl={deleteUrl}
+                                  confirmText="Delete this application?"
+                                  label="Delete"
+                                  className="rounded-md bg-white border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-50 disabled:opacity-60"
+                                />
+                              ) : null}
                             </div>
                           </td>
                         </tr>

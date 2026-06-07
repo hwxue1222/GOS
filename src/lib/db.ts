@@ -7711,6 +7711,95 @@ function getCompanyUpdateRequestList(db: Db) {
     : [];
 }
 
+function deleteSignaturePacketCascade(db: Db, packetId: string) {
+  const packetIdx = db.signaturePackets.findIndex((p) => p.id === packetId);
+  if (packetIdx < 0) return;
+  const packet = db.signaturePackets[packetIdx];
+  const documentId = packet.documentId;
+  db.signaturePackets.splice(packetIdx, 1);
+  db.signatureRequests = db.signatureRequests.filter((r) => r.packetId !== packetId);
+  if (documentId) {
+    const stillUsed = db.signaturePackets.some((p) => p.documentId === documentId);
+    if (!stillUsed) {
+      db.documents = db.documents.filter((d) => d.id !== documentId);
+    }
+  }
+}
+
+export async function deleteCompanyUpdateRequest(input: { requestId: string; deletedByUserId: string }) {
+  const db = await readDb();
+  const list = getCompanyUpdateRequestList(db);
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
+  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  deleteSignaturePacketCascade(db, r.packetId);
+  list.splice(idx, 1);
+  (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
+export async function deleteDirectorChangeRequest(input: { requestId: string; deletedByUserId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
+  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  deleteSignaturePacketCascade(db, r.packetId);
+  list.splice(idx, 1);
+  (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
+export async function deleteRorcDeclarationRequest(input: { requestId: string; deletedByUserId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
+    ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
+  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  deleteSignaturePacketCascade(db, r.packetId);
+  list.splice(idx, 1);
+  (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
+export async function deleteAnnualGeneralMeetingRequest(input: { requestId: string; deletedByUserId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
+    ? (((db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests ?? []) as AnnualGeneralMeetingRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
+  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  deleteSignaturePacketCascade(db, r.packetId);
+  list.splice(idx, 1);
+  (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
 export async function listCompanyUpdateRequestsByClient(clientId: string) {
   const db = await readDb();
   const list = getCompanyUpdateRequestList(db);

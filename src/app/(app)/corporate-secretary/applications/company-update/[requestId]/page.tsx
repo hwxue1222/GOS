@@ -1,6 +1,7 @@
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
+import DeleteActionClient from '@/components/DeleteActionClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -181,8 +182,19 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
               <h1 className="text-xl font-semibold">{label}</h1>
               <div className="mt-1 text-sm text-black/60">ID: {req.id}</div>
             </div>
-            <div className="text-sm">
-              <span className="text-black/60">Status:</span> <span className="font-medium">{req.status}</span>
+            <div className="flex items-center gap-3">
+              {me.role === 'client' && req.status === 'PENDING_SIGNATURES' && req.createdByUserId === me.id ? (
+                <DeleteActionClient
+                  deleteUrl={`/api/secretary/companies/${encodeURIComponent(req.clientId)}/company-update-requests/${encodeURIComponent(req.id)}`}
+                  confirmText="Delete this application?"
+                  label="Delete"
+                  className="rounded-md bg-white border border-red-200 text-red-700 px-3 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
+                  onDoneHref={`/corporate-secretary/applications?companyId=${encodeURIComponent(req.clientId)}`}
+                />
+              ) : null}
+              <div className="text-sm">
+                <span className="text-black/60">Status:</span> <span className="font-medium">{req.status}</span>
+              </div>
             </div>
           </div>
 

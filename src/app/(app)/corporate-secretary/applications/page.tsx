@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 import { buildIncorporationApplications } from '@/lib/incorporationApplications';
+import DeleteActionClient from '@/components/DeleteActionClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -113,6 +114,7 @@ export default async function CorporateSecretaryApplicationsPage({
         status: r.status,
         detailsHref: map.detailsHref,
         hasDocuments: map.hasDocuments,
+        sourceId: r.source.id,
       };
     }),
     ...incRows.map((r) => {
@@ -128,6 +130,7 @@ export default async function CorporateSecretaryApplicationsPage({
         status: r.status,
         detailsHref,
         hasDocuments: true,
+        sourceId: r.sourceId,
       };
     }),
   ].sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
@@ -315,6 +318,32 @@ export default async function CorporateSecretaryApplicationsPage({
                 </thead>
                 <tbody>
                   {visibleRows.map((r) => {
+                    const deleteUrl = (() => {
+                      if (me.role !== 'client') return '';
+                      if (r.status !== 'SIGNING') return '';
+                      if (!r.companyId || !r.sourceId) return '';
+                      if (r.typeKey === 'director_change') {
+                        return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.sourceId)}`;
+                      }
+                      if (r.typeKey === 'rorc') {
+                        return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/rorc-declaration-requests/${encodeURIComponent(r.sourceId)}`;
+                      }
+                      if (r.typeKey === 'agm') {
+                        return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.sourceId)}`;
+                      }
+                      if (
+                        r.typeKey === 'change_company_name' ||
+                        r.typeKey === 'change_fye' ||
+                        r.typeKey === 'change_registered_office_address' ||
+                        r.typeKey === 'change_business_activities' ||
+                        r.typeKey === 'change_secretary' ||
+                        r.typeKey === 'transfer_company_secretary' ||
+                        r.typeKey === 'company_update'
+                      ) {
+                        return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/company-update-requests/${encodeURIComponent(r.sourceId)}`;
+                      }
+                      return '';
+                    })();
                     return (
                       <tr key={r.id} className="border-b border-black/5">
                         <td className="px-3 py-2">{r.id}</td>
@@ -350,6 +379,14 @@ export default async function CorporateSecretaryApplicationsPage({
                             <Link href={r.detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
                               Details
                             </Link>
+                            {deleteUrl ? (
+                              <DeleteActionClient
+                                deleteUrl={deleteUrl}
+                                confirmText="Delete this application?"
+                                label="Delete"
+                                className="rounded-md bg-white border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-50 disabled:opacity-60"
+                              />
+                            ) : null}
                           </div>
                         </td>
                       </tr>
