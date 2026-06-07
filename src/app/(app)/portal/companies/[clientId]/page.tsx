@@ -91,18 +91,18 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
       if (party.type === 'PERSON' && party.personId) {
         const person = personById.get(party.personId);
         if (!person) return null;
-        return { role: r.role, name: person.fullName, email: person.email, phone: person.phone };
+        return { role: r.role, name: person.fullName, shares: r.shares };
       }
       if (party.type === 'COMPANY' && party.clientId) {
         const c = db.clients.find((x) => x.id === party.clientId);
         if (!c) return null;
-        return { role: r.role, name: c.name };
+        return { role: r.role, name: c.name, shares: r.shares };
       }
       return null;
     })
-    .filter(Boolean) as Array<{ role: string; name: string; email?: string; phone?: string }>;
+    .filter(Boolean) as Array<{ role: string; name: string; shares?: number }>;
 
-  const byRole = (role: string) => activeRoles.filter((x) => x.role === role).map((x) => x.name);
+  const byRole = (role: string) => activeRoles.filter((x) => x.role === role);
   const directors = byRole('DIRECTOR');
   const secretaries = byRole('SECRETARY');
   const shareholders = byRole('SHAREHOLDER');
@@ -145,10 +145,6 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                   <DlRow label="Entity status" value={client.entityStatus ?? '-'} />
                   <DlRow label="Incorporation date" value={date10(client.incorporationDate)} />
                   <DlRow label="Registered office address" value={client.registeredOfficeAddress ?? '-'} />
-                  <DlRow label="Address" value={client.address ?? '-'} />
-                  <DlRow label="Contact" value={client.contactPerson ?? '-'} />
-                  <DlRow label="Email" value={client.email ?? '-'} />
-                  <DlRow label="Phone" value={client.phone ?? '-'} />
                   <DlRow label="Paid-up capital" value={money(client.paidUpCapitalCurrency, client.paidUpCapitalAmount)} />
                   <DlRow label="Total shares" value={typeof client.totalShares === 'number' ? client.totalShares.toLocaleString() : '-'} />
                   <DlRow label="SSIC (Primary)" value={client.ssicPrimaryCode ?? '-'} />
@@ -163,19 +159,25 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                 <div className="mt-3 space-y-3 text-sm">
                   <div>
                     <div className="text-black/50">Directors</div>
-                    <div className="mt-1 text-black">{directors.length ? directors.join(', ') : '-'}</div>
+                    <div className="mt-1 text-black">{directors.length ? directors.map((d) => d.name).join(', ') : '-'}</div>
                   </div>
                   <div>
                     <div className="text-black/50">Secretaries</div>
-                    <div className="mt-1 text-black">{secretaries.length ? secretaries.join(', ') : '-'}</div>
+                    <div className="mt-1 text-black">{secretaries.length ? secretaries.map((d) => d.name).join(', ') : '-'}</div>
                   </div>
                   <div>
                     <div className="text-black/50">Shareholders</div>
-                    <div className="mt-1 text-black">{shareholders.length ? shareholders.join(', ') : '-'}</div>
+                    <div className="mt-1 text-black">
+                      {shareholders.length
+                        ? shareholders
+                            .map((s) => (typeof s.shares === 'number' ? `${s.name} (${s.shares.toLocaleString()})` : s.name))
+                            .join(', ')
+                        : '-'}
+                    </div>
                   </div>
                   <div>
                     <div className="text-black/50">RORC</div>
-                    <div className="mt-1 text-black">{rorc.length ? rorc.join(', ') : '-'}</div>
+                    <div className="mt-1 text-black">{rorc.length ? rorc.map((d) => d.name).join(', ') : '-'}</div>
                   </div>
                 </div>
               </div>
