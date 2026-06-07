@@ -358,10 +358,15 @@ export function renderCompanyUpdateRequestHtml(input: {
   }
 
   if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
-    const old1 = formatSsic(String(input.original.ssicPrimaryCode ?? ''));
-    const old2 = formatSsic(String(input.original.ssicSecondaryCode ?? ''));
-    const next1 = formatSsic(String((p as { ssicPrimaryCode?: unknown }).ssicPrimaryCode ?? ''));
-    const next2 = formatSsic(String((p as { ssicSecondaryCode?: unknown }).ssicSecondaryCode ?? ''));
+    const old1Code = String(input.original.ssicPrimaryCode ?? '').trim();
+    const old2Code = String(input.original.ssicSecondaryCode ?? '').trim();
+    const next1Code = String((p as { ssicPrimaryCode?: unknown }).ssicPrimaryCode ?? '').trim();
+    const next2Code = String((p as { ssicSecondaryCode?: unknown }).ssicSecondaryCode ?? '').trim();
+    const old1 = formatSsic(old1Code);
+    const old2 = formatSsic(old2Code);
+    const next1 = formatSsic(next1Code);
+    const next2 = formatSsic(next2Code);
+    const hasSecond = !!(old2Code || next2Code);
 
     const directors = (input.directors ?? [])
       .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
@@ -419,7 +424,7 @@ export function renderCompanyUpdateRequestHtml(input: {
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle">CHANGE OF BUSINESS ACTIVITIES</div>
     <div class="block" style="white-space: pre-wrap;">
-      That the business activities are changed from "<span class="red">${esc(old1)}</span>" and "<span class="red">${esc(old2)}</span>" to "<span class="red">${esc(next1)}</span>" and "<span class="red">${esc(next2)}</span>" with immediate effect.
+      That the business activities are changed from "<span class="red">${esc(old1)}</span>"${hasSecond ? ` and "<span class=\"red\">${esc(old2)}</span>"` : ''} to "<span class="red">${esc(next1)}</span>"${hasSecond ? ` and "<span class=\"red\">${esc(next2)}</span>"` : ''} with immediate effect.
     </div>
 
     <div class="block">Directors:</div>

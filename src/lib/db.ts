@@ -7850,10 +7850,18 @@ export async function createCompanyUpdateRequest(input: {
     const newRegisteredOfficeAddress = String(p.newRegisteredOfficeAddress ?? '').trim();
     if (!newRegisteredOfficeAddress) return { ok: false as const, error: 'INVALID_INPUT' as const };
   } else if (type === 'CHANGE_BUSINESS_ACTIVITIES') {
-    const ssicPrimaryCode = String(p.ssicPrimaryCode ?? '').trim();
-    const ssicSecondaryCode = String(p.ssicSecondaryCode ?? '').trim();
-    if (!ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
-    if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const ssicPrimaryCodeRaw = String(p.ssicPrimaryCode ?? '').trim();
+    const ssicSecondaryCodeRaw = String(p.ssicSecondaryCode ?? '').trim();
+    if (!ssicPrimaryCodeRaw && !ssicSecondaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (ssicPrimaryCodeRaw && ssicSecondaryCodeRaw && ssicSecondaryCodeRaw === ssicPrimaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+    const finalPrimary = ssicPrimaryCodeRaw || String(client.ssicPrimaryCode ?? '').trim();
+    const finalSecondary = ssicSecondaryCodeRaw || String(client.ssicSecondaryCode ?? '').trim();
+    if (!finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+    (p as Record<string, unknown>).ssicPrimaryCode = finalPrimary;
+    if (finalSecondary) (p as Record<string, unknown>).ssicSecondaryCode = finalSecondary;
+    else delete (p as Record<string, unknown>).ssicSecondaryCode;
   } else if (type === 'CHANGE_SECRETARY') {
     const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim();
     const addSecretaries = Array.isArray(p.addSecretaries) ? p.addSecretaries : [];

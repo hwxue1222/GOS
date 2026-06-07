@@ -24,8 +24,8 @@ export default function ChangeBusinessActivitiesClient() {
     }
     const ssicPrimaryCode = (primary ?? '').trim();
     const ssicSecondaryCode = (secondary ?? '').trim();
-    if (!ssicPrimaryCode) {
-      setSubmitError('Please select New Activity 1.');
+    if (!ssicPrimaryCode && !ssicSecondaryCode) {
+      setSubmitError('Please select New Activity 1 or New Activity 2.');
       return;
     }
     if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) {
@@ -40,9 +40,7 @@ export default function ChangeBusinessActivitiesClient() {
         body: JSON.stringify({
           type: 'CHANGE_BUSINESS_ACTIVITIES',
           payload: {
-            originalSsicPrimaryCode: client.ssicPrimaryCode ?? '',
-            originalSsicSecondaryCode: client.ssicSecondaryCode ?? '',
-            ssicPrimaryCode,
+            ssicPrimaryCode: ssicPrimaryCode || undefined,
             ssicSecondaryCode: ssicSecondaryCode || undefined,
           },
         }),
@@ -79,7 +77,7 @@ export default function ChangeBusinessActivitiesClient() {
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <div className="sm:col-span-12">
               <div className="text-sm text-black">
-                <span className="text-red-500">*</span> New Activity 1 :
+                <span className="text-red-500">*</span> New Activity 1 (or Activity 2) :
               </div>
               <div className="mt-1">
                 <SsicCombobox label="" value={primary} onChange={setPrimary} excludeCode={secondary} />
@@ -105,4 +103,3 @@ export default function ChangeBusinessActivitiesClient() {
     </ModalShell>
   );
 }
-
