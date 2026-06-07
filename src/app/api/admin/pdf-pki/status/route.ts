@@ -24,7 +24,7 @@ function parseP12Meta(p12b64: string, passphrase: string) {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'clients', 'viewAll')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (!hasPermission(user, 'secretary', 'viewAssigned')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const enabled = isPdfPkiEnabled();
   const p12b64 = (process.env.PDF_PKI_P12_BASE64 ?? '').trim();
@@ -54,4 +54,3 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'P12_PARSE_FAILED', message: msg, configured }, { status: 500 });
   }
 }
-
