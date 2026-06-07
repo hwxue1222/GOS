@@ -1,5 +1,28 @@
+import ssic from '@/data/ssic.json';
+
 function esc(s: string) {
   return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
+type SsicRow = { code: string; description: string };
+
+const ssicRows = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
+const ssicDescByCode = (() => {
+  const m = new Map<string, string>();
+  for (const r of ssicRows) {
+    const code = String(r.code ?? '').trim();
+    const description = String(r.description ?? '').trim();
+    if (code && description) m.set(code.toLowerCase(), description);
+  }
+  return m;
+})();
+
+function formatSsic(codeRaw: string) {
+  const code = String(codeRaw ?? '').trim();
+  if (!code) return '-';
+  const desc = ssicDescByCode.get(code.toLowerCase()) ?? '';
+  if (!desc) return code;
+  return `${desc}(${code})`;
 }
 
 function normalizeFyeDdMm(input: string) {
@@ -334,6 +357,79 @@ export function renderCompanyUpdateRequestHtml(input: {
 `.trim();
   }
 
+  if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+    const old1 = formatSsic(String(input.original.ssicPrimaryCode ?? ''));
+    const old2 = formatSsic(String(input.original.ssicSecondaryCode ?? ''));
+    const next1 = formatSsic(String((p as { ssicPrimaryCode?: unknown }).ssicPrimaryCode ?? ''));
+    const next2 = formatSsic(String((p as { ssicSecondaryCode?: unknown }).ssicSecondaryCode ?? ''));
+
+    const directors = (input.directors ?? [])
+      .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
+      .filter((d) => !!d.fullName);
+
+    const signatureBlocks = (directors.length ? directors : [{ fullName: '', email: undefined }])
+      .map((d) => {
+        const nameHtml = d.fullName
+          ? `<div class="sig-name"><strong><span class="red">${esc(d.fullName)}</span></strong></div>`
+          : '<div class="sig-name">________________</div>';
+        const emailKey = d.email ? esc(d.email.toLowerCase()) : '';
+        const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
+        return `
+<div class="sig-block">
+  <div class="sig-line">${marker}</div>
+  ${nameHtml}
+</div>
+`.trim();
+      })
+      .join('');
+
+    const dated = toDdMmYyyy(nowYmd);
+    return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Change of Business Activities</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .muted { color: #555; font-size: 12px; }
+      .center { text-align: center; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+      .red { color: #dc2626; font-weight: 700; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div class="center">
+      <div class="title"><span class="red">${companyName}</span></div>
+      <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: <span class="red">${companyRegistrationNo || '__________'}</span></div>
+      <div class="muted">(Incorporated in the Republic of Singapore)</div>
+    </div>
+
+    <div style="height: 14px;"></div>
+
+    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
+    <div class="subtitle">RESOLVED –</div>
+    <div class="subtitle">CHANGE OF BUSINESS ACTIVITIES</div>
+    <div class="block" style="white-space: pre-wrap;">
+      That the business activities are changed from "<span class="red">${esc(old1)}</span>" and "<span class="red">${esc(old2)}</span>" to "<span class="red">${esc(next1)}</span>" and "<span class="red">${esc(next2)}</span>" with immediate effect.
+    </div>
+
+    <div class="block">Directors:</div>
+    ${signatureBlocks}
+    <div style="margin-top: 18px;">Date: <span class="red">${esc(dated)}</span></div>
+  </body>
+</html>
+`.trim();
+  }
+
   if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
     const oldAddr = String(input.original.registeredOfficeAddress ?? '-').trim() || '-';
     const newAddr = String((p as { newRegisteredOfficeAddress?: unknown }).newRegisteredOfficeAddress ?? '').trim() || '-';
@@ -420,15 +516,6 @@ export function renderCompanyUpdateRequestHtml(input: {
     lines.push(`3. Meeting time: ${startDate}.`);
     lines.push(`4. Meeting venue: ${meetingVenue}.`);
     lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
-  } else if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
-    const p1 = String(p.ssicPrimaryCode ?? '').trim() || '-';
-    const p2 = String(p.ssicSecondaryCode ?? '').trim() || '-';
-    const o1 = (input.original.ssicPrimaryCode ?? '-').trim() || '-';
-    const o2 = (input.original.ssicSecondaryCode ?? '-').trim() || '-';
-    lines.push('1. The business activities (SSIC) of the Company be changed as follows:');
-    lines.push(`   Primary:   ${o1}  ->  ${p1}`);
-    lines.push(`   Secondary: ${o2}  ->  ${p2}`);
-    lines.push('2. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
   } else if (input.type === 'CHANGE_SECRETARY') {
     const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim() || '-';
     const addSecretaries = Array.isArray(p.addSecretaries) ? (p.addSecretaries as Array<Record<string, unknown>>) : [];
