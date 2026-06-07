@@ -52,7 +52,7 @@ function Dropdown(props: {
     <div ref={rootRef} className="relative">
       {trigger}
       {open ? (
-        <div className="absolute left-0 mt-2 min-w-[260px] rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden z-50">
+        <div className="absolute left-0 mt-2 min-w-[360px] rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden z-50">
           {children}
         </div>
       ) : null}
@@ -193,7 +193,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
                 Annual General Meeting
               </Link>
               <Link href="/corporate-secretary/rorc" onClick={() => setOpen(null)} className={itemClass()}>
-                Declaration of Company Controller(RORC)
+                Declaration of Company Controller (RORC)
               </Link>
             </Dropdown>
           </nav>
