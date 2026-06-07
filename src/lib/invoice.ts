@@ -40,7 +40,7 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       displayName: 'Bybridge Consultancy Pte Ltd',
       displayNameZh: '新加坡百桥咨询有限公司',
       uen: '201523304N',
-      addressLine: '10 Anson Road#10-13A International Plaza Singapore 079903',
+      addressLine: '8 Burn Road#15-03 Trivex Singapore 369977',
       tel: '+65 62215600',
       customerService: '+65 90888596',
       email: 'Luke@bby.sg',
