@@ -61,6 +61,9 @@ async function getBrowser() {
         '/Applications/Chromium.app/Contents/MacOS/Chromium',
       ];
       const candidate = envPath || macCandidates.find((p) => fs.existsSync(p)) || null;
+      if (!candidate && process.platform === 'darwin') {
+        throw new Error('CHROME_NOT_FOUND_ON_MAC');
+      }
       const executablePath = candidate || (await chromium.executablePath());
       return puppeteer.launch({
         args: chromium.args,
@@ -146,7 +149,27 @@ export async function GET(_req: Request, ctx: { params: Promise<{ documentId: st
     if (!ok) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
-  const cacheKey = `docPdf:${documentId}:${doc.sha256}`;
+  const packets = db.signaturePackets
+    .filter((p) => p.documentId === documentId)
+    .slice()
+    .sort((a, b) => String(b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.updatedAt ?? a.createdAt ?? '')));
+  const packet = packets[0] ?? null;
+  const packetId = packet?.id ?? '';
+  const packetReqs = packetId ? db.signatureRequests.filter((r) => r.packetId === packetId) : [];
+  const sigVersion = (() => {
+    const times: string[] = [];
+    if (packet?.createdAt) times.push(packet.createdAt);
+    if (packet?.updatedAt) times.push(packet.updatedAt);
+    for (const r of packetReqs) {
+      if (r.createdAt) times.push(r.createdAt);
+      if (r.updatedAt) times.push(r.updatedAt);
+      if (r.signedAt) times.push(r.signedAt);
+    }
+    times.sort();
+    return times[times.length - 1] ?? '';
+  })();
+
+  const cacheKey = `docPdf:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
   const cached = cacheGet(cacheKey);
   if (cached) {
     const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
@@ -160,32 +183,107 @@ export async function GET(_req: Request, ctx: { params: Promise<{ documentId: st
     });
   }
 
-  const browser = await getBrowser();
-  const page = await browser.newPage();
   try {
-    await page.emulateMediaType('print');
-    await page.setContent(doc.html, { waitUntil: ['domcontentloaded'] });
-    await page.evaluate(async () => {
-      if (document.fonts?.ready) await document.fonts.ready;
-    });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.emulateMediaType('print');
+      await page.setContent(doc.html, { waitUntil: ['domcontentloaded'] });
+      const signed = packetReqs
+        .filter((r) => r.status === 'SIGNED' && !!r.signedAt)
+        .map((r) => ({
+          signerEmail: String(r.email ?? '').trim().toLowerCase(),
+          signerName: String(r.rdrRepresentativeName ?? '').trim(),
+          signedAt: String(r.signedAt ?? ''),
+        }))
+        .filter((x) => !!x.signerEmail && !!x.signedAt);
 
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      preferCSSPageSize: true,
-    });
+      try {
+        await page.evaluate(
+          async (items) => {
+            if (document.fonts?.ready) await document.fonts.ready;
+            if (!items?.length) return;
 
-    cacheSet(cacheKey, Buffer.from(pdf));
-    const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
-    return new Response(new Blob([toArrayBuffer(pdf)], { type: 'application/pdf' }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
-        'Cache-Control': 'no-store',
-      },
-    });
-  } finally {
-    await page.close();
+            const toDdMmYyyy = (iso: string) => {
+              const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (!m) return String(iso || '');
+              return `${m[3]}/${m[2]}/${m[1]}`;
+            };
+
+            const placeholders = Array.from(document.querySelectorAll('[data-signer]')) as HTMLElement[];
+            if (placeholders.length) {
+              const byEmail = new Map<string, HTMLElement>();
+              for (const el of placeholders) {
+                const k = String(el.getAttribute('data-signer') || '').toLowerCase();
+                if (k) byEmail.set(k, el);
+              }
+              for (const it of items) {
+                const key = String(it.signerEmail || '').toLowerCase();
+                if (!key) continue;
+                const el = byEmail.get(key);
+                if (!el) continue;
+                el.textContent = `Signed ${toDdMmYyyy(String(it.signedAt || ''))}`;
+              }
+              return;
+            }
+
+            const box = document.createElement('div');
+            box.style.marginTop = '24px';
+            box.style.fontSize = '12px';
+            box.style.color = '#111';
+            const title = document.createElement('div');
+            title.style.fontWeight = '700';
+            title.textContent = 'Signatures';
+            box.appendChild(title);
+            for (const it of items) {
+              const row = document.createElement('div');
+              row.style.marginTop = '6px';
+              const name = String(it.signerName || '').trim();
+              const email = String(it.signerEmail || '').trim();
+              row.textContent = `${name ? name + ' ' : ''}<${email}> - ${toDdMmYyyy(String(it.signedAt || ''))}`;
+              box.appendChild(row);
+            }
+            document.body.appendChild(box);
+          },
+          signed,
+        );
+      } catch {
+        await page.evaluate(async () => {
+          if (document.fonts?.ready) await document.fonts.ready;
+        });
+      }
+
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        preferCSSPageSize: true,
+      });
+
+      cacheSet(cacheKey, Buffer.from(pdf));
+      const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
+      return new Response(new Blob([toArrayBuffer(pdf)], { type: 'application/pdf' }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } finally {
+      await page.close();
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('CHROME_NOT_FOUND_ON_MAC')) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'CHROME_NOT_FOUND',
+          message: 'Install Google Chrome (macOS) or set PUPPETEER_EXECUTABLE_PATH / CHROME_EXECUTABLE_PATH to enable PDF generation.',
+        },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ ok: false, error: 'PDF_FAILED', message: msg }, { status: 500 });
   }
 }

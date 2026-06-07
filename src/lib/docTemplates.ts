@@ -272,17 +272,19 @@ export function renderCompanyUpdateRequestHtml(input: {
     const newFyeRaw = String(p.newFye ?? '').trim() || '-';
     const oldFye = normalizeFyeDdMm(oldFyeRaw) || oldFyeRaw;
     const newFye = normalizeFyeDdMm(newFyeRaw) || newFyeRaw;
-    const directorNames = (input.directors ?? [])
-      .map((d) => String(d.fullName ?? '').trim())
-      .filter(Boolean);
+    const directors = (input.directors ?? [])
+      .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
+      .filter((d) => !!d.fullName);
 
-    const signatureBlocks = (directorNames.length ? directorNames : [''])
-      .map((name) => {
-        const nameHtml = name ? `<div class="sig-name"><strong>${esc(name)}</strong></div>` : '<div class="sig-name">________________</div>';
+    const signatureBlocks = (directors.length ? directors : [{ fullName: '', email: undefined }])
+      .map((d) => {
+        const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
+        const emailKey = d.email ? esc(d.email.toLowerCase()) : '';
+        const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
         return `
 <div class="sig-block">
   <div>Director:</div>
-  <div class="sig-line"><span class="sig-mark"></span></div>
+  <div class="sig-line">${marker}</div>
   ${nameHtml}
 </div>
 `.trim();
@@ -305,7 +307,7 @@ export function renderCompanyUpdateRequestHtml(input: {
       .block { margin-top: 14px; }
       .sig-block { margin-top: 18px; }
       .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
-      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #444; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
       .sig-name { margin-top: 2px; }
     </style>
   </head>
