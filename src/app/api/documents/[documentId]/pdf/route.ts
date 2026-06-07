@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import { digitallySignPdfIfEnabled, isPdfPkiEnabled } from '@/lib/pdfPki';
@@ -177,6 +178,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     return times[times.length - 1] ?? '';
   })();
 
+  const signatureHash = (() => {
+    const base = `${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
+    return crypto.createHash('sha256').update(base).digest('hex');
+  })();
+
   const cacheKey = `docPdf:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
   const cached = cacheGet(cacheKey);
   if (cached) {
@@ -260,6 +266,26 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
           if (document.fonts?.ready) await document.fonts.ready;
         });
       }
+
+      await page.evaluate(
+        ({ docHash, sigHash }) => {
+          const existing = document.getElementById('gos-doc-hashes');
+          if (existing) return;
+          const el = document.createElement('div');
+          el.id = 'gos-doc-hashes';
+          el.style.position = 'fixed';
+          el.style.left = '16px';
+          el.style.bottom = '12px';
+          el.style.fontSize = '9px';
+          el.style.color = '#666';
+          el.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+          el.style.whiteSpace = 'pre-wrap';
+          el.style.maxWidth = '95%';
+          el.textContent = `Document hash: ${docHash}\nSignature hash: ${sigHash}`;
+          document.body.appendChild(el);
+        },
+        { docHash: doc.sha256, sigHash: signatureHash },
+      );
 
       const pdf = await page.pdf({
         format: 'A4',
