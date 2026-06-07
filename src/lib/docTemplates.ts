@@ -366,7 +366,20 @@ export function renderCompanyUpdateRequestHtml(input: {
     const old2 = formatSsic(old2Code);
     const next1 = formatSsic(next1Code);
     const next2 = formatSsic(next2Code);
-    const hasSecond = !!(old2Code || next2Code);
+    const changed1 = !!next1Code && old1Code.toLowerCase() !== next1Code.toLowerCase();
+    const changed2 = !!next2Code && old2Code.toLowerCase() !== next2Code.toLowerCase();
+    const parts = [
+      changed1
+        ? old1Code
+          ? `from "<span class=\"red\">${esc(old1)}</span>" to "<span class=\"red\">${esc(next1)}</span>"`
+          : `to "<span class=\"red\">${esc(next1)}</span>"`
+        : '',
+      changed2
+        ? old2Code
+          ? `from "<span class=\"red\">${esc(old2)}</span>" to "<span class=\"red\">${esc(next2)}</span>"`
+          : `to "<span class=\"red\">${esc(next2)}</span>"`
+        : '',
+    ].filter(Boolean);
 
     const directors = (input.directors ?? [])
       .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
@@ -424,7 +437,7 @@ export function renderCompanyUpdateRequestHtml(input: {
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle">CHANGE OF BUSINESS ACTIVITIES</div>
     <div class="block" style="white-space: pre-wrap;">
-      That the business activities are changed from "<span class="red">${esc(old1)}</span>"${hasSecond ? ` and "<span class=\"red\">${esc(old2)}</span>"` : ''} to "<span class="red">${esc(next1)}</span>"${hasSecond ? ` and "<span class=\"red\">${esc(next2)}</span>"` : ''} with immediate effect.
+      ${parts.length ? `That the business activities are changed ${parts.join(' and ')} with immediate effect.` : 'That the business activities of the Company remain unchanged.'}
     </div>
 
     <div class="block">Directors:</div>

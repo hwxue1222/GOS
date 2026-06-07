@@ -7855,9 +7855,12 @@ export async function createCompanyUpdateRequest(input: {
     if (!ssicPrimaryCodeRaw && !ssicSecondaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
     if (ssicPrimaryCodeRaw && ssicSecondaryCodeRaw && ssicSecondaryCodeRaw === ssicPrimaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
-    const finalPrimary = ssicPrimaryCodeRaw || String(client.ssicPrimaryCode ?? '').trim();
-    const finalSecondary = ssicSecondaryCodeRaw || String(client.ssicSecondaryCode ?? '').trim();
+    const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
+    const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
+    const finalPrimary = ssicPrimaryCodeRaw || originalPrimary;
+    const finalSecondary = ssicSecondaryCodeRaw || originalSecondary;
     if (!finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (finalPrimary === originalPrimary && finalSecondary === originalSecondary) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     (p as Record<string, unknown>).ssicPrimaryCode = finalPrimary;
     if (finalSecondary) (p as Record<string, unknown>).ssicSecondaryCode = finalSecondary;

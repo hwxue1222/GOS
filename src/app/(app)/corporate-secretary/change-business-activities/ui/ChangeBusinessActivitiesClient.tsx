@@ -32,6 +32,15 @@ export default function ChangeBusinessActivitiesClient() {
       setSubmitError('Activity 2 cannot be same as Activity 1.');
       return;
     }
+
+    const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
+    const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
+    const resolvedPrimary = ssicPrimaryCode || originalPrimary;
+    const resolvedSecondary = ssicSecondaryCode || originalSecondary;
+    if (resolvedPrimary === originalPrimary && resolvedSecondary === originalSecondary) {
+      setSubmitError('No changes detected.');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
