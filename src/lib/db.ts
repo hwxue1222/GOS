@@ -1092,6 +1092,82 @@ function normalizeDb(parsed: Db): Db {
       }))
     : [];
 
+  const rawCompanyUpdateRequests = (parsed as unknown as { companyUpdateRequests?: unknown }).companyUpdateRequests;
+  const companyUpdateRequests: CompanyUpdateRequest[] = Array.isArray(rawCompanyUpdateRequests)
+    ? (rawCompanyUpdateRequests as unknown as CompanyUpdateRequest[]).map((r) => ({
+        id: String((r as CompanyUpdateRequest).id ?? ''),
+        clientId: String((r as CompanyUpdateRequest).clientId ?? ''),
+        type: (r as CompanyUpdateRequest).type,
+        status: (r as CompanyUpdateRequest).status ?? 'PENDING_SIGNATURES',
+        payload:
+          typeof (r as CompanyUpdateRequest).payload === 'object' && (r as CompanyUpdateRequest).payload
+            ? ((r as CompanyUpdateRequest).payload as Record<string, unknown>)
+            : {},
+        createdByUserId: String((r as CompanyUpdateRequest).createdByUserId ?? ''),
+        packetId: String((r as CompanyUpdateRequest).packetId ?? ''),
+        createdAt: String((r as CompanyUpdateRequest).createdAt ?? nowIso()),
+        updatedAt: typeof (r as CompanyUpdateRequest).updatedAt === 'string' ? (r as CompanyUpdateRequest).updatedAt : undefined,
+        submittedAt: typeof (r as CompanyUpdateRequest).submittedAt === 'string' ? (r as CompanyUpdateRequest).submittedAt : undefined,
+        signedAt: typeof (r as CompanyUpdateRequest).signedAt === 'string' ? (r as CompanyUpdateRequest).signedAt : undefined,
+        decidedAt: typeof (r as CompanyUpdateRequest).decidedAt === 'string' ? (r as CompanyUpdateRequest).decidedAt : undefined,
+        decidedByUserId: typeof (r as CompanyUpdateRequest).decidedByUserId === 'string' ? (r as CompanyUpdateRequest).decidedByUserId : undefined,
+        decisionNote: typeof (r as CompanyUpdateRequest).decisionNote === 'string' ? (r as CompanyUpdateRequest).decisionNote : undefined,
+      }))
+    : [];
+
+  const rawRorcDeclarationRequests = (parsed as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests;
+  const rorcDeclarationRequests: RorcDeclarationRequest[] = Array.isArray(rawRorcDeclarationRequests)
+    ? (rawRorcDeclarationRequests as unknown as RorcDeclarationRequest[]).map((r) => ({
+        id: String((r as RorcDeclarationRequest).id ?? ''),
+        clientId: String((r as RorcDeclarationRequest).clientId ?? ''),
+        status: (r as RorcDeclarationRequest).status ?? 'PENDING_SIGNATURES',
+        effectiveDate: String((r as RorcDeclarationRequest).effectiveDate ?? ''),
+        message: typeof (r as RorcDeclarationRequest).message === 'string' ? (r as RorcDeclarationRequest).message : undefined,
+        removeRorcRoleIds: Array.isArray((r as RorcDeclarationRequest).removeRorcRoleIds)
+          ? (r as RorcDeclarationRequest).removeRorcRoleIds.map((x) => String(x)).filter(Boolean)
+          : [],
+        addControllers: Array.isArray((r as RorcDeclarationRequest).addControllers)
+          ? (r as RorcDeclarationRequest).addControllers
+              .map((x) => ({
+                fullName: typeof x?.fullName === 'string' ? x.fullName : '',
+                email: typeof x?.email === 'string' ? x.email : undefined,
+              }))
+              .filter((x) => !!x.fullName)
+          : [],
+        createdByUserId: String((r as RorcDeclarationRequest).createdByUserId ?? ''),
+        packetId: String((r as RorcDeclarationRequest).packetId ?? ''),
+        createdAt: String((r as RorcDeclarationRequest).createdAt ?? nowIso()),
+        updatedAt: typeof (r as RorcDeclarationRequest).updatedAt === 'string' ? (r as RorcDeclarationRequest).updatedAt : undefined,
+        submittedAt: typeof (r as RorcDeclarationRequest).submittedAt === 'string' ? (r as RorcDeclarationRequest).submittedAt : undefined,
+        signedAt: typeof (r as RorcDeclarationRequest).signedAt === 'string' ? (r as RorcDeclarationRequest).signedAt : undefined,
+        decidedAt: typeof (r as RorcDeclarationRequest).decidedAt === 'string' ? (r as RorcDeclarationRequest).decidedAt : undefined,
+        decidedByUserId: typeof (r as RorcDeclarationRequest).decidedByUserId === 'string' ? (r as RorcDeclarationRequest).decidedByUserId : undefined,
+        decisionNote: typeof (r as RorcDeclarationRequest).decisionNote === 'string' ? (r as RorcDeclarationRequest).decisionNote : undefined,
+      }))
+    : [];
+
+  const rawAnnualGeneralMeetingRequests = (parsed as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests;
+  const annualGeneralMeetingRequests: AnnualGeneralMeetingRequest[] = Array.isArray(rawAnnualGeneralMeetingRequests)
+    ? (rawAnnualGeneralMeetingRequests as unknown as AnnualGeneralMeetingRequest[]).map((r) => ({
+        id: String((r as AnnualGeneralMeetingRequest).id ?? ''),
+        clientId: String((r as AnnualGeneralMeetingRequest).clientId ?? ''),
+        status: (r as AnnualGeneralMeetingRequest).status ?? 'PENDING_SIGNATURES',
+        meetingDate: String((r as AnnualGeneralMeetingRequest).meetingDate ?? ''),
+        meetingVenue: String((r as AnnualGeneralMeetingRequest).meetingVenue ?? ''),
+        chairman: String((r as AnnualGeneralMeetingRequest).chairman ?? ''),
+        agendaSummary: typeof (r as AnnualGeneralMeetingRequest).agendaSummary === 'string' ? (r as AnnualGeneralMeetingRequest).agendaSummary : undefined,
+        createdByUserId: String((r as AnnualGeneralMeetingRequest).createdByUserId ?? ''),
+        packetId: String((r as AnnualGeneralMeetingRequest).packetId ?? ''),
+        createdAt: String((r as AnnualGeneralMeetingRequest).createdAt ?? nowIso()),
+        updatedAt: typeof (r as AnnualGeneralMeetingRequest).updatedAt === 'string' ? (r as AnnualGeneralMeetingRequest).updatedAt : undefined,
+        submittedAt: typeof (r as AnnualGeneralMeetingRequest).submittedAt === 'string' ? (r as AnnualGeneralMeetingRequest).submittedAt : undefined,
+        signedAt: typeof (r as AnnualGeneralMeetingRequest).signedAt === 'string' ? (r as AnnualGeneralMeetingRequest).signedAt : undefined,
+        decidedAt: typeof (r as AnnualGeneralMeetingRequest).decidedAt === 'string' ? (r as AnnualGeneralMeetingRequest).decidedAt : undefined,
+        decidedByUserId: typeof (r as AnnualGeneralMeetingRequest).decidedByUserId === 'string' ? (r as AnnualGeneralMeetingRequest).decidedByUserId : undefined,
+        decisionNote: typeof (r as AnnualGeneralMeetingRequest).decisionNote === 'string' ? (r as AnnualGeneralMeetingRequest).decisionNote : undefined,
+      }))
+    : [];
+
   const rawAuditLogs = (parsed as unknown as { auditLogs?: unknown }).auditLogs;
   const auditLogs: AuditLog[] = Array.isArray(rawAuditLogs)
     ? (rawAuditLogs as unknown as AuditLog[])
@@ -1144,6 +1220,9 @@ function normalizeDb(parsed: Db): Db {
     representativeDesignationRequests,
     shareTransfers,
     directorChangeRequests,
+    companyUpdateRequests,
+    rorcDeclarationRequests,
+    annualGeneralMeetingRequests,
     incorporationApplications,
     incorporationApplicationEvents,
     incorporationApplicationFiles,
