@@ -536,6 +536,26 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/10 bg-black/[0.02]">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[360px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
+                    <select
+                      value={clientFilter}
+                      onChange={(e) => {
+                        setClientFilter(e.target.value);
+                        setPage(1);
+                      }}
+                      className="h-8 w-full min-w-[220px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                    >
+                      <option value="">All clients</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </th>
                 <th className="px-4 py-3 align-top whitespace-nowrap w-[220px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
@@ -564,26 +584,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                       <option value="">All issuer</option>
                       <option value="BBY_SG">BBY.SG</option>
                       <option value="BYBRIDGE">Bybridge</option>
-                    </select>
-                  </div>
-                </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[360px]">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
-                    <select
-                      value={clientFilter}
-                      onChange={(e) => {
-                        setClientFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 w-full min-w-[220px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                    >
-                      <option value="">All clients</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.code} {c.name}
-                        </option>
-                      ))}
                     </select>
                   </div>
                 </th>
@@ -625,12 +625,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 const s = statusLabel(inv.status);
                 return (
                   <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
-                        {inv.invoiceNo}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{inv.issuer}</td>
                     <td className="px-4 py-3 whitespace-nowrap overflow-hidden">
                       {row.client ? (
                         <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
@@ -644,6 +638,12 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         </div>
                       )}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
+                        {inv.invoiceNo}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{inv.issuer}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatDateDMY(inv.issueDate)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatMoney(inv.currency, inv.total)}</td>

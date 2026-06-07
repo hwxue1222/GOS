@@ -340,11 +340,7 @@ export default function InvoiceDetailClient({
       setMarkPaidError('Paid date is required');
       return;
     }
-    const note = markPaidNote.trim();
-    if (!note) {
-      setMarkPaidError('Payment note is required');
-      return;
-    }
+    const note = markPaidNote.trim() || null;
     await saveInvoice({ status: 'PAID', paidAt: ymd, paymentNote: note });
     setMarkPaidOpen(false);
     setMarkPaidDate('');
