@@ -63,7 +63,8 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
   }
 
   const r = ctx.request;
-  const docHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf`;
+  const docHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?download=1`;
+  const previewHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?disposition=inline`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -130,9 +131,14 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
                 <div className="text-sm font-medium">Documents</div>
                 <div className="mt-0.5 text-xs text-black/50">PDF is generated from the signed document HTML.</div>
               </div>
-              <a href={docHref} className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                Download PDF
-              </a>
+              <div className="flex items-center gap-2">
+                <a href={previewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
+                  Preview
+                </a>
+                <a href={docHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
+                  Download PDF
+                </a>
+              </div>
             </div>
             <div className="mt-2 text-xs text-black/50">{ctx.document.title}</div>
           </div>
@@ -141,4 +147,3 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     </div>
   );
 }
-

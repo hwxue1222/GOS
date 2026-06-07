@@ -76,8 +76,10 @@ export default async function ShareTransferApplicationDetailPage({
   const staSigns = staPacket ? db.signatureRequests.filter((r) => r.packetId === staPacket.id) : [];
   const brSigns = brPacket ? db.signatureRequests.filter((r) => r.packetId === brPacket.id) : [];
 
-  const staHref = staDoc ? `/api/documents/${encodeURIComponent(staDoc.id)}/pdf` : '';
-  const brHref = brDoc ? `/api/documents/${encodeURIComponent(brDoc.id)}/pdf` : '';
+  const staHref = staDoc ? `/api/documents/${encodeURIComponent(staDoc.id)}/pdf?download=1` : '';
+  const brHref = brDoc ? `/api/documents/${encodeURIComponent(brDoc.id)}/pdf?download=1` : '';
+  const staPreviewHref = staDoc ? `/api/documents/${encodeURIComponent(staDoc.id)}/pdf?disposition=inline` : '';
+  const brPreviewHref = brDoc ? `/api/documents/${encodeURIComponent(brDoc.id)}/pdf?disposition=inline` : '';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -159,14 +161,24 @@ export default async function ShareTransferApplicationDetailPage({
             <div className="text-sm font-medium">Documents</div>
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
               {staDoc ? (
-                <a href={staHref} className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                  Download STA PDF
-                </a>
+                <>
+                  <a href={staPreviewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
+                    Preview STA
+                  </a>
+                  <a href={staHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
+                    Download STA PDF
+                  </a>
+                </>
               ) : null}
               {brDoc ? (
-                <a href={brHref} className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                  Download BR PDF
-                </a>
+                <>
+                  <a href={brPreviewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
+                    Preview BR
+                  </a>
+                  <a href={brHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
+                    Download BR PDF
+                  </a>
+                </>
               ) : null}
               {!staDoc && !brDoc ? <div className="text-sm text-black/50">No documents</div> : null}
             </div>
@@ -177,4 +189,3 @@ export default async function ShareTransferApplicationDetailPage({
     </div>
   );
 }
-

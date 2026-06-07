@@ -135,11 +135,18 @@ async function canClientAccessDocument(user: { email: string }, documentId: stri
   return false;
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ documentId: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ documentId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { documentId } = await ctx.params;
+  const url = new URL(req.url);
+  const dispositionParam = (url.searchParams.get('disposition') ?? '').toLowerCase();
+  const inlineParam = (url.searchParams.get('inline') ?? '').toLowerCase();
+  const downloadParam = (url.searchParams.get('download') ?? '').toLowerCase();
+  const contentDisposition: 'inline' | 'attachment' =
+    dispositionParam === 'inline' || inlineParam === '1' || downloadParam === '0' ? 'inline' : 'attachment';
+
   const db = await readDb();
   const doc = db.documents.find((d) => d.id === documentId) ?? null;
   if (!doc) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
@@ -177,7 +184,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ documentId: st
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
+        'Content-Disposition': `${contentDisposition}; filename="${filenameBase}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });
@@ -265,7 +272,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ documentId: st
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${filenameBase}.pdf"`,
+          'Content-Disposition': `${contentDisposition}; filename="${filenameBase}.pdf"`,
           'Cache-Control': 'no-store',
         },
       });

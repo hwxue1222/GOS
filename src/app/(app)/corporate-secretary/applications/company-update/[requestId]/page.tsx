@@ -237,14 +237,24 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                 <div className="text-sm font-medium">Documents</div>
                 <div className="mt-2 text-sm">
                   {document ? (
-                    <a
-                      href={`/api/documents/${encodeURIComponent(document.id)}/pdf`}
-                      className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Download PDF
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`/api/documents/${encodeURIComponent(document.id)}/pdf?disposition=inline`}
+                        className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Preview
+                      </a>
+                      <a
+                        href={`/api/documents/${encodeURIComponent(document.id)}/pdf?download=1`}
+                        className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download PDF
+                      </a>
+                    </div>
                   ) : (
                     <div className="text-black/40">No documents</div>
                   )}
