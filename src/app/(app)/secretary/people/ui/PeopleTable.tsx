@@ -55,6 +55,12 @@ export default function PeopleTable({ people, loading }: Props) {
     return role;
   };
 
+  const companyRoleLines = (p: Person) => {
+    const rows = p.companyRoles ?? [];
+    if (!rows.length) return [];
+    return rows.flatMap((cr) => cr.roles.map((r) => `${cr.clientName}: ${roleLabel(r)}`));
+  };
+
   return (
     <div className="mt-6 rounded-xl bg-white border border-black/5 overflow-x-auto">
       <table className="min-w-[1650px] w-full text-sm">
@@ -86,7 +92,8 @@ export default function PeopleTable({ people, loading }: Props) {
                 <tr key={p.id} className="border-t border-black/5">
                   <td className="px-4 py-3 font-medium">{p.fullName}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div>
+                      <div className="flex flex-wrap gap-1">
                       {(p.roleTags ?? []).length ? (
                         p.roleTags!.map((r) => (
                           <span key={r} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${tagClass(r)}`}>
@@ -96,21 +103,26 @@ export default function PeopleTable({ people, loading }: Props) {
                       ) : (
                         <span className="text-black/40 text-xs">-</span>
                       )}
+                      </div>
+
                       {typeof p.companyCount === 'number' && p.companyCount > 0 ? (
-                        <span
-                          className="inline-flex items-center rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs text-black/60"
-                          title={
-                            (p.companyRoles ?? []).length
-                              ? p.companyRoles!
-                                  .map((cr) => `${cr.clientName} — ${cr.roles.map((r) => roleLabel(r)).join(', ')}`)
-                                  .join('\n')
-                              : (p.companyNames ?? []).length
-                                ? p.companyNames!.join('\n')
-                                : undefined
-                          }
+                        <div
+                          className="mt-1 text-xs text-black/60 space-y-0.5"
+                          title={companyRoleLines(p).length ? companyRoleLines(p).join('\n') : (p.companyNames ?? []).join('\n')}
                         >
-                          {lang === 'zh' ? `${p.companyCount}${t('people.companyCountSuffix')}` : `${p.companyCount} ${t('people.companyCountSuffix')}`}
-                        </span>
+                          {companyRoleLines(p)
+                            .slice(0, 6)
+                            .map((line) => (
+                              <div key={line} className="truncate">
+                                {line}
+                              </div>
+                            ))}
+                          {companyRoleLines(p).length > 6 ? (
+                            <div className="text-black/40">
+                              {lang === 'zh' ? `还有 ${companyRoleLines(p).length - 6} 条...` : `${companyRoleLines(p).length - 6} more...`}
+                            </div>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                   </td>
