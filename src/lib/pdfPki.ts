@@ -46,9 +46,21 @@ export async function digitallySignPdfIfEnabled(input: {
     signingTime: input.signingTime,
   };
 
+  const widgetRect = (() => {
+    const raw = (process.env.PDF_PKI_WIDGET_RECT ?? '').trim();
+    if (!raw) return [50, 40, 320, 110];
+    const parts = raw
+      .split(',')
+      .map((x) => Number(x.trim()))
+      .filter((x) => Number.isFinite(x));
+    if (parts.length !== 4) return [50, 40, 320, 110];
+    return parts;
+  })();
+
   const pdfDoc = await PDFDocument.load(input.pdf, { updateMetadata: false });
+  const firstPage = pdfDoc.getPages()[0];
   pdflibAddPlaceholder({
-    pdfDoc,
+    pdfPage: firstPage,
     reason: opts.reason ?? 'Approved',
     contactInfo: opts.contactInfo ?? '',
     name: opts.name ?? 'ByBridge',
@@ -56,6 +68,7 @@ export async function digitallySignPdfIfEnabled(input: {
     signingTime: opts.signingTime,
     signatureLength: Number(process.env.PDF_PKI_SIGNATURE_LENGTH ?? '') || 8192,
     appName: opts.appName,
+    widgetRect,
   });
   const pdfWithPlaceholder = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 
@@ -63,4 +76,3 @@ export async function digitallySignPdfIfEnabled(input: {
   const signed = await signpdf.sign(pdfWithPlaceholder, signer, opts.signingTime);
   return Buffer.from(signed);
 }
-
