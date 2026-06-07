@@ -82,7 +82,6 @@ export default async function DashboardPage() {
                 <table className="min-w-full text-sm">
                   <thead className="text-left text-black/60">
                     <tr className="border-b border-black/5">
-                      <th className="px-3 py-2 font-medium">ID</th>
                       <th className="px-3 py-2 font-medium">Type</th>
                       <th className="px-3 py-2 font-medium">Company Name</th>
                       <th className="px-3 py-2 font-medium">Application Date</th>
@@ -97,7 +96,6 @@ export default async function DashboardPage() {
                       const typeLabel = r.type === 'REGISTER_COMPANY' ? 'Register Company' : 'Transfer of Company Secretary';
                       return (
                         <tr key={r.id} className="border-b border-black/5">
-                          <td className="px-3 py-2">{r.id}</td>
                           <td className="px-3 py-2">{typeLabel}</td>
                           <td className="px-3 py-2">{r.companyName}</td>
                           <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
@@ -122,7 +120,7 @@ export default async function DashboardPage() {
                     })}
                     {incRows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-3 py-10 text-center text-black/40">
+                        <td colSpan={6} className="px-3 py-10 text-center text-black/40">
                           No data
                         </td>
                       </tr>
@@ -158,7 +156,6 @@ export default async function DashboardPage() {
                 <table className="min-w-full text-sm">
                   <thead className="text-left text-black/60">
                     <tr className="border-b border-black/5">
-                      <th className="px-3 py-2 font-medium">ID</th>
                       <th className="px-3 py-2 font-medium">Type</th>
                       <th className="px-3 py-2 font-medium">Company Name</th>
                       <th className="px-3 py-2 font-medium">Application Date</th>
@@ -236,7 +233,6 @@ export default async function DashboardPage() {
                       })();
                       return (
                         <tr key={r.id} className="border-b border-black/5">
-                          <td className="px-3 py-2">{r.id}</td>
                           <td className="px-3 py-2">{map.typeLabel}</td>
                           <td className="px-3 py-2">{r.companyName}</td>
                           <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
@@ -269,7 +265,7 @@ export default async function DashboardPage() {
                     })}
                     {csRows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-3 py-10 text-center text-black/40">
+                        <td colSpan={6} className="px-3 py-10 text-center text-black/40">
                           No data
                         </td>
                       </tr>
