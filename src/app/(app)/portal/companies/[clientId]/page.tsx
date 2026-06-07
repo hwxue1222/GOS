@@ -1,0 +1,212 @@
+import Link from 'next/link';
+
+import AppTopNav from '@/components/AppTopNav';
+import { getCurrentUser } from '@/lib/auth';
+import { readDb } from '@/lib/db';
+
+function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
+  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
+  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
+  return true;
+}
+
+function canAccessClient(db: Awaited<ReturnType<typeof readDb>>, user: { role: string; email: string }, clientId: string) {
+  if (user.role !== 'client') return true;
+  const emailKey = user.email.trim().toLowerCase();
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  for (const r of db.clientPartyRoles) {
+    if (r.clientId !== clientId) continue;
+    if (!isActiveRole(r)) continue;
+    const party = partyById.get(r.partyId);
+    if (!party || party.type !== 'PERSON' || !party.personId) continue;
+    const person = personById.get(party.personId);
+    if (!person) continue;
+    if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+    return true;
+  }
+  return false;
+}
+
+function money(currency?: string, amount?: number) {
+  if (!currency || typeof amount !== 'number' || !Number.isFinite(amount)) return '-';
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function date10(value?: string) {
+  const s = String(value ?? '').trim();
+  return s ? s.slice(0, 10) : '-';
+}
+
+function DlRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-3 py-2 border-t border-black/5">
+      <div className="text-sm text-black/50">{label}</div>
+      <div className="sm:col-span-2 text-sm text-black">{value}</div>
+    </div>
+  );
+}
+
+export default async function PortalCompanyDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
+  const me = await getCurrentUser();
+  if (!me) return null;
+
+  const { clientId } = await params;
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === clientId && !c.deletedAt) ?? null;
+  if (!client) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppTopNav active="dashboard" />
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">NOT_FOUND</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canAccessClient(db, me, clientId)) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppTopNav active="dashboard" />
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const activeRoles = db.clientPartyRoles
+    .filter((r) => r.clientId === clientId)
+    .filter((r) => isActiveRole(r))
+    .map((r) => {
+      const party = partyById.get(r.partyId);
+      if (!party) return null;
+      if (party.type === 'PERSON' && party.personId) {
+        const person = personById.get(party.personId);
+        if (!person) return null;
+        return { role: r.role, name: person.fullName, email: person.email, phone: person.phone };
+      }
+      if (party.type === 'COMPANY' && party.clientId) {
+        const c = db.clients.find((x) => x.id === party.clientId);
+        if (!c) return null;
+        return { role: r.role, name: c.name };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{ role: string; name: string; email?: string; phone?: string }>;
+
+  const byRole = (role: string) => activeRoles.filter((x) => x.role === role).map((x) => x.name);
+  const directors = byRole('DIRECTOR');
+  const secretaries = byRole('SECRETARY');
+  const shareholders = byRole('SHAREHOLDER');
+  const rorc = byRole('RORC');
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <AppTopNav active="dashboard" />
+      <div className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="text-sm text-[#2f7bdc]">
+            <Link href="/dashboard" className="hover:underline">
+              Home
+            </Link>
+            <span className="mx-2 text-black/30">/</span>
+            <span className="text-black/70">Company details</span>
+          </div>
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <div>
+              <div className="text-2xl font-bold">Company details</div>
+              <div className="mt-1 text-sm text-black/50">{client.code}</div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <div className="rounded-xl bg-white border border-black/5 p-5">
+                <div className="flex items-center gap-2">
+                  <div className="text-base font-semibold">{client.name}</div>
+                  {client.isStruckOff ? (
+                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                      Struck Off
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <DlRow label="Company registration no." value={client.companyRegistrationNo ?? '-'} />
+                  <DlRow label="FYE" value={client.fye ?? '-'} />
+                  <DlRow label="Entity status" value={client.entityStatus ?? '-'} />
+                  <DlRow label="Incorporation date" value={date10(client.incorporationDate)} />
+                  <DlRow label="Registered office address" value={client.registeredOfficeAddress ?? '-'} />
+                  <DlRow label="Address" value={client.address ?? '-'} />
+                  <DlRow label="Contact" value={client.contactPerson ?? '-'} />
+                  <DlRow label="Email" value={client.email ?? '-'} />
+                  <DlRow label="Phone" value={client.phone ?? '-'} />
+                  <DlRow label="Paid-up capital" value={money(client.paidUpCapitalCurrency, client.paidUpCapitalAmount)} />
+                  <DlRow label="Total shares" value={typeof client.totalShares === 'number' ? client.totalShares.toLocaleString() : '-'} />
+                  <DlRow label="SSIC (Primary)" value={client.ssicPrimaryCode ?? '-'} />
+                  <DlRow label="SSIC (Secondary)" value={client.ssicSecondaryCode ?? '-'} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-xl bg-white border border-black/5 p-5">
+                <div className="text-sm font-semibold">People & roles</div>
+                <div className="mt-3 space-y-3 text-sm">
+                  <div>
+                    <div className="text-black/50">Directors</div>
+                    <div className="mt-1 text-black">{directors.length ? directors.join(', ') : '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-black/50">Secretaries</div>
+                    <div className="mt-1 text-black">{secretaries.length ? secretaries.join(', ') : '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-black/50">Shareholders</div>
+                    <div className="mt-1 text-black">{shareholders.length ? shareholders.join(', ') : '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-black/50">RORC</div>
+                    <div className="mt-1 text-black">{rorc.length ? rorc.join(', ') : '-'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white border border-black/5 p-5">
+                <div className="text-sm font-semibold">Corporate Secretary Services</div>
+                <div className="mt-3 flex flex-col gap-2">
+                  <Link
+                    href={`/corporate-secretary/applications?companyId=${encodeURIComponent(client.id)}`}
+                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                  >
+                    View applications
+                  </Link>
+                  <Link
+                    href={`/corporate-secretary/applications/new/director-change?companyId=${encodeURIComponent(client.id)}`}
+                    className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
+                  >
+                    New change of director
+                  </Link>
+                  <Link
+                    href={`/secretary/share-transfers?clientId=${encodeURIComponent(client.id)}`}
+                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                  >
+                    New transfer of shares
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

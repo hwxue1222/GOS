@@ -21,7 +21,7 @@ function MenuButton(props: { active: boolean; label: string; onClick: () => void
     <button
       onClick={props.onClick}
       className={[
-        'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+        'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap hover:shadow-sm',
         props.active ? 'text-black' : 'text-black/70 hover:text-black hover:bg-black/5',
       ].join(' ')}
     >
@@ -82,7 +82,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
   function switchCompany(id: string) {
     setCurrentCompanyId(id);
     window.localStorage.setItem('gos.currentCompanyId', id);
-    router.push(`/secretary/companies/${encodeURIComponent(id)}`);
+    router.push(`/portal/companies/${encodeURIComponent(id)}`);
   }
 
   function goCompanyService(service: 'director' | 'share_transfer') {
@@ -96,7 +96,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
 
   return (
     <header className="bg-white border-b border-black/5">
-      <div className="h-14 px-4 flex items-center justify-between max-w-6xl mx-auto">
+      <div className="min-h-14 px-4 py-2 flex items-center justify-between gap-4 flex-wrap max-w-6xl mx-auto">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <div className="h-8 w-8 rounded-md bg-[#c62828]/10 text-[#c62828] flex items-center justify-center font-semibold">B</div>
@@ -107,7 +107,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
             <Link
               href="/dashboard"
               className={[
-                'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap hover:shadow-sm',
                 active === 'dashboard' ? 'text-black' : 'text-black/70 hover:text-black hover:bg-black/5',
               ].join(' ')}
             >
