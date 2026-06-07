@@ -73,7 +73,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
 
   const pendingDirectorRows = buildSecretaryServiceApplications(db, allowedClientIds)
     .filter((r) => r.type === 'DIRECTOR_CHANGE')
-    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'SIGNING')
     .map((r) => ({
       id: `DCR-${r.source.id}`,
       typeLabel: 'Change of Director',
@@ -96,7 +96,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
   };
 
   const companyUpdateRows = (db.companyUpdateRequests ?? [])
-    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'PENDING_SIGNATURES')
     .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
     .map((r) => {
       const company = db.clients.find((c) => c.id === r.clientId);
@@ -108,14 +108,14 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
         companyName,
         applicationDate: r.createdAt,
         editDate: r.updatedAt ?? r.createdAt,
-        status: r.status,
+        status: r.status === 'PENDING_SIGNATURES' ? 'SIGNING' : r.status,
         detailsHref: `/corporate-secretary/applications/company-update/${encodeURIComponent(r.id)}`,
         decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/company-update-requests/${encodeURIComponent(r.id)}/decision`,
       };
     });
 
   const rorcRows = (db.rorcDeclarationRequests ?? [])
-    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'PENDING_SIGNATURES')
     .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
     .map((r) => {
       const company = db.clients.find((c) => c.id === r.clientId);
@@ -127,14 +127,14 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
         companyName,
         applicationDate: r.createdAt,
         editDate: r.updatedAt ?? r.createdAt,
-        status: r.status,
+        status: r.status === 'PENDING_SIGNATURES' ? 'SIGNING' : r.status,
         detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.id)}`,
         decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/rorc-declaration-requests/${encodeURIComponent(r.id)}/decision`,
       };
     });
 
   const agmRows = (db.annualGeneralMeetingRequests ?? [])
-    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'PENDING_SIGNATURES')
     .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
     .map((r) => {
       const company = db.clients.find((c) => c.id === r.clientId);
@@ -146,7 +146,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
         companyName,
         applicationDate: r.createdAt,
         editDate: r.updatedAt ?? r.createdAt,
-        status: r.status,
+        status: r.status === 'PENDING_SIGNATURES' ? 'SIGNING' : r.status,
         detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.id)}`,
         decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/annual-general-meeting-requests/${encodeURIComponent(r.id)}/decision`,
       };

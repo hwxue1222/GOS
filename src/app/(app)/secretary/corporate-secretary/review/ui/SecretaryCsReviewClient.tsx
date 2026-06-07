@@ -68,7 +68,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                 <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
                 <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>
                 <td className="px-3 py-2">
-                  <span className="text-[#16a34a]">{r.status}</span>
+                  <span className={r.status === 'PENDING_REVIEW' ? 'text-[#16a34a]' : r.status === 'SIGNING' ? 'text-[#d97706]' : 'text-black/70'}>{r.status}</span>
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -78,27 +78,33 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                     >
                       Details
                     </Link>
-                    <button
-                      disabled={!!busyId}
-                      onClick={() => void decide(r, 'APPROVE')}
-                      className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      disabled={!!busyId}
-                      onClick={() => void decide(r, 'NEED_MORE_INFO')}
-                      className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                    >
-                      Need more info
-                    </button>
-                    <button
-                      disabled={!!busyId}
-                      onClick={() => void decide(r, 'REJECT')}
-                      className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                    >
-                      Reject
-                    </button>
+                    {r.status === 'PENDING_REVIEW' ? (
+                      <>
+                        <button
+                          disabled={!!busyId}
+                          onClick={() => void decide(r, 'APPROVE')}
+                          className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          disabled={!!busyId}
+                          onClick={() => void decide(r, 'NEED_MORE_INFO')}
+                          className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                        >
+                          Need more info
+                        </button>
+                        <button
+                          disabled={!!busyId}
+                          onClick={() => void decide(r, 'REJECT')}
+                          className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-xs text-black/50">Waiting for signatures</div>
+                    )}
                   </div>
                 </td>
               </tr>

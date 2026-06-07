@@ -86,7 +86,7 @@ export default async function SecretaryAcraFilingPage() {
 
   const csRows = buildSecretaryServiceApplications(db, allowedClientIds)
     .filter((r) => r.type !== 'SHARE_TRANSFER')
-    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'SIGNING')
     .map((r) => {
       const map = (() => {
         if (r.type === 'DIRECTOR_CHANGE') {
