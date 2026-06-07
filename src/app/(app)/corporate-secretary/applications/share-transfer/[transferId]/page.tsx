@@ -2,6 +2,7 @@ import Link from 'next/link';
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
+import { getSignerIdentityForClient } from '@/lib/signerInfo';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -134,7 +135,14 @@ export default async function ShareTransferApplicationDetailPage({
                 <div className="mt-2 space-y-2">
                   {staSigns.map((s) => (
                     <div key={s.id} className="rounded-md bg-white border border-black/5 px-3 py-2">
-                      <div className="text-sm font-medium truncate">{s.email}</div>
+                      <div className="text-sm font-medium truncate">
+                        {(() => {
+                          const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
+                          const left = meta.fullName ? meta.fullName : s.email;
+                          const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
+                          return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
+                        })()}
+                      </div>
                       <div className="mt-0.5 text-xs text-black/50">{s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}</div>
                     </div>
                   ))}
@@ -147,7 +155,14 @@ export default async function ShareTransferApplicationDetailPage({
                 <div className="mt-2 space-y-2">
                   {brSigns.map((s) => (
                     <div key={s.id} className="rounded-md bg-white border border-black/5 px-3 py-2">
-                      <div className="text-sm font-medium truncate">{s.email}</div>
+                      <div className="text-sm font-medium truncate">
+                        {(() => {
+                          const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
+                          const left = meta.fullName ? meta.fullName : s.email;
+                          const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
+                          return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
+                        })()}
+                      </div>
                       <div className="mt-0.5 text-xs text-black/50">{s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}</div>
                     </div>
                   ))}

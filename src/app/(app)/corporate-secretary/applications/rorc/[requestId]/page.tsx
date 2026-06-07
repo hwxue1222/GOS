@@ -2,6 +2,7 @@ import Link from 'next/link';
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { getRorcDeclarationRequestContext, readDb } from '@/lib/db';
+import { getSignerIdentityForClient } from '@/lib/signerInfo';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -63,6 +64,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
   }
 
   const r = ctx.request;
+  const db = await readDb();
   const docHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?download=1`;
   const previewHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?disposition=inline`;
 
@@ -116,7 +118,14 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {ctx.signatures.map((s) => (
                 <div key={s.id} className="rounded-md bg-[#f8fafc] border border-black/5 px-3 py-2">
-                  <div className="text-sm font-medium truncate">{s.email}</div>
+                  <div className="text-sm font-medium truncate">
+                    {(() => {
+                      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
+                      const left = meta.fullName ? meta.fullName : s.email;
+                      const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
+                      return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
+                    })()}
+                  </div>
                   <div className="mt-0.5 text-xs text-black/50">
                     {s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}
                   </div>

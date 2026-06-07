@@ -2,6 +2,7 @@ import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import DeleteActionClient from '@/components/DeleteActionClient';
+import { getSignerIdentityForClient } from '@/lib/signerInfo';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -222,7 +223,14 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                     <div className="mt-2 space-y-1">
                       {signatures.map((s) => (
                         <div key={s.email} className="flex items-center justify-between gap-3">
-                          <div className="truncate">{s.email}</div>
+                          <div className="truncate">
+                            {(() => {
+                              const meta = getSignerIdentityForClient(db, req.clientId, s.email);
+                              const left = meta.fullName ? meta.fullName : s.email;
+                              const right = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
+                              return left === s.email ? right : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
+                            })()}
+                          </div>
                           <div className="shrink-0 text-black/60">{s.status}</div>
                         </div>
                       ))}
