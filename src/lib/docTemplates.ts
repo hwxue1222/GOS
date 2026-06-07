@@ -197,6 +197,7 @@ export function renderCompanyUpdateRequestHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;
   directors?: Array<{ fullName: string; email?: string }>;
+  resolutionDateYmd?: string;
   type:
     | 'CHANGE_COMPANY_NAME'
     | 'CHANGE_FINANCIAL_YEAR_END'
@@ -214,7 +215,13 @@ export function renderCompanyUpdateRequestHtml(input: {
 }) {
   const companyName = esc(input.companyName);
   const companyRegistrationNo = input.companyRegistrationNo ? esc(input.companyRegistrationNo) : '';
-  const now = new Date().toISOString().slice(0, 10);
+  const nowYmd = (input.resolutionDateYmd ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+
+  const toDdMmYyyy = (ymd: string) => {
+    const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return ymd;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  };
 
   const fmtDirector = (d: { fullName: string; email?: string }) => {
     const name = String(d.fullName ?? '').trim();
@@ -236,6 +243,57 @@ export function renderCompanyUpdateRequestHtml(input: {
 
   const p = input.payload ?? {};
 
+  if (input.type === 'CHANGE_FINANCIAL_YEAR_END') {
+    const oldFye = (input.original.fye ?? '-').trim() || '-';
+    const newFye = String(p.newFye ?? '').trim() || '-';
+    const directorNames = (input.directors ?? [])
+      .map((d) => String(d.fullName ?? '').trim())
+      .filter(Boolean);
+
+    const signatureBlocks = (directorNames.length ? directorNames : ['']).
+      map((name) => {
+        const nameHtml = name ? `<div style="margin-top: 12px;"><strong>${esc(name)}</strong></div>` : '<div style="margin-top: 12px;">________________</div>';
+        return `<div style="margin-top: 18px;">Director:</div><div style="margin-top: 10px;">_____________</div>${nameHtml}`;
+      })
+      .join('');
+
+    const dated = toDdMmYyyy(nowYmd);
+    return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Change of Financial Year End (FYE)</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .muted { color: #555; font-size: 12px; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${companyName}</div>
+    <div class="block"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
+    <div class="muted">(Incorporated in the Republic of Singapore)</div>
+
+    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
+
+    <div class="subtitle">RESOLVED –</div>
+    <div class="subtitle" style="font-weight: 700;">CHANGE OF FINANCIAL YEAR END DATE</div>
+    <div class="block">
+      That the financial year end date of the Company is changed from <strong>${esc(oldFye)}</strong> to <strong>${esc(newFye)}</strong> and determine that the next financial year end date of the Company is effective immediately following its last financial year.
+    </div>
+
+    ${signatureBlocks}
+    <div style="margin-top: 18px;"><strong>Dated</strong>: ${esc(dated)}</div>
+  </body>
+</html>
+`.trim();
+  }
+
   const lines: string[] = [];
   lines.push('WRITTEN RESOLUTION OF THE DIRECTORS');
   lines.push('');
@@ -255,11 +313,6 @@ export function renderCompanyUpdateRequestHtml(input: {
     lines.push(`3. Meeting time: ${startDate}.`);
     lines.push(`4. Meeting venue: ${meetingVenue}.`);
     lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
-  } else if (input.type === 'CHANGE_FINANCIAL_YEAR_END') {
-    const originalFye = (input.original.fye ?? '-').trim() || '-';
-    const newFye = String(p.newFye ?? '').trim() || '-';
-    lines.push(`1. The Financial Year End (FYE) of the Company be changed from "${originalFye}" to "${newFye}".`);
-    lines.push('2. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
   } else if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
     const original = (input.original.registeredOfficeAddress ?? '-').trim() || '-';
     const next = String(p.newRegisteredOfficeAddress ?? '').trim() || '-';
@@ -326,7 +379,7 @@ export function renderCompanyUpdateRequestHtml(input: {
   </head>
   <body>
     <h1>Board Resolution</h1>
-    <div class="muted">Date: ${esc(now)}</div>
+    <div class="muted">Date: ${esc(nowYmd)}</div>
     <div class="box" style="margin-top: 12px;">
       <div><strong>Title</strong>: ${esc(title)}</div>
       <div style="margin-top: 10px; white-space: pre-wrap;">${esc(summaryText)}</div>

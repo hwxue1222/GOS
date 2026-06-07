@@ -7718,6 +7718,7 @@ export async function createCompanyUpdateRequest(input: {
     companyName: client.name,
     companyRegistrationNo: client.companyRegistrationNo,
     directors: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email })),
+    resolutionDateYmd: now.slice(0, 10),
     type,
     original: {
       fye: client.fye ?? undefined,
