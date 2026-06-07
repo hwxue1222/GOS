@@ -2,6 +2,30 @@ function esc(s: string) {
   return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function normalizeFyeDdMm(input: string) {
+  const s = String(input ?? '').trim();
+  if (!s) return '';
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m1) {
+    const dd = String(Number(m1[1])).padStart(2, '0');
+    const mm = String(Number(m1[2])).padStart(2, '0');
+    return `${dd}/${mm}`;
+  }
+  const m2 = s.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (m2) {
+    const a = Number(m2[1]);
+    const b = Number(m2[2]);
+    const aa = String(a).padStart(2, '0');
+    const bb = String(b).padStart(2, '0');
+    if (a > 12) return `${aa}/${bb}`;
+    if (b > 12) return `${bb}/${aa}`;
+    return `${bb}/${aa}`;
+  }
+  const m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m3) return `${m3[3]}/${m3[2]}`;
+  return s;
+}
+
 export function renderRdrAuthorizationHtml(input: {
   companyName: string;
   representativeName?: string;
@@ -244,8 +268,10 @@ export function renderCompanyUpdateRequestHtml(input: {
   const p = input.payload ?? {};
 
   if (input.type === 'CHANGE_FINANCIAL_YEAR_END') {
-    const oldFye = (input.original.fye ?? '-').trim() || '-';
-    const newFye = String(p.newFye ?? '').trim() || '-';
+    const oldFyeRaw = (input.original.fye ?? '-').trim() || '-';
+    const newFyeRaw = String(p.newFye ?? '').trim() || '-';
+    const oldFye = normalizeFyeDdMm(oldFyeRaw) || oldFyeRaw;
+    const newFye = normalizeFyeDdMm(newFyeRaw) || newFyeRaw;
     const directorNames = (input.directors ?? [])
       .map((d) => String(d.fullName ?? '').trim())
       .filter(Boolean);

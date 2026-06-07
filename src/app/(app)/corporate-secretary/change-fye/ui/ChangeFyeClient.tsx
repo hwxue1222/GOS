@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 
-function toMmDd(dateIso: string) {
+function toDdMm(dateIso: string) {
   const d = new Date(`${dateIso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return '';
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  return `${mm}-${dd}`;
+  return `${dd}/${mm}`;
 }
 
 export default function ChangeFyeClient() {
@@ -30,8 +30,8 @@ export default function ChangeFyeClient() {
       setSubmitError('NO_COMPANY');
       return;
     }
-    const mmdd = toMmDd(newFyeDate);
-    if (!mmdd) {
+    const ddmm = toDdMm(newFyeDate);
+    if (!ddmm) {
       setSubmitError('Please select a date.');
       return;
     }
@@ -42,7 +42,7 @@ export default function ChangeFyeClient() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           type: 'CHANGE_FINANCIAL_YEAR_END',
-          payload: { originalFye: original, newFye: mmdd, rawDate: newFyeDate },
+          payload: { originalFye: original, newFye: ddmm, rawDate: newFyeDate },
         }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
@@ -93,4 +93,3 @@ export default function ChangeFyeClient() {
     </ModalShell>
   );
 }
-

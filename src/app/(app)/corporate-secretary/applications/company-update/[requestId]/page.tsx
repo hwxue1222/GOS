@@ -18,6 +18,30 @@ function typeLabel(t: string) {
   return t;
 }
 
+function normalizeFyeDdMm(input: string) {
+  const s = String(input ?? '').trim();
+  if (!s) return '';
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m1) {
+    const dd = String(Number(m1[1])).padStart(2, '0');
+    const mm = String(Number(m1[2])).padStart(2, '0');
+    return `${dd}/${mm}`;
+  }
+  const m2 = s.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (m2) {
+    const a = Number(m2[1]);
+    const b = Number(m2[2]);
+    const aa = String(a).padStart(2, '0');
+    const bb = String(b).padStart(2, '0');
+    if (a > 12) return `${aa}/${bb}`;
+    if (b > 12) return `${bb}/${aa}`;
+    return `${bb}/${aa}`;
+  }
+  const m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m3) return `${m3[3]}/${m3[2]}`;
+  return s;
+}
+
 export default async function CompanyUpdateApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -97,11 +121,14 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
       ];
     }
     if (req.type === 'CHANGE_FINANCIAL_YEAR_END') {
+      const before = normalizeFyeDdMm(company.fye ?? '-') || (company.fye ?? '-');
+      const afterRaw = String(payload.newFye ?? '');
+      const after = normalizeFyeDdMm(afterRaw) || afterRaw;
       return [
         {
           k: 'FYE',
-          before: company.fye ?? '-',
-          after: String(payload.newFye ?? ''),
+          before,
+          after,
         },
       ];
     }
