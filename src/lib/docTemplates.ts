@@ -343,12 +343,13 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     const signatureBlocks = (directors.length ? directors : [{ fullName: '', email: undefined }])
       .map((d) => {
-        const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
+        const nameHtml = d.fullName
+          ? `<div class="sig-name"><strong><span class="red">${esc(d.fullName)}</span></strong></div>`
+          : '<div class="sig-name">________________</div>';
         const emailKey = d.email ? esc(d.email.toLowerCase()) : '';
         const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
         return `
 <div class="sig-block">
-  <div>Director:</div>
   <div class="sig-line">${marker}</div>
   ${nameHtml}
 </div>
@@ -365,40 +366,47 @@ export function renderCompanyUpdateRequestHtml(input: {
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Change of Registered Office Address</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 24px; color: #111; font-size: 14px; }
       .muted { color: #555; font-size: 12px; }
-      .title { font-size: 18px; font-weight: 700; margin: 0; }
-      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
-      .block { margin-top: 14px; }
-      .red { color: #dc2626; font-weight: 700; }
+      .center { text-align: center; }
+      .title { font-size: 16px; font-weight: 700; margin: 0; }
+      .subtitle { margin-top: 12px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 12px; }
+      .red { color: #ee0000; }
+      .underline { text-decoration: underline; }
       .sig-block { margin-top: 18px; }
-      .sig-line { width: 420px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-line { width: 260px; height: 18px; border-bottom: 1px solid #666; position: relative; margin-top: 10px; }
       .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
-      .sig-name { margin-top: 2px; }
+      .sig-name { margin-top: 4px; }
     </style>
   </head>
   <body>
-    <div class="title">${companyName}</div>
-    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
-    <div class="muted">(Incorporated in the Republic of Singapore)</div>
+    <div class="center">
+      <div class="title"><span class="red">${companyName}</span></div>
+      <div class="block" style="margin-top: 0;"><span>Co. Reg. No.: </span><span class="red">${companyRegistrationNo || '__________'}</span></div>
+      <div class="muted">(Incorporated in the Republic of Singapore)</div>
+    </div>
 
-    <div style="height: 14px;"></div>
+    <div style="height: 16px;"></div>
 
     <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
-    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
 
+    <div style="height: 14px;"></div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
+
+    <div style="height: 10px;"></div>
     <div class="subtitle">RESOLVED –</div>
-    <div class="subtitle" style="font-weight: 700;">CHANGE OF REGISTERED OFFICE ADDRESS</div>
+    <div class="subtitle underline">CHANGE OF REGISTERED ADDRESS</div>
+
     <div class="block" style="white-space: pre-wrap;">
-      That the registered office address of the Company is changed from
-      <span class="red">${esc(oldAddr)}</span>
-      to
-      <span class="red">${esc(newAddr)}</span>.
+      That the registered office address of the Company be changed from <span class="red underline">${esc(oldAddr)}</span> to <span class="red underline">${esc(newAddr)}</span> from immediate effect.
     </div>
-    <div class="block">Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.</div>
+
+    <div style="height: 18px;"></div>
+    <div class="block">Directors:</div>
 
     ${signatureBlocks}
-    <div style="margin-top: 18px;"><strong>Dated</strong>: ${esc(dated)}</div>
+    <div style="margin-top: 18px;">Date: <span class="red">${esc(dated)}</span></div>
   </body>
 </html>
 `.trim();
