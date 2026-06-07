@@ -410,7 +410,6 @@ export default function MembersClient() {
             <span className="text-black/70">Members</span>
           </div>
           <div className="mt-1 text-2xl font-bold">Members</div>
-          <div className="mt-1 text-sm text-black/50">Assign roles in company detail.</div>
         </div>
         <div className="flex items-center gap-2 w-full justify-end">
           <button
