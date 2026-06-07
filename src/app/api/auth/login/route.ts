@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSession, findUserByEmailOrName } from '@/lib/db';
+import { createSession, findUserByEmailOrName, touchPersonLastLoginDateByEmail } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { SESSION_COOKIE } from '@/lib/auth';
 
@@ -27,6 +27,11 @@ export async function POST(req: Request) {
     if (!ok) return NextResponse.json({ ok: false, error: 'INVALID_LOGIN' }, { status: 401 });
 
     const session = await createSession(user.id);
+
+    if (user.role === 'client') {
+      await touchPersonLastLoginDateByEmail(user.email).catch(() => null);
+    }
+
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, session.token, {
       httpOnly: true,

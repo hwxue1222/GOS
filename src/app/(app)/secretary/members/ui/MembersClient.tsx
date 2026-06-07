@@ -124,6 +124,10 @@ export default function MembersClient() {
   const [creating, setCreating] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordOk, setPasswordOk] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -322,7 +326,47 @@ export default function MembersClient() {
       dob: m.dob ?? '',
       address: m.address ?? '',
     });
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setPasswordError(null);
+    setPasswordOk(null);
     setEditingMemberId(memberId);
+  }
+
+  async function changeMemberPassword() {
+    if (!editingMemberId) return;
+    const m = members.find((x) => x.id === editingMemberId);
+    if (!m?.lastLoginDate) return;
+
+    setPasswordError(null);
+    setPasswordOk(null);
+    const newPassword = passwordForm.newPassword.trim();
+    const confirmPassword = passwordForm.confirmPassword.trim();
+    if (newPassword.length < 6) {
+      setPasswordError('INVALID_PASSWORD');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('PASSWORD_MISMATCH');
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const res = await fetch(`/api/secretary/members/${encodeURIComponent(editingMemberId)}/password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!res?.ok || !j?.ok) {
+        setPasswordError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setPasswordOk('Password updated');
+    } finally {
+      setPasswordSaving(false);
+    }
   }
 
   async function saveEdit() {
@@ -697,6 +741,53 @@ export default function MembersClient() {
                 </label>
               ) : null}
             </div>
+
+            {(() => {
+              const m = members.find((x) => x.id === editingMemberId);
+              if (!m?.lastLoginDate) return null;
+              return (
+                <div className="mt-6 rounded-xl border border-black/10 p-4">
+                  <div className="text-sm font-semibold">Login password</div>
+                  <div className="mt-1 text-xs text-black/50">Member has logged in before. You can update the login password here.</div>
+
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="text-sm">
+                      <div className="text-black/60">New password</div>
+                      <input
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm((v) => ({ ...v, newPassword: e.target.value }))}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        placeholder="At least 6 characters"
+                      />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-black/60">Confirm password</div>
+                      <input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm((v) => ({ ...v, confirmPassword: e.target.value }))}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        placeholder="Repeat"
+                      />
+                    </label>
+                  </div>
+
+                  {passwordError ? <div className="mt-2 text-sm text-red-600">{passwordError}</div> : null}
+                  {passwordOk ? <div className="mt-2 text-sm text-[#16a34a]">{passwordOk}</div> : null}
+
+                  <div className="mt-3 flex items-center justify-end">
+                    <button
+                      disabled={passwordSaving}
+                      onClick={() => void changeMemberPassword()}
+                      className="rounded-lg bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-60"
+                    >
+                      {passwordSaving ? 'Updating...' : 'Update password'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
 

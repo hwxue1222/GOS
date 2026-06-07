@@ -6463,7 +6463,35 @@ export async function importPersons(input: {
 }
 
 function makeTempPassword() {
-  return randomBytes(9).toString('base64url');
+  return '123456';
+}
+
+export async function touchPersonLastLoginDateByEmail(email: string) {
+  const emailKey = email.trim().toLowerCase();
+  if (!emailKey) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const db = await readDb();
+  const idx = db.persons.findIndex((p) => (p.email ?? '').trim().toLowerCase() === emailKey);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const now = nowIso();
+  const prev = db.persons[idx];
+  db.persons[idx] = { ...prev, lastLoginDate: now, updatedAt: now };
+  await writeDb(db);
+  return { ok: true as const };
+}
+
+export async function setClientPasswordForPerson(input: { personId: string; newPassword: string }) {
+  const personId = input.personId.trim();
+  const newPassword = input.newPassword;
+  if (!personId || !newPassword) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const db = await readDb();
+  const person = db.persons.find((p) => p.id === personId) ?? null;
+  const email = person?.email?.trim() ?? '';
+  if (!person || !email) return { ok: false as const, error: 'NOT_FOUND' as const };
+  if (!person.lastLoginDate) return { ok: false as const, error: 'NOT_LOGGED_IN' as const };
+  const user = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+  if (!user || user.role !== 'client') return { ok: false as const, error: 'NO_LOGIN' as const };
+  await setUserPassword(user.id, newPassword);
+  return { ok: true as const };
 }
 
 export async function createClientLoginForPerson(input: { personId: string }) {
