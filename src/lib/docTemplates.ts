@@ -334,6 +334,76 @@ export function renderCompanyUpdateRequestHtml(input: {
 `.trim();
   }
 
+  if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+    const oldAddr = String(input.original.registeredOfficeAddress ?? '-').trim() || '-';
+    const newAddr = String((p as { newRegisteredOfficeAddress?: unknown }).newRegisteredOfficeAddress ?? '').trim() || '-';
+    const directors = (input.directors ?? [])
+      .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
+      .filter((d) => !!d.fullName);
+
+    const signatureBlocks = (directors.length ? directors : [{ fullName: '', email: undefined }])
+      .map((d) => {
+        const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
+        const emailKey = d.email ? esc(d.email.toLowerCase()) : '';
+        const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
+        return `
+<div class="sig-block">
+  <div>Director:</div>
+  <div class="sig-line">${marker}</div>
+  ${nameHtml}
+</div>
+`.trim();
+      })
+      .join('');
+
+    const dated = toDdMmYyyy(nowYmd);
+    return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Change of Registered Office Address</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .muted { color: #555; font-size: 12px; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+      .red { color: #dc2626; font-weight: 700; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 420px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${companyName}</div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
+    <div class="muted">(Incorporated in the Republic of Singapore)</div>
+
+    <div style="height: 14px;"></div>
+
+    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
+
+    <div class="subtitle">RESOLVED –</div>
+    <div class="subtitle" style="font-weight: 700;">CHANGE OF REGISTERED OFFICE ADDRESS</div>
+    <div class="block" style="white-space: pre-wrap;">
+      That the registered office address of the Company is changed from
+      <span class="red">${esc(oldAddr)}</span>
+      to
+      <span class="red">${esc(newAddr)}</span>.
+    </div>
+    <div class="block">Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.</div>
+
+    ${signatureBlocks}
+    <div style="margin-top: 18px;"><strong>Dated</strong>: ${esc(dated)}</div>
+  </body>
+</html>
+`.trim();
+  }
+
   const lines: string[] = [];
   lines.push('WRITTEN RESOLUTION OF THE DIRECTORS');
   lines.push('');
@@ -353,15 +423,6 @@ export function renderCompanyUpdateRequestHtml(input: {
     lines.push(`3. Meeting time: ${startDate}.`);
     lines.push(`4. Meeting venue: ${meetingVenue}.`);
     lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
-  } else if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
-    const original = (input.original.registeredOfficeAddress ?? '-').trim() || '-';
-    const next = String(p.newRegisteredOfficeAddress ?? '').trim() || '-';
-    const useByBridge = Boolean((p as { useByBridgeRegisteredOfficeAddress?: unknown }).useByBridgeRegisteredOfficeAddress);
-    lines.push('1. The Registered Office Address of the Company be changed as follows:');
-    lines.push(`   From: ${original}`);
-    lines.push(`   To:   ${next}`);
-    lines.push(`2. Use ByBridge registered office address: ${useByBridge ? 'Yes' : 'No'}.`);
-    lines.push('3. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
   } else if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
     const p1 = String(p.ssicPrimaryCode ?? '').trim() || '-';
     const p2 = String(p.ssicSecondaryCode ?? '').trim() || '-';
