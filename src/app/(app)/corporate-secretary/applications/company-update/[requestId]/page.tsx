@@ -203,7 +203,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
               <div className="text-sm font-medium">Company</div>
               <div className="mt-2 text-sm text-black/70">
                 <div>Name: {company?.name ?? req.clientId}</div>
-                <div className="mt-1">Client ID: {req.clientId}</div>
+                <div className="mt-1">Company code: {company?.code ?? req.clientId}</div>
               </div>
               <div className="mt-4 text-sm font-medium">Timeline</div>
               <div className="mt-2 text-sm text-black/70">
