@@ -8,7 +8,7 @@ import FrontUserMenuClient from '@/components/FrontUserMenuClient';
 import type { Role } from '@/lib/types';
 import LanguageToggleClient from '@/components/LanguageToggleClient';
 
-type Company = { id: string; name: string; code: string };
+type Company = { id: string; name: string; code: string; isStruckOff?: boolean };
 
 type Props = {
   active: 'dashboard' | 'incorporation' | 'corporate-secretary';
@@ -69,17 +69,21 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
   const [open, setOpen] = useState<'inc' | 'cs' | null>(null);
   const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
 
+  const selectableCompanies = companies.filter((c) => !c.isStruckOff);
+
   useEffect(() => {
     const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
-    const valid = companies.some((c) => c.id === stored);
-    const next = valid ? stored : companies[0]?.id ?? '';
+    const valid = companies.some((c) => c.id === stored && !c.isStruckOff);
+    const next = valid ? stored : selectableCompanies[0]?.id ?? '';
     if (next) {
       setCurrentCompanyId(next);
       window.localStorage.setItem('gos.currentCompanyId', next);
     }
-  }, [companies]);
+  }, [companies, selectableCompanies]);
 
   function switchCompany(id: string) {
+    const c = companies.find((x) => x.id === id);
+    if (!c || c.isStruckOff) return;
     setCurrentCompanyId(id);
     window.localStorage.setItem('gos.currentCompanyId', id);
     router.push(`/portal/companies/${encodeURIComponent(id)}`);
@@ -212,12 +216,12 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
           <select
             value={currentCompanyId}
             onChange={(e) => switchCompany(e.target.value)}
-            disabled={!companies.length}
+            disabled={!selectableCompanies.length}
             className="w-[220px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
           >
-            {!companies.length ? <option value="">No companies</option> : null}
+            {!selectableCompanies.length ? <option value="">No companies</option> : null}
             {companies.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.id} disabled={!!c.isStruckOff}>
                 {c.name}
               </option>
             ))}

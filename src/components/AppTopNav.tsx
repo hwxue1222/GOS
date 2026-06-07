@@ -69,7 +69,12 @@ export default async function AppTopNav({ active }: Props) {
     const companies = db.clients
       .filter((c) => !c.deletedAt)
       .filter((c) => allowed.has(c.id))
-      .map((c) => ({ id: c.id, name: c.name, code: c.code }))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        code: c.code,
+        isStruckOff: Boolean(c.isStruckOff || (c.entityStatus ?? '').toLowerCase().includes('struck off')),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const frontActive: 'dashboard' | 'incorporation' | 'corporate-secretary' =

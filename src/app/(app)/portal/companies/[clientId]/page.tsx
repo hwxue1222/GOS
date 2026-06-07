@@ -201,30 +201,6 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-xl bg-white border border-black/5 p-5">
-                <div className="text-sm font-semibold">Corporate Secretary Services</div>
-                <div className="mt-3 flex flex-col gap-2">
-                  <Link
-                    href={`/corporate-secretary/applications?companyId=${encodeURIComponent(client.id)}`}
-                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                  >
-                    View applications
-                  </Link>
-                  <Link
-                    href={`/corporate-secretary/applications/new/director-change?companyId=${encodeURIComponent(client.id)}`}
-                    className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
-                  >
-                    New change of director
-                  </Link>
-                  <Link
-                    href={`/secretary/share-transfers?clientId=${encodeURIComponent(client.id)}`}
-                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                  >
-                    New transfer of shares
-                  </Link>
-                </div>
-              </div>
             </div>
           </div>
         </div>
