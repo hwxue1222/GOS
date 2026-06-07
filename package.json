@@ -9,9 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@vercel/kv": "^3.0.0",
+    "@signpdf/placeholder-pdf-lib": "^3.3.0",
+    "@signpdf/signer-p12": "^3.3.0",
+    "@signpdf/signpdf": "^3.3.0",
     "@sparticuz/chromium": "^133.0.0",
+    "@vercel/kv": "^3.0.0",
     "next": "16.2.4",
+    "node-forge": "^1.4.0",
     "nodemailer": "^8.0.9",
     "pdf-lib": "^1.17.1",
     "puppeteer-core": "^24.12.0",

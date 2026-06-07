@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
+import { digitallySignPdfIfEnabled, isPdfPkiEnabled } from '@/lib/pdfPki';
 import type { Browser } from 'puppeteer-core';
 
 export const runtime = 'nodejs';
@@ -56,15 +57,15 @@ async function getBrowser() {
       const puppeteer = puppeteerMod.default ?? puppeteerMod;
 
       const envPath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || process.env.CHROME_EXECUTABLE_PATH?.trim();
-      const macCandidates = [
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        '/Applications/Chromium.app/Contents/MacOS/Chromium',
-      ];
-      const candidate = envPath || macCandidates.find((p) => fs.existsSync(p)) || null;
-      if (!candidate && process.platform === 'darwin') {
-        throw new Error('CHROME_NOT_FOUND_ON_MAC');
-      }
-      const executablePath = candidate || (await chromium.executablePath());
+      const chromiumPath = await chromium.executablePath();
+      const macCandidates = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium'];
+      const candidate =
+        (envPath && fs.existsSync(envPath) ? envPath : null) ||
+        (chromiumPath && fs.existsSync(chromiumPath) ? chromiumPath : null) ||
+        macCandidates.find((p) => fs.existsSync(p)) ||
+        null;
+      if (!candidate) throw new Error('CHROME_NOT_FOUND');
+      const executablePath = candidate;
       return puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -266,14 +267,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
         preferCSSPageSize: true,
       });
 
-      cacheSet(cacheKey, Buffer.from(pdf));
+      const pdfBuffer = Buffer.from(pdf);
+      const shouldPkiSign = packet?.status === 'SIGNED';
+      const signedPdfBuffer = await digitallySignPdfIfEnabled({
+        pdf: pdfBuffer,
+        shouldSign: shouldPkiSign,
+        signingTime: sigVersion ? new Date(sigVersion) : undefined,
+      });
+
+      cacheSet(cacheKey, signedPdfBuffer);
       const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
-      return new Response(new Blob([toArrayBuffer(pdf)], { type: 'application/pdf' }), {
+      return new Response(new Blob([toArrayBuffer(signedPdfBuffer)], { type: 'application/pdf' }), {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `${contentDisposition}; filename="${filenameBase}.pdf"`,
           'Cache-Control': 'no-store',
+          ...(isPdfPkiEnabled() && shouldPkiSign ? { 'X-Pdf-Digital-Signature': 'pki' } : {}),
         },
       });
     } finally {
@@ -281,16 +291,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes('CHROME_NOT_FOUND_ON_MAC')) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: 'CHROME_NOT_FOUND',
-          message: 'Install Google Chrome (macOS) or set PUPPETEER_EXECUTABLE_PATH / CHROME_EXECUTABLE_PATH to enable PDF generation.',
-        },
-        { status: 500 },
-      );
-    }
+    if (msg.includes('CHROME_NOT_FOUND'))
+      return NextResponse.json({ ok: false, error: 'CHROME_NOT_FOUND', message: 'Set PUPPETEER_EXECUTABLE_PATH / CHROME_EXECUTABLE_PATH to enable PDF generation.' }, { status: 500 });
     return NextResponse.json({ ok: false, error: 'PDF_FAILED', message: msg }, { status: 500 });
   }
 }
