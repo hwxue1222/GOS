@@ -21,7 +21,7 @@ function MenuButton(props: { active: boolean; label: string; onClick: () => void
     <button
       onClick={props.onClick}
       className={[
-        'px-3 py-2 rounded-md text-sm font-medium transition-colors',
+        'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
         props.active ? 'text-black' : 'text-black/70 hover:text-black hover:bg-black/5',
       ].join(' ')}
     >
@@ -52,7 +52,7 @@ function Dropdown(props: {
     <div ref={rootRef} className="relative">
       {trigger}
       {open ? (
-        <div className="absolute left-0 mt-2 min-w-[360px] rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden z-50">
+        <div className="absolute left-0 mt-2 min-w-[520px] rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden z-50">
           {children}
         </div>
       ) : null}
@@ -61,7 +61,7 @@ function Dropdown(props: {
 }
 
 function itemClass() {
-  return 'w-full text-left px-3 py-2 text-sm hover:bg-black/5 text-black/80';
+  return 'block w-full text-left px-3 py-2 text-sm hover:bg-black/5 text-black/80 whitespace-nowrap truncate';
 }
 
 export default function FrontTopNavClient({ active, user, companies }: Props) {
@@ -107,7 +107,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
             <Link
               href="/dashboard"
               className={[
-                'px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                 active === 'dashboard' ? 'text-black' : 'text-black/70 hover:text-black hover:bg-black/5',
               ].join(' ')}
             >
