@@ -366,43 +366,35 @@ export function renderCompanyUpdateRequestHtml(input: {
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Change of Registered Office Address</title>
     <style>
-      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 24px; color: #111; font-size: 14px; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
       .muted { color: #555; font-size: 12px; }
-      .center { text-align: center; }
-      .title { font-size: 16px; font-weight: 700; margin: 0; }
-      .subtitle { margin-top: 12px; font-size: 14px; font-weight: 700; }
-      .block { margin-top: 12px; }
-      .red { color: #ee0000; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+      .red { color: #dc2626; font-weight: 700; }
       .underline { text-decoration: underline; }
       .sig-block { margin-top: 18px; }
-      .sig-line { width: 260px; height: 18px; border-bottom: 1px solid #666; position: relative; margin-top: 10px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
       .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
-      .sig-name { margin-top: 4px; }
+      .sig-name { margin-top: 2px; }
     </style>
   </head>
   <body>
-    <div class="center">
-      <div class="title"><span class="red">${companyName}</span></div>
-      <div class="block" style="margin-top: 0;"><span>Co. Reg. No.: </span><span class="red">${companyRegistrationNo || '__________'}</span></div>
-      <div class="muted">(Incorporated in the Republic of Singapore)</div>
-    </div>
+    <div class="title"><span class="red">${companyName}</span></div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: <span class="red">${companyRegistrationNo || '__________'}</span></div>
+    <div class="muted">(Incorporated in the Republic of Singapore)</div>
 
-    <div style="height: 16px;"></div>
+    <div style="height: 14px;"></div>
 
     <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
 
-    <div style="height: 14px;"></div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
 
-    <div style="height: 10px;"></div>
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle underline">CHANGE OF REGISTERED ADDRESS</div>
 
-    <div class="block" style="white-space: pre-wrap;">
-      That the registered office address of the Company be changed from <span class="red underline">${esc(oldAddr)}</span> to <span class="red underline">${esc(newAddr)}</span> from immediate effect.
-    </div>
+    <div class="block" style="white-space: pre-wrap;">That the registered office address of the Company be changed from <span class="red underline">${esc(oldAddr)}</span> to <span class="red underline">${esc(newAddr)}</span> from immediate effect.</div>
 
-    <div style="height: 18px;"></div>
     <div class="block">Directors:</div>
 
     ${signatureBlocks}

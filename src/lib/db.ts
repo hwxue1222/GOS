@@ -6820,7 +6820,7 @@ export async function createSignaturePacket(input: {
 export async function createSignatureRequestsForPacket(input: { packetId: string; emails: string[] }) {
   const db = await readDb();
   const createdAt = nowIso();
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
 
   const links: Array<{ email: string; url: string }> = [];
   for (const raw of input.emails) {
@@ -7259,7 +7259,7 @@ export async function createShareTransferRequest(input: {
       packetId: brPacket.id,
       email,
       tokenHash: sha256Hex(token),
-      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
       status: 'PENDING',
       createdAt: now,
       updatedAt: now,
@@ -7354,7 +7354,7 @@ export async function createShareTransferRequest(input: {
         packetId: packet.id,
         email,
         tokenHash: sha256Hex(token),
-        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'PENDING',
         createdAt: now,
         updatedAt: now,
@@ -7392,7 +7392,7 @@ export async function createShareTransferRequest(input: {
         packetId: staPacket.id,
         email,
         tokenHash: sha256Hex(token),
-        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'PENDING',
         createdAt: now,
         updatedAt: now,
@@ -7467,7 +7467,7 @@ export async function resumeShareTransfer(transferId: string) {
       packetId: staPacket.id,
       email,
       tokenHash: sha256Hex(token),
-      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
       status: 'PENDING',
       createdAt: now,
       updatedAt: now,
@@ -7591,7 +7591,7 @@ export async function createDirectorChangeRequest(input: {
   };
   db.signaturePackets.unshift(packet);
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
   const signLinks: Array<{ email: string; url: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();
@@ -7919,7 +7919,7 @@ export async function createCompanyUpdateRequest(input: {
   };
   db.signaturePackets.unshift(packet);
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
   const signLinks: Array<{ email: string; url: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();
@@ -8229,7 +8229,7 @@ export async function createRorcDeclarationRequest(input: {
   };
   db.signaturePackets.unshift(packet);
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
   const signLinks: Array<{ email: string; url: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();

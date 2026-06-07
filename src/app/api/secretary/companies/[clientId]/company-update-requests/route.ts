@@ -106,7 +106,26 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
 
   const baseUrl = resolveBaseUrl(req);
   const signLinks = (r as unknown as { signLinks?: Array<{ email: string; url: string }> }).signLinks ?? [];
-  await Promise.all(signLinks.map((l) => sendSigningInvite({ to: l.email, title: `${type} - ${clientId}`, url: `${baseUrl}${l.url}` })));
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === clientId) ?? null;
+  const companyName = client?.name ?? clientId;
+  const applicationName =
+    type === 'CHANGE_COMPANY_NAME'
+      ? 'change of company name'
+      : type === 'CHANGE_FINANCIAL_YEAR_END'
+        ? 'change of financial year end (FYE)'
+        : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
+          ? 'change of registered office address'
+          : type === 'CHANGE_BUSINESS_ACTIVITIES'
+            ? 'change of business activities'
+            : type === 'CHANGE_SECRETARY'
+              ? 'change of secretary'
+              : type === 'TRANSFER_COMPANY_SECRETARY'
+                ? 'transfer of company secretary'
+                : String(type).toLowerCase();
+  await Promise.all(
+    signLinks.map((l) => sendSigningInvite({ to: l.email, title: `${applicationName} - ${companyName}`, url: `${baseUrl}${l.url}` })),
+  );
 
   return NextResponse.json({ ok: true, request: r.request, signLinks });
 }

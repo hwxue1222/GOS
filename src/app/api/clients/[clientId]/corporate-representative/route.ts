@@ -110,7 +110,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   const baseUrl = origin || (host ? `${proto}://${host}` : '');
   await Promise.all(
     signLinks.map((l) =>
-      baseUrl ? sendSigningInvite({ to: l.email, title: doc.title, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
+      baseUrl
+        ? sendSigningInvite({ to: l.email, title: `corporate representative designation - ${client.name}`, url: `${baseUrl}${l.url}` })
+        : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),
   );
 

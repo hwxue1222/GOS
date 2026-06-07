@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getInvoiceIssuerConfig } from '@/lib/invoice';
 
 export type EmailAttachment = { filename: string; contentBase64: string; contentType?: string };
 
@@ -114,7 +115,41 @@ export async function sendEmail(input: {
 }
 
 export async function sendSigningInvite(input: { to: string; title: string; url: string }) {
-  const subject = `Signature required: ${input.title}`;
-  const html = `<div style="font-family: ui-sans-serif,system-ui; line-height:1.5;"><div>Please sign:</div><div style="margin-top:8px;"><a href="${input.url}">${input.url}</a></div><div style="color:#555;font-size:12px;margin-top:10px;">This link is unique to you.</div></div>`;
+  const issuer = getInvoiceIssuerConfig('BBY_SG');
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(today.getFullYear());
+  const dated = `${dd}/${mm}/${yyyy}`;
+
+  const m = input.title.match(/^(.+?)\s+-\s+(.+)$/);
+  const applicationName = (m?.[1] ?? input.title).trim();
+  const companyName = (m?.[2] ?? '').trim();
+
+  const appKey = applicationName.toLowerCase();
+  const isDirectorFlow = !appKey.includes('share transfer');
+  const salutation = isDirectorFlow ? 'Dear Director,' : 'Dear Signatory,';
+  const roleLine = isDirectorFlow
+    ? 'As a Director of the Company, please click the link below to sign and approve the Directors\' Resolution.'
+    : 'Please click the link below to review and sign.';
+
+  const subject = `${applicationName}_${companyName || 'Company'}`;
+  const html = `
+<div style="font-family: ui-sans-serif,system-ui; line-height:1.6; font-size:14px; color:#111;">
+  <div>${salutation}</div>
+  <div style="margin-top:10px;">
+    The Company, <strong>${companyName || 'your company'}</strong>, has submitted an application for <strong>${applicationName}</strong>.
+    ${roleLine}
+  </div>
+  <div style="margin-top:12px;">
+    <a href="${input.url}">${input.url}</a>
+  </div>
+  <div style="margin-top:10px; color:#555; font-size:12px;">This link is valid for 10 days.</div>
+  <div style="margin-top:16px; color:#111; font-size:12px;">
+    ${issuer.displayName} (${issuer.uen})<br />
+    ${dated}
+  </div>
+</div>
+`.trim();
   return sendEmail({ to: input.to, subject, html });
 }

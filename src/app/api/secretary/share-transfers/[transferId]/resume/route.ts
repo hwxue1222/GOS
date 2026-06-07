@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { appendAuditLog, resumeShareTransfer } from '@/lib/db';
+import { appendAuditLog, readDb, resumeShareTransfer } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
 
 export async function POST(req: Request, { params }: { params: Promise<{ transferId: string }> }) {
@@ -27,10 +27,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ transfe
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
   const proto = req.headers.get('x-forwarded-proto')?.trim() || 'https';
   const baseUrl = origin || (host ? `${proto}://${host}` : '');
+  const db = await readDb();
+  const transfer = db.shareTransfers.find((t) => t.id === transferId) ?? null;
+  const client = transfer ? db.clients.find((c) => c.id === transfer.clientId) ?? null : null;
+  const companyName = client?.name ?? (transfer?.clientId ?? transferId);
   await Promise.all(
     r.signLinks.map((l) =>
       baseUrl
-        ? sendSigningInvite({ to: l.email, title: `Share Transfer - ${transferId}`, url: `${baseUrl}${l.url}` })
+        ? sendSigningInvite({ to: l.email, title: `share transfer - ${companyName}`, url: `${baseUrl}${l.url}` })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),
   );

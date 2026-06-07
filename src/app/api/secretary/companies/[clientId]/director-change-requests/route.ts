@@ -126,8 +126,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   });
 
   const baseUrl = resolveBaseUrl(req);
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === clientId) ?? null;
+  const companyName = client?.name ?? clientId;
   await Promise.all(
-    r.signLinks.map((l) => sendSigningInvite({ to: l.email, title: `Director Change - ${clientId}`, url: `${baseUrl}${l.url}` })),
+    r.signLinks.map((l) => sendSigningInvite({ to: l.email, title: `change of director - ${companyName}`, url: `${baseUrl}${l.url}` })),
   );
 
   await appendAuditLog({
@@ -143,4 +146,3 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
 
   return NextResponse.json({ ok: true, request: r.request, signLinks: r.signLinks });
 }
-
