@@ -343,9 +343,7 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     const signatureBlocks = (directors.length ? directors : [{ fullName: '', email: undefined }])
       .map((d) => {
-        const nameHtml = d.fullName
-          ? `<div class="sig-name"><strong><span class="red">${esc(d.fullName)}</span></strong></div>`
-          : '<div class="sig-name">________________</div>';
+        const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
         const emailKey = d.email ? esc(d.email.toLowerCase()) : '';
         const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
         return `
@@ -371,7 +369,6 @@ export function renderCompanyUpdateRequestHtml(input: {
       .title { font-size: 18px; font-weight: 700; margin: 0; }
       .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
       .block { margin-top: 14px; }
-      .red { color: #dc2626; font-weight: 700; }
       .underline { text-decoration: underline; }
       .sig-block { margin-top: 18px; }
       .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
@@ -380,8 +377,8 @@ export function renderCompanyUpdateRequestHtml(input: {
     </style>
   </head>
   <body>
-    <div class="title"><span class="red">${companyName}</span></div>
-    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: <span class="red">${companyRegistrationNo || '__________'}</span></div>
+    <div class="title">${companyName}</div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${companyRegistrationNo || '__________'}</div>
     <div class="muted">(Incorporated in the Republic of Singapore)</div>
 
     <div style="height: 14px;"></div>
@@ -393,12 +390,12 @@ export function renderCompanyUpdateRequestHtml(input: {
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle underline">CHANGE OF REGISTERED ADDRESS</div>
 
-    <div class="block" style="white-space: pre-wrap;">That the registered office address of the Company be changed from <span class="red underline">${esc(oldAddr)}</span> to <span class="red underline">${esc(newAddr)}</span> from immediate effect.</div>
+    <div class="block" style="white-space: pre-wrap;">That the registered office address of the Company be changed from <span class="underline">${esc(oldAddr)}</span> to <span class="underline">${esc(newAddr)}</span> from immediate effect.</div>
 
     <div class="block">Directors:</div>
 
     ${signatureBlocks}
-    <div style="margin-top: 18px;">Date: <span class="red">${esc(dated)}</span></div>
+    <div style="margin-top: 18px;">Date: ${esc(dated)}</div>
   </body>
 </html>
 `.trim();
