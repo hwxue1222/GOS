@@ -23,7 +23,7 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
 
   async function signOut() {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    router.replace('/login');
+    router.replace('/portal/login');
   }
 
   return (
@@ -35,9 +35,9 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
         <div className="h-8 w-8 rounded-full bg-black/10 flex items-center justify-center text-xs font-semibold">
           {user.name.slice(0, 2).toUpperCase()}
         </div>
-        <div className="hidden sm:block text-left leading-tight">
-          <div className="text-sm font-medium text-black">{user.name}</div>
-          <div className="text-xs text-black/50">Profile ▾</div>
+        <div className="hidden sm:flex items-center gap-1 text-sm font-medium text-black whitespace-nowrap">
+          <span>{user.name}</span>
+          <span className="text-black/50">▾</span>
         </div>
       </button>
 
@@ -64,4 +64,3 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
     </div>
   );
 }
-

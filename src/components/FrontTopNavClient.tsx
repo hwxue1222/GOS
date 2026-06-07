@@ -96,7 +96,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
 
   return (
     <header className="bg-white border-b border-black/5">
-      <div className="min-h-14 px-4 py-2 flex items-center justify-between gap-4 flex-wrap max-w-6xl mx-auto">
+      <div className="h-14 px-4 flex items-center justify-between gap-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <div className="h-8 w-8 rounded-md bg-[#c62828]/10 text-[#c62828] flex items-center justify-center font-semibold">B</div>
@@ -196,20 +196,24 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
                 Declaration of Company Controller (RORC)
               </Link>
             </Dropdown>
+
+            <Link
+              href="/user-guide"
+              className="px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap hover:shadow-sm text-black/70 hover:text-black hover:bg-black/5"
+            >
+              User Guide
+            </Link>
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link href="/user-guide" className="hidden sm:block text-sm text-black/70 hover:text-black">
-            User Guide
-          </Link>
+        <div className="flex items-center gap-3 shrink-0">
           <LanguageToggleClient />
 
           <select
             value={currentCompanyId}
             onChange={(e) => switchCompany(e.target.value)}
             disabled={!companies.length}
-            className="max-w-[240px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
+            className="w-[220px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
           >
             {!companies.length ? <option value="">No companies</option> : null}
             {companies.map((c) => (
