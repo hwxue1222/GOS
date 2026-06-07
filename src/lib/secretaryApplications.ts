@@ -1,4 +1,4 @@
-import type { Db, DirectorChangeRequest, SecretaryServiceApplicationRow, ShareTransfer } from '@/lib/types';
+import type { CompanyUpdateRequest, Db, DirectorChangeRequest, SecretaryServiceApplicationRow, ShareTransfer } from '@/lib/types';
 
 function iso(s: string | undefined) {
   const v = String(s ?? '').trim();
@@ -20,6 +20,15 @@ function statusFromShareTransfer(t: ShareTransfer): SecretaryServiceApplicationR
   if (t.status === 'BLOCKED_REPRESENTATIVE') return 'NEED_MORE_INFO';
   if (t.status === 'SIGNED') return 'PROCESSING';
   if (t.status === 'APPLIED') return 'COMPLETE';
+  return 'PROCESSING';
+}
+
+function statusFromCompanyUpdateRequest(r: CompanyUpdateRequest): SecretaryServiceApplicationRow['status'] {
+  if (r.status === 'PENDING_SIGNATURES') return 'SIGNING';
+  if (r.status === 'PENDING_REVIEW') return 'PENDING_REVIEW';
+  if (r.status === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
+  if (r.status === 'REJECTED') return 'REJECTED';
+  if (r.status === 'COMPLETE') return 'COMPLETE';
   return 'PROCESSING';
 }
 
@@ -64,6 +73,24 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
     });
   }
 
+  for (const r of db.companyUpdateRequests ?? []) {
+    const client = clientById.get(r.clientId);
+    if (!client || client.deletedAt) continue;
+    if (allowedClientIds && !allowedClientIds.has(r.clientId)) continue;
+    const applicationDate = iso(r.submittedAt || r.createdAt);
+    const editDate = iso(r.updatedAt || r.createdAt);
+    rows.push({
+      id: `CUR-${r.id}`,
+      type: r.type,
+      companyId: r.clientId,
+      companyName: client.name,
+      applicationDate,
+      editDate,
+      status: statusFromCompanyUpdateRequest(r),
+      source: { kind: 'COMPANY_UPDATE_REQUEST', id: r.id },
+    });
+  }
+
   rows.sort((a, b) => {
     if (a.editDate !== b.editDate) return b.editDate.localeCompare(a.editDate);
     return b.applicationDate.localeCompare(a.applicationDate);
@@ -71,4 +98,3 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
 
   return rows;
 }
-

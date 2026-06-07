@@ -71,17 +71,52 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
     return allowed;
   })();
 
-  const rows = buildSecretaryServiceApplications(db, allowedClientIds)
+  const pendingDirectorRows = buildSecretaryServiceApplications(db, allowedClientIds)
     .filter((r) => r.type === 'DIRECTOR_CHANGE')
     .filter((r) => r.status === 'PENDING_REVIEW')
     .map((r) => ({
-      requestId: r.source.id,
+      id: `DCR-${r.source.id}`,
+      typeLabel: 'Change of Director',
       companyId: r.companyId,
       companyName: r.companyName,
       applicationDate: r.applicationDate,
       editDate: r.editDate,
       status: r.status,
+      detailsHref: `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`,
+      decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}/decision`,
     }));
+
+  const labelForType = (t: string) => {
+    if (t === 'CHANGE_COMPANY_NAME') return 'Change of Company Name';
+    if (t === 'CHANGE_FINANCIAL_YEAR_END') return 'Change of Financial Year End (FYE)';
+    if (t === 'CHANGE_REGISTERED_OFFICE_ADDRESS') return 'Change of Registered Office Address';
+    if (t === 'CHANGE_BUSINESS_ACTIVITIES') return 'Change of Business Activities';
+    if (t === 'CHANGE_SECRETARY') return 'Change of Secretary';
+    return t;
+  };
+
+  const companyUpdateRows = (db.companyUpdateRequests ?? [])
+    .filter((r) => r.status === 'PENDING_REVIEW')
+    .filter((r) => (allowedClientIds ? allowedClientIds.has(r.clientId) : true))
+    .map((r) => {
+      const company = db.clients.find((c) => c.id === r.clientId);
+      const companyName = company?.name ?? r.clientId;
+      return {
+        id: `CUR-${r.id}`,
+        typeLabel: labelForType(r.type),
+        companyId: r.clientId,
+        companyName,
+        applicationDate: r.createdAt,
+        editDate: r.updatedAt ?? r.createdAt,
+        status: r.status,
+        detailsHref: `/corporate-secretary/applications/company-update/${encodeURIComponent(r.id)}`,
+        decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.clientId)}/company-update-requests/${encodeURIComponent(r.id)}/decision`,
+      };
+    });
+
+  const rows = [...companyUpdateRows, ...pendingDirectorRows].sort(
+    (a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''),
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -89,7 +124,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <h1 className="text-xl font-semibold">Corporate Secretary Review</h1>
-          <div className="mt-1 text-sm text-black/60">Pending director change approvals</div>
+          <div className="mt-1 text-sm text-black/60">Pending approvals</div>
           <div className="mt-4">
             <SecretaryCsReviewClient rows={rows} />
           </div>
@@ -98,4 +133,3 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
     </div>
   );
 }
-

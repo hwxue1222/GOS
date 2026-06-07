@@ -1,0 +1,108 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
+import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
+
+export default function ChangeBusinessActivitiesClient() {
+  const router = useRouter();
+  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+
+  const [primary, setPrimary] = useState<string | undefined>(undefined);
+  const [secondary, setSecondary] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function onSubmit() {
+    setSubmitError(null);
+    if (!companyId || !client) {
+      setSubmitError('NO_COMPANY');
+      return;
+    }
+    const ssicPrimaryCode = (primary ?? '').trim();
+    const ssicSecondaryCode = (secondary ?? '').trim();
+    if (!ssicPrimaryCode) {
+      setSubmitError('Please select New Activity 1.');
+      return;
+    }
+    if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) {
+      setSubmitError('Activity 2 cannot be same as Activity 1.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'CHANGE_BUSINESS_ACTIVITIES',
+          payload: {
+            originalSsicPrimaryCode: client.ssicPrimaryCode ?? '',
+            originalSsicSecondaryCode: client.ssicSecondaryCode ?? '',
+            ssicPrimaryCode,
+            ssicSecondaryCode: ssicSecondaryCode || undefined,
+          },
+        }),
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
+      if (!res?.ok || !j?.ok || !j.request?.id) {
+        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      router.push(`/corporate-secretary/applications/company-update/${encodeURIComponent(j.request.id)}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <ModalShell title="Change of Business Activities" closeHref={closeHref}>
+      {submitError ? <div className="mb-3 text-sm text-red-600">{submitError}</div> : null}
+
+      {loading ? <div className="text-sm text-black/60">Loading...</div> : null}
+      {!loading && (error || !client) ? <div className="text-sm text-red-600">{error ?? 'NOT_FOUND'}</div> : null}
+
+      {!loading && client ? (
+        <div className="space-y-5">
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="text-black/60">Original Activity 1:</span> <span className="text-black">{client.ssicPrimaryCode ?? '-'}</span>
+            </div>
+            <div>
+              <span className="text-black/60">Original Activity 2:</span> <span className="text-black">{client.ssicSecondaryCode ?? '-'}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <div className="sm:col-span-12">
+              <div className="text-sm text-black">
+                <span className="text-red-500">*</span> New Activity 1 :
+              </div>
+              <div className="mt-1">
+                <SsicCombobox label="" value={primary} onChange={setPrimary} excludeCode={secondary} />
+              </div>
+            </div>
+            <div className="sm:col-span-12">
+              <div className="text-sm text-black">New Activity 2 :</div>
+              <div className="mt-1">
+                <SsicCombobox label="" value={secondary} onChange={setSecondary} excludeCode={primary} />
+              </div>
+            </div>
+          </div>
+
+          <button
+            disabled={submitting}
+            onClick={() => void onSubmit()}
+            className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
+          >
+            Apply
+          </button>
+        </div>
+      ) : null}
+    </ModalShell>
+  );
+}
+

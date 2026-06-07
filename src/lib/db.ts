@@ -7,6 +7,8 @@ import { newId } from '@/lib/id';
 import type {
   Client,
   ClientPartyRole,
+  CompanyUpdateRequest,
+  CompanyUpdateRequestType,
   CompanyRepresentative,
   Currency,
   Db,
@@ -6938,6 +6940,20 @@ async function finalizeDirectorChangeIfReady(db: Db, packet: SignaturePacket) {
   (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
 }
 
+async function finalizeCompanyUpdateIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'COMPANY_UPDATE') return;
+  if (packet.status !== 'SIGNED') return;
+
+  const list = getCompanyUpdateRequestList(db);
+  const idx = list.findIndex((r) => r.id === packet.relatedId);
+  if (idx < 0) return;
+  const r = list[idx];
+  if (r.status !== 'PENDING_SIGNATURES') return;
+  const now = nowIso();
+  list[idx] = { ...r, status: 'PENDING_REVIEW', signedAt: now, updatedAt: now };
+  (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+}
+
 export async function signByToken(input: {
   token: string;
   otp: string;
@@ -7010,6 +7026,7 @@ export async function signByToken(input: {
     await finalizeRdrIfReady(db, db.signaturePackets[packetIdx]);
     await maybeFinalizeShareTransferIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeDirectorChangeIfReady(db, db.signaturePackets[packetIdx]);
+    await finalizeCompanyUpdateIfReady(db, db.signaturePackets[packetIdx]);
   } else if (packet.status === 'DRAFT') {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
   }
@@ -7570,15 +7587,15 @@ export async function decideDirectorChangeRequest(input: {
   if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const r = list[idx];
-  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
-  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const packetId = (r as unknown as { packetId?: unknown }).packetId;
+  const packet = typeof packetId === 'string' ? db.signaturePackets.find((p) => p.id === packetId) ?? null : null;
 
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
 
   if (input.decision === 'APPROVE') {
     if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-    if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+    if (!packet || packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
 
     for (const roleId of r.removeDirectorRoleIds) {
       const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'DIRECTOR');
@@ -7624,6 +7641,268 @@ export async function decideDirectorChangeRequest(input: {
   }
 
   (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: list[idx] };
+}
+
+function getCompanyUpdateRequestList(db: Db) {
+  return Array.isArray((db as unknown as { companyUpdateRequests?: unknown }).companyUpdateRequests)
+    ? (((db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests ?? []) as CompanyUpdateRequest[])
+    : [];
+}
+
+export async function listCompanyUpdateRequestsByClient(clientId: string) {
+  const db = await readDb();
+  const list = getCompanyUpdateRequestList(db);
+  return list.filter((r) => r.clientId === clientId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getCompanyUpdateRequestById(requestId: string) {
+  const db = await readDb();
+  const list = getCompanyUpdateRequestList(db);
+  return list.find((r) => r.id === requestId) ?? null;
+}
+
+export async function createCompanyUpdateRequest(input: {
+  clientId: string;
+  type: CompanyUpdateRequestType;
+  payload: Record<string, unknown>;
+  createdByUserId: string;
+}) {
+  const db = await readDb();
+  const client = db.clients.find((c) => c.id === input.clientId) ?? null;
+  if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const directors = await listClientDirectors(input.clientId);
+  const signerEmails = Array.from(
+    new Set(
+      directors
+        .map((d) => (d.person.email ?? '').trim())
+        .filter(Boolean)
+        .map((e) => e.toLowerCase()),
+    ),
+  );
+  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const type = input.type;
+  const p = input.payload ?? {};
+  const now = nowIso();
+
+  if (type === 'CHANGE_COMPANY_NAME') {
+    const newCompanyName = String(p.newCompanyName ?? '').trim();
+    const chairman = String(p.chairman ?? '').trim();
+    const startDate = String(p.startDate ?? '').trim();
+    const meetingVenue = String(p.meetingVenue ?? '').trim();
+    if (!newCompanyName || !chairman || !startDate || !meetingVenue) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else if (type === 'CHANGE_FINANCIAL_YEAR_END') {
+    const newFye = String(p.newFye ?? '').trim();
+    if (!newFye) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else if (type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+    const newRegisteredOfficeAddress = String(p.newRegisteredOfficeAddress ?? '').trim();
+    if (!newRegisteredOfficeAddress) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else if (type === 'CHANGE_BUSINESS_ACTIVITIES') {
+    const ssicPrimaryCode = String(p.ssicPrimaryCode ?? '').trim();
+    const ssicSecondaryCode = String(p.ssicSecondaryCode ?? '').trim();
+    if (!ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else if (type === 'CHANGE_SECRETARY') {
+    const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim();
+    const addSecretaries = Array.isArray(p.addSecretaries) ? p.addSecretaries : [];
+    const hasAdd = addSecretaries.some((x) => String((x as { fullName?: unknown }).fullName ?? '').trim());
+    if (!removeSecretaryRoleId && !hasAdd) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  } else {
+    return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
+  const id = newId('cur');
+  const titlePrefix =
+    type === 'CHANGE_COMPANY_NAME'
+      ? 'Change of Company Name'
+      : type === 'CHANGE_FINANCIAL_YEAR_END'
+        ? 'Change of Financial Year End (FYE)'
+        : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
+          ? 'Change of Registered Office Address'
+          : type === 'CHANGE_BUSINESS_ACTIVITIES'
+            ? 'Change of Business Activities'
+            : type === 'CHANGE_SECRETARY'
+              ? 'Change of Secretary'
+              : type;
+
+  const html = (await import('@/lib/docTemplates')).renderCompanyUpdateRequestHtml({
+    companyName: client.name,
+    companyRegistrationNo: client.companyRegistrationNo,
+    type,
+    original: {
+      fye: client.fye ?? undefined,
+      registeredOfficeAddress: client.registeredOfficeAddress ?? undefined,
+      ssicPrimaryCode: client.ssicPrimaryCode ?? undefined,
+      ssicSecondaryCode: client.ssicSecondaryCode ?? undefined,
+    },
+    payload: p,
+  });
+
+  const doc: Document = {
+    id: newId('doc'),
+    type: 'CO_UPD',
+    title: `${titlePrefix} - ${client.name}`,
+    html,
+    sha256: sha256Hex(html),
+    createdAt: now,
+  };
+  db.documents.unshift(doc);
+
+  const packet: SignaturePacket = {
+    id: newId('spk'),
+    kind: 'CO_UPD',
+    relatedType: 'COMPANY_UPDATE',
+    relatedId: id,
+    documentId: doc.id,
+    status: 'SIGNING',
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.signaturePackets.unshift(packet);
+
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const signLinks: Array<{ email: string; url: string }> = [];
+  for (const emailKey of signerEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: packet.id,
+      email: emailKey,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+  }
+
+  const request: CompanyUpdateRequest = {
+    id,
+    clientId: input.clientId,
+    type,
+    status: 'PENDING_SIGNATURES',
+    payload: p,
+    createdByUserId: input.createdByUserId,
+    packetId: packet.id,
+    createdAt: now,
+    updatedAt: now,
+    submittedAt: now,
+  };
+
+  const list = getCompanyUpdateRequestList(db);
+  list.unshift(request);
+  (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request, signLinks };
+}
+
+export async function decideCompanyUpdateRequest(input: {
+  requestId: string;
+  decidedByUserId: string;
+  decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO';
+  note?: string;
+}) {
+  const db = await readDb();
+  const list = getCompanyUpdateRequestList(db);
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packet = db.signaturePackets.find((p) => p.id === r.packetId);
+  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const now = nowIso();
+  const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
+
+  if (input.decision === 'NEED_MORE_INFO') {
+    list[idx] = { ...r, status: 'NEED_MORE_INFO', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (input.decision === 'REJECT') {
+    list[idx] = { ...r, status: 'REJECTED', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+    (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+    await writeDb(db);
+    return { ok: true as const, request: list[idx] };
+  }
+
+  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (packet && packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+  const clientIdx = db.clients.findIndex((c) => c.id === r.clientId);
+  if (clientIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const client = db.clients[clientIdx];
+  if (client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const p = r.payload ?? {};
+  if (r.type === 'CHANGE_COMPANY_NAME') {
+    const newCompanyName = String((p as { newCompanyName?: unknown }).newCompanyName ?? '').trim();
+    if (!newCompanyName) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const nextFka = client.name.trim() && client.name.trim() !== newCompanyName ? client.name : client.fka;
+    db.clients[clientIdx] = { ...client, name: newCompanyName, fka: nextFka };
+  } else if (r.type === 'CHANGE_FINANCIAL_YEAR_END') {
+    const newFye = String((p as { newFye?: unknown }).newFye ?? '').trim();
+    if (!newFye) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    db.clients[clientIdx] = { ...client, fye: newFye };
+  } else if (r.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+    const newRegisteredOfficeAddress = String((p as { newRegisteredOfficeAddress?: unknown }).newRegisteredOfficeAddress ?? '').trim();
+    if (!newRegisteredOfficeAddress) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    db.clients[clientIdx] = { ...client, registeredOfficeAddress: newRegisteredOfficeAddress };
+  } else if (r.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+    const ssicPrimaryCode = String((p as { ssicPrimaryCode?: unknown }).ssicPrimaryCode ?? '').trim();
+    const ssicSecondaryCode = String((p as { ssicSecondaryCode?: unknown }).ssicSecondaryCode ?? '').trim() || undefined;
+    if (!ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    db.clients[clientIdx] = { ...client, ssicPrimaryCode, ssicSecondaryCode };
+  } else if (r.type === 'CHANGE_SECRETARY') {
+    const payload = p as {
+      removeSecretaryRoleId?: unknown;
+      addSecretaries?: unknown;
+    };
+    const removeSecretaryRoleId = String(payload.removeSecretaryRoleId ?? '').trim();
+    if (removeSecretaryRoleId) {
+      const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === removeSecretaryRoleId && x.clientId === r.clientId && x.role === 'SECRETARY');
+      if (roleIdx >= 0 && !db.clientPartyRoles[roleIdx].resignationDate) {
+        db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], resignationDate: now.slice(0, 10), updatedAt: now };
+      }
+    }
+
+    const addSecretaries = Array.isArray(payload.addSecretaries) ? (payload.addSecretaries as Array<Record<string, unknown>>) : [];
+    for (const s of addSecretaries) {
+      const fullName = String(s.fullName ?? '').trim();
+      if (!fullName) continue;
+      const email = typeof s.email === 'string' ? s.email.trim() || undefined : undefined;
+      const phone = typeof s.phone === 'string' ? s.phone.trim() || undefined : undefined;
+      const person: Person = { id: newId('per'), fullName, email, phone, createdAt: now, updatedAt: now };
+      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+      const role: ClientPartyRole = {
+        id: newId('cpr'),
+        clientId: r.clientId,
+        partyId: party.id,
+        role: 'SECRETARY',
+        appointmentDate: now.slice(0, 10),
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.persons.unshift(person);
+      db.parties.unshift(party);
+      db.clientPartyRoles.unshift(role);
+    }
+  } else {
+    return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
+  list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
   await writeDb(db);
   return { ok: true as const, request: list[idx] };
 }

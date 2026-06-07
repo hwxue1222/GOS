@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export type ReviewRow = {
-  requestId: string;
+  id: string;
+  typeLabel: string;
   companyId: string;
   companyName: string;
   applicationDate: string;
   editDate: string;
   status: string;
+  detailsHref: string;
+  decisionUrl: string;
 };
 
 export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] }) {
@@ -20,17 +23,14 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
 
   async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO') {
     setError(null);
-    setBusyId(row.requestId);
+    setBusyId(row.id);
     try {
       const note = window.prompt('Note (optional)') ?? '';
-      const res = await fetch(
-        `/api/secretary/companies/${encodeURIComponent(row.companyId)}/director-change-requests/${encodeURIComponent(row.requestId)}/decision`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ decision, note }),
-        },
-      ).catch(() => null);
+      const res = await fetch(row.decisionUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision, note }),
+      }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok) {
         setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
@@ -60,9 +60,9 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.requestId} className="border-b border-black/5">
-                <td className="px-3 py-2">DCR-{r.requestId}</td>
-                <td className="px-3 py-2">Change of Director</td>
+              <tr key={r.id} className="border-b border-black/5">
+                <td className="px-3 py-2">{r.id}</td>
+                <td className="px-3 py-2">{r.typeLabel}</td>
                 <td className="px-3 py-2">{r.companyName}</td>
                 <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
                 <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>
@@ -72,27 +72,27 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/corporate-secretary/applications/director-change/${encodeURIComponent(r.requestId)}`}
+                      href={r.detailsHref}
                       className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium"
                     >
                       Details
                     </Link>
                     <button
-                      disabled={busyId === r.requestId}
+                      disabled={busyId === r.id}
                       onClick={() => void decide(r, 'APPROVE')}
                       className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
                       Approve
                     </button>
                     <button
-                      disabled={busyId === r.requestId}
+                      disabled={busyId === r.id}
                       onClick={() => void decide(r, 'NEED_MORE_INFO')}
                       className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
                       Need more info
                     </button>
                     <button
-                      disabled={busyId === r.requestId}
+                      disabled={busyId === r.id}
                       onClick={() => void decide(r, 'REJECT')}
                       className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                     >
@@ -115,4 +115,3 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
     </div>
   );
 }
-

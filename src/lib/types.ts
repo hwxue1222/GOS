@@ -231,7 +231,7 @@ export type CompanyRepresentative = {
   updatedAt?: string;
 };
 
-export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG';
+export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD';
 
 export type Document = {
   id: string;
@@ -242,14 +242,14 @@ export type Document = {
   createdAt: string;
 };
 
-export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG';
+export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 
 export type SignaturePacket = {
   id: string;
   kind: SignaturePacketKind;
-  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE';
+  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'COMPANY_UPDATE';
   relatedId: string;
   documentId: string;
   status: SignaturePacketStatus;
@@ -340,7 +340,15 @@ export type ShareTransfer = {
   updatedAt?: string;
 };
 
-export type SecretaryServiceApplicationType = 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'TRANSFER_COMPANY_SECRETARY';
+export type SecretaryServiceApplicationType =
+  | 'SHARE_TRANSFER'
+  | 'DIRECTOR_CHANGE'
+  | 'TRANSFER_COMPANY_SECRETARY'
+  | 'CHANGE_COMPANY_NAME'
+  | 'CHANGE_FINANCIAL_YEAR_END'
+  | 'CHANGE_REGISTERED_OFFICE_ADDRESS'
+  | 'CHANGE_BUSINESS_ACTIVITIES'
+  | 'CHANGE_SECRETARY';
 
 export type SecretaryServiceApplicationStatus =
   | 'DRAFT'
@@ -360,7 +368,41 @@ export type SecretaryServiceApplicationRow = {
   applicationDate: string;
   editDate: string;
   status: SecretaryServiceApplicationStatus;
-  source: { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string } | { kind: 'SHARE_TRANSFER'; id: string };
+  source:
+    | { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string }
+    | { kind: 'SHARE_TRANSFER'; id: string }
+    | { kind: 'COMPANY_UPDATE_REQUEST'; id: string };
+};
+
+export type CompanyUpdateRequestType =
+  | 'CHANGE_COMPANY_NAME'
+  | 'CHANGE_FINANCIAL_YEAR_END'
+  | 'CHANGE_REGISTERED_OFFICE_ADDRESS'
+  | 'CHANGE_BUSINESS_ACTIVITIES'
+  | 'CHANGE_SECRETARY';
+
+export type CompanyUpdateRequestStatus =
+  | 'PENDING_SIGNATURES'
+  | 'PENDING_REVIEW'
+  | 'NEED_MORE_INFO'
+  | 'REJECTED'
+  | 'COMPLETE';
+
+export type CompanyUpdateRequest = {
+  id: string;
+  clientId: string;
+  type: CompanyUpdateRequestType;
+  status: CompanyUpdateRequestStatus;
+  payload: Record<string, unknown>;
+  createdByUserId: string;
+  packetId: string;
+  createdAt: string;
+  updatedAt?: string;
+  submittedAt?: string;
+  signedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
 };
 
 export type IncorporationApplicationType = 'REGISTER_COMPANY' | 'TRANSFER_COMPANY_SECRETARY';
@@ -470,6 +512,7 @@ export type Db = {
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
   directorChangeRequests?: DirectorChangeRequest[];
+  companyUpdateRequests?: CompanyUpdateRequest[];
   incorporationApplications?: IncorporationApplication[];
   incorporationApplicationEvents?: IncorporationApplicationEvent[];
   incorporationApplicationFiles?: IncorporationApplicationFile[];

@@ -115,6 +115,10 @@ async function canClientAccessDocument(user: { email: string }, documentId: stri
       if (!companyParty || !companyParty.clientId) continue;
       if (allowedClientIds.has(companyParty.clientId)) return true;
     }
+    if (p.relatedType === 'COMPANY_UPDATE') {
+      const cur = (db.companyUpdateRequests ?? []).find((x) => x.id === p.relatedId) ?? null;
+      if (cur && allowedClientIds.has(cur.clientId)) return true;
+    }
   }
 
   return false;
@@ -177,4 +181,3 @@ export async function GET(_req: Request, ctx: { params: Promise<{ documentId: st
     await page.close();
   }
 }
-

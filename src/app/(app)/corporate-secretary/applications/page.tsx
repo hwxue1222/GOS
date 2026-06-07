@@ -47,20 +47,55 @@ export default async function CorporateSecretaryApplicationsPage({
 
   const allRows = [
     ...rows.map((r) => {
-      const detailsHref =
-        r.type === 'DIRECTOR_CHANGE'
-          ? `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`
-          : `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`;
+      const map = (() => {
+        if (r.type === 'DIRECTOR_CHANGE') {
+          const detailsHref = `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'director_change', typeLabel: 'Change of Director', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'SHARE_TRANSFER') {
+          const detailsHref = `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'share_transfer', typeLabel: 'Transfer of Shares', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'CHANGE_COMPANY_NAME') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'change_company_name', typeLabel: 'Change of Company Name', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'CHANGE_FINANCIAL_YEAR_END') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'change_fye', typeLabel: 'Change of Financial Year End (FYE)', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return {
+            typeKey: 'change_registered_office_address',
+            typeLabel: 'Change of Registered Office Address',
+            detailsHref,
+            hasDocuments: true,
+          };
+        }
+        if (r.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'change_business_activities', typeLabel: 'Change of Business Activities', detailsHref, hasDocuments: true };
+        }
+        if (r.type === 'CHANGE_SECRETARY') {
+          const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+          return { typeKey: 'change_secretary', typeLabel: 'Change of Secretary', detailsHref, hasDocuments: true };
+        }
+        const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
+        return { typeKey: 'company_update', typeLabel: r.type, detailsHref, hasDocuments: true };
+      })();
+
       return {
         id: r.id,
-        typeKey: r.type === 'DIRECTOR_CHANGE' ? 'director_change' : 'share_transfer',
-        typeLabel: r.type === 'DIRECTOR_CHANGE' ? 'Change of Director' : 'Transfer of Shares',
+        typeKey: map.typeKey,
+        typeLabel: map.typeLabel,
         companyId: r.companyId,
         companyName: r.companyName,
         applicationDate: r.applicationDate,
         editDate: r.editDate,
         status: r.status,
-        detailsHref,
+        detailsHref: map.detailsHref,
+        hasDocuments: map.hasDocuments,
       };
     }),
     ...incRows.map((r) => {
@@ -75,6 +110,7 @@ export default async function CorporateSecretaryApplicationsPage({
         editDate: r.editDate,
         status: r.status,
         detailsHref,
+        hasDocuments: true,
       };
     }),
   ].sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
@@ -167,6 +203,53 @@ export default async function CorporateSecretaryApplicationsPage({
             >
               Transfer Secretary
             </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=change_company_name${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'change_company_name' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              Change of Company Name
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=change_fye${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'change_fye' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              Change of FYE
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=change_registered_office_address${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'change_registered_office_address'
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              Change of Address
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=change_business_activities${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'change_business_activities' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              Change of Activities
+            </Link>
+            <Link
+              href={`/corporate-secretary/applications?type=change_secretary${filterCompanyId ? `&companyId=${encodeURIComponent(filterCompanyId)}` : ''}`}
+              className={[
+                'rounded-full px-3 py-1.5 border',
+                filterType === 'change_secretary' ? 'bg-black text-white border-black' : 'bg-white border-black/10 text-black/70',
+              ].join(' ')}
+            >
+              Change of Secretary
+            </Link>
           </div>
 
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
@@ -209,12 +292,14 @@ export default async function CorporateSecretaryApplicationsPage({
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
-                            <Link
-                              href={`${r.detailsHref}#documents`}
-                              className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium"
-                            >
-                              Documents
-                            </Link>
+                            {r.hasDocuments ? (
+                              <Link
+                                href={`${r.detailsHref}#documents`}
+                                className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium"
+                              >
+                                Documents
+                              </Link>
+                            ) : null}
                             <Link href={r.detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
                               Details
                             </Link>
