@@ -7701,22 +7701,23 @@ export async function createCompanyUpdateRequest(input: {
   const id = newId('cur');
   const titlePrefix =
     type === 'CHANGE_COMPANY_NAME'
-      ? 'Change of Company Name'
+      ? 'Board Resolution - Change of Company Name'
       : type === 'CHANGE_FINANCIAL_YEAR_END'
-        ? 'Change of Financial Year End (FYE)'
+        ? 'Board Resolution - Change of Financial Year End (FYE)'
         : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
-          ? 'Change of Registered Office Address'
+          ? 'Board Resolution - Change of Registered Office Address'
           : type === 'CHANGE_BUSINESS_ACTIVITIES'
-            ? 'Change of Business Activities'
+            ? 'Board Resolution - Change of Business Activities'
             : type === 'CHANGE_SECRETARY'
-              ? 'Change of Secretary'
+              ? 'Board Resolution - Change of Secretary'
             : type === 'TRANSFER_COMPANY_SECRETARY'
-              ? 'Transfer of Company Secretary'
+              ? 'Board Resolution - Transfer of Company Secretary'
               : type;
 
   const html = (await import('@/lib/docTemplates')).renderCompanyUpdateRequestHtml({
     companyName: client.name,
     companyRegistrationNo: client.companyRegistrationNo,
+    directors: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email })),
     type,
     original: {
       fye: client.fye ?? undefined,

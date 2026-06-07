@@ -196,6 +196,7 @@ export function renderDirectorChangeRequestHtml(input: {
 export function renderCompanyUpdateRequestHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;
+  directors?: Array<{ fullName: string; email?: string }>;
   type:
     | 'CHANGE_COMPANY_NAME'
     | 'CHANGE_FINANCIAL_YEAR_END'
@@ -215,7 +216,14 @@ export function renderCompanyUpdateRequestHtml(input: {
   const companyRegistrationNo = input.companyRegistrationNo ? esc(input.companyRegistrationNo) : '';
   const now = new Date().toISOString().slice(0, 10);
 
-  const row = (k: string, v: string) => `<div style="margin-top: 10px;"><strong>${esc(k)}</strong>: ${esc(v)}</div>`;
+  const fmtDirector = (d: { fullName: string; email?: string }) => {
+    const name = String(d.fullName ?? '').trim();
+    const email = String(d.email ?? '').trim();
+    if (!name) return '';
+    return email ? `${name} <${email}>` : name;
+  };
+
+  const directorsLine = (input.directors ?? []).map(fmtDirector).filter(Boolean).join(', ');
   const title = (() => {
     if (input.type === 'CHANGE_COMPANY_NAME') return 'Change of Company Name';
     if (input.type === 'CHANGE_FINANCIAL_YEAR_END') return 'Change of Financial Year End (FYE)';
@@ -227,85 +235,79 @@ export function renderCompanyUpdateRequestHtml(input: {
   })();
 
   const p = input.payload ?? {};
-  const body = (() => {
-    if (input.type === 'CHANGE_COMPANY_NAME') {
-      const newCompanyName = String(p.newCompanyName ?? '').trim();
-      const chairman = String(p.chairman ?? '').trim();
-      const startDate = String(p.startDate ?? '').trim();
-      const meetingVenue = String(p.meetingVenue ?? '').trim();
-      const useRegisteredOffice = Boolean((p as { useByBridgeRegisteredOfficeAddress?: unknown }).useByBridgeRegisteredOfficeAddress);
-      return (
-        row('Original Company', input.companyName) +
-        row('New Company', newCompanyName || '-') +
-        row('Chairman', chairman || '-') +
-        row('Start Time', startDate || '-') +
-        row('Meeting Venue', meetingVenue || '-') +
-        row('Use ByBridge registered office address', useRegisteredOffice ? 'Yes' : 'No')
-      );
-    }
 
-    if (input.type === 'CHANGE_FINANCIAL_YEAR_END') {
-      const newFye = String(p.newFye ?? '').trim();
-      return row('Original FYE', input.original.fye ?? '-') + row('New FYE', newFye || '-');
-    }
+  const lines: string[] = [];
+  lines.push('WRITTEN RESOLUTION OF THE DIRECTORS');
+  lines.push('');
+  lines.push(`Company: ${input.companyName}${companyRegistrationNo ? ` (${input.companyRegistrationNo})` : ''}`);
+  if (directorsLine) lines.push(`Directors: ${directorsLine}`);
+  lines.push('');
+  lines.push('IT WAS RESOLVED THAT:');
 
-    if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
-      const newRegisteredOfficeAddress = String(p.newRegisteredOfficeAddress ?? '').trim();
-      const useByBridge = Boolean((p as { useByBridgeRegisteredOfficeAddress?: unknown }).useByBridgeRegisteredOfficeAddress);
-      return (
-        row('Original Registered Office Address', input.original.registeredOfficeAddress ?? '-') +
-        row('New Registered Office Address', newRegisteredOfficeAddress || '-') +
-        row('Use ByBridge registered office address', useByBridge ? 'Yes' : 'No')
-      );
-    }
+  if (input.type === 'CHANGE_COMPANY_NAME') {
+    const newCompanyName = String(p.newCompanyName ?? '').trim() || '-';
+    const chairman = String(p.chairman ?? '').trim() || '-';
+    const startDate = String(p.startDate ?? '').trim() || '-';
+    const meetingVenue = String(p.meetingVenue ?? '').trim() || '-';
+    const useRegisteredOffice = Boolean((p as { useByBridgeRegisteredOfficeAddress?: unknown }).useByBridgeRegisteredOfficeAddress);
+    lines.push(`1. The Company name be changed from "${input.companyName}" to "${newCompanyName}".`);
+    lines.push(`2. Chairman: ${chairman}.`);
+    lines.push(`3. Meeting time: ${startDate}.`);
+    lines.push(`4. Meeting venue: ${meetingVenue}.`);
+    lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
+  } else if (input.type === 'CHANGE_FINANCIAL_YEAR_END') {
+    const originalFye = (input.original.fye ?? '-').trim() || '-';
+    const newFye = String(p.newFye ?? '').trim() || '-';
+    lines.push(`1. The Financial Year End (FYE) of the Company be changed from "${originalFye}" to "${newFye}".`);
+    lines.push('2. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
+  } else if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') {
+    const original = (input.original.registeredOfficeAddress ?? '-').trim() || '-';
+    const next = String(p.newRegisteredOfficeAddress ?? '').trim() || '-';
+    const useByBridge = Boolean((p as { useByBridgeRegisteredOfficeAddress?: unknown }).useByBridgeRegisteredOfficeAddress);
+    lines.push('1. The Registered Office Address of the Company be changed as follows:');
+    lines.push(`   From: ${original}`);
+    lines.push(`   To:   ${next}`);
+    lines.push(`2. Use ByBridge registered office address: ${useByBridge ? 'Yes' : 'No'}.`);
+    lines.push('3. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
+  } else if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+    const p1 = String(p.ssicPrimaryCode ?? '').trim() || '-';
+    const p2 = String(p.ssicSecondaryCode ?? '').trim() || '-';
+    const o1 = (input.original.ssicPrimaryCode ?? '-').trim() || '-';
+    const o2 = (input.original.ssicSecondaryCode ?? '-').trim() || '-';
+    lines.push('1. The business activities (SSIC) of the Company be changed as follows:');
+    lines.push(`   Primary:   ${o1}  ->  ${p1}`);
+    lines.push(`   Secondary: ${o2}  ->  ${p2}`);
+    lines.push('2. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
+  } else if (input.type === 'CHANGE_SECRETARY') {
+    const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim() || '-';
+    const addSecretaries = Array.isArray(p.addSecretaries) ? (p.addSecretaries as Array<Record<string, unknown>>) : [];
+    const useByBridge = Boolean((p as { useByBridgeCompanySecretary?: unknown }).useByBridgeCompanySecretary);
+    const addNames = addSecretaries
+      .map((x) => ({ fullName: String(x.fullName ?? '').trim(), email: String(x.email ?? '').trim() }))
+      .filter((x) => !!x.fullName)
+      .map((x) => (x.email ? `${x.fullName} <${x.email}>` : x.fullName));
+    lines.push('1. The Company Secretary be changed as follows:');
+    lines.push(`   Remove secretary role ID: ${removeSecretaryRoleId}`);
+    lines.push(`   Add: ${addNames.length ? addNames.join(', ') : '-'}`);
+    lines.push(`2. Use ByBridge company secretary: ${useByBridge ? 'Yes' : 'No'}.`);
+    lines.push('3. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
+  } else if (input.type === 'TRANSFER_COMPANY_SECRETARY') {
+    const effectiveDate = String(p.effectiveDate ?? '').trim() || '-';
+    const newSecretaryName = String(p.newSecretaryName ?? '').trim() || '-';
+    const newSecretaryEmail = String(p.newSecretaryEmail ?? '').trim() || '-';
+    const reason = String(p.reason ?? '').trim() || '-';
+    const notes = String(p.notes ?? '').trim() || '-';
+    lines.push(`1. With effect from ${effectiveDate}, the Company Secretary be transferred / changed.`);
+    lines.push(`2. New secretary: ${newSecretaryName} <${newSecretaryEmail}>.`);
+    lines.push(`3. Reason: ${reason}.`);
+    lines.push(`4. Notes: ${notes}.`);
+    lines.push('5. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
+  }
 
-    if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') {
-      const ssicPrimaryCode = String(p.ssicPrimaryCode ?? '').trim();
-      const ssicSecondaryCode = String(p.ssicSecondaryCode ?? '').trim();
-      return (
-        row('Original Activity 1 (SSIC)', input.original.ssicPrimaryCode ?? '-') +
-        row('Original Activity 2 (SSIC)', input.original.ssicSecondaryCode ?? '-') +
-        row('New Activity 1 (SSIC)', ssicPrimaryCode || '-') +
-        row('New Activity 2 (SSIC)', ssicSecondaryCode || '-')
-      );
-    }
+  lines.push('');
+  lines.push('For and on behalf of the Company.');
 
-    if (input.type === 'CHANGE_SECRETARY') {
-      const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim();
-      const addSecretaries = Array.isArray(p.addSecretaries) ? (p.addSecretaries as Array<Record<string, unknown>>) : [];
-      const useByBridge = Boolean((p as { useByBridgeCompanySecretary?: unknown }).useByBridgeCompanySecretary);
-      const addList = addSecretaries
-        .map((x) => ({ fullName: String(x.fullName ?? '').trim(), email: String(x.email ?? '').trim() }))
-        .filter((x) => !!x.fullName)
-        .map((x) => (x.email ? `${esc(x.fullName)} &lt;${esc(x.email)}&gt;` : esc(x.fullName)));
-      const addHtml = addList.length
-        ? `<ul style="margin:8px 0 0 18px;">${addList.map((x) => `<li>${x}</li>`).join('')}</ul>`
-        : '<div class="muted" style="margin-top:6px;">None</div>';
-
-      return (
-        row('Remove secretary role ID', removeSecretaryRoleId || '-') +
-        `<div style="margin-top: 10px;"><strong>Add secretaries</strong>:</div>${addHtml}` +
-        row('Use ByBridge company secretary', useByBridge ? 'Yes' : 'No')
-      );
-    }
-
-    if (input.type === 'TRANSFER_COMPANY_SECRETARY') {
-      const effectiveDate = String(p.effectiveDate ?? '').trim();
-      const newSecretaryName = String(p.newSecretaryName ?? '').trim();
-      const newSecretaryEmail = String(p.newSecretaryEmail ?? '').trim();
-      const reason = String(p.reason ?? '').trim();
-      const notes = String(p.notes ?? '').trim();
-      return (
-        row('Effective date', effectiveDate || '-') +
-        row('New secretary name', newSecretaryName || '-') +
-        row('New secretary email', newSecretaryEmail || '-') +
-        row('Reason', reason || '-') +
-        row('Notes', notes || '-')
-      );
-    }
-
-    return '';
-  })();
+  const summaryText = lines.join('\n');
 
   return `
 <!doctype html>
@@ -323,11 +325,11 @@ export function renderCompanyUpdateRequestHtml(input: {
     </style>
   </head>
   <body>
-    <h1>${esc(title)}</h1>
+    <h1>Board Resolution</h1>
     <div class="muted">Date: ${esc(now)}</div>
     <div class="box" style="margin-top: 12px;">
-      <div><strong>Company</strong>: ${companyName}${companyRegistrationNo ? ` (${companyRegistrationNo})` : ''}</div>
-      ${body}
+      <div><strong>Title</strong>: ${esc(title)}</div>
+      <div style="margin-top: 10px; white-space: pre-wrap;">${esc(summaryText)}</div>
       <div class="sig">
         <div>Signed by Directors of the Company:</div>
         <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
