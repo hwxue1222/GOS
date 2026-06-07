@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
 
 type Person = {
@@ -46,6 +47,8 @@ type Props = {
 
 export default function PeopleTable({ people, loading }: Props) {
   const { t, lang } = useI18n();
+
+  const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
 
   const roleLabel = (role: string) => {
     if (role === 'DIRECTOR') return t('roles.director');
@@ -106,23 +109,39 @@ export default function PeopleTable({ people, loading }: Props) {
                       </div>
 
                       {typeof p.companyCount === 'number' && p.companyCount > 0 ? (
-                        <div
-                          className="mt-1 text-xs text-black/60 space-y-0.5"
-                          title={companyRoleLines(p).length ? companyRoleLines(p).join('\n') : (p.companyNames ?? []).join('\n')}
-                        >
-                          {companyRoleLines(p)
-                            .slice(0, 6)
-                            .map((line) => (
-                              <div key={line} className="truncate">
-                                {line}
-                              </div>
-                            ))}
-                          {companyRoleLines(p).length > 6 ? (
-                            <div className="text-black/40">
-                              {lang === 'zh' ? `还有 ${companyRoleLines(p).length - 6} 条...` : `${companyRoleLines(p).length - 6} more...`}
+                        (() => {
+                          const lines = companyRoleLines(p);
+                          const expanded = !!expandedById[p.id];
+                          const visibleLines = expanded ? lines : lines.slice(0, 6);
+                          const remaining = Math.max(0, lines.length - 6);
+                          return (
+                            <div
+                              className="mt-1 text-xs text-black/60 space-y-0.5"
+                              title={lines.length ? lines.join('\n') : (p.companyNames ?? []).join('\n')}
+                            >
+                              {visibleLines.map((line) => (
+                                <div key={line} className="truncate">
+                                  {line}
+                                </div>
+                              ))}
+                              {remaining > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedById((prev) => ({ ...prev, [p.id]: !expanded }))}
+                                  className="text-black/40 hover:underline"
+                                >
+                                  {expanded
+                                    ? lang === 'zh'
+                                      ? '收起'
+                                      : 'Collapse'
+                                    : lang === 'zh'
+                                      ? `还有 ${remaining} 条...`
+                                      : `${remaining} more...`}
+                                </button>
+                              ) : null}
                             </div>
-                          ) : null}
-                        </div>
+                          );
+                        })()
                       ) : null}
                     </div>
                   </td>

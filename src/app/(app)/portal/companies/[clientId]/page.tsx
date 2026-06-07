@@ -3,6 +3,11 @@ import Link from 'next/link';
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
+import ssic from '@/data/ssic.json';
+
+type SsicRow = { code: string; description: string };
+const SSIC_ROWS = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
+const SSIC_DESC_BY_CODE = new Map(SSIC_ROWS.map((r) => [String(r.code ?? '').trim().toLowerCase(), String(r.description ?? '').trim()]));
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -43,6 +48,21 @@ function DlRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-3 py-2 border-t border-black/5">
       <div className="text-sm text-black/50">{label}</div>
       <div className="sm:col-span-2 text-sm text-black">{value}</div>
+    </div>
+  );
+}
+
+function SsicValue({ code }: { code?: string }) {
+  const s = String(code ?? '').trim();
+  if (!s) return '-';
+  const desc = SSIC_DESC_BY_CODE.get(s.toLowerCase()) ?? '';
+  if (!desc) return s;
+  return (
+    <div className="min-w-0">
+      <div>{s}</div>
+      <div className="mt-0.5 text-xs text-black/50 break-words" title={desc}>
+        {desc}
+      </div>
     </div>
   );
 }
@@ -147,8 +167,8 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                   <DlRow label="Registered office address" value={client.registeredOfficeAddress ?? '-'} />
                   <DlRow label="Paid-up capital" value={money(client.paidUpCapitalCurrency, client.paidUpCapitalAmount)} />
                   <DlRow label="Total shares" value={typeof client.totalShares === 'number' ? client.totalShares.toLocaleString() : '-'} />
-                  <DlRow label="SSIC (Primary)" value={client.ssicPrimaryCode ?? '-'} />
-                  <DlRow label="SSIC (Secondary)" value={client.ssicSecondaryCode ?? '-'} />
+                  <DlRow label="SSIC (Primary)" value={<SsicValue code={client.ssicPrimaryCode} />} />
+                  <DlRow label="SSIC (Secondary)" value={<SsicValue code={client.ssicSecondaryCode} />} />
                 </div>
               </div>
             </div>

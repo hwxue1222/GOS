@@ -236,6 +236,12 @@ export default function PeopleClient() {
           <div className="mt-1 text-sm text-black/60">{t('people.hint')}</div>
         </div>
         <div className="flex items-center gap-2 w-full justify-end">
+          <Link
+            href="/secretary/acra-filing"
+            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+          >
+            ACRA Filing
+          </Link>
           <button
             onClick={() => {
               setError(null);
