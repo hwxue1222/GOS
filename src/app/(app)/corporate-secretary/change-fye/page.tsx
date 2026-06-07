@@ -10,11 +10,10 @@ export default async function ChangeFyePage() {
       <AppTopNav active="corporate-secretary" />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-xl font-semibold">Change of Fiscal Financial Year</h1>
+          <h1 className="text-xl font-semibold">Change of Financial Year End (FYE)</h1>
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">Coming soon.</div>
         </div>
       </div>
     </div>
   );
 }
-

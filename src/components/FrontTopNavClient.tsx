@@ -160,7 +160,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
                 Change of Company Name
               </Link>
               <Link href="/corporate-secretary/change-fye" onClick={() => setOpen(null)} className={itemClass()}>
-                Change of Fiscal Financial Year
+                Change of Financial Year End (FYE)
               </Link>
               <Link href="/corporate-secretary/change-address" onClick={() => setOpen(null)} className={itemClass()}>
                 Change of Registered Office Address
