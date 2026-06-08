@@ -61,6 +61,15 @@ type NewSecretary = {
   email: string;
   joinDate: string;
   address: string;
+  declaration: {
+    i: boolean;
+    ii: boolean;
+    iii: boolean;
+    iv: boolean;
+    v: boolean;
+    vi: boolean;
+    vii: boolean;
+  };
 };
 
 function normalizePhone(countryCode: string, local: string) {
@@ -100,6 +109,7 @@ export default function ChangeSecretaryClient() {
         email: '',
         joinDate: '',
         address: '',
+        declaration: { i: false, ii: false, iii: false, iv: false, v: false, vi: false, vii: false },
       },
     ]);
   }
@@ -125,6 +135,9 @@ export default function ChangeSecretaryClient() {
         idNo: x.idNo.trim(),
         joinDate: x.joinDate.trim(),
         address: x.address.trim(),
+        declarationQualifications: (Object.entries(x.declaration)
+          .filter(([, v]) => v)
+          .map(([k]) => k) as Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>) ?? [],
       }))
       .filter((x) => !!x.fullName);
 
@@ -139,6 +152,10 @@ export default function ChangeSecretaryClient() {
       for (const s of cleanedAdd) {
         if (!s.fullName || !s.idNo || !s.email || !s.dob || !s.nationality || !s.phone || !s.joinDate || !s.address) {
           setSubmitError('Please complete all required fields for new secretary.');
+          return;
+        }
+        if (!s.declarationQualifications.length) {
+          setSubmitError('Please tick at least one declaration item (i) to (vii).');
           return;
         }
       }
@@ -162,6 +179,7 @@ export default function ChangeSecretaryClient() {
               dob: x.dob || undefined,
               address: x.address || undefined,
               joinDate: x.joinDate || undefined,
+              declarationQualifications: x.declarationQualifications,
             })),
             useByBridgeCompanySecretary: useByBridgeSecretary,
           },
@@ -312,6 +330,80 @@ export default function ChangeSecretaryClient() {
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm min-h-[90px]"
                         />
                       </label>
+
+                      <div className="sm:col-span-12 text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Declaration
+                        </div>
+                        <div className="mt-2 text-black/70">
+                          I am a qualified person under section 171(1AA) of the Companies Act by virtue of my being —
+                        </div>
+                        <div className="mt-2 space-y-2">
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.i}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, i: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(i) a secretary of a company for at least 3 of the 5 years immediately preceding the abovementioned date of my appointment as secretary of the abovenamed company.</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.ii}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, ii: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(ii) a qualified person under the Legal Profession Act (Cap. 161).</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.iii}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, iii: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(iii) public accountant registered or deemed to be registered under the Accountants Act (Cap. 2).</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.iv}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, iv: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(iv) a member of the Singapore Association of the Institute of Chartered Secretaries and Administrators.</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.v}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, v: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(v) a member of the Institute of Singapore Chartered Accountants (formerly known as the Institute of Certified Public Accountants of Singapore).</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.vi}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, vi: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(vi) a member of the Association of International Accountants (Singapore Branch).</span>
+                          </label>
+                          <label className="flex items-start gap-2 text-sm text-black/80">
+                            <input
+                              type="checkbox"
+                              checked={s.declaration.vii}
+                              onChange={(e) => patchSecretary(i, { declaration: { ...s.declaration, vii: e.target.checked } })}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <span>(vii) a member of The Institute of Company Accountants, Singapore.</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="mt-2 flex justify-end">
