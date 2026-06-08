@@ -144,18 +144,14 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
       ];
     }
     if (req.type === 'CHANGE_BUSINESS_ACTIVITIES') {
+      const beforePrimary = String(payload.originalSsicPrimaryCode ?? company.ssicPrimaryCode ?? '-');
+      const beforeSecondary = String(payload.originalSsicSecondaryCode ?? company.ssicSecondaryCode ?? '-');
+      const afterPrimary = String(payload.ssicPrimaryCode ?? '');
+      const afterSecondary = String(payload.ssicSecondaryCode ?? '') || '-';
       return [
-        {
-          k: 'SSIC (Primary)',
-          before: company.ssicPrimaryCode ?? '-',
-          after: String(payload.ssicPrimaryCode ?? ''),
-        },
-        {
-          k: 'SSIC (Secondary)',
-          before: company.ssicSecondaryCode ?? '-',
-          after: String(payload.ssicSecondaryCode ?? '-') || '-',
-        },
-      ];
+        { k: 'SSIC (Primary)', before: beforePrimary || '-', after: afterPrimary || '-' },
+        { k: 'SSIC (Secondary)', before: beforeSecondary || '-', after: afterSecondary || '-' },
+      ].filter((x) => x.before !== x.after);
     }
     if (req.type === 'CHANGE_SECRETARY') {
       const add = Array.isArray(payload.addSecretaries) ? (payload.addSecretaries as Array<Record<string, unknown>>) : [];
