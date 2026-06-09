@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
@@ -78,6 +78,10 @@ function normalizePhone(countryCode: string, local: string) {
   return `${countryCode}${digits}`;
 }
 
+function draftKey(companyId: string) {
+  return `gos.draft.changeSecretary.${companyId}`;
+}
+
 export default function ChangeSecretaryClient() {
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
@@ -87,6 +91,24 @@ export default function ChangeSecretaryClient() {
   const [useByBridgeSecretary, setUseByBridgeSecretary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    const raw = window.localStorage.getItem(draftKey(companyId));
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw) as {
+        removeSecretaryRoleId?: string;
+        useByBridgeSecretary?: boolean;
+        addSecretaries?: NewSecretary[];
+      };
+      if (typeof d.removeSecretaryRoleId === 'string') setRemoveSecretaryRoleId(d.removeSecretaryRoleId);
+      if (typeof d.useByBridgeSecretary === 'boolean') setUseByBridgeSecretary(d.useByBridgeSecretary);
+      if (Array.isArray(d.addSecretaries)) setAddSecretaries(d.addSecretaries);
+    } catch {
+      window.localStorage.removeItem(draftKey(companyId));
+    }
+  }, [companyId]);
 
   const existing = useMemo(() => roles?.secretaries ?? [], [roles?.secretaries]);
 
@@ -117,79 +139,25 @@ export default function ChangeSecretaryClient() {
     setAddSecretaries((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function onSubmit() {
+  async function onSave() {
     setSubmitError(null);
     if (!companyId || !client) {
       setSubmitError('NO_COMPANY');
       return;
     }
 
-    const cleanedAdd = addSecretaries
-      .map((x) => ({
-        fullName: x.fullName.trim(),
-        email: x.email.trim(),
-        phone: normalizePhone(x.phoneCountryCode, x.phoneLocal),
-        dob: x.dob.trim(),
-        nationality: x.nationality.trim(),
-        idNo: x.idNo.trim(),
-        joinDate: x.joinDate.trim(),
-        address: x.address.trim(),
-        declarationQualifications: (Object.entries(x.declaration)
-          .filter(([, v]) => v)
-          .map(([k]) => k) as Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>) ?? [],
-      }))
-      .filter((x) => !!x.fullName);
-
-    const hasDelete = !!removeSecretaryRoleId.trim();
-    const hasAdd = cleanedAdd.length > 0;
-    if (!useByBridgeSecretary && !hasDelete && !hasAdd) {
-      setSubmitError('Please add or delete at least one secretary.');
-      return;
-    }
-
-    if (!useByBridgeSecretary && hasAdd) {
-      for (const s of cleanedAdd) {
-        if (!s.fullName || !s.idNo || !s.email || !s.dob || !s.nationality || !s.phone || !s.joinDate || !s.address) {
-          setSubmitError('Please complete all required fields for new secretary.');
-          return;
-        }
-        if (!s.declarationQualifications.length) {
-          setSubmitError('Please tick at least one declaration item (i) to (vii).');
-          return;
-        }
-      }
-    }
-
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          type: 'CHANGE_SECRETARY',
-          payload: {
-            removeSecretaryRoleId: removeSecretaryRoleId.trim() || undefined,
-            addSecretaries: cleanedAdd.map((x) => ({
-              fullName: x.fullName,
-              email: x.email || undefined,
-              phone: x.phone || undefined,
-              idNo: x.idNo || undefined,
-              nationality: x.nationality || undefined,
-              dob: x.dob || undefined,
-              address: x.address || undefined,
-              joinDate: x.joinDate || undefined,
-              declarationQualifications: x.declarationQualifications,
-            })),
-            useByBridgeCompanySecretary: useByBridgeSecretary,
-          },
+      window.localStorage.setItem(
+        draftKey(companyId),
+        JSON.stringify({
+          removeSecretaryRoleId,
+          useByBridgeSecretary,
+          addSecretaries,
+          savedAt: new Date().toISOString(),
         }),
-      }).catch(() => null);
-      const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
-      if (!res?.ok || !j?.ok || !j.request?.id) {
-        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-        return;
-      }
-      router.push(`/corporate-secretary/applications/company-update/${encodeURIComponent(j.request.id)}`);
+      );
+      router.push(closeHref);
     } finally {
       setSubmitting(false);
     }
@@ -456,10 +424,10 @@ export default function ChangeSecretaryClient() {
 
           <button
             disabled={submitting}
-            onClick={() => void onSubmit()}
+            onClick={() => void onSave()}
             className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
-            Apply
+            Save
           </button>
         </div>
       ) : null}
