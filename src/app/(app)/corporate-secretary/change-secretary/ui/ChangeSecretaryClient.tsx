@@ -58,9 +58,11 @@ type NewSecretary = {
   phoneCountryCode: PhoneCountryCode;
   phoneLocal: string;
   idNo: string;
+  idTypeLabel: 'Passport No.' | 'NRIC No.' | 'FIN No.' | 'IC No.';
   email: string;
   joinDate: string;
   address: string;
+  lockedFromMember: boolean;
   declaration: {
     i: boolean;
     ii: boolean;
@@ -78,6 +80,17 @@ function normalizePhone(countryCode: string, local: string) {
   return `${countryCode}${digits}`;
 }
 
+function splitPhone(phoneRaw: string): { phoneCountryCode: PhoneCountryCode; phoneLocal: string } {
+  const s = String(phoneRaw ?? '').trim();
+  const digits = s.replace(/\s+/g, '');
+  for (const c of PHONE_COUNTRY_CODES.slice().sort((a, b) => b.value.length - a.value.length)) {
+    if (digits.startsWith(c.value)) {
+      return { phoneCountryCode: c.value, phoneLocal: digits.slice(c.value.length).replace(/\D/g, '') };
+    }
+  }
+  return { phoneCountryCode: '+65', phoneLocal: digits.replace(/\D/g, '') };
+}
+
 function draftKey(companyId: string) {
   return `gos.draft.changeSecretary.${companyId}`;
 }
@@ -93,6 +106,9 @@ export default function ChangeSecretaryClient() {
   const [useByBridgeSecretary, setUseByBridgeSecretary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const lookupTimerByIdx = useMemo(() => new Map<number, ReturnType<typeof setTimeout>>(), []);
+  const lookupSeqByIdx = useMemo(() => new Map<number, number>(), []);
 
   const validateSecretary = (s: NewSecretary) => {
     const fullName = s.fullName.trim();
@@ -118,6 +134,43 @@ export default function ChangeSecretaryClient() {
     const ok = !Object.values(missing).some(Boolean);
     return { ok, missing };
   };
+
+  async function lookupMemberByIdNo(idx: number, idNoRaw: string) {
+    if (!companyId) return;
+    const idNo = String(idNoRaw ?? '').trim();
+    if (!idNo) return;
+
+    const seq = (lookupSeqByIdx.get(idx) ?? 0) + 1;
+    lookupSeqByIdx.set(idx, seq);
+
+    const res = await fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}`).catch(() => null);
+    const json = (await res?.json().catch(() => null)) as
+      | {
+          ok: true;
+          person: { fullName?: string; email?: string; phone?: string; nationality?: string; dob?: string; address?: string; idNo?: string };
+        }
+      | { ok: true; person: null }
+      | { ok: false; error?: string }
+      | null;
+
+    if ((lookupSeqByIdx.get(idx) ?? 0) !== seq) return;
+    if (!res?.ok || !json || !('ok' in json) || !json.ok) return;
+    if (!('person' in json) || !json.person) return;
+
+    const p = json.person;
+    const phone = splitPhone(String(p.phone ?? ''));
+    patchSecretary(idx, {
+      fullName: String(p.fullName ?? '').trim(),
+      email: String(p.email ?? '').trim(),
+      nationality: String(p.nationality ?? '').trim() || 'Singapore',
+      dob: String(p.dob ?? '').trim(),
+      address: String(p.address ?? '').trim(),
+      phoneCountryCode: phone.phoneCountryCode,
+      phoneLocal: phone.phoneLocal,
+      lockedFromMember: true,
+    });
+    setShowErrorsByIdx((prev) => ({ ...prev, [idx]: false }));
+  }
 
   useEffect(() => {
     if (!companyId) return;
@@ -166,9 +219,11 @@ export default function ChangeSecretaryClient() {
         phoneCountryCode: '+65',
         phoneLocal: '',
         idNo: '',
+        idTypeLabel: 'NRIC No.',
         email: '',
         joinDate: '',
         address: '',
+        lockedFromMember: false,
         declaration: { i: false, ii: false, iii: false, iv: false, v: false, vi: false, vii: false },
       },
     ]);
@@ -242,6 +297,7 @@ export default function ChangeSecretaryClient() {
         dob: x.dob.trim(),
         nationality: x.nationality.trim(),
         idNo: x.idNo.trim(),
+        idTypeLabel: x.idTypeLabel,
         joinDate: x.joinDate.trim(),
         address: x.address.trim(),
         declarationQualifications: (Object.entries(x.declaration)
@@ -284,6 +340,7 @@ export default function ChangeSecretaryClient() {
               email: x.email || undefined,
               phone: x.phone || undefined,
               idNo: x.idNo || undefined,
+              idTypeLabel: x.idTypeLabel,
               nationality: x.nationality || undefined,
               dob: x.dob || undefined,
               address: x.address || undefined,
@@ -350,23 +407,62 @@ export default function ChangeSecretaryClient() {
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
-                          <span className="text-red-500">*</span> Secretary Full Name
+                          <span className="text-red-500">*</span> Full Name
                         </div>
                         <input
                           value={s.fullName}
                           onChange={(e) => patchSecretary(i, { fullName: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.fullName ? 'border-red-500' : 'border-black/10'}`}
+                          disabled={s.lockedFromMember}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.fullName ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
-                          <span className="text-red-500">*</span> Passport/NRIC/FIN
+                          <span className="text-red-500">*</span> Identification
                         </div>
-                        <input
-                          value={s.idNo}
-                          onChange={(e) => patchSecretary(i, { idNo: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.idNo ? 'border-red-500' : 'border-black/10'}`}
-                        />
+                        <div className="mt-1 flex items-center gap-2">
+                          <select
+                            value={s.idTypeLabel}
+                            onChange={(e) => patchSecretary(i, { idTypeLabel: e.target.value as NewSecretary['idTypeLabel'] })}
+                            className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="Passport No.">Passport No.</option>
+                            <option value="NRIC No.">NRIC No.</option>
+                            <option value="FIN No.">FIN No.</option>
+                            <option value="IC No.">IC No.</option>
+                          </select>
+                          <input
+                            value={s.idNo}
+                            onChange={(e) => {
+                              const next = e.target.value;
+                              const wasLocked = s.lockedFromMember;
+                              patchSecretary(i, {
+                                idNo: next,
+                                ...(wasLocked
+                                  ? {
+                                      lockedFromMember: false,
+                                      fullName: '',
+                                      email: '',
+                                      phoneLocal: '',
+                                      dob: '',
+                                      nationality: 'Singapore',
+                                      address: '',
+                                    }
+                                  : {}),
+                              });
+                              const t = lookupTimerByIdx.get(i);
+                              if (t) clearTimeout(t);
+                              lookupTimerByIdx.set(
+                                i,
+                                setTimeout(() => {
+                                  void lookupMemberByIdNo(i, next);
+                                }, 350),
+                              );
+                            }}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.idNo ? 'border-red-500' : 'border-black/10'}`}
+                            placeholder={s.idTypeLabel}
+                          />
+                        </div>
                       </label>
 
                       <label className="sm:col-span-6 text-sm">
@@ -377,7 +473,8 @@ export default function ChangeSecretaryClient() {
                           type="date"
                           value={s.dob}
                           onChange={(e) => patchSecretary(i, { dob: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                          disabled={s.lockedFromMember}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
@@ -387,7 +484,8 @@ export default function ChangeSecretaryClient() {
                         <input
                           value={s.email}
                           onChange={(e) => patchSecretary(i, { email: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.email ? 'border-red-500' : 'border-black/10'}`}
+                          disabled={s.lockedFromMember}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.email ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 
@@ -398,7 +496,8 @@ export default function ChangeSecretaryClient() {
                         <select
                           value={s.nationality}
                           onChange={(e) => patchSecretary(i, { nationality: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
+                          disabled={s.lockedFromMember}
+                          className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
                         >
                           {NATIONALITY_OPTIONS.map((n) => (
                             <option key={n} value={n}>
@@ -410,7 +509,7 @@ export default function ChangeSecretaryClient() {
 
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
-                          <span className="text-red-500">*</span> Join Date
+                          <span className="text-red-500">*</span> Date of appointment
                         </div>
                         <input
                           type="date"
@@ -441,7 +540,8 @@ export default function ChangeSecretaryClient() {
                           <input
                             value={s.phoneLocal}
                             onChange={(e) => patchSecretary(i, { phoneLocal: e.target.value })}
-                            className="flex-1 px-3 py-2 text-sm outline-none"
+                            disabled={s.lockedFromMember}
+                            className={`flex-1 px-3 py-2 text-sm outline-none ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''}`}
                             placeholder="Phone"
                           />
                         </div>
@@ -454,7 +554,8 @@ export default function ChangeSecretaryClient() {
                         <textarea
                           value={s.address}
                           onChange={(e) => patchSecretary(i, { address: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
+                          disabled={s.lockedFromMember}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 

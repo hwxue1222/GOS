@@ -62,12 +62,14 @@ export function renderSecretaryConsentToActHtml(input: {
     address: string;
     nationality: string;
     idNo: string;
+    idTypeLabel?: 'Passport No.' | 'NRIC No.' | 'FIN No.' | 'IC No.';
     effectiveDateYmd: string;
     declarationQualifications: Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>;
   };
   signedDateYmd: string;
 }) {
   const s = input.secretary;
+  const idLabel = String(s.idTypeLabel ?? 'FIN No.').trim() || 'FIN No.';
   const qset = new Set((s.declarationQualifications ?? []).map((x) => String(x)));
   const mark = (k: string) => (qset.has(k) ? '☒' : '☐');
   const signer = [{ fullName: s.fullName, email: s.email }];
@@ -123,7 +125,7 @@ export function renderSecretaryConsentToActHtml(input: {
 
     <div class="block"><strong>Name:</strong> ${esc(s.fullName)}</div>
     <div class="block"><strong>Address:</strong> ${esc(s.address)}</div>
-    <div class="block"><strong>FIN No:</strong> ${esc(s.idNo)} &nbsp;&nbsp;&nbsp; <strong>Nationality:</strong> ${esc(s.nationality)}</div>
+    <div class="block"><strong>${esc(idLabel)}</strong> ${esc(s.idNo)} &nbsp;&nbsp;&nbsp; <strong>Nationality:</strong> ${esc(s.nationality)}</div>
     <div class="block"><strong>Date:</strong> ${esc(toDdMmYyyy(input.signedDateYmd))}</div>
     <div class="block muted"># to be completed by secretaries of public companies only or by secretaries of private companies appointed under section 171(1AB) of the Act.</div>
   </body>
@@ -177,7 +179,7 @@ export function renderChangeSecretaryResolutionHtml(input: {
   companyRegistrationNo?: string;
   directors: Array<{ fullName: string; email?: string }>;
   resolutionDateYmd: string;
-  appointedSecretaries: Array<{ fullName: string; idNo?: string }>;
+  appointedSecretaries: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
   resignedSecretary?: { fullName: string; idNo?: string };
 }) {
   const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: 'Director:' });
@@ -185,7 +187,8 @@ export function renderChangeSecretaryResolutionHtml(input: {
   const apptLines = appts
     .map((s) => {
       const idNo = String(s.idNo ?? '').trim();
-      const idPart = idNo ? ` (NRIC No. ${esc(idNo)})` : '';
+      const idTypeLabel = String(s.idTypeLabel ?? '').trim();
+      const idPart = idNo ? ` (${esc(idTypeLabel || 'ID No.')} ${esc(idNo)})` : '';
       return `That ${esc(s.fullName)}${idPart} having consented to act as Secretary of the Company, be and is hereby appointed with immediate effect.`;
     })
     .join('<br />');
@@ -482,7 +485,11 @@ export function renderCompanyUpdateRequestHtml(input: {
       ? (((p as { addSecretaries?: unknown }).addSecretaries ?? []) as Array<Record<string, unknown>>)
       : [];
     const appointedSecretaries = addSecretaries
-      .map((x) => ({ fullName: String(x.fullName ?? '').trim(), idNo: String(x.idNo ?? '').trim() || undefined }))
+      .map((x) => ({
+        fullName: String(x.fullName ?? '').trim(),
+        idTypeLabel: String(x.idTypeLabel ?? '').trim() || undefined,
+        idNo: String(x.idNo ?? '').trim() || undefined,
+      }))
       .filter((x) => !!x.fullName);
 
     const resignedName = String((p as { resignedSecretaryName?: unknown }).resignedSecretaryName ?? '').trim();

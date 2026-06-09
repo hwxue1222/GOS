@@ -7885,12 +7885,13 @@ export async function createCompanyUpdateRequest(input: {
       if (!fullName) continue;
       const email = String(s.email ?? '').trim();
       const idNo = String(s.idNo ?? '').trim();
+      const idTypeLabel = String(s.idTypeLabel ?? '').trim();
       const nationality = String(s.nationality ?? '').trim();
       const dob = String(s.dob ?? '').trim();
       const joinDate = String(s.joinDate ?? '').trim();
       const address = String(s.address ?? '').trim();
       const decl = Array.isArray(s.declarationQualifications) ? (s.declarationQualifications as unknown[]) : [];
-      if (!email || !idNo || !nationality || !dob || !joinDate || !address || decl.length === 0) {
+      if (!email || !idNo || !idTypeLabel || !nationality || !dob || !joinDate || !address || decl.length === 0) {
         return { ok: false as const, error: 'INVALID_INPUT' as const };
       }
     }
