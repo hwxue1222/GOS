@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import DeleteActionClient from '@/components/DeleteActionClient';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
+import SignaturesDocumentsCardClient from './ui/SignaturesDocumentsCardClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -124,6 +125,23 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     signed: allSignatures.filter((s) => s.status === 'SIGNED').length,
   };
 
+  const signatureRows = allSignatures.map((s) => {
+    const meta = getSignerIdentityForClient(db, req.clientId, s.email);
+    return {
+      documentTitle: s.documentTitle,
+      signerName: meta.fullName,
+      signerRole: meta.role,
+      email: s.email,
+      status: s.status,
+    };
+  });
+
+  const documentRows = packetRows.map((row) => ({
+    documentId: row.document.id,
+    title: row.document.title,
+    signerCount: row.signatures.length,
+  }));
+
   const diffRows = (() => {
     if (!company) return [] as Array<{ k: string; before: string; after: string }>;
     if (req.type === 'CHANGE_COMPANY_NAME') {
@@ -209,131 +227,109 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
           </div>
 
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-5 rounded-xl bg-white border border-black/5 p-4">
-              <div className="text-sm font-medium">Company</div>
-              <div className="mt-2 text-sm text-black/70">
-                <div>Name: {company?.name ?? req.clientId}</div>
-                <div className="mt-1">Company code: {company?.code ?? req.clientId}</div>
-              </div>
-              <div className="mt-4 text-sm font-medium">Timeline</div>
-              <div className="mt-2 text-sm text-black/70">
-                <div>Submitted: {(req.submittedAt ?? req.createdAt).slice(0, 10)}</div>
-                {req.signedAt ? <div className="mt-1">Signed: {req.signedAt.slice(0, 10)}</div> : null}
-                {req.decidedAt ? <div className="mt-1">Decided: {req.decidedAt.slice(0, 10)}</div> : null}
-              </div>
-
-              <div className="mt-4">
-                <div className="text-sm font-medium">Signatures</div>
-                <div className="mt-2 text-sm text-black/70">
+            <div className="lg:col-span-7 space-y-4">
+              <div className="rounded-xl bg-white border border-black/5 p-5">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    Progress: {signatureSummary.signed}/{signatureSummary.total}
+                    <div className="text-sm font-medium">Overview</div>
+                    <div className="mt-1 text-xs text-black/50">Quick summary of the application.</div>
                   </div>
-                  {packetRows.length ? (
-                    <div className="mt-2 space-y-4">
-                      {packetRows.map((row) => (
-                        <div key={row.packet.id} className="rounded-lg border border-black/5 p-3">
-                          <div className="text-xs text-black/50">{row.document.title}</div>
-                          <div className="mt-1 text-xs text-black/50">
-                            Progress: {row.signatures.filter((s) => s.status === 'SIGNED').length}/{row.signatures.length}
-                          </div>
-                          {row.signatures.length ? (
-                            <div className="mt-2 space-y-1">
-                              {row.signatures.map((s) => (
-                                <div key={`${row.packet.id}:${s.email}`} className="flex items-center justify-between gap-3">
-                                  <div className="truncate">
-                                    {(() => {
-                                      const meta = getSignerIdentityForClient(db, req.clientId, s.email);
-                                      const left = meta.fullName ? meta.fullName : s.email;
-                                      const right = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                                      return left === s.email ? right : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                                    })()}
-                                  </div>
-                                  <div className="shrink-0 text-black/60">{s.status}</div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="mt-2 text-black/40">No signatures</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-black/40">No signatures</div>
-                  )}
+                  <div className="text-xs text-black/50">Updated: {(req.updatedAt ?? req.createdAt).slice(0, 10)}</div>
                 </div>
+
+                <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Company</dt>
+                    <dd className="text-right text-black/80">{company?.name ?? req.clientId}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Company code</dt>
+                    <dd className="text-right text-black/80">{company?.code ?? req.clientId}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Type</dt>
+                    <dd className="text-right text-black/80">{label}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Status</dt>
+                    <dd className="text-right text-black/80">{req.status}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Submitted</dt>
+                    <dd className="text-right text-black/80">{(req.submittedAt ?? req.createdAt).slice(0, 10)}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Signed</dt>
+                    <dd className="text-right text-black/80">{req.signedAt ? req.signedAt.slice(0, 10) : '-'}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="text-black/50">Decided</dt>
+                    <dd className="text-right text-black/80">{req.decidedAt ? req.decidedAt.slice(0, 10) : '-'}</dd>
+                  </div>
+                </dl>
+
+                {req.decisionNote ? (
+                  <div className="mt-4 rounded-lg border border-black/5 bg-black/[0.02] p-3">
+                    <div className="text-xs font-medium text-black/70">Decision note</div>
+                    <div className="mt-1 text-sm text-black/70 whitespace-pre-wrap">{req.decisionNote}</div>
+                  </div>
+                ) : null}
               </div>
 
-              <div id="documents" className="mt-4">
-                <div className="text-sm font-medium">Documents</div>
-                <div className="mt-2 text-sm">
-                  {packetRows.length ? (
-                    <div className="space-y-3">
-                      {packetRows.map((row) => (
-                        <div key={row.document.id} className="rounded-lg border border-black/5 p-3">
-                          <div className="text-xs text-black/50">{row.document.title}</div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <a
-                              href={`/api/documents/${encodeURIComponent(row.document.id)}/pdf?disposition=inline`}
-                              className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Preview
-                            </a>
-                            <a
-                              href={`/api/documents/${encodeURIComponent(row.document.id)}/pdf?download=1`}
-                              className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Download PDF
-                            </a>
-                          </div>
-                        </div>
+              <div className="rounded-xl bg-white border border-black/5 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">Requested changes</div>
+                    <div className="mt-1 text-xs text-black/50">Before → after preview for this request.</div>
+                  </div>
+                  <div className="text-xs text-black/50">Rows: {diffRows.length}</div>
+                </div>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="text-left text-black/60">
+                      <tr className="border-b border-black/10">
+                        <th className="px-3 py-2 font-medium">Field</th>
+                        <th className="px-3 py-2 font-medium">Before</th>
+                        <th className="px-3 py-2 font-medium">After</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diffRows.map((r) => (
+                        <tr key={r.k} className="border-b border-black/5">
+                          <td className="px-3 py-2 align-top font-medium text-black/80">{r.k}</td>
+                          <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.before || '-'}</td>
+                          <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.after || '-'}</td>
+                        </tr>
                       ))}
-                    </div>
-                  ) : (
-                    <div className="text-black/40">No documents</div>
-                  )}
+                      {diffRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-3 py-8 text-center text-black/40">
+                            No preview available
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              {req.decisionNote ? (
-                <div className="mt-4">
-                  <div className="text-sm font-medium">Decision note</div>
-                  <div className="mt-2 text-sm text-black/70 whitespace-pre-wrap">{req.decisionNote}</div>
-                </div>
-              ) : null}
             </div>
 
-            <div className="lg:col-span-7 rounded-xl bg-white border border-black/5 p-4">
-              <div className="text-sm font-medium">Requested changes</div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="text-left text-black/60">
-                    <tr className="border-b border-black/5">
-                      <th className="px-3 py-2 font-medium">Field</th>
-                      <th className="px-3 py-2 font-medium">Before</th>
-                      <th className="px-3 py-2 font-medium">After</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {diffRows.map((r) => (
-                      <tr key={r.k} className="border-b border-black/5">
-                        <td className="px-3 py-2">{r.k}</td>
-                        <td className="px-3 py-2 text-black/70 whitespace-pre-wrap">{r.before}</td>
-                        <td className="px-3 py-2 text-black/70 whitespace-pre-wrap">{r.after}</td>
-                      </tr>
-                    ))}
-                    {diffRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-8 text-center text-black/40">
-                          No preview
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
+            <div className="lg:col-span-5">
+              <div className="space-y-4 lg:sticky lg:top-20">
+                <div className="rounded-xl bg-white border border-black/5 p-5">
+                  <div className="text-sm font-medium">Progress</div>
+                  <div className="mt-1 text-xs text-black/50">Signatures across all documents.</div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-sm text-black/70">Signed</div>
+                    <div className="text-sm font-medium">{signatureSummary.signed}</div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="text-sm text-black/70">Total</div>
+                    <div className="text-sm font-medium">{signatureSummary.total}</div>
+                  </div>
+                </div>
+
+                <SignaturesDocumentsCardClient signatureRows={signatureRows} documents={documentRows} />
               </div>
             </div>
           </div>
