@@ -407,7 +407,11 @@ export default function ChangeSecretaryClient() {
                     </div>
 
                     <div className="mt-2 flex justify-end">
-                      <button type="button" onClick={() => deleteRow(i)} className="text-sm text-red-600 hover:underline">
+                      <button
+                        type="button"
+                        onClick={() => deleteRow(i)}
+                        className="rounded-md bg-white border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
+                      >
                         Delete
                       </button>
                     </div>
@@ -416,6 +420,8 @@ export default function ChangeSecretaryClient() {
               </div>
             ) : null}
           </div>
+
+          <div className="border-t border-black/10" />
 
           <div>
             <div className="text-sm font-medium text-black">Delete Secretary</div>

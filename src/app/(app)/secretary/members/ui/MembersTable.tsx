@@ -104,7 +104,11 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                         </button>
                       ) : null}
                       {onDelete ? (
-                        <button type="button" onClick={() => onDelete(p.id)} className="text-xs text-red-600 hover:underline">
+                        <button
+                          type="button"
+                          onClick={() => onDelete(p.id)}
+                          className="rounded-md bg-white border border-red-200 text-red-700 px-2 py-1 text-xs font-medium hover:bg-red-50"
+                        >
                           Delete
                         </button>
                       ) : null}
