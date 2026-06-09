@@ -87,6 +87,7 @@ export default function ChangeSecretaryClient() {
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const [addSecretaries, setAddSecretaries] = useState<NewSecretary[]>([]);
+  const [editing, setEditing] = useState(false);
   const [removeSecretaryRoleId, setRemoveSecretaryRoleId] = useState('');
   const [useByBridgeSecretary, setUseByBridgeSecretary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +119,7 @@ export default function ChangeSecretaryClient() {
 
   function addRow() {
     setUseByBridgeSecretary(false);
+    setEditing(true);
     setAddSecretaries((prev) => [
       ...prev,
       {
@@ -157,7 +159,86 @@ export default function ChangeSecretaryClient() {
           savedAt: new Date().toISOString(),
         }),
       );
-      router.push(closeHref);
+      setEditing(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onApply() {
+    setSubmitError(null);
+    if (!companyId || !client) {
+      setSubmitError('NO_COMPANY');
+      return;
+    }
+
+    const cleanedAdd = addSecretaries
+      .map((x) => ({
+        fullName: x.fullName.trim(),
+        email: x.email.trim(),
+        phone: normalizePhone(x.phoneCountryCode, x.phoneLocal),
+        dob: x.dob.trim(),
+        nationality: x.nationality.trim(),
+        idNo: x.idNo.trim(),
+        joinDate: x.joinDate.trim(),
+        address: x.address.trim(),
+        declarationQualifications: (Object.entries(x.declaration)
+          .filter(([, v]) => v)
+          .map(([k]) => k) as Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>) ?? [],
+      }))
+      .filter((x) => !!x.fullName);
+
+    const hasDelete = !!removeSecretaryRoleId.trim();
+    const hasAdd = cleanedAdd.length > 0;
+    if (!useByBridgeSecretary && !hasDelete && !hasAdd) {
+      setSubmitError('Please add or delete at least one secretary.');
+      return;
+    }
+
+    if (!useByBridgeSecretary && hasAdd) {
+      for (const s of cleanedAdd) {
+        if (!s.fullName || !s.idNo || !s.email || !s.dob || !s.nationality || !s.phone || !s.joinDate || !s.address) {
+          setSubmitError('Please complete all required fields for new secretary.');
+          return;
+        }
+        if (!s.declarationQualifications.length) {
+          setSubmitError('Please tick at least one declaration item (i) to (vii).');
+          return;
+        }
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'CHANGE_SECRETARY',
+          payload: {
+            removeSecretaryRoleId: removeSecretaryRoleId.trim() || undefined,
+            addSecretaries: cleanedAdd.map((x) => ({
+              fullName: x.fullName,
+              email: x.email || undefined,
+              phone: x.phone || undefined,
+              idNo: x.idNo || undefined,
+              nationality: x.nationality || undefined,
+              dob: x.dob || undefined,
+              address: x.address || undefined,
+              joinDate: x.joinDate || undefined,
+              declarationQualifications: x.declarationQualifications,
+            })),
+            useByBridgeCompanySecretary: useByBridgeSecretary,
+          },
+        }),
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
+      if (!res?.ok || !j?.ok || !j.request?.id) {
+        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      window.localStorage.removeItem(draftKey(companyId));
+      router.push(`/corporate-secretary/applications/company-update/${encodeURIComponent(j.request.id)}`);
     } finally {
       setSubmitting(false);
     }
@@ -185,7 +266,11 @@ export default function ChangeSecretaryClient() {
               </button>
             </div>
 
-            {addSecretaries.length ? (
+            {!editing && addSecretaries.length ? (
+              <div className="mt-2 text-xs text-black/50">Saved new secretary info: {addSecretaries.length}</div>
+            ) : null}
+
+            {editing ? (
               <div className="mt-4 space-y-6">
                 {addSecretaries.map((s, i) => (
                   <div key={i}>
@@ -424,10 +509,10 @@ export default function ChangeSecretaryClient() {
 
           <button
             disabled={submitting}
-            onClick={() => void onSave()}
+            onClick={() => void (editing ? onSave() : onApply())}
             className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
-            Save
+            {editing ? 'Save' : 'Apply'}
           </button>
         </div>
       ) : null}
