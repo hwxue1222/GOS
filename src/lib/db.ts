@@ -7931,17 +7931,17 @@ export async function createCompanyUpdateRequest(input: {
                 : String(type).toLowerCase();
   const titlePrefix =
     type === 'CHANGE_COMPANY_NAME'
-      ? 'Board Resolution - Change of Company Name'
+      ? 'Director Resolution - Change of Company Name'
       : type === 'CHANGE_FINANCIAL_YEAR_END'
-        ? 'Board Resolution - Change of Financial Year End (FYE)'
+        ? 'Director Resolution - Change of Financial Year End (FYE)'
         : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
-          ? 'Board Resolution - Change of Registered Office Address'
+          ? 'Director Resolution - Change of Registered Office Address'
           : type === 'CHANGE_BUSINESS_ACTIVITIES'
-            ? 'Board Resolution - Change of Business Activities'
+            ? 'Director Resolution - Change of Business Activities'
             : type === 'CHANGE_SECRETARY'
-              ? 'Board Resolution - Change of Secretary'
+              ? 'Director Resolution - Change of Secretary'
             : type === 'TRANSFER_COMPANY_SECRETARY'
-              ? 'Board Resolution - Transfer of Company Secretary'
+              ? 'Director Resolution - Transfer of Company Secretary'
               : type;
 
   const templates = await import('@/lib/docTemplates');
