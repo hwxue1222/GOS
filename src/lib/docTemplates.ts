@@ -42,9 +42,10 @@ function signatureBlocksByEmail(input: {
       const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
       const emailKey = d.email ? esc(String(d.email).toLowerCase()) : '';
       const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
+      const labelHtml = label ? `<div>${esc(label)}</div>` : '';
       return `
 <div class="sig-block">
-  <div>${esc(label)}</div>
+  ${labelHtml}
   <div class="sig-line">${marker}</div>
   ${nameHtml}
 </div>
@@ -182,7 +183,7 @@ export function renderChangeSecretaryResolutionHtml(input: {
   appointedSecretaries: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
   resignedSecretary?: { fullName: string; idNo?: string };
 }) {
-  const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: 'Director:' });
+  const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: '' });
   const appts = input.appointedSecretaries;
   const apptLines = appts
     .map((s) => {
