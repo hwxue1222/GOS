@@ -96,7 +96,6 @@ export default function ChangeSecretaryClient() {
 
   function addRow() {
     setUseByBridgeSecretary(false);
-    setRemoveSecretaryRoleId('');
     setAddSecretaries((prev) => [
       ...prev,
       {
@@ -428,8 +427,7 @@ export default function ChangeSecretaryClient() {
             <select
               value={removeSecretaryRoleId}
               onChange={(e) => setRemoveSecretaryRoleId(e.target.value)}
-              disabled={useByBridgeSecretary || addSecretaries.length > 0}
-              className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/5"
+              className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
             >
               <option value=""></option>
               {existing.map((r) => (
@@ -449,7 +447,6 @@ export default function ChangeSecretaryClient() {
                 setUseByBridgeSecretary(checked);
                 if (checked) {
                   setAddSecretaries([]);
-                  setRemoveSecretaryRoleId('');
                 }
               }}
               className="h-4 w-4"
