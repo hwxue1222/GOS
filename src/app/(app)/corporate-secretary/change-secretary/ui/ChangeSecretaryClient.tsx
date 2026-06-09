@@ -336,7 +336,9 @@ export default function ChangeSecretaryClient() {
             </div>
 
             {!editing && addSecretaries.length ? (
-              <div className="mt-2 text-xs text-black/50">Saved new secretary info: {addSecretaries.length}</div>
+              <div className="mt-2 text-xs text-black/50">
+                Saved new secretary: {addSecretaries.map((s) => s.fullName.trim()).filter(Boolean).join(', ') || '-'}
+              </div>
             ) : null}
 
             {editing ? (
