@@ -88,10 +88,36 @@ export default function ChangeSecretaryClient() {
 
   const [addSecretaries, setAddSecretaries] = useState<NewSecretary[]>([]);
   const [editing, setEditing] = useState(false);
+  const [showErrorsByIdx, setShowErrorsByIdx] = useState<Record<number, boolean>>({});
   const [removeSecretaryRoleId, setRemoveSecretaryRoleId] = useState('');
   const [useByBridgeSecretary, setUseByBridgeSecretary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const validateSecretary = (s: NewSecretary) => {
+    const fullName = s.fullName.trim();
+    const idNo = s.idNo.trim();
+    const email = s.email.trim();
+    const dob = s.dob.trim();
+    const nationality = s.nationality.trim();
+    const joinDate = s.joinDate.trim();
+    const address = s.address.trim();
+    const phone = normalizePhone(s.phoneCountryCode, s.phoneLocal);
+    const declarationQualifications = Object.values(s.declaration).some(Boolean);
+    const missing = {
+      fullName: !fullName,
+      idNo: !idNo,
+      email: !email,
+      dob: !dob,
+      nationality: !nationality,
+      joinDate: !joinDate,
+      address: !address,
+      phone: !phone,
+      declaration: !declarationQualifications,
+    };
+    const ok = !Object.values(missing).some(Boolean);
+    return { ok, missing };
+  };
 
   useEffect(() => {
     if (!companyId) return;
@@ -119,7 +145,18 @@ export default function ChangeSecretaryClient() {
 
   function addRow() {
     setUseByBridgeSecretary(false);
+    const lastIdx = addSecretaries.length ? addSecretaries.length - 1 : -1;
+    if (lastIdx >= 0) {
+      const v = validateSecretary(addSecretaries[lastIdx]);
+      if (!v.ok) {
+        setShowErrorsByIdx((prev) => ({ ...prev, [lastIdx]: true }));
+        setSubmitError(`Please complete all required fields for Secretary ${lastIdx + 1} before adding next.`);
+        return;
+      }
+    }
+
     setEditing(true);
+    setSubmitError(null);
     setAddSecretaries((prev) => [
       ...prev,
       {
@@ -139,12 +176,37 @@ export default function ChangeSecretaryClient() {
 
   function deleteRow(idx: number) {
     setAddSecretaries((prev) => prev.filter((_, i) => i !== idx));
+    setShowErrorsByIdx((prev) => {
+      const next: Record<number, boolean> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        const i = Number(k);
+        if (!Number.isFinite(i) || i === idx) continue;
+        next[i > idx ? i - 1 : i] = v;
+      }
+      return next;
+    });
   }
 
   async function onSave() {
     setSubmitError(null);
     if (!companyId || !client) {
       setSubmitError('NO_COMPANY');
+      return;
+    }
+
+    const invalidIdx: number[] = [];
+    addSecretaries.forEach((s, idx) => {
+      const v = validateSecretary(s);
+      if (!v.ok) invalidIdx.push(idx);
+    });
+
+    if (invalidIdx.length) {
+      setShowErrorsByIdx((prev) => {
+        const next = { ...prev };
+        for (const idx of invalidIdx) next[idx] = true;
+        return next;
+      });
+      setSubmitError('Please complete all required fields for new secretary.');
       return;
     }
 
@@ -274,6 +336,7 @@ export default function ChangeSecretaryClient() {
               <div className="mt-4 space-y-6">
                 {addSecretaries.map((s, i) => (
                   <div key={i}>
+                    <div className="text-sm font-medium text-black">Secretary {i + 1}</div>
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
@@ -282,7 +345,7 @@ export default function ChangeSecretaryClient() {
                         <input
                           value={s.fullName}
                           onChange={(e) => patchSecretary(i, { fullName: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.fullName ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
@@ -292,7 +355,7 @@ export default function ChangeSecretaryClient() {
                         <input
                           value={s.idNo}
                           onChange={(e) => patchSecretary(i, { idNo: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.idNo ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 
@@ -304,7 +367,7 @@ export default function ChangeSecretaryClient() {
                           type="date"
                           value={s.dob}
                           onChange={(e) => patchSecretary(i, { dob: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
@@ -314,7 +377,7 @@ export default function ChangeSecretaryClient() {
                         <input
                           value={s.email}
                           onChange={(e) => patchSecretary(i, { email: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.email ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 
@@ -325,7 +388,7 @@ export default function ChangeSecretaryClient() {
                         <select
                           value={s.nationality}
                           onChange={(e) => patchSecretary(i, { nationality: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
                         >
                           {NATIONALITY_OPTIONS.map((n) => (
                             <option key={n} value={n}>
@@ -343,7 +406,7 @@ export default function ChangeSecretaryClient() {
                           type="date"
                           value={s.joinDate}
                           onChange={(e) => patchSecretary(i, { joinDate: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.joinDate ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 
@@ -351,7 +414,9 @@ export default function ChangeSecretaryClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Phone
                         </div>
-                        <div className="mt-1 flex items-center rounded-lg border border-black/10 overflow-hidden">
+                        <div
+                          className={`mt-1 flex items-center rounded-lg border overflow-hidden ${showErrorsByIdx[i] && validateSecretary(s).missing.phone ? 'border-red-500' : 'border-black/10'}`}
+                        >
                           <select
                             value={s.phoneCountryCode}
                             onChange={(e) => patchSecretary(i, { phoneCountryCode: e.target.value as PhoneCountryCode })}
@@ -379,7 +444,7 @@ export default function ChangeSecretaryClient() {
                         <textarea
                           value={s.address}
                           onChange={(e) => patchSecretary(i, { address: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm min-h-[90px]"
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
 
@@ -390,7 +455,9 @@ export default function ChangeSecretaryClient() {
                         <div className="mt-2 text-black/70">
                           I am a qualified person under section 171(1AA) of the Companies Act by virtue of my being —
                         </div>
-                        <div className="mt-2 space-y-2">
+                        <div
+                          className={`mt-2 space-y-2 rounded-lg border px-3 py-3 ${showErrorsByIdx[i] && validateSecretary(s).missing.declaration ? 'border-red-500' : 'border-transparent'}`}
+                        >
                           <label className="flex items-start gap-2 text-sm text-black/80">
                             <input
                               type="checkbox"
