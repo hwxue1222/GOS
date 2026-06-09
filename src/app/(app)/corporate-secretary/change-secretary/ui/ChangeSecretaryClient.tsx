@@ -343,6 +343,7 @@ export default function ChangeSecretaryClient() {
               <div className="mt-4 space-y-6">
                 {addSecretaries.map((s, i) => (
                   <div key={i}>
+                    {i > 0 ? <div className="my-4 border-t border-dashed border-black/20" /> : null}
                     <div className="text-sm font-medium text-black">Secretary {i + 1}</div>
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                       <label className="sm:col-span-6 text-sm">
