@@ -207,7 +207,7 @@ export default function ChangeSecretaryClient() {
         <div className="space-y-5">
           <div>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm text-black">New Addition Secretary Informations</div>
+              <div className="text-sm text-black">New secretary appointed</div>
               <button
                 type="button"
                 onClick={addRow}
@@ -424,14 +424,14 @@ export default function ChangeSecretaryClient() {
           <div className="border-t border-black/10" />
 
           <div>
-            <div className="text-sm font-medium text-black">Delete Secretary</div>
+            <div className="text-sm font-medium text-black">Resignation of secretary</div>
             <select
               value={removeSecretaryRoleId}
               onChange={(e) => setRemoveSecretaryRoleId(e.target.value)}
               disabled={useByBridgeSecretary || addSecretaries.length > 0}
               className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/5"
             >
-              <option value="">Needed Delete Secretary</option>
+              <option value=""></option>
               {existing.map((r) => (
                 <option key={r.role.id} value={r.role.id}>
                   {r.entity.person.fullName}
