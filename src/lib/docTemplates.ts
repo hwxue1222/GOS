@@ -71,7 +71,7 @@ export function renderSecretaryConsentToActHtml(input: {
   const s = input.secretary;
   const idLabel = String(s.idTypeLabel ?? 'FIN No.').trim() || 'FIN No.';
   const qset = new Set((s.declarationQualifications ?? []).map((x) => String(x)));
-  const mark = (k: string) => (qset.has(k) ? '☒' : '☐');
+  const strike = (k: string, text: string) => (qset.has(k) ? text : `<span class="strike">${text}</span>`);
   const signer = [{ fullName: s.fullName, email: s.email }];
   const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
   return `
@@ -95,6 +95,7 @@ export function renderSecretaryConsentToActHtml(input: {
       .kv div { margin-top: 4px; }
       ul { margin: 8px 0 0 0; padding-left: 0; list-style: none; }
       li { margin-top: 6px; }
+      .strike { text-decoration: line-through; }
     </style>
   </head>
   <body>
@@ -112,13 +113,13 @@ export function renderSecretaryConsentToActHtml(input: {
     <div class="block">2. I am a qualified person under section 171(1AA) of the Companies Act by virtue of my being —</div>
 
     <ul>
-      <li>${mark('i')} (i) a secretary of a company for at least 3 of the 5 years immediately preceding the abovementioned date of my appointment as secretary of the abovenamed company.</li>
-      <li>${mark('ii')} (ii) a qualified person under the Legal Profession Act (Cap. 161).</li>
-      <li>${mark('iii')} (iii) public accountant registered or deemed to be registered under the Accountants Act (Cap. 2).</li>
-      <li>${mark('iv')} (iv) a member of the Singapore Association of the Institute of Chartered Secretaries and Administrators.</li>
-      <li>${mark('v')} (v) a member of the Institute of Singapore Chartered Accountants (formerly known as the Institute of Certified Public Accountants of Singapore).</li>
-      <li>${mark('vi')} (vi) a member of the Association of International Accountants (Singapore Branch).</li>
-      <li>${mark('vii')} (vii) a member of The Institute of Company Accountants, Singapore.</li>
+      <li>${strike('i', '(i) a secretary of a company for at least 3 of the 5 years immediately preceding the abovementioned date of my appointment as secretary of the abovenamed company.')}</li>
+      <li>${strike('ii', '(ii) a qualified person under the Legal Profession Act (Cap. 161).')}</li>
+      <li>${strike('iii', '(iii) public accountant registered or deemed to be registered under the Accountants Act (Cap. 2).')}</li>
+      <li>${strike('iv', '(iv) a member of the Singapore Association of the Institute of Chartered Secretaries and Administrators.')}</li>
+      <li>${strike('v', '(v) a member of the Institute of Singapore Chartered Accountants (formerly known as the Institute of Certified Public Accountants of Singapore).')}</li>
+      <li>${strike('vi', '(vi) a member of the Association of International Accountants (Singapore Branch).')}</li>
+      <li>${strike('vii', '(vii) a member of The Institute of Company Accountants, Singapore.')}</li>
     </ul>
 
     ${blocks}
