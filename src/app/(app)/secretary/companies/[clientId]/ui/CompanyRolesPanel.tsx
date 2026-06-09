@@ -204,7 +204,7 @@ export default function CompanyRolesPanel({
                 await onAddRole({ role: roleTab, personId });
                 setSelectedPersonId('');
               }}
-              className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium"
+              className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium hover:bg-black/2"
             >
               {t('roles.add')}
             </button>

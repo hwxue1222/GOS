@@ -212,7 +212,7 @@ export default function ChangeSecretaryClient() {
                 type="button"
                 onClick={addRow}
                 disabled={useByBridgeSecretary}
-                className="text-sm text-[#2f7bdc] hover:underline disabled:opacity-60"
+                className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/2 disabled:opacity-60"
               >
                 Add
               </button>
