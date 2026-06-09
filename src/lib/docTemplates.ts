@@ -168,7 +168,6 @@ export function renderSecretaryResignationLetterHtml(input: {
     <div class="block">Yours faithfully</div>
 
     ${blocks}
-    <div class="block">${esc(input.resignedSecretary.fullName)}</div>
   </body>
 </html>
 `.trim();
