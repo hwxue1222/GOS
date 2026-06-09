@@ -127,7 +127,7 @@ export async function sendSigningInvite(input: { to: string; title: string; url:
   const companyName = (m?.[2] ?? '').trim();
 
   const appKey = applicationName.toLowerCase();
-  const isDirectorFlow = !appKey.includes('share transfer');
+  const isDirectorFlow = !appKey.includes('share transfer') && !appKey.includes('consent') && !appKey.includes('resignation');
   const salutation = isDirectorFlow ? 'Dear Director,' : 'Dear Signatory,';
   const roleLine = isDirectorFlow
     ? 'As a Director of the Company, please click the link below to sign and approve the Directors\' Resolution.'

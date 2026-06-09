@@ -4,6 +4,12 @@ function esc(s: string) {
   return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function toDdMmYyyy(ymd: string) {
+  const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return ymd;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 type SsicRow = { code: string; description: string };
 
 const ssicRows = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
@@ -23,6 +29,212 @@ function formatSsic(codeRaw: string) {
   const desc = ssicDescByCode.get(code.toLowerCase()) ?? '';
   if (!desc) return code;
   return `${desc}(${code})`;
+}
+
+function signatureBlocksByEmail(input: {
+  signers: Array<{ fullName: string; email?: string }>;
+  label?: string;
+}) {
+  const label = input.label ?? 'Director:';
+  const list = input.signers.length ? input.signers : [{ fullName: '', email: undefined }];
+  return list
+    .map((d) => {
+      const nameHtml = d.fullName ? `<div class="sig-name"><strong>${esc(d.fullName)}</strong></div>` : '<div class="sig-name">________________</div>';
+      const emailKey = d.email ? esc(String(d.email).toLowerCase()) : '';
+      const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
+      return `
+<div class="sig-block">
+  <div>${esc(label)}</div>
+  <div class="sig-line">${marker}</div>
+  ${nameHtml}
+</div>
+`.trim();
+    })
+    .join('');
+}
+
+export function renderSecretaryConsentToActHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  secretary: {
+    fullName: string;
+    email?: string;
+    address: string;
+    nationality: string;
+    idNo: string;
+    effectiveDateYmd: string;
+    declarationQualifications: Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>;
+  };
+  signedDateYmd: string;
+}) {
+  const s = input.secretary;
+  const qset = new Set((s.declarationQualifications ?? []).map((x) => String(x)));
+  const mark = (k: string) => (qset.has(k) ? '☒' : '☐');
+  const signer = [{ fullName: s.fullName, email: s.email }];
+  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Consent to Act as Secretary</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .title { font-size: 16px; font-weight: 700; text-align: center; }
+      .center { text-align: center; }
+      .block { margin-top: 12px; }
+      .muted { color: #555; font-size: 12px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+      .kv { margin-top: 8px; }
+      .kv div { margin-top: 4px; }
+      ul { margin: 8px 0 0 0; padding-left: 0; list-style: none; }
+      li { margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="center">THE COMPANIES ACT</div>
+    <div class="center">(CHAPTER 50)</div>
+    <div class="center">SECTION 173 (4A)</div>
+    <div class="title block">CONSENT TO ACT AS SECRETARY</div>
+
+    <div class="kv">
+      <div><strong>Name of Company:</strong> ${esc(input.companyName)}</div>
+      <div><strong>Company UEN:</strong> ${esc(input.companyRegistrationNo ?? '')}</div>
+    </div>
+
+    <div class="block">1. I, the undermentioned person, hereby consent to act as a secretary of the abovenamed company with effect from ${esc(input.secretary.effectiveDateYmd)}.</div>
+    <div class="block">2. I am a qualified person under section 171(1AA) of the Companies Act by virtue of my being —</div>
+
+    <ul>
+      <li>${mark('i')} (i) a secretary of a company for at least 3 of the 5 years immediately preceding the abovementioned date of my appointment as secretary of the abovenamed company.</li>
+      <li>${mark('ii')} (ii) a qualified person under the Legal Profession Act (Cap. 161).</li>
+      <li>${mark('iii')} (iii) public accountant registered or deemed to be registered under the Accountants Act (Cap. 2).</li>
+      <li>${mark('iv')} (iv) a member of the Singapore Association of the Institute of Chartered Secretaries and Administrators.</li>
+      <li>${mark('v')} (v) a member of the Institute of Singapore Chartered Accountants (formerly known as the Institute of Certified Public Accountants of Singapore).</li>
+      <li>${mark('vi')} (vi) a member of the Association of International Accountants (Singapore Branch).</li>
+      <li>${mark('vii')} (vii) a member of The Institute of Company Accountants, Singapore.</li>
+    </ul>
+
+    ${blocks}
+
+    <div class="block"><strong>Name:</strong> ${esc(s.fullName)}</div>
+    <div class="block"><strong>Address:</strong> ${esc(s.address)}</div>
+    <div class="block"><strong>FIN No:</strong> ${esc(s.idNo)} &nbsp;&nbsp;&nbsp; <strong>Nationality:</strong> ${esc(s.nationality)}</div>
+    <div class="block"><strong>Date:</strong> ${esc(toDdMmYyyy(input.signedDateYmd))}</div>
+    <div class="block muted"># to be completed by secretaries of public companies only or by secretaries of private companies appointed under section 171(1AB) of the Act.</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderSecretaryResignationLetterHtml(input: {
+  companyName: string;
+  resignedSecretary: { fullName: string; email?: string };
+  dateYmd: string;
+}) {
+  const signer = [{ fullName: input.resignedSecretary.fullName, email: input.resignedSecretary.email }];
+  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Letter of Resignation</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
+      .block { margin-top: 12px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div>Date: ${esc(toDdMmYyyy(input.dateYmd))}</div>
+    <div class="block">The Board of Directors</div>
+    <div>${esc(input.companyName)}</div>
+    <div class="block">Dear Sirs,</div>
+
+    <div class="block"><strong>LETTER OF RESIGNATION</strong></div>
+    <div class="block">I hereby tender my resignation as Secretary of the Company with immediate effect.</div>
+    <div class="block">I acknowledge that I shall henceforth have no further claims against the Company in respect of all matters and disputes which have arisen prior to this date on the understanding that the Company shall likewise have no claims whatsoever against me.</div>
+    <div class="block">Yours faithfully</div>
+
+    ${blocks}
+    <div class="block">${esc(input.resignedSecretary.fullName)}</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderChangeSecretaryResolutionHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  directors: Array<{ fullName: string; email?: string }>;
+  resolutionDateYmd: string;
+  appointedSecretaries: Array<{ fullName: string; idNo?: string }>;
+  resignedSecretary?: { fullName: string; idNo?: string };
+}) {
+  const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: 'Director:' });
+  const appts = input.appointedSecretaries;
+  const apptLines = appts
+    .map((s) => {
+      const idNo = String(s.idNo ?? '').trim();
+      const idPart = idNo ? ` (NRIC No. ${esc(idNo)})` : '';
+      return `That ${esc(s.fullName)}${idPart} having consented to act as Secretary of the Company, be and is hereby appointed with immediate effect.`;
+    })
+    .join('<br />');
+  const resigned = input.resignedSecretary;
+  const resignLine = resigned
+    ? (() => {
+        const idNo = String(resigned.idNo ?? '').trim();
+        const idPart = idNo ? ` (NRIC No. ${esc(idNo)})` : '';
+        return `That the resignation of ${esc(resigned.fullName)}${idPart} as Secretary of the Company, be and is hereby approved with immediate effect.`;
+      })()
+    : '';
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Change of Secretary</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .muted { color: #555; font-size: 12px; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${esc(input.companyName)}</div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${esc(input.companyRegistrationNo ?? '')}</div>
+    <div class="muted">(Incorporated in the Republic of Singapore)</div>
+
+    <div class="subtitle">DIRECTORS’ RESOLUTION IN WRITING PURSUANT TO THE CONSTITUTION OF THE COMPANY</div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
+    <div class="subtitle">RESOLVED –</div>
+
+    ${apptLines ? `<div class=\"subtitle\">APPOINTMENT OF SECRETARY</div><div class=\"block\">${apptLines}</div>` : ''}
+    ${resignLine ? `<div class=\"subtitle\">RESIGNATION OF SECRETARY</div><div class=\"block\">${resignLine}</div>` : ''}
+
+    <div class="subtitle">DIRECTORS:</div>
+    ${sigBlocks}
+    <div style="margin-top: 18px;"><strong>Date</strong>: ${esc(toDdMmYyyy(input.resolutionDateYmd))}</div>
+  </body>
+</html>
+`.trim();
 }
 
 function normalizeFyeDdMm(input: string) {
@@ -264,11 +476,28 @@ export function renderCompanyUpdateRequestHtml(input: {
   const companyRegistrationNo = input.companyRegistrationNo ? esc(input.companyRegistrationNo) : '';
   const nowYmd = (input.resolutionDateYmd ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
 
-  const toDdMmYyyy = (ymd: string) => {
-    const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return ymd;
-    return `${m[3]}/${m[2]}/${m[1]}`;
-  };
+  if (input.type === 'CHANGE_SECRETARY') {
+    const p = input.payload ?? {};
+    const addSecretaries = Array.isArray((p as { addSecretaries?: unknown }).addSecretaries)
+      ? (((p as { addSecretaries?: unknown }).addSecretaries ?? []) as Array<Record<string, unknown>>)
+      : [];
+    const appointedSecretaries = addSecretaries
+      .map((x) => ({ fullName: String(x.fullName ?? '').trim(), idNo: String(x.idNo ?? '').trim() || undefined }))
+      .filter((x) => !!x.fullName);
+
+    const resignedName = String((p as { resignedSecretaryName?: unknown }).resignedSecretaryName ?? '').trim();
+    const resignedIdNo = String((p as { resignedSecretaryIdNo?: unknown }).resignedSecretaryIdNo ?? '').trim() || undefined;
+    const resignedSecretary = resignedName ? { fullName: resignedName, idNo: resignedIdNo } : undefined;
+
+    return renderChangeSecretaryResolutionHtml({
+      companyName: input.companyName,
+      companyRegistrationNo: input.companyRegistrationNo,
+      directors: input.directors ?? [],
+      resolutionDateYmd: nowYmd,
+      appointedSecretaries,
+      resignedSecretary,
+    });
+  }
 
   const fmtDirector = (d: { fullName: string; email?: string }) => {
     const name = String(d.fullName ?? '').trim();
@@ -283,7 +512,6 @@ export function renderCompanyUpdateRequestHtml(input: {
     if (input.type === 'CHANGE_FINANCIAL_YEAR_END') return 'Change of Financial Year End (FYE)';
     if (input.type === 'CHANGE_REGISTERED_OFFICE_ADDRESS') return 'Change of Registered Office Address';
     if (input.type === 'CHANGE_BUSINESS_ACTIVITIES') return 'Change of Business Activities';
-    if (input.type === 'CHANGE_SECRETARY') return 'Change of Secretary';
     if (input.type === 'TRANSFER_COMPANY_SECRETARY') return 'Transfer of Company Secretary';
     return input.type;
   })();
@@ -528,19 +756,6 @@ export function renderCompanyUpdateRequestHtml(input: {
     lines.push(`3. Meeting time: ${startDate}.`);
     lines.push(`4. Meeting venue: ${meetingVenue}.`);
     lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
-  } else if (input.type === 'CHANGE_SECRETARY') {
-    const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim() || '-';
-    const addSecretaries = Array.isArray(p.addSecretaries) ? (p.addSecretaries as Array<Record<string, unknown>>) : [];
-    const useByBridge = Boolean((p as { useByBridgeCompanySecretary?: unknown }).useByBridgeCompanySecretary);
-    const addNames = addSecretaries
-      .map((x) => ({ fullName: String(x.fullName ?? '').trim(), email: String(x.email ?? '').trim() }))
-      .filter((x) => !!x.fullName)
-      .map((x) => (x.email ? `${x.fullName} <${x.email}>` : x.fullName));
-    lines.push('1. The Company Secretary be changed as follows:');
-    lines.push(`   Remove secretary role ID: ${removeSecretaryRoleId}`);
-    lines.push(`   Add: ${addNames.length ? addNames.join(', ') : '-'}`);
-    lines.push(`2. Use ByBridge company secretary: ${useByBridge ? 'Yes' : 'No'}.`);
-    lines.push('3. Any Director be authorised to take all necessary steps and to file the relevant notification with ACRA.');
   } else if (input.type === 'TRANSFER_COMPANY_SECRETARY') {
     const effectiveDate = String(p.effectiveDate ?? '').trim() || '-';
     const newSecretaryName = String(p.newSecretaryName ?? '').trim() || '-';

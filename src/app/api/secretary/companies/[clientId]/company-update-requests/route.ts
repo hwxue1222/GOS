@@ -124,7 +124,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
                 ? 'transfer of company secretary'
                 : String(type).toLowerCase();
   await Promise.all(
-    signLinks.map((l) => sendSigningInvite({ to: l.email, title: `${applicationName} - ${companyName}`, url: `${baseUrl}${l.url}` })),
+    signLinks.map((l) =>
+      sendSigningInvite({
+        to: l.email,
+        title: (l as { title?: string }).title ?? `${applicationName} - ${companyName}`,
+        url: `${baseUrl}${l.url}`,
+      }),
+    ),
   );
 
   return NextResponse.json({ ok: true, request: r.request, signLinks });

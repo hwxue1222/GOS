@@ -6970,6 +6970,10 @@ async function finalizeCompanyUpdateIfReady(db: Db, packet: SignaturePacket) {
   if (packet.relatedType !== 'COMPANY_UPDATE') return;
   if (packet.status !== 'SIGNED') return;
 
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === packet.relatedId);
+  if (!packets.length) return;
+  if (!packets.every((p) => p.status === 'SIGNED')) return;
+
   const list = getCompanyUpdateRequestList(db);
   const idx = list.findIndex((r) => r.id === packet.relatedId);
   if (idx < 0) return;
@@ -7837,6 +7841,8 @@ export async function createCompanyUpdateRequest(input: {
   const p = input.payload ?? {};
   const now = nowIso();
 
+  const companyName = client.name;
+
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
@@ -7872,6 +7878,34 @@ export async function createCompanyUpdateRequest(input: {
     const addSecretaries = Array.isArray(p.addSecretaries) ? p.addSecretaries : [];
     const hasAdd = addSecretaries.some((x) => String((x as { fullName?: unknown }).fullName ?? '').trim());
     if (!removeSecretaryRoleId && !hasAdd) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+    const addRows = addSecretaries as Array<Record<string, unknown>>;
+    for (const s of addRows) {
+      const fullName = String(s.fullName ?? '').trim();
+      if (!fullName) continue;
+      const email = String(s.email ?? '').trim();
+      const idNo = String(s.idNo ?? '').trim();
+      const nationality = String(s.nationality ?? '').trim();
+      const dob = String(s.dob ?? '').trim();
+      const joinDate = String(s.joinDate ?? '').trim();
+      const address = String(s.address ?? '').trim();
+      const decl = Array.isArray(s.declarationQualifications) ? (s.declarationQualifications as unknown[]) : [];
+      if (!email || !idNo || !nationality || !dob || !joinDate || !address || decl.length === 0) {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
+    }
+
+    if (removeSecretaryRoleId) {
+      const role = db.clientPartyRoles.find((r) => r.id === removeSecretaryRoleId && r.clientId === input.clientId && r.role === 'SECRETARY') ?? null;
+      if (!role) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const party = db.parties.find((x) => x.id === role.partyId) ?? null;
+      if (!party || party.type !== 'PERSON' || !party.personId) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const person = db.persons.find((x) => x.id === party.personId) ?? null;
+      if (!person) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      (p as Record<string, unknown>).resignedSecretaryName = person.fullName;
+      (p as Record<string, unknown>).resignedSecretaryEmail = person.email ?? '';
+      (p as Record<string, unknown>).resignedSecretaryIdNo = (person as unknown as { idNo?: unknown }).idNo ?? '';
+    }
   } else if (type === 'TRANSFER_COMPANY_SECRETARY') {
     const newSecretaryName = String(p.newSecretaryName ?? '').trim();
     if (!newSecretaryName) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -7880,6 +7914,20 @@ export async function createCompanyUpdateRequest(input: {
   }
 
   const id = newId('cur');
+  const applicationName =
+    type === 'CHANGE_COMPANY_NAME'
+      ? 'change of company name'
+      : type === 'CHANGE_FINANCIAL_YEAR_END'
+        ? 'change of financial year end (FYE)'
+        : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
+          ? 'change of registered office address'
+          : type === 'CHANGE_BUSINESS_ACTIVITIES'
+            ? 'change of business activities'
+            : type === 'CHANGE_SECRETARY'
+              ? 'change of secretary'
+              : type === 'TRANSFER_COMPANY_SECRETARY'
+                ? 'transfer of company secretary'
+                : String(type).toLowerCase();
   const titlePrefix =
     type === 'CHANGE_COMPANY_NAME'
       ? 'Board Resolution - Change of Company Name'
@@ -7895,8 +7943,10 @@ export async function createCompanyUpdateRequest(input: {
               ? 'Board Resolution - Transfer of Company Secretary'
               : type;
 
-  const html = (await import('@/lib/docTemplates')).renderCompanyUpdateRequestHtml({
-    companyName: client.name,
+  const templates = await import('@/lib/docTemplates');
+
+  const commonTplInput = {
+    companyName,
     companyRegistrationNo: client.companyRegistrationNo,
     directors: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email })),
     resolutionDateYmd: now.slice(0, 10),
@@ -7908,7 +7958,9 @@ export async function createCompanyUpdateRequest(input: {
       ssicSecondaryCode: client.ssicSecondaryCode ?? undefined,
     },
     payload: p,
-  });
+  };
+
+  const html = type === 'CHANGE_SECRETARY' ? templates.renderCompanyUpdateRequestHtml(commonTplInput) : templates.renderCompanyUpdateRequestHtml(commonTplInput);
 
   const doc: Document = {
     id: newId('doc'),
@@ -7933,7 +7985,7 @@ export async function createCompanyUpdateRequest(input: {
   db.signaturePackets.unshift(packet);
 
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string }> = [];
+  const signLinks: Array<{ email: string; url: string; title?: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();
     const req: SignatureRequest = {
@@ -7947,7 +7999,122 @@ export async function createCompanyUpdateRequest(input: {
       updatedAt: now,
     };
     db.signatureRequests.unshift(req);
-    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+    signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+  }
+
+  if (type === 'CHANGE_SECRETARY') {
+    const payload = p as {
+      addSecretaries?: unknown;
+      removeSecretaryRoleId?: unknown;
+      resignedSecretaryEmail?: unknown;
+      resignedSecretaryName?: unknown;
+      resignedSecretaryIdNo?: unknown;
+    };
+
+    const addRows = Array.isArray(payload.addSecretaries) ? (payload.addSecretaries as Array<Record<string, unknown>>) : [];
+    for (const s of addRows) {
+      const fullName = String(s.fullName ?? '').trim();
+      if (!fullName) continue;
+      const email = String(s.email ?? '').trim().toLowerCase();
+      if (!email) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+      const consentHtml = templates.renderSecretaryConsentToActHtml({
+        companyName,
+        companyRegistrationNo: client.companyRegistrationNo,
+        secretary: {
+          fullName,
+          email,
+          address: String(s.address ?? '').trim(),
+          nationality: String(s.nationality ?? '').trim(),
+          idNo: String(s.idNo ?? '').trim(),
+          effectiveDateYmd: String(s.joinDate ?? '').trim() || now.slice(0, 10),
+          declarationQualifications: (Array.isArray(s.declarationQualifications)
+            ? (s.declarationQualifications as Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>)
+            : []) as Array<'i' | 'ii' | 'iii' | 'iv' | 'v' | 'vi' | 'vii'>,
+        },
+        signedDateYmd: now.slice(0, 10),
+      });
+
+      const consentDoc: Document = {
+        id: newId('doc'),
+        type: 'CO_UPD',
+        title: `Consent to Act as Secretary - ${companyName}`,
+        html: consentHtml,
+        sha256: sha256Hex(consentHtml),
+        createdAt: now,
+      };
+      db.documents.unshift(consentDoc);
+
+      const consentPacket: SignaturePacket = {
+        id: newId('spk'),
+        kind: 'CO_UPD',
+        relatedType: 'COMPANY_UPDATE',
+        relatedId: id,
+        documentId: consentDoc.id,
+        status: 'SIGNING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signaturePackets.unshift(consentPacket);
+
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: consentPacket.id,
+        email,
+        tokenHash: sha256Hex(token),
+        expiresAt,
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      signLinks.push({ email, url: `/sign/${token}`, title: `consent to act as secretary - ${companyName}` });
+    }
+
+    const resignedEmail = String(payload.resignedSecretaryEmail ?? '').trim().toLowerCase();
+    const resignedName = String(payload.resignedSecretaryName ?? '').trim();
+    if (resignedName) {
+      if (!resignedEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+      const resignHtml = templates.renderSecretaryResignationLetterHtml({
+        companyName,
+        resignedSecretary: { fullName: resignedName, email: resignedEmail },
+        dateYmd: now.slice(0, 10),
+      });
+      const resignDoc: Document = {
+        id: newId('doc'),
+        type: 'CO_UPD',
+        title: `Resignation Letter - Secretary - ${companyName}`,
+        html: resignHtml,
+        sha256: sha256Hex(resignHtml),
+        createdAt: now,
+      };
+      db.documents.unshift(resignDoc);
+      const resignPacket: SignaturePacket = {
+        id: newId('spk'),
+        kind: 'CO_UPD',
+        relatedType: 'COMPANY_UPDATE',
+        relatedId: id,
+        documentId: resignDoc.id,
+        status: 'SIGNING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signaturePackets.unshift(resignPacket);
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: resignPacket.id,
+        email: resignedEmail,
+        tokenHash: sha256Hex(token),
+        expiresAt,
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      signLinks.push({ email: resignedEmail, url: `/sign/${token}`, title: `resignation of secretary - ${companyName}` });
+    }
   }
 
   const request: CompanyUpdateRequest = {
@@ -7984,8 +8151,8 @@ export async function decideCompanyUpdateRequest(input: {
   const r = list[idx];
   if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
 
-  const packet = db.signaturePackets.find((p) => p.id === r.packetId);
-  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === r.id);
+  if (!packets.length) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
@@ -8005,7 +8172,7 @@ export async function decideCompanyUpdateRequest(input: {
   }
 
   if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (packet && packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (!packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
 
   const clientIdx = db.clients.findIndex((c) => c.id === r.clientId);
   if (clientIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };

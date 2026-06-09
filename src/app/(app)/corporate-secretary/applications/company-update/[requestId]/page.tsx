@@ -98,17 +98,30 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   const payload = req.payload as Record<string, unknown>;
   const label = typeLabel(req.type);
 
-  const packet = db.signaturePackets.find((p) => p.id === (req as unknown as { packetId?: string }).packetId) ?? null;
-  const document = packet ? db.documents.find((d) => d.id === packet.documentId) ?? null : null;
-  const signatures = packet
-    ? db.signatureRequests
-        .filter((r) => r.packetId === packet.id)
+  const packets = db.signaturePackets
+    .filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === req.id)
+    .slice()
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const packetRows = packets
+    .map((p) => {
+      const document = db.documents.find((d) => d.id === p.documentId) ?? null;
+      if (!document) return null;
+      const signatures = db.signatureRequests
+        .filter((r) => r.packetId === p.id)
         .sort((a, b) => a.email.localeCompare(b.email))
-        .map((r) => ({ email: r.email, status: r.status, signedAt: r.signedAt }))
-    : [];
+        .map((r) => ({ email: r.email, status: r.status, signedAt: r.signedAt }));
+      return { packet: p, document, signatures };
+    })
+    .filter(Boolean) as Array<{
+    packet: (typeof packets)[number];
+    document: { id: string; title: string };
+    signatures: Array<{ email: string; status: string; signedAt?: string }>;
+  }>;
+
+  const allSignatures = packetRows.flatMap((x) => x.signatures.map((s) => ({ ...s, packetId: x.packet.id, documentTitle: x.document.title })));
   const signatureSummary = {
-    total: signatures.length,
-    signed: signatures.filter((s) => s.status === 'SIGNED').length,
+    total: allSignatures.length,
+    signed: allSignatures.filter((s) => s.status === 'SIGNED').length,
   };
 
   const diffRows = (() => {
@@ -215,19 +228,33 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                   <div>
                     Progress: {signatureSummary.signed}/{signatureSummary.total}
                   </div>
-                  {signatures.length ? (
-                    <div className="mt-2 space-y-1">
-                      {signatures.map((s) => (
-                        <div key={s.email} className="flex items-center justify-between gap-3">
-                          <div className="truncate">
-                            {(() => {
-                              const meta = getSignerIdentityForClient(db, req.clientId, s.email);
-                              const left = meta.fullName ? meta.fullName : s.email;
-                              const right = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                              return left === s.email ? right : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                            })()}
+                  {packetRows.length ? (
+                    <div className="mt-2 space-y-4">
+                      {packetRows.map((row) => (
+                        <div key={row.packet.id} className="rounded-lg border border-black/5 p-3">
+                          <div className="text-xs text-black/50">{row.document.title}</div>
+                          <div className="mt-1 text-xs text-black/50">
+                            Progress: {row.signatures.filter((s) => s.status === 'SIGNED').length}/{row.signatures.length}
                           </div>
-                          <div className="shrink-0 text-black/60">{s.status}</div>
+                          {row.signatures.length ? (
+                            <div className="mt-2 space-y-1">
+                              {row.signatures.map((s) => (
+                                <div key={`${row.packet.id}:${s.email}`} className="flex items-center justify-between gap-3">
+                                  <div className="truncate">
+                                    {(() => {
+                                      const meta = getSignerIdentityForClient(db, req.clientId, s.email);
+                                      const left = meta.fullName ? meta.fullName : s.email;
+                                      const right = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
+                                      return left === s.email ? right : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
+                                    })()}
+                                  </div>
+                                  <div className="shrink-0 text-black/60">{s.status}</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-2 text-black/40">No signatures</div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -240,24 +267,31 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
               <div id="documents" className="mt-4">
                 <div className="text-sm font-medium">Documents</div>
                 <div className="mt-2 text-sm">
-                  {document ? (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`/api/documents/${encodeURIComponent(document.id)}/pdf?disposition=inline`}
-                        className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Preview
-                      </a>
-                      <a
-                        href={`/api/documents/${encodeURIComponent(document.id)}/pdf?download=1`}
-                        className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download PDF
-                      </a>
+                  {packetRows.length ? (
+                    <div className="space-y-3">
+                      {packetRows.map((row) => (
+                        <div key={row.document.id} className="rounded-lg border border-black/5 p-3">
+                          <div className="text-xs text-black/50">{row.document.title}</div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <a
+                              href={`/api/documents/${encodeURIComponent(row.document.id)}/pdf?disposition=inline`}
+                              className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Preview
+                            </a>
+                            <a
+                              href={`/api/documents/${encodeURIComponent(row.document.id)}/pdf?download=1`}
+                              className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-sm font-medium"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Download PDF
+                            </a>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="text-black/40">No documents</div>
