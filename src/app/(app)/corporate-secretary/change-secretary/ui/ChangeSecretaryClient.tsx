@@ -320,7 +320,14 @@ export default function ChangeSecretaryClient() {
               <div className="text-sm text-black">New secretary appointed</div>
               <button
                 type="button"
-                onClick={addRow}
+                onClick={() => {
+                  if (!editing && addSecretaries.length) {
+                    setSubmitError(null);
+                    setEditing(true);
+                    return;
+                  }
+                  addRow();
+                }}
                 disabled={useByBridgeSecretary}
                 className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/2 disabled:opacity-60"
               >
