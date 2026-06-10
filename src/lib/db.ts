@@ -7875,7 +7875,36 @@ export async function createCompanyUpdateRequest(input: {
     else delete (p as Record<string, unknown>).ssicSecondaryCode;
   } else if (type === 'CHANGE_SECRETARY') {
     const removeSecretaryRoleId = String(p.removeSecretaryRoleId ?? '').trim();
-    const addSecretaries = Array.isArray(p.addSecretaries) ? p.addSecretaries : [];
+    const useByBridge = Boolean((p as { useByBridgeCompanySecretary?: unknown }).useByBridgeCompanySecretary);
+
+    const normalizeIdNo = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, '').toLowerCase();
+    const byBridgeIdNo = 's7864540g';
+
+    const byBridgePerson = db.persons.find((x) => normalizeIdNo((x as { idNo?: unknown }).idNo) === byBridgeIdNo) ?? null;
+    const byBridgeFullName = byBridgePerson?.fullName ?? 'Xue Hongwei';
+    const byBridgeEmail = String(byBridgePerson?.email ?? 'hwxue1222@gmail.com').trim();
+    const byBridgeNationality = String(byBridgePerson?.nationality ?? 'Singapore').trim() || 'Singapore';
+    const byBridgeAddress = String(byBridgePerson?.address ?? client.registeredOfficeAddress ?? '').trim();
+
+    const byBridgeSecretaryRow: Record<string, unknown> = {
+      fullName: byBridgeFullName,
+      email: byBridgeEmail,
+      idNo: 'S7864540G',
+      idTypeLabel: 'NRIC No.',
+      nationality: byBridgeNationality,
+      dob: String(byBridgePerson?.dob ?? '').trim(),
+      joinDate: now.slice(0, 10),
+      address: byBridgeAddress,
+      declarationQualifications: ['i'],
+    };
+
+    const addSecretaries = Array.isArray(p.addSecretaries) ? (p.addSecretaries as Array<Record<string, unknown>>) : [];
+    if (useByBridge) {
+      const hasByBridge = addSecretaries.some((x) => normalizeIdNo(x.idNo) === byBridgeIdNo);
+      if (!hasByBridge) addSecretaries.unshift(byBridgeSecretaryRow);
+      (p as Record<string, unknown>).addSecretaries = addSecretaries;
+    }
+
     const hasAdd = addSecretaries.some((x) => String((x as { fullName?: unknown }).fullName ?? '').trim());
     if (!removeSecretaryRoleId && !hasAdd) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
@@ -7891,7 +7920,11 @@ export async function createCompanyUpdateRequest(input: {
       const joinDate = String(s.joinDate ?? '').trim();
       const address = String(s.address ?? '').trim();
       const decl = Array.isArray(s.declarationQualifications) ? (s.declarationQualifications as unknown[]) : [];
-      if (!email || !idNo || !idTypeLabel || !nationality || !dob || !joinDate || !address || decl.length === 0) {
+      const isByBridgeRow = normalizeIdNo(idNo) === byBridgeIdNo;
+      if (!email || !idNo || !idTypeLabel || !nationality || !joinDate || !address || decl.length === 0) {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
+      if (!isByBridgeRow && !dob) {
         return { ok: false as const, error: 'INVALID_INPUT' as const };
       }
     }
@@ -7904,7 +7937,10 @@ export async function createCompanyUpdateRequest(input: {
       const person = db.persons.find((x) => x.id === party.personId) ?? null;
       if (!person) return { ok: false as const, error: 'INVALID_INPUT' as const };
       const idType = String((person as { idType?: unknown }).idType ?? '').trim();
-      const idTypeLabel = idType === 'PASSPORT' ? 'Passport No.' : idType === 'NRIC' ? 'NRIC No.' : 'ID No.';
+      const idNoRaw = String((person as { idNo?: unknown }).idNo ?? '').trim();
+      const first = idNoRaw ? idNoRaw[0].toUpperCase() : '';
+      const inferred = first === 'F' || first === 'G' ? 'FIN No.' : first === 'S' || first === 'T' ? 'NRIC No.' : 'ID No.';
+      const idTypeLabel = idType === 'PASSPORT' ? 'Passport No.' : idType === 'NRIC' ? 'NRIC No.' : inferred;
       (p as Record<string, unknown>).resignedSecretaryName = person.fullName;
       (p as Record<string, unknown>).resignedSecretaryEmail = person.email ?? '';
       (p as Record<string, unknown>).resignedSecretaryIdNo = (person as unknown as { idNo?: unknown }).idNo ?? '';

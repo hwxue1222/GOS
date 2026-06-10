@@ -163,7 +163,6 @@ export default function ChangeSecretaryClient() {
       fullName: String(p.fullName ?? '').trim(),
       email: String(p.email ?? '').trim(),
       nationality: String(p.nationality ?? '').trim() || 'Singapore',
-      dob: String(p.dob ?? '').trim(),
       address: String(p.address ?? '').trim(),
       phoneCountryCode: phone.phoneCountryCode,
       phoneLocal: phone.phoneLocal,
@@ -171,6 +170,7 @@ export default function ChangeSecretaryClient() {
     });
     setShowErrorsByIdx((prev) => ({ ...prev, [idx]: false }));
   }
+
 
   useEffect(() => {
     if (!companyId) return;
@@ -313,7 +313,7 @@ export default function ChangeSecretaryClient() {
       return;
     }
 
-    if (!useByBridgeSecretary && hasAdd) {
+    if (hasAdd) {
       for (const s of cleanedAdd) {
         if (!s.fullName || !s.idNo || !s.email || !s.dob || !s.nationality || !s.phone || !s.joinDate || !s.address) {
           setSubmitError('Please complete all required fields for new secretary.');
@@ -398,6 +398,10 @@ export default function ChangeSecretaryClient() {
               </div>
             ) : null}
 
+            {!editing && useByBridgeSecretary ? (
+              <div className="mt-2 text-xs text-black/50">ByBridge company secretary: Xue Hongwei (NRIC No. S7864540G)</div>
+            ) : null}
+
             {editing ? (
               <div className="mt-4 space-y-6">
                 {addSecretaries.map((s, i) => (
@@ -473,8 +477,7 @@ export default function ChangeSecretaryClient() {
                           type="date"
                           value={s.dob}
                           onChange={(e) => patchSecretary(i, { dob: e.target.value })}
-                          disabled={s.lockedFromMember}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
@@ -677,6 +680,11 @@ export default function ChangeSecretaryClient() {
                 const checked = e.target.checked;
                 setUseByBridgeSecretary(checked);
                 if (checked) {
+                  setSubmitError(null);
+                  setEditing(false);
+                  setAddSecretaries([]);
+                  setShowErrorsByIdx({});
+                } else {
                   setAddSecretaries([]);
                 }
               }}
