@@ -24,6 +24,22 @@ const PHONE_COUNTRY_CODES: Array<{ label: string; value: PhoneCountryCode }> = [
   { label: 'UK +44', value: '+44' },
 ];
 
+const NATIONALITY_OPTIONS = [
+  'Singapore',
+  'Singapore PR',
+  'Malaysia',
+  'China',
+  'India',
+  'Indonesia',
+  'Philippines',
+  'Vietnam',
+  'Thailand',
+  'Japan',
+  'South Korea',
+  'United Kingdom',
+  'United States',
+] as const;
+
 type NewDirector = {
   fullName: string;
   dob: string;
@@ -536,11 +552,17 @@ export default function ChangeDirectorClient(props: {
                             className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${showErr && v.missing.nationality ? 'border-red-500' : 'border-black/10'}`}
                           />
                         ) : (
-                          <input
+                          <select
                             value={d.nationality}
                             onChange={(e) => patchDirector(i, { nationality: e.target.value })}
-                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErr && v.missing.nationality ? 'border-red-500' : 'border-black/10'}`}
-                          />
+                            className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${showErr && v.missing.nationality ? 'border-red-500' : 'border-black/10'}`}
+                          >
+                            {NATIONALITY_OPTIONS.map((n) => (
+                              <option key={n} value={n}>
+                                {n}
+                              </option>
+                            ))}
+                          </select>
                         )}
                       </label>
 
