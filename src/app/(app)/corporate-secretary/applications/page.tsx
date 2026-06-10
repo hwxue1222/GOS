@@ -25,6 +25,24 @@ export default async function CorporateSecretaryApplicationsPage({
 
   const db = await readDb();
 
+  const allowedClientIds = (() => {
+    if (me.role !== 'client') return null;
+    const emailKey = me.email.trim().toLowerCase();
+    const partyById = new Map(db.parties.map((p) => [p.id, p]));
+    const personById = new Map(db.persons.map((p) => [p.id, p]));
+    const allowed = new Set<string>();
+    for (const r of db.clientPartyRoles) {
+      if (!isActiveRole(r)) continue;
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) continue;
+      const person = personById.get(party.personId);
+      if (!person) continue;
+      if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+      allowed.add(r.clientId);
+    }
+    return allowed;
+  })();
+
   const companies = db.clients
     .filter((c) => !c.deletedAt)
     .filter((c) => (allowedClientIds ? allowedClientIds.has(c.id) : true))
@@ -48,24 +66,6 @@ export default async function CorporateSecretaryApplicationsPage({
     if (s === 'APPROVED' || s === 'COMPLETE') return 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]';
     return 'bg-white text-black/70 border-black/10';
   };
-
-  const allowedClientIds = (() => {
-    if (me.role !== 'client') return null;
-    const emailKey = me.email.trim().toLowerCase();
-    const partyById = new Map(db.parties.map((p) => [p.id, p]));
-    const personById = new Map(db.persons.map((p) => [p.id, p]));
-    const allowed = new Set<string>();
-    for (const r of db.clientPartyRoles) {
-      if (!isActiveRole(r)) continue;
-      const party = partyById.get(r.partyId);
-      if (!party || party.type !== 'PERSON' || !party.personId) continue;
-      const person = personById.get(party.personId);
-      if (!person) continue;
-      if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
-      allowed.add(r.clientId);
-    }
-    return allowed;
-  })();
 
   const rows = buildSecretaryServiceApplications(db, allowedClientIds);
   const incRows = buildIncorporationApplications(db, allowedClientIds, me.role === 'client' ? me.id : null);
