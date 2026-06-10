@@ -313,7 +313,6 @@ export default function ChangeSecretaryClient() {
   }
 
   function addRow() {
-    setUseByBridgeSecretary(false);
     const lastIdx = addSecretaries.length ? addSecretaries.length - 1 : -1;
     if (lastIdx >= 0) {
       const v = validateSecretary(addSecretaries[lastIdx]);
@@ -499,15 +498,14 @@ export default function ChangeSecretaryClient() {
               <button
                 type="button"
                 onClick={() => {
-                  if (!editing && addSecretaries.length) {
+                  if (!editing && (addSecretaries.length || useByBridgeSecretary)) {
                     setSubmitError(null);
                     setEditing(true);
                     return;
                   }
                   addRow();
                 }}
-                disabled={useByBridgeSecretary}
-                className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/2 disabled:opacity-60"
+                className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/2"
               >
                 Add
               </button>
@@ -834,14 +832,7 @@ export default function ChangeSecretaryClient() {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setUseByBridgeSecretary(checked);
-                if (checked) {
-                  setSubmitError(null);
-                  setEditing(false);
-                  setAddSecretaries([]);
-                  setShowErrorsByIdx({});
-                } else {
-                  setAddSecretaries([]);
-                }
+                setSubmitError(null);
               }}
               className="h-4 w-4"
             />
