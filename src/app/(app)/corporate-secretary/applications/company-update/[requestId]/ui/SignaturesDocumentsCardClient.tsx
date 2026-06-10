@@ -16,6 +16,10 @@ export type DocumentRow = {
   signerCount: number;
 };
 
+function normalizeDocTitle(title: string) {
+  return String(title ?? '').replaceAll('Board Resolution', 'Director Resolution');
+}
+
 export default function SignaturesDocumentsCardClient(props: {
   signatureRows: SignatureRow[];
   documents: DocumentRow[];
@@ -73,7 +77,7 @@ export default function SignaturesDocumentsCardClient(props: {
             <tbody>
               {props.signatureRows.map((r) => (
                 <tr key={`${r.documentTitle}:${r.email}`} className="border-b border-black/5">
-                  <td className="px-3 py-2 align-top text-xs text-black/70">{r.documentTitle}</td>
+                  <td className="px-3 py-2 align-top text-xs text-black/70">{normalizeDocTitle(r.documentTitle)}</td>
                   <td className="px-3 py-2 align-top">
                     <div className="text-sm text-black/80">{r.signerName || r.email}</div>
                     <div className="text-xs text-black/50">
@@ -107,7 +111,7 @@ export default function SignaturesDocumentsCardClient(props: {
               {props.documents.map((d) => (
                 <tr key={d.documentId} className="border-b border-black/5">
                   <td className="px-3 py-2 align-top">
-                    <div className="text-sm text-black/80">{d.title}</div>
+                    <div className="text-sm text-black/80">{normalizeDocTitle(d.title)}</div>
                     <div className="text-xs text-black/50">Signers: {d.signerCount}</div>
                   </td>
                   <td className="px-3 py-2 align-top">
@@ -146,4 +150,3 @@ export default function SignaturesDocumentsCardClient(props: {
     </div>
   );
 }
-

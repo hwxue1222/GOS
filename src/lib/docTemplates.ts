@@ -181,7 +181,7 @@ export function renderChangeSecretaryResolutionHtml(input: {
   directors: Array<{ fullName: string; email?: string }>;
   resolutionDateYmd: string;
   appointedSecretaries: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
-  resignedSecretary?: { fullName: string; idNo?: string };
+  resignedSecretary?: { fullName: string; idTypeLabel?: string; idNo?: string };
 }) {
   const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: '' });
   const appts = input.appointedSecretaries;
@@ -197,7 +197,8 @@ export function renderChangeSecretaryResolutionHtml(input: {
   const resignLine = resigned
     ? (() => {
         const idNo = String(resigned.idNo ?? '').trim();
-        const idPart = idNo ? ` (NRIC No. ${esc(idNo)})` : '';
+      const idTypeLabel = String(resigned.idTypeLabel ?? '').trim();
+      const idPart = idNo ? ` (${esc(idTypeLabel || 'ID No.')} ${esc(idNo)})` : '';
         return `That the resignation of ${esc(resigned.fullName)}${idPart} as Secretary of the Company, be and is hereby approved with immediate effect.`;
       })()
     : '';
@@ -370,7 +371,7 @@ export function renderBoardResolutionHtml(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Board Resolution</title>
+    <title>Director Resolution</title>
     <style>
       body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
       h1 { font-size: 18px; margin: 0 0 16px; }
@@ -380,7 +381,7 @@ export function renderBoardResolutionHtml(input: {
     </style>
   </head>
   <body>
-    <h1>Board Resolution</h1>
+    <h1>Director Resolution</h1>
     <div class="muted">Date: ${resolutionDate}</div>
     <div class="box" style="margin-top: 12px;">
       <div><strong>Company</strong>: ${companyName}</div>
@@ -495,7 +496,11 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     const resignedName = String((p as { resignedSecretaryName?: unknown }).resignedSecretaryName ?? '').trim();
     const resignedIdNo = String((p as { resignedSecretaryIdNo?: unknown }).resignedSecretaryIdNo ?? '').trim() || undefined;
-    const resignedSecretary = resignedName ? { fullName: resignedName, idNo: resignedIdNo } : undefined;
+    const resignedIdTypeLabel =
+      String((p as { resignedSecretaryIdTypeLabel?: unknown }).resignedSecretaryIdTypeLabel ?? '').trim() || undefined;
+    const resignedSecretary = resignedName
+      ? { fullName: resignedName, idTypeLabel: resignedIdTypeLabel, idNo: resignedIdNo }
+      : undefined;
 
     return renderChangeSecretaryResolutionHtml({
       companyName: input.companyName,
@@ -798,7 +803,7 @@ export function renderCompanyUpdateRequestHtml(input: {
     </style>
   </head>
   <body>
-    <h1>Board Resolution</h1>
+    <h1>Director Resolution</h1>
     <div class="muted">Date: ${esc(nowYmd)}</div>
     <div class="box" style="margin-top: 12px;">
       <div><strong>Title</strong>: ${esc(title)}</div>

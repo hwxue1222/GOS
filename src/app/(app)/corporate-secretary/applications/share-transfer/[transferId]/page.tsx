@@ -151,7 +151,7 @@ export default async function ShareTransferApplicationDetailPage({
               </div>
 
               <div className="rounded-lg bg-[#f8fafc] border border-black/5 p-3">
-                <div className="text-sm font-medium">Board Resolution</div>
+                <div className="text-sm font-medium">Director Resolution</div>
                 <div className="mt-2 space-y-2">
                   {brSigns.map((s) => (
                     <div key={s.id} className="rounded-md bg-white border border-black/5 px-3 py-2">

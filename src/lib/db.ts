@@ -7191,7 +7191,7 @@ export async function createShareTransferRequest(input: {
   const brDoc: Document = {
     id: newId('doc'),
     type: 'BR',
-    title: `Board Resolution - ${client.name}`,
+    title: `Director Resolution - ${client.name}`,
     html: '',
     sha256: '',
     createdAt: now,
@@ -7903,9 +7903,12 @@ export async function createCompanyUpdateRequest(input: {
       if (!party || party.type !== 'PERSON' || !party.personId) return { ok: false as const, error: 'INVALID_INPUT' as const };
       const person = db.persons.find((x) => x.id === party.personId) ?? null;
       if (!person) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const idType = String((person as { idType?: unknown }).idType ?? '').trim();
+      const idTypeLabel = idType === 'PASSPORT' ? 'Passport No.' : idType === 'NRIC' ? 'NRIC No.' : 'ID No.';
       (p as Record<string, unknown>).resignedSecretaryName = person.fullName;
       (p as Record<string, unknown>).resignedSecretaryEmail = person.email ?? '';
       (p as Record<string, unknown>).resignedSecretaryIdNo = (person as unknown as { idNo?: unknown }).idNo ?? '';
+      (p as Record<string, unknown>).resignedSecretaryIdTypeLabel = idTypeLabel;
     }
   } else if (type === 'TRANSFER_COMPANY_SECRETARY') {
     const newSecretaryName = String(p.newSecretaryName ?? '').trim();
