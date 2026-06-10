@@ -116,6 +116,10 @@ function isYmdWithinPastDays(ymd: string, days: number) {
   return v >= min && v <= today;
 }
 
+function isYmd(ymd: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(ymd ?? '').trim());
+}
+
 export default function ChangeSecretaryClient() {
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
@@ -183,7 +187,7 @@ export default function ChangeSecretaryClient() {
 
     const p = json.person;
     const phone = splitPhone(String(p.phone ?? ''));
-    patchSecretary(idx, {
+    const patch: Partial<NewSecretary> = {
       fullName: String(p.fullName ?? '').trim(),
       email: String(p.email ?? '').trim(),
       nationality: String(p.nationality ?? '').trim() || 'Singapore',
@@ -191,7 +195,10 @@ export default function ChangeSecretaryClient() {
       phoneCountryCode: phone.phoneCountryCode,
       phoneLocal: phone.phoneLocal,
       lockedFromMember: true,
-    });
+    };
+    const dob = String(p.dob ?? '').trim();
+    if (dob && isYmd(dob)) patch.dob = dob;
+    patchSecretary(idx, patch);
     setShowErrorsByIdx((prev) => ({ ...prev, [idx]: false }));
   }
 
