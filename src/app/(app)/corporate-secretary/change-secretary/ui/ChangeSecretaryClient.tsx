@@ -95,6 +95,27 @@ function draftKey(companyId: string) {
   return `gos.draft.changeSecretary.${companyId}`;
 }
 
+function ymdNDaysAgo(n: number) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+function ymdToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+function isYmdWithinPastDays(ymd: string, days: number) {
+  const v = String(ymd ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const today = ymdToday();
+  const min = ymdNDaysAgo(days);
+  return v >= min && v <= today;
+}
+
 export default function ChangeSecretaryClient() {
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
@@ -131,8 +152,11 @@ export default function ChangeSecretaryClient() {
       phone: !phone,
       declaration: !declarationQualifications,
     };
+    const invalid = {
+      joinDate: !!joinDate && !isYmdWithinPastDays(joinDate, 14),
+    };
     const ok = !Object.values(missing).some(Boolean);
-    return { ok, missing };
+    return { ok: ok && !Object.values(invalid).some(Boolean), missing, invalid };
   };
 
   async function lookupMemberByIdNo(idx: number, idNoRaw: string) {
@@ -317,6 +341,10 @@ export default function ChangeSecretaryClient() {
       for (const s of cleanedAdd) {
         if (!s.fullName || !s.idNo || !s.email || !s.dob || !s.nationality || !s.phone || !s.joinDate || !s.address) {
           setSubmitError('Please complete all required fields for new secretary.');
+          return;
+        }
+        if (!isYmdWithinPastDays(s.joinDate, 14)) {
+          setSubmitError('Date of appointment must be within the past 14 days and not in the future.');
           return;
         }
         if (!s.declarationQualifications.length) {
@@ -518,8 +546,17 @@ export default function ChangeSecretaryClient() {
                           type="date"
                           value={s.joinDate}
                           onChange={(e) => patchSecretary(i, { joinDate: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.joinDate ? 'border-red-500' : 'border-black/10'}`}
+                          min={ymdNDaysAgo(14)}
+                          max={ymdToday()}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
+                            showErrorsByIdx[i] && (validateSecretary(s).missing.joinDate || validateSecretary(s).invalid.joinDate)
+                              ? 'border-red-500'
+                              : 'border-black/10'
+                          }`}
                         />
+                        {showErrorsByIdx[i] && validateSecretary(s).invalid.joinDate ? (
+                          <div className="mt-1 text-xs text-red-600">Date of appointment must be within the past 14 days and not in the future.</div>
+                        ) : null}
                       </label>
 
                       <label className="sm:col-span-6 text-sm">

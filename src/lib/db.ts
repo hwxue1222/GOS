@@ -7841,6 +7841,21 @@ export async function createCompanyUpdateRequest(input: {
   const p = input.payload ?? {};
   const now = nowIso();
 
+  const isYmd = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const ymdToday = () => now.slice(0, 10);
+  const ymdNDaysAgo = (days: number) => {
+    const d = new Date(`${ymdToday()}T00:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().slice(0, 10);
+  };
+  const isYmdWithinPastDays = (ymd: string, days: number) => {
+    const v = String(ymd ?? '').trim();
+    if (!isYmd(v)) return false;
+    const min = ymdNDaysAgo(days);
+    const max = ymdToday();
+    return v >= min && v <= max;
+  };
+
   const companyName = client.name;
 
   if (type === 'CHANGE_COMPANY_NAME') {
@@ -7925,6 +7940,9 @@ export async function createCompanyUpdateRequest(input: {
         return { ok: false as const, error: 'INVALID_INPUT' as const };
       }
       if (!isByBridgeRow && !dob) {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
+      if (!isYmdWithinPastDays(joinDate, 14)) {
         return { ok: false as const, error: 'INVALID_INPUT' as const };
       }
     }
