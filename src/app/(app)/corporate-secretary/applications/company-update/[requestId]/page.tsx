@@ -56,7 +56,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     return (
       <div className="min-h-screen flex flex-col">
         <AppTopNav active="corporate-secretary" />
-        <div className="flex-1">
+        <div className="flex-1 bg-[#f7f8fa]">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
           </div>
@@ -85,7 +85,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
       return (
         <div className="min-h-screen flex flex-col">
           <AppTopNav active="corporate-secretary" />
-          <div className="flex-1">
+          <div className="flex-1 bg-[#f7f8fa]">
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
             </div>
@@ -98,6 +98,20 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   const company = db.clients.find((c) => c.id === req.clientId && !c.deletedAt) ?? null;
   const payload = req.payload as Record<string, unknown>;
   const label = typeLabel(req.type);
+
+  const statusLabel = req.status === 'PENDING_SIGNATURES' ? 'SIGNING' : req.status;
+  const statusClass =
+    req.status === 'PENDING_SIGNATURES'
+      ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+      : req.status === 'PENDING_REVIEW'
+        ? 'bg-[#faf5ff] text-[#6d28d9] border-[#e9d5ff]'
+        : req.status === 'NEED_MORE_INFO'
+          ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
+          : req.status === 'COMPLETE'
+            ? 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'
+            : req.status === 'REJECTED'
+              ? 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
+              : 'bg-white text-black/70 border-black/10';
 
   const packets = db.signaturePackets
     .filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === req.id)
@@ -133,6 +147,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
       signerRole: meta.role,
       email: s.email,
       status: s.status,
+      signedAt: s.signedAt,
     };
   });
 
@@ -203,7 +218,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
+      <div className="flex-1 bg-[#f7f8fa]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -220,9 +235,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                   onDoneHref={`/corporate-secretary/applications?companyId=${encodeURIComponent(req.clientId)}`}
                 />
               ) : null}
-              <div className="text-sm">
-                <span className="text-black/60">Status:</span> <span className="font-medium">{req.status}</span>
-              </div>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
             </div>
           </div>
 
@@ -286,7 +299,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                 </div>
                 <div className="mt-4 overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="text-left text-black/60">
+                    <thead className="text-left text-black/60 bg-black/[0.02]">
                       <tr className="border-b border-black/10">
                         <th className="px-3 py-2 font-medium">Field</th>
                         <th className="px-3 py-2 font-medium">Before</th>
@@ -295,7 +308,7 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
                     </thead>
                     <tbody>
                       {diffRows.map((r) => (
-                        <tr key={r.k} className="border-b border-black/5">
+                        <tr key={r.k} className="border-b border-black/5 hover:bg-black/[0.02]">
                           <td className="px-3 py-2 align-top font-medium text-black/80">{r.k}</td>
                           <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.before || '-'}</td>
                           <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.after || '-'}</td>

@@ -8,6 +8,7 @@ export type SignatureRow = {
   signerRole: string;
   email: string;
   status: string;
+  signedAt?: string;
 };
 
 export type DocumentRow = {
@@ -18,6 +19,20 @@ export type DocumentRow = {
 
 function normalizeDocTitle(title: string) {
   return String(title ?? '').replaceAll('Board Resolution', 'Director Resolution');
+}
+
+function formatTs(ts?: string) {
+  const s = String(ts ?? '').trim();
+  if (!s) return '-';
+  return s.slice(0, 19).replace('T', ' ');
+}
+
+function signatureStatusClass(status: string) {
+  if (status === 'SIGNED') return 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]';
+  if (status === 'OTP_SENT') return 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]';
+  if (status === 'EXPIRED') return 'bg-black/[0.02] text-black/70 border-black/10';
+  if (status === 'REVOKED') return 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]';
+  return 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]';
 }
 
 export default function SignaturesDocumentsCardClient(props: {
@@ -51,7 +66,7 @@ export default function SignaturesDocumentsCardClient(props: {
             tab === 'signatures' ? 'bg-white text-black shadow-sm' : 'text-black/60 hover:bg-white/60'
           }`}
         >
-          Signatures
+          Signatures ({props.signatureRows.length})
         </button>
         <button
           type="button"
@@ -60,23 +75,24 @@ export default function SignaturesDocumentsCardClient(props: {
             tab === 'documents' ? 'bg-white text-black shadow-sm' : 'text-black/60 hover:bg-white/60'
           }`}
         >
-          Documents
+          Documents ({props.documents.length})
         </button>
       </div>
 
       {tab === 'signatures' ? (
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="text-left text-black/60">
+            <thead className="text-left text-black/60 bg-black/[0.02]">
               <tr className="border-b border-black/10">
                 <th className="px-3 py-2 font-medium">Document</th>
                 <th className="px-3 py-2 font-medium">Signer</th>
                 <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Time</th>
               </tr>
             </thead>
             <tbody>
               {props.signatureRows.map((r) => (
-                <tr key={`${r.documentTitle}:${r.email}`} className="border-b border-black/5">
+                <tr key={`${r.documentTitle}:${r.email}`} className="border-b border-black/5 hover:bg-black/[0.02]">
                   <td className="px-3 py-2 align-top text-xs text-black/70">{normalizeDocTitle(r.documentTitle)}</td>
                   <td className="px-3 py-2 align-top">
                     <div className="text-sm text-black/80">{r.signerName || r.email}</div>
@@ -85,12 +101,15 @@ export default function SignaturesDocumentsCardClient(props: {
                       {r.email}
                     </div>
                   </td>
-                  <td className="px-3 py-2 align-top text-xs text-black/60">{r.status}</td>
+                  <td className="px-3 py-2 align-top">
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${signatureStatusClass(r.status)}`}>{r.status}</span>
+                  </td>
+                  <td className="px-3 py-2 align-top text-xs text-black/60">{formatTs(r.signedAt)}</td>
                 </tr>
               ))}
               {props.signatureRows.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-3 py-8 text-center text-black/40">
+                  <td colSpan={4} className="px-3 py-8 text-center text-black/40">
                     No signatures
                   </td>
                 </tr>
@@ -101,7 +120,7 @@ export default function SignaturesDocumentsCardClient(props: {
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="text-left text-black/60">
+            <thead className="text-left text-black/60 bg-black/[0.02]">
               <tr className="border-b border-black/10">
                 <th className="px-3 py-2 font-medium">Document</th>
                 <th className="px-3 py-2 font-medium">Actions</th>
@@ -109,7 +128,7 @@ export default function SignaturesDocumentsCardClient(props: {
             </thead>
             <tbody>
               {props.documents.map((d) => (
-                <tr key={d.documentId} className="border-b border-black/5">
+                <tr key={d.documentId} className="border-b border-black/5 hover:bg-black/[0.02]">
                   <td className="px-3 py-2 align-top">
                     <div className="text-sm text-black/80">{normalizeDocTitle(d.title)}</div>
                     <div className="text-xs text-black/50">Signers: {d.signerCount}</div>
