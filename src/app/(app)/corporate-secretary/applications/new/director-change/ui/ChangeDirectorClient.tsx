@@ -693,7 +693,7 @@ export default function ChangeDirectorClient(props: {
             </div>
             <label className="sm:col-span-5 text-sm">
               <div className="text-black">
-                <span className="text-red-500">*</span> Date of appointment
+                <span className="text-red-500">*</span> Date of resignation
               </div>
               <input
                 type="date"
