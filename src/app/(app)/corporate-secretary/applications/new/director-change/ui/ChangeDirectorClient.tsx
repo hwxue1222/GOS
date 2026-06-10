@@ -87,10 +87,19 @@ function splitPhone(phoneRaw: string): { phoneCountryCode: PhoneCountryCode; pho
 export default function ChangeDirectorClient(props: {
   companyId: string;
   closeHref: string;
-  directors: Array<{ roleId: string; fullName: string }>;
+  directors: Array<{ roleId: string; fullName: string; isLocal: boolean }>;
 }) {
   const router = useRouter();
   const { companyId, closeHref, directors } = props;
+
+  const isLocalDirector = (v: unknown) => {
+    const s = String(v ?? '').trim().toLowerCase();
+    if (!s) return false;
+    if (s === 'singapore') return true;
+    if (s.includes('singapore') && s.includes('pr')) return true;
+    if (s === 'ep' || s.includes('employment pass')) return true;
+    return false;
+  };
 
   const [editing, setEditing] = useState(false);
   const [removeDirectorRoleId, setRemoveDirectorRoleId] = useState('');
@@ -302,6 +311,15 @@ export default function ChangeDirectorClient(props: {
       return;
     }
 
+    const existingLocal = directors.filter((d) => d.isLocal).length;
+    const removedLocal = removeDirectorRoleId ? (directors.find((d) => d.roleId === removeDirectorRoleId)?.isLocal ? 1 : 0) : 0;
+    const addedLocal = cleanedAdd.filter((d) => isLocalDirector(d.nationality)).length + (useByBridgeNomineeDirector ? 1 : 0);
+    const remainingLocal = existingLocal - removedLocal + addedLocal;
+    if (remainingLocal < 1) {
+      setSubmitError('Company must have at least one local director (Singapore / Singapore PR / EP).');
+      return;
+    }
+
     if (hasAdd) {
       for (const d of cleanedAdd) {
         if (!d.fullName || !d.email || !d.idNo || !d.nationality || !d.dob || !d.address || !d.phone || !d.appointmentDate) {
@@ -349,7 +367,11 @@ export default function ChangeDirectorClient(props: {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
       if (!res?.ok || !j?.ok || !j.request?.id) {
-        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        if (j?.error === 'NEED_LOCAL_DIRECTOR') {
+          setSubmitError('Company must have at least one local director (Singapore / Singapore PR / EP).');
+        } else {
+          setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        }
         return;
       }
       window.localStorage.removeItem(draftKey(companyId));

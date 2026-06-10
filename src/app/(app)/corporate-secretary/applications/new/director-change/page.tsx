@@ -70,9 +70,11 @@ export default async function NewDirectorChangePage({
       if (!party || party.type !== 'PERSON' || !party.personId) return null;
       const person = personById.get(party.personId);
       if (!person) return null;
-      return { roleId: r.id, fullName: person.fullName };
+      const nat = String((person as { nationality?: unknown }).nationality ?? '').trim().toLowerCase();
+      const isLocal = nat === 'singapore' || (nat.includes('singapore') && nat.includes('pr')) || nat === 'ep' || nat.includes('employment pass');
+      return { roleId: r.id, fullName: person.fullName, isLocal };
     })
-    .filter(Boolean) as Array<{ roleId: string; fullName: string }>;
+    .filter(Boolean) as Array<{ roleId: string; fullName: string; isLocal: boolean }>;
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -7613,6 +7613,21 @@ export async function createDirectorChangeRequest(input: {
   if (!removeDirectorRoleIds.length && !cleanedAdd.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const directors = await listClientDirectors(input.clientId);
+
+  const isLocalDirector = (v: unknown) => {
+    const s = String(v ?? '').trim().toLowerCase();
+    if (!s) return false;
+    if (s === 'singapore') return true;
+    if (s.includes('singapore') && s.includes('pr')) return true;
+    if (s === 'ep' || s.includes('employment pass')) return true;
+    return false;
+  };
+
+  const existingLocal = directors.filter((d) => isLocalDirector(d.person.nationality)).length;
+  const removedLocal = directors.filter((d) => removeDirectorRoleIds.includes(d.role.id)).filter((d) => isLocalDirector(d.person.nationality)).length;
+  const addedLocal = cleanedAdd.filter((d) => isLocalDirector(d.nationality)).length;
+  const remainingLocal = existingLocal - removedLocal + addedLocal;
+  if (remainingLocal < 1) return { ok: false as const, error: 'NEED_LOCAL_DIRECTOR' as const };
   const activeDirectorRoleIds = new Set(directors.map((d) => d.role.id));
   if (removeDirectorRoleIds.some((id) => !activeDirectorRoleIds.has(id))) {
     return { ok: false as const, error: 'INVALID_INPUT' as const };
