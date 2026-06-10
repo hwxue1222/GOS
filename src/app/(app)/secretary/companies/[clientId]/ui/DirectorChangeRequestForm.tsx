@@ -18,10 +18,9 @@ import {
 type Props = {
   clientId: string;
   directors: Array<{ roleId: string; fullName: string; email?: string }>;
-  onSubmitted: (signLinksText: string | null) => void;
 };
 
-export default function DirectorChangeRequestForm({ clientId, directors, onSubmitted }: Props) {
+export default function DirectorChangeRequestForm({ clientId, directors }: Props) {
   const router = useRouter();
   const [effectiveDate, setEffectiveDate] = useState(() => ymdToday());
   const [message, setMessage] = useState('');
@@ -293,7 +292,6 @@ export default function DirectorChangeRequestForm({ clientId, directors, onSubmi
         ? (j.signLinks as Array<{ email: string; url: string }>).map((x) => `${x.email} — ${x.url}`).join('\n')
         : null;
       window.localStorage.removeItem(draftKey(clientId));
-      onSubmitted(signLinksText);
       router.push(`/corporate-secretary/applications/director-change/${encodeURIComponent(j.request.id)}`);
     } finally {
       setSubmitting(false);

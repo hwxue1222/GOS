@@ -48,7 +48,6 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
   const [items, setItems] = useState<DirectorChangeRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
   const directorByRoleId = useMemo(() => new Map(directors.map((d) => [d.roleId, d])), [directors]);
 
@@ -77,7 +76,6 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
   async function decide(requestId: string, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO', note?: string) {
     if (!canApprove) return;
     setError(null);
-    setInfo(null);
     const res = await fetch(
       `/api/secretary/companies/${encodeURIComponent(clientId)}/director-change-requests/${encodeURIComponent(requestId)}/decision`,
       {
@@ -110,20 +108,10 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
       </div>
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-      {info ? (
-        <div className="mt-3 rounded-lg bg-[#f8fafc] border border-black/5 p-3 text-xs font-mono whitespace-pre-wrap">{info}</div>
-      ) : null}
 
       {canSubmit ? (
         <div className="mt-4">
-          <DirectorChangeRequestForm
-            clientId={clientId}
-            directors={directors}
-            onSubmitted={(signLinksText) => {
-              if (signLinksText) setInfo(signLinksText);
-              void refresh();
-            }}
-          />
+          <DirectorChangeRequestForm clientId={clientId} directors={directors} />
         </div>
       ) : null}
 

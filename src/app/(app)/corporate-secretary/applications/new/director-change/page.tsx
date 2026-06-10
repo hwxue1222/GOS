@@ -105,7 +105,7 @@ export default async function NewDirectorChangePage({
               </form>
             </div>
 
-            <DirectorChangeRequestForm clientId={companyId} directors={directors} onSubmitted={() => undefined} />
+            <DirectorChangeRequestForm clientId={companyId} directors={directors} />
           </div>
         </ModalShell>
       </div>
