@@ -1,8 +1,8 @@
 import AppTopNav from '@/components/AppTopNav';
-import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import DirectorChangeRequestForm from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestForm';
+import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -51,7 +51,7 @@ export default async function NewDirectorChangePage({
     return (
       <div className="min-h-screen flex flex-col">
         <AppTopNav active="corporate-secretary" />
-        <div className="flex-1">
+        <div className="flex-1 bg-[#f7f8fa]">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">No companies</div>
           </div>
@@ -78,48 +78,37 @@ export default async function NewDirectorChangePage({
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold">New Change of Director</h1>
-              <div className="mt-1 text-sm text-black/60">Select a company, then submit the request.</div>
+      <div className="flex-1 relative bg-[#f7f8fa]">
+        <ModalShell title="Change of Director" closeHref="/corporate-secretary/applications">
+          <div className="space-y-5">
+            <div className="rounded-xl bg-white border border-black/5 p-4">
+              <div className="text-sm font-medium">Company</div>
+              <div className="mt-1 text-xs text-black/50">Select the company to file this director change request.</div>
+              <form method="GET" className="mt-3 flex flex-wrap items-center gap-2">
+                <select
+                  name="companyId"
+                  defaultValue={companyId}
+                  className="flex-1 min-w-[240px] max-w-[520px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium hover:bg-black/[0.02]"
+                >
+                  Load
+                </button>
+              </form>
             </div>
-            <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
-              Back
-            </Link>
-          </div>
 
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <form method="GET" className="flex items-center gap-2">
-              <label className="text-sm text-black/70">Company</label>
-              <select
-                name="companyId"
-                defaultValue={companyId}
-                className="max-w-[420px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <button type="submit" className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium">
-                Load
-              </button>
-            </form>
+            <DirectorChangeRequestForm clientId={companyId} directors={directors} onSubmitted={() => undefined} />
           </div>
-
-          <div className="mt-4">
-            <DirectorChangeRequestForm
-              clientId={companyId}
-              directors={directors}
-              onSubmitted={() => undefined}
-            />
-          </div>
-        </div>
+        </ModalShell>
       </div>
     </div>
   );
 }
-

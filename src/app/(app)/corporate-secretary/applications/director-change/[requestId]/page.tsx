@@ -43,7 +43,7 @@ export default async function DirectorChangeApplicationDetailPage({
     return (
       <div className="min-h-screen flex flex-col">
         <AppTopNav active="corporate-secretary" />
-        <div className="flex-1">
+        <div className="flex-1 bg-[#f7f8fa]">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
           </div>
@@ -58,7 +58,7 @@ export default async function DirectorChangeApplicationDetailPage({
       return (
         <div className="min-h-screen flex flex-col">
           <AppTopNav active="corporate-secretary" />
-          <div className="flex-1">
+          <div className="flex-1 bg-[#f7f8fa]">
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
             </div>
@@ -124,10 +124,24 @@ export default async function DirectorChangeApplicationDetailPage({
     })
     .filter(Boolean);
 
+  const statusLabel = r.status === 'PENDING_SIGNATURES' ? 'SIGNING' : r.status;
+  const statusClass =
+    r.status === 'PENDING_SIGNATURES'
+      ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+      : r.status === 'PENDING_REVIEW'
+        ? 'bg-[#faf5ff] text-[#6d28d9] border-[#e9d5ff]'
+        : r.status === 'NEED_MORE_INFO'
+          ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
+          : r.status === 'APPROVED'
+            ? 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'
+            : r.status === 'REJECTED'
+              ? 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
+              : 'bg-white text-black/70 border-black/10';
+
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
+      <div className="flex-1 bg-[#f7f8fa]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -143,7 +157,9 @@ export default async function DirectorChangeApplicationDetailPage({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div>
                 <div className="text-black/50">Status</div>
-                <div className="mt-1 font-medium">{r.status}</div>
+                <div className="mt-1">
+                  <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
+                </div>
               </div>
               <div>
                 <div className="text-black/50">Effective date</div>

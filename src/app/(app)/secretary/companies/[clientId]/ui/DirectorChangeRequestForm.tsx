@@ -363,7 +363,7 @@ export default function DirectorChangeRequestForm({ clientId, directors, onSubmi
               }
               addRow();
             }}
-            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/2"
+            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/[0.02]"
           >
             Add
           </button>
