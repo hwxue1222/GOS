@@ -58,6 +58,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
 
   const db = await readDb();
   const list = (db.directorChangeRequests ?? []).filter((r) => r.clientId === clientId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const packetIdsByRequestId = new Map<string, string[]>();
+  for (const p of db.signaturePackets) {
+    if (p.relatedType !== 'DIRECTOR_CHANGE') continue;
+    const arr = packetIdsByRequestId.get(p.relatedId) ?? [];
+    arr.push(p.id);
+    packetIdsByRequestId.set(p.relatedId, arr);
+  }
+
   const signaturesByPacket = new Map<string, Array<{ email: string; status: string; signedAt?: string }>>();
   for (const sr of db.signatureRequests) {
     const arr = signaturesByPacket.get(sr.packetId) ?? [];
@@ -66,7 +74,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   }
 
   const items = list.map((r) => {
-    const sigs = (signaturesByPacket.get(r.packetId) ?? []).sort((a, b) => a.email.localeCompare(b.email));
+    const packetIds = packetIdsByRequestId.get(r.id) ?? (r.packetId ? [r.packetId] : []);
+    const sigs = packetIds
+      .flatMap((pid) => signaturesByPacket.get(pid) ?? [])
+      .sort((a, b) => a.email.localeCompare(b.email));
     const total = sigs.length;
     const signed = sigs.filter((x) => x.status === 'SIGNED').length;
     return { request: r, signatures: sigs, signatureSummary: { total, signed } };
@@ -94,6 +105,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     | {
         effectiveDate?: string;
         message?: string;
+        useByBridgeNomineeDirector?: boolean;
         removeDirectorRoleIds?: unknown;
         addDirectors?: unknown;
       }
@@ -101,6 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
 
   const effectiveDate = typeof body?.effectiveDate === 'string' ? body.effectiveDate.trim() : '';
   const message = typeof body?.message === 'string' ? body.message : undefined;
+  const useByBridgeNomineeDirector = typeof body?.useByBridgeNomineeDirector === 'boolean' ? body.useByBridgeNomineeDirector : undefined;
   const removeDirectorRoleIds = Array.isArray(body?.removeDirectorRoleIds) ? body?.removeDirectorRoleIds : [];
   const addDirectors = Array.isArray(body?.addDirectors) ? body?.addDirectors : [];
 
@@ -109,8 +122,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     createdByUserId: user.id,
     effectiveDate,
     message,
+    useByBridgeNomineeDirector,
     removeDirectorRoleIds: removeDirectorRoleIds as string[],
-    addDirectors: addDirectors as Array<{ fullName: string; email?: string }>,
+    addDirectors: addDirectors as any,
   });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
 
@@ -130,7 +144,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const client = db.clients.find((c) => c.id === clientId) ?? null;
   const companyName = client?.name ?? clientId;
   await Promise.all(
-    r.signLinks.map((l) => sendSigningInvite({ to: l.email, title: `change of director - ${companyName}`, url: `${baseUrl}${l.url}` })),
+    r.signLinks.map((l) =>
+      sendSigningInvite({ to: l.email, title: l.title ?? `change of director - ${companyName}`, url: `${baseUrl}${l.url}` }),
+    ),
   );
 
   await appendAuditLog({

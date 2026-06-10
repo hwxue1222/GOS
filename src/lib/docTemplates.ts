@@ -175,6 +175,146 @@ export function renderSecretaryResignationLetterHtml(input: {
 `.trim();
 }
 
+export function renderDirectorConsentToActHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  director: {
+    fullName: string;
+    email: string;
+    address: string;
+    nationality: string;
+    idNo: string;
+    idTypeLabel?: 'Passport No.' | 'NRIC No.' | 'FIN No.' | 'IC No.' | 'ID No.';
+    dobYmd: string;
+    effectiveDateYmd: string;
+  };
+  signedDateYmd: string;
+}) {
+  const d = input.director;
+  const idLabel = String(d.idTypeLabel ?? 'ID No.').trim() || 'ID No.';
+  const signer = [{ fullName: d.fullName, email: d.email }];
+  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Consent to Act as Director</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .title { font-size: 16px; font-weight: 700; text-align: center; }
+      .center { text-align: center; }
+      .block { margin-top: 12px; }
+      .muted { color: #555; font-size: 12px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+      .kv { margin-top: 8px; }
+      .kv div { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="center">THE COMPANIES ACT</div>
+    <div class="center">(CHAPTER 50)</div>
+    <div class="title block">CONSENT TO ACT AS DIRECTOR</div>
+
+    <div class="kv">
+      <div><strong>Name of Company:</strong> ${esc(input.companyName)}</div>
+      <div><strong>Company UEN:</strong> ${esc(input.companyRegistrationNo ?? '')}</div>
+    </div>
+
+    <div class="block">I, the undermentioned person, hereby consent to act as a Director of the abovenamed company with effect from ${esc(input.director.effectiveDateYmd)}.</div>
+
+    ${blocks}
+
+    <div class="block"><strong>Name:</strong> ${esc(d.fullName)}</div>
+    <div class="block"><strong>Address:</strong> ${esc(d.address)}</div>
+    <div class="block"><strong>${esc(idLabel)}</strong> ${esc(d.idNo)} &nbsp;&nbsp;&nbsp; <strong>Nationality:</strong> ${esc(d.nationality)}</div>
+    <div class="block"><strong>Date of Birth:</strong> ${esc(toDdMmYyyy(d.dobYmd))}</div>
+    <div class="block"><strong>Date:</strong> ${esc(toDdMmYyyy(input.signedDateYmd))}</div>
+    <div class="block muted">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderChangeDirectorResolutionHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  directors: Array<{ fullName: string; email?: string }>;
+  resolutionDateYmd: string;
+  effectiveDateYmd: string;
+  appointedDirectors: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
+  resignedDirectors: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
+}) {
+  const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: '' });
+  const appts = input.appointedDirectors;
+  const resigs = input.resignedDirectors;
+
+  const fmtIdPart = (x: { idTypeLabel?: string; idNo?: string }) => {
+    const idNo = String(x.idNo ?? '').trim();
+    const idTypeLabel = String(x.idTypeLabel ?? '').trim();
+    return idNo ? ` (${esc(idTypeLabel || 'ID No.')} ${esc(idNo)})` : '';
+  };
+
+  const apptLines = appts.length
+    ? appts
+        .map(
+          (d) =>
+            `That ${esc(d.fullName)}${fmtIdPart(d)} having consented to act as Director of the Company, be and is hereby appointed with effect from <strong>${esc(toDdMmYyyy(input.effectiveDateYmd))}</strong>.`,
+        )
+        .join('<br />')
+    : '';
+
+  const resignLines = resigs.length
+    ? resigs.map((d) => `That the resignation of ${esc(d.fullName)}${fmtIdPart(d)} as Director of the Company, be and is hereby approved with immediate effect.`).join('<br />')
+    : '';
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Change of Director</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .muted { color: #555; font-size: 12px; }
+      .subtitle { margin-top: 8px; font-size: 14px; font-weight: 700; }
+      .block { margin-top: 14px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${esc(input.companyName)}</div>
+    <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${esc(input.companyRegistrationNo ?? '')}</div>
+    <div class="muted">(Incorporated in the Republic of Singapore)</div>
+
+    <div style="height: 14px;"></div>
+
+    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
+
+    <div class="subtitle">RESOLVED –</div>
+    <div class="subtitle" style="font-weight: 700;">CHANGE OF DIRECTOR</div>
+
+    ${resignLines ? `<div class="block">${resignLines}</div>` : ''}
+    ${apptLines ? `<div class="block">${apptLines}</div>` : ''}
+
+    ${sigBlocks}
+
+    <div style="margin-top: 18px;"><strong>Dated</strong>: ${esc(toDdMmYyyy(input.resolutionDateYmd))}</div>
+  </body>
+</html>
+`.trim();
+}
+
 export function renderChangeSecretaryResolutionHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;

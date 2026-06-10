@@ -272,8 +272,19 @@ export type DirectorChangeRequest = {
   status: DirectorChangeRequestStatus;
   effectiveDate: string;
   message?: string;
+  useByBridgeNomineeDirector?: boolean;
   removeDirectorRoleIds: string[];
-  addDirectors: Array<{ fullName: string; email?: string }>;
+  addDirectors: Array<{
+    fullName: string;
+    email: string;
+    idTypeLabel?: 'Passport No.' | 'NRIC No.' | 'FIN No.' | 'IC No.' | 'ID No.';
+    idNo?: string;
+    nationality?: string;
+    dob?: string;
+    address?: string;
+    phone?: string;
+    isByBridgeNominee?: boolean;
+  }>;
   packetId: string;
   createdAt: string;
   updatedAt?: string;

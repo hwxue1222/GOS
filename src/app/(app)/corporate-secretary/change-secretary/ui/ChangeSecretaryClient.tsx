@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
@@ -212,8 +212,8 @@ export default function ChangeSecretaryClient() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const lookupTimerByIdx = useMemo(() => new Map<number, ReturnType<typeof setTimeout>>(), []);
-  const lookupSeqByIdx = useMemo(() => new Map<number, number>(), []);
+  const lookupTimerByIdxRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const lookupSeqByIdxRef = useRef(new Map<number, number>());
 
   const validateSecretary = (s: NewSecretary) => {
     const fullName = s.fullName.trim();
@@ -248,8 +248,8 @@ export default function ChangeSecretaryClient() {
     const idNo = String(idNoRaw ?? '').trim();
     if (!idNo) return;
 
-    const seq = (lookupSeqByIdx.get(idx) ?? 0) + 1;
-    lookupSeqByIdx.set(idx, seq);
+    const seq = (lookupSeqByIdxRef.current.get(idx) ?? 0) + 1;
+    lookupSeqByIdxRef.current.set(idx, seq);
 
     const res = await fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}`).catch(() => null);
     const json = (await res?.json().catch(() => null)) as
@@ -261,7 +261,7 @@ export default function ChangeSecretaryClient() {
       | { ok: false; error?: string }
       | null;
 
-    if ((lookupSeqByIdx.get(idx) ?? 0) !== seq) return;
+    if ((lookupSeqByIdxRef.current.get(idx) ?? 0) !== seq) return;
     if (!res?.ok || !json || !('ok' in json) || !json.ok) return;
     if (!('person' in json) || !json.person) return;
 
@@ -574,9 +574,9 @@ export default function ChangeSecretaryClient() {
                                     }
                                   : {}),
                               });
-                              const t = lookupTimerByIdx.get(i);
+                              const t = lookupTimerByIdxRef.current.get(i);
                               if (t) clearTimeout(t);
-                              lookupTimerByIdx.set(
+                              lookupTimerByIdxRef.current.set(
                                 i,
                                 setTimeout(() => {
                                   void lookupMemberByIdNo(i, next);

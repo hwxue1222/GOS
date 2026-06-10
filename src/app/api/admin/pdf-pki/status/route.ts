@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { isPdfPkiEnabled } from '@/lib/pdfPki';
+import * as forge from 'node-forge';
 
 function parseP12Meta(p12b64: string, passphrase: string) {
-  const forge = require('node-forge') as typeof import('node-forge');
   const der = forge.util.decode64(p12b64);
   const asn1 = forge.asn1.fromDer(der);
   const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, false, passphrase);

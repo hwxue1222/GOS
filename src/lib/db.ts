@@ -1069,6 +1069,10 @@ function normalizeDb(parsed: Db): Db {
         status: (r as DirectorChangeRequest).status ?? 'DRAFT',
         effectiveDate: String((r as DirectorChangeRequest).effectiveDate ?? ''),
         message: typeof (r as DirectorChangeRequest).message === 'string' ? (r as DirectorChangeRequest).message : undefined,
+        useByBridgeNomineeDirector:
+          typeof (r as DirectorChangeRequest).useByBridgeNomineeDirector === 'boolean'
+            ? (r as DirectorChangeRequest).useByBridgeNomineeDirector
+            : undefined,
         removeDirectorRoleIds: Array.isArray((r as DirectorChangeRequest).removeDirectorRoleIds)
           ? (r as DirectorChangeRequest).removeDirectorRoleIds.map((x) => String(x)).filter(Boolean)
           : [],
@@ -1076,7 +1080,14 @@ function normalizeDb(parsed: Db): Db {
           ? (r as DirectorChangeRequest).addDirectors
               .map((x) => ({
                 fullName: typeof x?.fullName === 'string' ? x.fullName : '',
-                email: typeof x?.email === 'string' ? x.email : undefined,
+                email: typeof x?.email === 'string' ? x.email : '',
+                idTypeLabel: typeof x?.idTypeLabel === 'string' ? x.idTypeLabel : undefined,
+                idNo: typeof x?.idNo === 'string' ? x.idNo : undefined,
+                nationality: typeof x?.nationality === 'string' ? x.nationality : undefined,
+                dob: typeof x?.dob === 'string' ? x.dob : undefined,
+                address: typeof x?.address === 'string' ? x.address : undefined,
+                phone: typeof x?.phone === 'string' ? x.phone : undefined,
+                isByBridgeNominee: typeof x?.isByBridgeNominee === 'boolean' ? x.isByBridgeNominee : undefined,
               }))
               .filter((x) => !!x.fullName)
           : [],
@@ -6954,6 +6965,10 @@ async function finalizeDirectorChangeIfReady(db: Db, packet: SignaturePacket) {
   if (packet.relatedType !== 'DIRECTOR_CHANGE') return;
   if (packet.status !== 'SIGNED') return;
 
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === packet.relatedId);
+  if (!packets.length) return;
+  if (!packets.every((p) => p.status === 'SIGNED')) return;
+
   const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
     ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
     : [];
@@ -7504,14 +7519,22 @@ export async function getDirectorChangeRequestContext(requestId: string) {
     : [];
   const request = list.find((r) => r.id === requestId) ?? null;
   if (!request) return null;
-  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
-  if (!packet) return null;
-  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
-  if (!document) return null;
+
+  const packets = db.signaturePackets
+    .filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === requestId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (!packets.length) return null;
+
+  const docsById = new Map(db.documents.map((d) => [d.id, d]));
+  const documents = packets.map((p) => docsById.get(p.documentId)).filter(Boolean) as Document[];
+  if (!documents.length) return null;
+
+  const packetIds = new Set(packets.map((p) => p.id));
   const signatures = db.signatureRequests
-    .filter((r) => r.packetId === packet.id)
-    .sort((a, b) => a.email.localeCompare(b.email));
-  return { request, packet, document, signatures };
+    .filter((r) => packetIds.has(r.packetId))
+    .sort((a, b) => (a.packetId !== b.packetId ? a.packetId.localeCompare(b.packetId) : a.email.localeCompare(b.email)));
+
+  return { request, packets, documents, signatures };
 }
 
 export async function createDirectorChangeRequest(input: {
@@ -7519,8 +7542,19 @@ export async function createDirectorChangeRequest(input: {
   createdByUserId: string;
   effectiveDate: string;
   message?: string;
+  useByBridgeNomineeDirector?: boolean;
   removeDirectorRoleIds: string[];
-  addDirectors: Array<{ fullName: string; email?: string }>;
+  addDirectors: Array<{
+    fullName: string;
+    email: string;
+    idTypeLabel?: 'Passport No.' | 'NRIC No.' | 'FIN No.' | 'IC No.' | 'ID No.';
+    idNo?: string;
+    nationality?: string;
+    dob?: string;
+    address?: string;
+    phone?: string;
+    isByBridgeNominee?: boolean;
+  }>;
 }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
@@ -7532,15 +7566,43 @@ export async function createDirectorChangeRequest(input: {
   const removeDirectorRoleIds = Array.isArray(input.removeDirectorRoleIds)
     ? input.removeDirectorRoleIds.map((x) => String(x).trim()).filter(Boolean)
     : [];
-  const addDirectors = Array.isArray(input.addDirectors)
-    ? input.addDirectors
-        .map((x) => ({
-          fullName: String(x?.fullName ?? '').trim(),
-          email: typeof x?.email === 'string' ? x.email.trim() || undefined : undefined,
-        }))
-        .filter((x) => !!x.fullName)
-    : [];
-  if (!removeDirectorRoleIds.length && !addDirectors.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const byBridgeNomineeDirector = {
+    fullName: 'Xue Hongwei',
+    email: 'hwxue1222@gmail.com',
+    idTypeLabel: 'NRIC No.' as const,
+    idNo: 'S7864540G',
+    nationality: 'Singapore PR',
+    dob: '1978-12-22',
+    address: 'BLK 842',
+    phone: '+6590888596',
+    isByBridgeNominee: true,
+  };
+
+  const addDirectorsRaw = Array.isArray(input.addDirectors) ? input.addDirectors : [];
+  const addDirectors = addDirectorsRaw
+    .map((x) => ({
+      fullName: String(x?.fullName ?? '').trim(),
+      email: String(x?.email ?? '').trim().toLowerCase(),
+      idTypeLabel: typeof x?.idTypeLabel === 'string' ? (x.idTypeLabel as any) : undefined,
+      idNo: typeof x?.idNo === 'string' ? x.idNo.trim() : undefined,
+      nationality: typeof x?.nationality === 'string' ? x.nationality.trim() : undefined,
+      dob: typeof x?.dob === 'string' ? x.dob.trim() : undefined,
+      address: typeof x?.address === 'string' ? x.address.trim() : undefined,
+      phone: typeof x?.phone === 'string' ? x.phone.trim() : undefined,
+      isByBridgeNominee: typeof x?.isByBridgeNominee === 'boolean' ? x.isByBridgeNominee : undefined,
+    }))
+    .filter((x) => !!x.fullName);
+
+  const useByBridgeNomineeDirector = !!input.useByBridgeNomineeDirector;
+  const cleanedAdd = useByBridgeNomineeDirector
+    ? [
+        byBridgeNomineeDirector,
+        ...addDirectors.filter((d) => d.email && d.email !== byBridgeNomineeDirector.email && !d.isByBridgeNominee),
+      ]
+    : addDirectors;
+
+  if (!removeDirectorRoleIds.length && !cleanedAdd.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const directors = await listClientDirectors(input.clientId);
   const activeDirectorRoleIds = new Set(directors.map((d) => d.role.id));
@@ -7558,27 +7620,63 @@ export async function createDirectorChangeRequest(input: {
   );
   if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
+  const emailSet = new Set<string>();
+  for (const d of cleanedAdd) {
+    if (!d.email) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+    if (emailSet.has(d.email)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    emailSet.add(d.email);
+    if (!d.idNo || !d.nationality || !d.dob || !d.address) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.dob)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
   const now = nowIso();
   const id = newId('dcr');
 
-  const removed = directors
-    .filter((d) => removeDirectorRoleIds.includes(d.role.id))
-    .map((d) => ({ fullName: d.person.fullName, email: d.person.email }));
+  const templates = await import('@/lib/docTemplates');
 
-  const html = (await import('@/lib/docTemplates')).renderDirectorChangeRequestHtml({
+  const toIdTypeLabel = (idTypeRaw: unknown, idNoRaw: unknown) => {
+    const idType = String(idTypeRaw ?? '').trim();
+    if (idType === 'PASSPORT') return 'Passport No.' as const;
+    if (idType === 'NRIC') return 'NRIC No.' as const;
+    if (idType === 'FIN') return 'FIN No.' as const;
+    if (idType === 'IC') return 'IC No.' as const;
+    const idNo = String(idNoRaw ?? '').trim();
+    const first = idNo ? idNo[0]?.toUpperCase() : '';
+    if (first === 'F' || first === 'G') return 'FIN No.' as const;
+    if (first === 'S' || first === 'T') return 'NRIC No.' as const;
+    return 'ID No.' as const;
+  };
+
+  const resignedDirectors = directors
+    .filter((d) => removeDirectorRoleIds.includes(d.role.id))
+    .map((d) => ({
+      fullName: d.person.fullName,
+      idNo: String((d.person as any).idNo ?? '').trim() || undefined,
+      idTypeLabel: toIdTypeLabel((d.person as any).idType, (d.person as any).idNo),
+    }));
+
+  const appointedDirectors = cleanedAdd.map((d) => ({
+    fullName: d.fullName,
+    idNo: d.idNo,
+    idTypeLabel: (d.idTypeLabel as any) || toIdTypeLabel(undefined, d.idNo),
+  }));
+
+  const resolutionHtml = templates.renderChangeDirectorResolutionHtml({
     companyName: client.name,
-    effectiveDate,
-    message: input.message,
-    addDirectors,
-    removeDirectors: removed,
+    companyRegistrationNo: client.companyRegistrationNo,
+    directors: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email })),
+    resolutionDateYmd: now.slice(0, 10),
+    effectiveDateYmd: effectiveDate,
+    appointedDirectors,
+    resignedDirectors,
   });
 
   const doc: Document = {
     id: newId('doc'),
     type: 'DIR_CHG',
-    title: `Director Change - ${client.name}`,
-    html,
-    sha256: sha256Hex(html),
+    title: `Director Resolution - Change of Director - ${client.name}`,
+    html: resolutionHtml,
+    sha256: sha256Hex(resolutionHtml),
     createdAt: now,
   };
   db.documents.unshift(doc);
@@ -7596,7 +7694,7 @@ export async function createDirectorChangeRequest(input: {
   db.signaturePackets.unshift(packet);
 
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string }> = [];
+  const signLinks: Array<{ email: string; url: string; title?: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();
     const req: SignatureRequest = {
@@ -7610,7 +7708,61 @@ export async function createDirectorChangeRequest(input: {
       updatedAt: now,
     };
     db.signatureRequests.unshift(req);
-    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+    signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `change of director - ${client.name}` });
+  }
+
+  for (const d of cleanedAdd) {
+    const consentHtml = templates.renderDirectorConsentToActHtml({
+      companyName: client.name,
+      companyRegistrationNo: client.companyRegistrationNo,
+      director: {
+        fullName: d.fullName,
+        email: d.email,
+        address: d.address ?? '',
+        nationality: d.nationality ?? '',
+        idNo: d.idNo ?? '',
+        idTypeLabel: (d.idTypeLabel as any) || toIdTypeLabel(undefined, d.idNo),
+        dobYmd: d.dob ?? '',
+        effectiveDateYmd: effectiveDate,
+      },
+      signedDateYmd: now.slice(0, 10),
+    });
+
+    const consentDoc: Document = {
+      id: newId('doc'),
+      type: 'DIR_CHG',
+      title: `Consent to Act as Director - ${client.name} - ${d.fullName}`,
+      html: consentHtml,
+      sha256: sha256Hex(consentHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(consentDoc);
+
+    const consentPacket: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'DIR_CHG',
+      relatedType: 'DIRECTOR_CHANGE',
+      relatedId: id,
+      documentId: consentDoc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(consentPacket);
+
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: consentPacket.id,
+      email: d.email,
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: d.email, url: `/sign/${token}`, title: `consent to act as director - ${client.name}` });
   }
 
   const request: DirectorChangeRequest = {
@@ -7620,8 +7772,9 @@ export async function createDirectorChangeRequest(input: {
     status: 'PENDING_SIGNATURES',
     effectiveDate,
     message: typeof input.message === 'string' ? input.message : undefined,
+    useByBridgeNomineeDirector,
     removeDirectorRoleIds,
-    addDirectors,
+    addDirectors: cleanedAdd,
     packetId: packet.id,
     createdAt: now,
     updatedAt: now,
@@ -7651,15 +7804,14 @@ export async function decideDirectorChangeRequest(input: {
   if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const r = list[idx];
-  const packetId = (r as unknown as { packetId?: unknown }).packetId;
-  const packet = typeof packetId === 'string' ? db.signaturePackets.find((p) => p.id === packetId) ?? null : null;
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === r.id);
 
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
 
   if (input.decision === 'APPROVE') {
     if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-    if (!packet || packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+    if (!packets.length || !packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
 
     for (const roleId of r.removeDirectorRoleIds) {
       const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'DIRECTOR');
@@ -7668,11 +7820,30 @@ export async function decideDirectorChangeRequest(input: {
       }
     }
 
+    const toPersonIdType = (labelRaw: unknown) => {
+      const label = String(labelRaw ?? '').trim();
+      if (label === 'NRIC No.') return 'NRIC' as const;
+      if (label === 'Passport No.') return 'PASSPORT' as const;
+      return 'OTHER' as const;
+    };
+
     for (const d of r.addDirectors) {
       const fullName = d.fullName.trim();
       if (!fullName) continue;
-      const email = typeof d.email === 'string' ? d.email.trim() || undefined : undefined;
-      const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+      const email = String(d.email ?? '').trim() || undefined;
+      const person: Person = {
+        id: newId('per'),
+        fullName,
+        email,
+        phone: typeof d.phone === 'string' ? d.phone.trim() || undefined : undefined,
+        idType: toPersonIdType(d.idTypeLabel),
+        idNo: typeof d.idNo === 'string' ? d.idNo.trim() || undefined : undefined,
+        nationality: typeof d.nationality === 'string' ? d.nationality.trim() || undefined : undefined,
+        dob: typeof d.dob === 'string' ? d.dob.trim() || undefined : undefined,
+        address: typeof d.address === 'string' ? d.address.trim() || undefined : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
       const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
       const role: ClientPartyRole = {
         id: newId('cpr'),
@@ -7759,7 +7930,12 @@ export async function deleteDirectorChangeRequest(input: { requestId: string; de
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
   if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
-  deleteSignaturePacketCascade(db, r.packetId);
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
   list.splice(idx, 1);
   (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
   await writeDb(db);

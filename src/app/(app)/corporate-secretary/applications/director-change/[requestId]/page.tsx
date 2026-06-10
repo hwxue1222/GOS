@@ -3,6 +3,7 @@ import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { getDirectorChangeRequestContext, readDb } from '@/lib/db';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/company-update/[requestId]/ui/SignaturesDocumentsCardClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -69,8 +70,59 @@ export default async function DirectorChangeApplicationDetailPage({
 
   const r = ctx.request;
   const db = await readDb();
-  const docHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?download=1`;
-  const previewHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?disposition=inline`;
+
+  const docById = new Map(ctx.documents.map((d) => [d.id, d]));
+  const docByPacketId = new Map(ctx.packets.map((p) => [p.id, docById.get(p.documentId) ?? null]));
+  const signaturesByPacket = new Map<string, typeof ctx.signatures>();
+  for (const s of ctx.signatures) {
+    const arr = signaturesByPacket.get(s.packetId) ?? [];
+    arr.push(s);
+    signaturesByPacket.set(s.packetId, arr);
+  }
+
+  const addDirectorByEmail = new Map(r.addDirectors.map((d) => [String(d.email ?? '').trim().toLowerCase(), d]));
+
+  const signatureRows = ctx.signatures
+    .map((s) => {
+      const doc = docByPacketId.get(s.packetId);
+      const docTitle = doc?.title ?? s.packetId;
+      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
+      const fromAdd = addDirectorByEmail.get(String(s.email ?? '').trim().toLowerCase());
+      const signerName = meta.fullName || fromAdd?.fullName || '';
+      const signerRole = meta.role || (fromAdd ? 'NEW_DIRECTOR' : '');
+      return {
+        documentTitle: docTitle,
+        signerName,
+        signerRole,
+        email: s.email,
+        status: s.status,
+        signedAt: s.signedAt,
+      };
+    })
+    .sort((a, b) => (a.documentTitle !== b.documentTitle ? a.documentTitle.localeCompare(b.documentTitle) : a.email.localeCompare(b.email)));
+
+  const documents = ctx.packets
+    .map((p) => {
+      const d = docById.get(p.documentId);
+      if (!d) return null;
+      const signerCount = (signaturesByPacket.get(p.id) ?? []).length;
+      return { documentId: d.id, title: d.title, signerCount };
+    })
+    .filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const removedDirectors = db.clientPartyRoles
+    .filter((x) => x.clientId === r.clientId)
+    .filter((x) => x.role === 'DIRECTOR')
+    .filter((x) => r.removeDirectorRoleIds.includes(x.id))
+    .map((x) => {
+      const party = partyById.get(x.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) return '';
+      const person = personById.get(party.personId);
+      return person?.fullName ?? '';
+    })
+    .filter(Boolean);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -109,51 +161,17 @@ export default async function DirectorChangeApplicationDetailPage({
             <div className="text-sm font-medium">Changes</div>
             <div className="mt-2 text-sm">
               <div className="text-black/50">Add directors</div>
-              <div className="mt-1">{r.addDirectors.length ? r.addDirectors.map((d) => d.fullName).join(', ') : '-'}</div>
+              <div className="mt-1">{r.addDirectors.length ? r.addDirectors.map((d) => d.fullName).filter(Boolean).join(', ') : '-'}</div>
             </div>
             <div className="mt-3 text-sm">
-              <div className="text-black/50">Remove director role IDs</div>
-              <div className="mt-1 font-mono text-xs break-all">{r.removeDirectorRoleIds.length ? r.removeDirectorRoleIds.join(', ') : '-'}</div>
+              <div className="text-black/50">Remove directors</div>
+              <div className="mt-1">{removedDirectors.length ? removedDirectors.join(', ') : '-'}</div>
             </div>
+            {r.useByBridgeNomineeDirector ? <div className="mt-3 text-xs text-black/50">Includes ByBridge nominee director service</div> : null}
           </div>
 
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-medium">Signatures</div>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {ctx.signatures.map((s) => (
-                <div key={s.id} className="rounded-md bg-[#f8fafc] border border-black/5 px-3 py-2">
-                  <div className="text-sm font-medium truncate">
-                    {(() => {
-                      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
-                      const left = meta.fullName ? meta.fullName : s.email;
-                      const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                      return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                    })()}
-                  </div>
-                  <div className="mt-0.5 text-xs text-black/50">
-                    {s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div id="documents" className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Documents</div>
-                <div className="mt-0.5 text-xs text-black/50">PDF is generated from the signed document HTML.</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <a href={previewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
-                  Preview
-                </a>
-                <a href={docHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                  Download PDF
-                </a>
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-black/50">{ctx.document.title}</div>
+          <div className="mt-4">
+            <SignaturesDocumentsCardClient signatureRows={signatureRows} documents={documents} />
           </div>
         </div>
       </div>
