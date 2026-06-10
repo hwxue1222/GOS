@@ -141,7 +141,7 @@ export type InvoiceEmailHistory = {
   updatedAt: string;
 };
 
-export type PersonIdType = 'NRIC' | 'PASSPORT' | 'OTHER';
+export type PersonIdType = 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER';
 
 export type Person = {
   id: string;

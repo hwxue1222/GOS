@@ -104,6 +104,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const body = (await req.json().catch(() => null)) as
     | {
         effectiveDate?: string;
+        resignationDateYmd?: string;
         message?: string;
         useByBridgeNomineeDirector?: boolean;
         removeDirectorRoleIds?: unknown;
@@ -112,6 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     | null;
 
   const effectiveDate = typeof body?.effectiveDate === 'string' ? body.effectiveDate.trim() : '';
+  const resignationDateYmd = typeof body?.resignationDateYmd === 'string' ? body.resignationDateYmd.trim() : '';
   const message = typeof body?.message === 'string' ? body.message : undefined;
   const useByBridgeNomineeDirector = typeof body?.useByBridgeNomineeDirector === 'boolean' ? body.useByBridgeNomineeDirector : undefined;
   const removeDirectorRoleIds = Array.isArray(body?.removeDirectorRoleIds) ? body?.removeDirectorRoleIds : [];
@@ -121,6 +123,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     clientId,
     createdByUserId: user.id,
     effectiveDate,
+    resignationDateYmd: resignationDateYmd || undefined,
     message,
     useByBridgeNomineeDirector,
     removeDirectorRoleIds: removeDirectorRoleIds as string[],

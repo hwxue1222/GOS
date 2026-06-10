@@ -69,13 +69,14 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
 
   return (
     <div className="mt-6 rounded-xl bg-white border border-black/5 overflow-x-auto">
-      <table className="min-w-[1650px] w-full text-sm">
+      <table className="min-w-[1760px] w-full text-sm">
         <thead className="bg-black/2">
           <tr className="text-left text-black/60">
             <th className="px-4 py-3">Name</th>
             <th className="px-4 py-3">{t('people.tags')}</th>
             <th className="px-4 py-3">Email</th>
             <th className="px-4 py-3">Phone</th>
+            <th className="px-4 py-3">ID Type</th>
             <th className="px-4 py-3">ID</th>
             <th className="px-4 py-3">Nationality</th>
             <th className="px-4 py-3">DOB</th>
@@ -88,7 +89,7 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={11} className="px-4 py-10 text-center text-black/50">
+              <td colSpan={12} className="px-4 py-10 text-center text-black/50">
                 Loading...
               </td>
             </tr>
@@ -173,6 +174,7 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                   </td>
                   <td className="px-4 py-3">{p.email ?? '-'}</td>
                   <td className="px-4 py-3">{p.phone ?? '-'}</td>
+                  <td className="px-4 py-3">{String((p as { idType?: unknown }).idType ?? '-') }</td>
                   <td className="px-4 py-3">{p.idNo ?? '-'}</td>
                   <td className="px-4 py-3">{normalizeCarToSar(p.nationality) ?? '-'}</td>
                   <td className="px-4 py-3">{p.dob ?? '-'}</td>
@@ -193,7 +195,7 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
             : null}
           {!loading && members.length === 0 ? (
             <tr>
-              <td colSpan={11} className="px-4 py-10 text-center text-black/50">
+              <td colSpan={12} className="px-4 py-10 text-center text-black/50">
                 {t('common.noResults')}
               </td>
             </tr>

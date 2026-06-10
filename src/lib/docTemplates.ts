@@ -54,6 +54,12 @@ function signatureBlocksByEmail(input: {
     .join('');
 }
 
+function directorResolutionHeaderLabel(directorCount: number) {
+  return directorCount > 1
+    ? "DIRECTORS' RESOLUTION IN WRITING PURSUANT TO THE CONSTITUTION OF THE COMPANY"
+    : "DIRECTOR'S RESOLUTION IN WRITING PURSUANT TO THE CONSTITUTION OF THE COMPANY";
+}
+
 export function renderSecretaryConsentToActHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;
@@ -248,8 +254,10 @@ export function renderChangeDirectorResolutionHtml(input: {
   effectiveDateYmd: string;
   appointedDirectors: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
   resignedDirectors: Array<{ fullName: string; idTypeLabel?: string; idNo?: string }>;
+  resignationDateYmd?: string;
 }) {
   const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: '' });
+  const headerLabel = directorResolutionHeaderLabel(input.directors.length);
   const appts = input.appointedDirectors;
   const resigs = input.resignedDirectors;
 
@@ -269,7 +277,14 @@ export function renderChangeDirectorResolutionHtml(input: {
     : '';
 
   const resignLines = resigs.length
-    ? resigs.map((d) => `That the resignation of ${esc(d.fullName)}${fmtIdPart(d)} as Director of the Company, be and is hereby approved with immediate effect.`).join('<br />')
+    ? resigs
+        .map((d) => {
+          const datePart = input.resignationDateYmd
+            ? `with effect from <strong>${esc(toDdMmYyyy(input.resignationDateYmd))}</strong>`
+            : 'with immediate effect';
+          return `That the resignation of ${esc(d.fullName)}${fmtIdPart(d)} as Director of the Company, be and is hereby approved ${datePart}.`;
+        })
+        .join('<br />')
     : '';
 
   return `
@@ -298,7 +313,7 @@ export function renderChangeDirectorResolutionHtml(input: {
 
     <div style="height: 14px;"></div>
 
-    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="subtitle">${headerLabel}</div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
 
     <div class="subtitle">RESOLVED –</div>
@@ -324,6 +339,7 @@ export function renderChangeSecretaryResolutionHtml(input: {
   resignedSecretary?: { fullName: string; idTypeLabel?: string; idNo?: string };
 }) {
   const sigBlocks = signatureBlocksByEmail({ signers: input.directors, label: '' });
+  const headerLabel = directorResolutionHeaderLabel(input.directors.length);
   const appts = input.appointedSecretaries;
   const apptLines = appts
     .map((s) => {
@@ -367,7 +383,7 @@ export function renderChangeSecretaryResolutionHtml(input: {
     <div style="margin-top: 0;"><strong>Co. Reg. No.</strong>: ${esc(input.companyRegistrationNo ?? '')}</div>
     <div class="muted">(Incorporated in the Republic of Singapore)</div>
 
-    <div class="subtitle">DIRECTORS’ RESOLUTION IN WRITING PURSUANT TO THE CONSTITUTION OF THE COMPANY</div>
+    <div class="subtitle">${headerLabel}</div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
     <div class="subtitle">RESOLVED –</div>
 
@@ -722,7 +738,7 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     <div style="height: 14px;"></div>
 
-    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="subtitle">${directorResolutionHeaderLabel(directors.length)}</div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
 
     <div class="subtitle">RESOLVED –</div>
@@ -808,7 +824,7 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     <div style="height: 14px;"></div>
 
-    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="subtitle">${directorResolutionHeaderLabel(directors.length)}</div>
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolution:</div>
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle">CHANGE OF BUSINESS ACTIVITIES</div>
@@ -872,7 +888,7 @@ export function renderCompanyUpdateRequestHtml(input: {
 
     <div style="height: 14px;"></div>
 
-    <div class="subtitle">DIRECTOR’S RESOLUTION IN WRITING PURSUANT TO THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+    <div class="subtitle">${directorResolutionHeaderLabel(directors.length)}</div>
 
     <div class="block">I/We, the undersigned, being the Director(s) of the Company, do hereby pass the following resolutions:</div>
 

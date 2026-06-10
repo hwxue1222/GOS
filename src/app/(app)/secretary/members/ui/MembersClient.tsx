@@ -133,6 +133,7 @@ export default function MembersClient() {
     email: '',
     phoneCountryCode: '+65',
     phoneLocal: '',
+    idType: 'NRIC' as 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER',
     idNo: '',
     nationality: 'Singapore',
     nationalityOther: '',
@@ -147,6 +148,7 @@ export default function MembersClient() {
     email: '',
     phoneCountryCode: '+65',
     phoneLocal: '',
+    idType: 'NRIC' as 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER',
     idNo: '',
     nationality: 'Singapore',
     nationalityOther: '',
@@ -236,6 +238,7 @@ export default function MembersClient() {
           fullName,
           email: form.email.trim() || undefined,
           phone,
+          idType: form.idType,
           idNo: form.idNo.trim() || undefined,
           nationality: nationality ? normalizeCarToSar(nationality) : undefined,
           dob,
@@ -253,6 +256,7 @@ export default function MembersClient() {
         email: '',
         phoneCountryCode: '+65',
         phoneLocal: '',
+        idType: 'NRIC',
         idNo: '',
         nationality: 'Singapore',
         nationalityOther: '',
@@ -320,6 +324,13 @@ export default function MembersClient() {
       email: m.email ?? '',
       phoneCountryCode: code,
       phoneLocal: local,
+      idType:
+        (m as { idType?: unknown }).idType === 'PASSPORT' ||
+        (m as { idType?: unknown }).idType === 'FIN' ||
+        (m as { idType?: unknown }).idType === 'IC' ||
+        (m as { idType?: unknown }).idType === 'OTHER'
+          ? ((m as { idType?: any }).idType as any)
+          : 'NRIC',
       idNo: m.idNo ?? '',
       nationality,
       nationalityOther: nationality === 'Others (please specify)' ? nat : '',
@@ -410,6 +421,7 @@ export default function MembersClient() {
           fullName,
           email: editForm.email.trim(),
           phone: phone ?? '',
+          idType: editForm.idType,
           idNo: editForm.idNo.trim(),
           nationality: nationalityRaw ? normalizeCarToSar(nationalityRaw) : '',
           dob,
@@ -561,12 +573,25 @@ export default function MembersClient() {
               </label>
               <label className="text-sm sm:col-span-2">
                 <div className="text-black/60">ID</div>
-                <input
-                  value={form.idNo}
-                  onChange={(e) => setForm((v) => ({ ...v, idNo: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  placeholder="NRIC / Passport"
-                />
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    value={form.idType}
+                    onChange={(e) => setForm((v) => ({ ...v, idType: e.target.value as any }))}
+                    className="h-10 rounded-lg border border-black/10 bg-white px-2 text-sm text-black/70"
+                  >
+                    <option value="PASSPORT">Passport No.</option>
+                    <option value="NRIC">NRIC No.</option>
+                    <option value="FIN">FIN No.</option>
+                    <option value="IC">IC No.</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <input
+                    value={form.idNo}
+                    onChange={(e) => setForm((v) => ({ ...v, idNo: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                    placeholder="ID number"
+                  />
+                </div>
               </label>
               <label className="text-sm">
                 <div className="text-black/60">Nationality</div>
@@ -690,12 +715,25 @@ export default function MembersClient() {
               </label>
               <label className="text-sm sm:col-span-2">
                 <div className="text-black/60">ID</div>
-                <input
-                  value={editForm.idNo}
-                  onChange={(e) => setEditForm((v) => ({ ...v, idNo: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  placeholder="NRIC / Passport"
-                />
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    value={editForm.idType}
+                    onChange={(e) => setEditForm((v) => ({ ...v, idType: e.target.value as any }))}
+                    className="h-10 rounded-lg border border-black/10 bg-white px-2 text-sm text-black/70"
+                  >
+                    <option value="PASSPORT">Passport No.</option>
+                    <option value="NRIC">NRIC No.</option>
+                    <option value="FIN">FIN No.</option>
+                    <option value="IC">IC No.</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <input
+                    value={editForm.idNo}
+                    onChange={(e) => setEditForm((v) => ({ ...v, idNo: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-black/10 px-3 text-sm"
+                    placeholder="ID number"
+                  />
+                </div>
               </label>
               <label className="text-sm">
                 <div className="text-black/60">Nationality</div>

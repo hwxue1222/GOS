@@ -19,7 +19,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ memberId: str
         fullName?: string;
         email?: string;
         phone?: string;
-        idType?: 'NRIC' | 'PASSPORT' | 'OTHER';
+        idType?: 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER';
         idNo?: string;
         nationality?: string;
         dob?: string;

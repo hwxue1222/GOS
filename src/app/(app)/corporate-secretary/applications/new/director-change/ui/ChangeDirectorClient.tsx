@@ -119,7 +119,7 @@ export default function ChangeDirectorClient(props: {
 
   const [editing, setEditing] = useState(false);
   const [removeDirectorRoleId, setRemoveDirectorRoleId] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState(ymdToday());
+  const [resignationDateYmd, setResignationDateYmd] = useState(ymdToday());
   const [useByBridgeNomineeDirector, setUseByBridgeNomineeDirector] = useState(false);
   const [addDirectors, setAddDirectors] = useState<NewDirector[]>([]);
   const [showErrorsByIdx, setShowErrorsByIdx] = useState<Record<number, boolean>>({});
@@ -135,22 +135,18 @@ export default function ChangeDirectorClient(props: {
     try {
       const d = JSON.parse(raw) as {
         removeDirectorRoleId?: string;
-        appointmentDate?: string;
+        resignationDateYmd?: string;
         useByBridgeNomineeDirector?: boolean;
         addDirectors?: NewDirector[];
       };
       if (typeof d.removeDirectorRoleId === 'string') setRemoveDirectorRoleId(d.removeDirectorRoleId);
-      if (typeof d.appointmentDate === 'string' && isYmd(d.appointmentDate)) setAppointmentDate(d.appointmentDate);
+      if (typeof d.resignationDateYmd === 'string' && isYmd(d.resignationDateYmd)) setResignationDateYmd(d.resignationDateYmd);
       if (typeof d.useByBridgeNomineeDirector === 'boolean') setUseByBridgeNomineeDirector(d.useByBridgeNomineeDirector);
       if (Array.isArray(d.addDirectors)) setAddDirectors(d.addDirectors);
     } catch {
       window.localStorage.removeItem(draftKey(companyId));
     }
   }, [companyId]);
-
-  useEffect(() => {
-    setAddDirectors((prev) => prev.map((d) => (d.appointmentDate ? { ...d, appointmentDate } : d)));
-  }, [appointmentDate]);
 
   const validateDirector = (d: NewDirector) => {
     const missing = {
@@ -256,7 +252,7 @@ export default function ChangeDirectorClient(props: {
         idNo: '',
         idTypeLabel: 'NRIC No.',
         email: '',
-        appointmentDate,
+        appointmentDate: '',
         address: '',
         lockedFromMember: false,
       },
@@ -266,8 +262,8 @@ export default function ChangeDirectorClient(props: {
   async function onSave() {
     setSubmitError(null);
 
-    if (!isYmdWithinPastDays(appointmentDate, 14)) {
-      setSubmitError('Date of appointment must be within the past 14 days and not in the future.');
+    if (removeDirectorRoleId && !isYmdWithinPastDays(resignationDateYmd, 14)) {
+      setSubmitError('Date of resignation must be within the past 14 days and not in the future.');
       return;
     }
 
@@ -291,7 +287,7 @@ export default function ChangeDirectorClient(props: {
       draftKey(companyId),
       JSON.stringify({
         removeDirectorRoleId,
-        appointmentDate,
+        resignationDateYmd,
         useByBridgeNomineeDirector,
         addDirectors,
         savedAt: new Date().toISOString(),
@@ -303,8 +299,8 @@ export default function ChangeDirectorClient(props: {
   async function onApply() {
     setSubmitError(null);
 
-    if (!isYmdWithinPastDays(appointmentDate, 14)) {
-      setSubmitError('Date of appointment must be within the past 14 days and not in the future.');
+    if (removeDirectorRoleId && !isYmdWithinPastDays(resignationDateYmd, 14)) {
+      setSubmitError('Date of resignation must be within the past 14 days and not in the future.');
       return;
     }
 
@@ -317,7 +313,7 @@ export default function ChangeDirectorClient(props: {
         nationality: d.nationality.trim(),
         idNo: d.idNo.trim(),
         idTypeLabel: d.idTypeLabel,
-        appointmentDate: d.appointmentDate.trim() || appointmentDate,
+        appointmentDate: d.appointmentDate.trim(),
         address: d.address.trim(),
       }))
       .filter((d) => !!d.fullName);
@@ -360,7 +356,7 @@ export default function ChangeDirectorClient(props: {
       }
     }
 
-    const effectiveDate = appointmentDate;
+    const effectiveDate = hasAdd ? cleanedAdd[0]!.appointmentDate : hasDelete ? resignationDateYmd : ymdToday();
 
     setSubmitting(true);
     try {
@@ -369,6 +365,7 @@ export default function ChangeDirectorClient(props: {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           effectiveDate,
+          resignationDateYmd: hasDelete ? resignationDateYmd : undefined,
           useByBridgeNomineeDirector,
           removeDirectorRoleIds: removeDirectorRoleId ? [removeDirectorRoleId] : [],
           addDirectors: cleanedAdd.map((d) => ({
@@ -697,8 +694,8 @@ export default function ChangeDirectorClient(props: {
               </div>
               <input
                 type="date"
-                value={appointmentDate}
-                onChange={(e) => setAppointmentDate(e.target.value)}
+                value={resignationDateYmd}
+                onChange={(e) => setResignationDateYmd(e.target.value)}
                 min={ymdNDaysAgo(14)}
                 max={ymdToday()}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"

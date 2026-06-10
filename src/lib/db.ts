@@ -7541,6 +7541,7 @@ export async function createDirectorChangeRequest(input: {
   clientId: string;
   createdByUserId: string;
   effectiveDate: string;
+  resignationDateYmd?: string;
   message?: string;
   useByBridgeNomineeDirector?: boolean;
   removeDirectorRoleIds: string[];
@@ -7569,6 +7570,17 @@ export async function createDirectorChangeRequest(input: {
     d.setUTCDate(d.getUTCDate() - 14);
     const min = d.toISOString().slice(0, 10);
     if (effectiveDate < min || effectiveDate > now) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
+
+  const resignationDateYmd = String(input.resignationDateYmd ?? '').trim();
+  if (input.removeDirectorRoleIds.length && !resignationDateYmd) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  if (resignationDateYmd) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(resignationDateYmd)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const now = nowIso().slice(0, 10);
+    const d = new Date(`${now}T00:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() - 14);
+    const min = d.toISOString().slice(0, 10);
+    if (resignationDateYmd < min || resignationDateYmd > now) return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
 
   const removeDirectorRoleIds = Array.isArray(input.removeDirectorRoleIds)
@@ -7690,6 +7702,7 @@ export async function createDirectorChangeRequest(input: {
     directors: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email })),
     resolutionDateYmd: now.slice(0, 10),
     effectiveDateYmd: effectiveDate,
+    resignationDateYmd: input.resignationDateYmd ?? undefined,
     appointedDirectors,
     resignedDirectors,
   });
