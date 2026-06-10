@@ -659,14 +659,6 @@ export default function ChangeDirectorClient(props: {
                   </div>
                 );
               })}
-
-              <button
-                disabled={submitting}
-                onClick={() => void onSave()}
-                className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
-              >
-                Save
-              </button>
             </div>
           ) : null}
         </div>
@@ -716,6 +708,16 @@ export default function ChangeDirectorClient(props: {
           />
           To use ByBridge nominee director service
         </label>
+
+        {editing ? (
+          <button
+            disabled={submitting}
+            onClick={() => void onSave()}
+            className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
+          >
+            Save
+          </button>
+        ) : null}
 
         {!editing ? (
           <button
