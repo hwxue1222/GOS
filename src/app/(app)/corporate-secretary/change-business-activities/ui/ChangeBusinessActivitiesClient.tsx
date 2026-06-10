@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
@@ -15,6 +15,35 @@ export default function ChangeBusinessActivitiesClient() {
   const [secondary, setSecondary] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [originalPrimaryDesc, setOriginalPrimaryDesc] = useState<string>('');
+  const [originalSecondaryDesc, setOriginalSecondaryDesc] = useState<string>('');
+
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      if (!client) return;
+      const p = String(client.ssicPrimaryCode ?? '').trim();
+      const s = String(client.ssicSecondaryCode ?? '').trim();
+
+      async function fetchDesc(code: string) {
+        if (!code) return '';
+        const res = await fetch(`/api/ssic?code=${encodeURIComponent(code)}`).catch(() => null);
+        const j = (await res?.json().catch(() => null)) as { ok: boolean; item?: { description?: string } | null } | null;
+        if (!res?.ok || !j?.ok) return '';
+        return String(j.item?.description ?? '').trim();
+      }
+
+      const [pd, sd] = await Promise.all([fetchDesc(p), fetchDesc(s)]);
+      if (ignore) return;
+      setOriginalPrimaryDesc(pd);
+      setOriginalSecondaryDesc(sd);
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [client]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -76,10 +105,14 @@ export default function ChangeBusinessActivitiesClient() {
         <div className="space-y-5">
           <div className="space-y-2 text-sm">
             <div>
-              <span className="text-black/60">Original Activity 1:</span> <span className="text-black">{client.ssicPrimaryCode ?? '-'}</span>
+              <span className="text-black/60">Original Activity 1:</span>{' '}
+              <span className="text-black">{client.ssicPrimaryCode ?? '-'}</span>
+              {originalPrimaryDesc ? <span className="text-black/50"> — {originalPrimaryDesc}</span> : null}
             </div>
             <div>
-              <span className="text-black/60">Original Activity 2:</span> <span className="text-black">{client.ssicSecondaryCode ?? '-'}</span>
+              <span className="text-black/60">Original Activity 2:</span>{' '}
+              <span className="text-black">{client.ssicSecondaryCode ?? '-'}</span>
+              {originalSecondaryDesc ? <span className="text-black/50"> — {originalSecondaryDesc}</span> : null}
             </div>
           </div>
 

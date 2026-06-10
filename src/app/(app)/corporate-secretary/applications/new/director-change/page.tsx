@@ -1,8 +1,7 @@
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
-import DirectorChangeRequestForm from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorChangeRequestForm';
-import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
+import ChangeDirectorClient from '@/app/(app)/corporate-secretary/applications/new/director-change/ui/ChangeDirectorClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -71,43 +70,19 @@ export default async function NewDirectorChangePage({
       if (!party || party.type !== 'PERSON' || !party.personId) return null;
       const person = personById.get(party.personId);
       if (!person) return null;
-      return { roleId: r.id, fullName: person.fullName, email: person.email };
+      return { roleId: r.id, fullName: person.fullName };
     })
-    .filter(Boolean) as Array<{ roleId: string; fullName: string; email?: string }>;
+    .filter(Boolean) as Array<{ roleId: string; fullName: string }>;
 
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
-      <div className="flex-1 relative bg-[#f7f8fa]">
-        <ModalShell title="Change of Director" closeHref="/corporate-secretary/applications">
-          <div className="space-y-5">
-            <div className="rounded-xl bg-white border border-black/5 p-4">
-              <div className="text-sm font-medium">Company</div>
-              <div className="mt-1 text-xs text-black/50">Select the company to file this director change request.</div>
-              <form method="GET" className="mt-3 flex flex-wrap items-center gap-2">
-                <select
-                  name="companyId"
-                  defaultValue={companyId}
-                  className="flex-1 min-w-[240px] max-w-[520px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
-                >
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="submit"
-                  className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium hover:bg-black/[0.02]"
-                >
-                  Load
-                </button>
-              </form>
-            </div>
-
-            <DirectorChangeRequestForm clientId={companyId} directors={directors} />
-          </div>
-        </ModalShell>
+      <div className="flex-1 relative">
+        <ChangeDirectorClient
+          companyId={companyId}
+          closeHref={`/portal/companies/${encodeURIComponent(companyId)}`}
+          directors={directors}
+        />
       </div>
     </div>
   );
