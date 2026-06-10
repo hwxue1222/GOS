@@ -54,6 +54,7 @@ const NATIONALITY_OPTIONS = [
 type NewSecretary = {
   fullName: string;
   dob: string;
+  dobLocked: boolean;
   nationality: string;
   phoneCountryCode: PhoneCountryCode;
   phoneLocal: string;
@@ -197,7 +198,12 @@ export default function ChangeSecretaryClient() {
       lockedFromMember: true,
     };
     const dob = String(p.dob ?? '').trim();
-    if (dob && isYmd(dob)) patch.dob = dob;
+    if (dob && isYmd(dob)) {
+      patch.dob = dob;
+      patch.dobLocked = true;
+    } else {
+      patch.dobLocked = false;
+    }
     patchSecretary(idx, patch);
     setShowErrorsByIdx((prev) => ({ ...prev, [idx]: false }));
   }
@@ -246,6 +252,7 @@ export default function ChangeSecretaryClient() {
       {
         fullName: '',
         dob: '',
+        dobLocked: false,
         nationality: 'Singapore',
         phoneCountryCode: '+65',
         phoneLocal: '',
@@ -484,6 +491,7 @@ export default function ChangeSecretaryClient() {
                                       email: '',
                                       phoneLocal: '',
                                       dob: '',
+                                      dobLocked: false,
                                       nationality: 'Singapore',
                                       address: '',
                                     }
@@ -511,8 +519,9 @@ export default function ChangeSecretaryClient() {
                         <input
                           type="date"
                           value={s.dob}
-                          onChange={(e) => patchSecretary(i, { dob: e.target.value })}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                          onChange={(e) => patchSecretary(i, { dob: e.target.value, dobLocked: false })}
+                          disabled={s.dobLocked}
+                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.dobLocked ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                         />
                       </label>
                       <label className="sm:col-span-6 text-sm">
