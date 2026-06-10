@@ -92,7 +92,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
   function goCompanyService(service: 'director' | 'share_transfer') {
     if (!currentCompanyId) return;
     if (service === 'director') {
-      router.push(`/corporate-secretary/applications?type=director_change&companyId=${encodeURIComponent(currentCompanyId)}`);
+      router.push(`/corporate-secretary/applications/new/director-change?companyId=${encodeURIComponent(currentCompanyId)}`);
       return;
     }
     router.push(`/corporate-secretary/applications?type=share_transfer&companyId=${encodeURIComponent(currentCompanyId)}`);
