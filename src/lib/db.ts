@@ -7562,6 +7562,14 @@ export async function createDirectorChangeRequest(input: {
 
   const effectiveDate = input.effectiveDate.trim();
   if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  {
+    const now = nowIso().slice(0, 10);
+    const d = new Date(`${now}T00:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() - 14);
+    const min = d.toISOString().slice(0, 10);
+    if (effectiveDate < min || effectiveDate > now) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
 
   const removeDirectorRoleIds = Array.isArray(input.removeDirectorRoleIds)
     ? input.removeDirectorRoleIds.map((x) => String(x).trim()).filter(Boolean)

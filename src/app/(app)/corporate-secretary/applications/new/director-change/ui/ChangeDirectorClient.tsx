@@ -94,6 +94,7 @@ export default function ChangeDirectorClient(props: {
 
   const [editing, setEditing] = useState(false);
   const [removeDirectorRoleId, setRemoveDirectorRoleId] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState(ymdToday());
   const [useByBridgeNomineeDirector, setUseByBridgeNomineeDirector] = useState(false);
   const [addDirectors, setAddDirectors] = useState<NewDirector[]>([]);
   const [showErrorsByIdx, setShowErrorsByIdx] = useState<Record<number, boolean>>({});
@@ -109,16 +110,22 @@ export default function ChangeDirectorClient(props: {
     try {
       const d = JSON.parse(raw) as {
         removeDirectorRoleId?: string;
+        appointmentDate?: string;
         useByBridgeNomineeDirector?: boolean;
         addDirectors?: NewDirector[];
       };
       if (typeof d.removeDirectorRoleId === 'string') setRemoveDirectorRoleId(d.removeDirectorRoleId);
+      if (typeof d.appointmentDate === 'string' && isYmd(d.appointmentDate)) setAppointmentDate(d.appointmentDate);
       if (typeof d.useByBridgeNomineeDirector === 'boolean') setUseByBridgeNomineeDirector(d.useByBridgeNomineeDirector);
       if (Array.isArray(d.addDirectors)) setAddDirectors(d.addDirectors);
     } catch {
       window.localStorage.removeItem(draftKey(companyId));
     }
   }, [companyId]);
+
+  useEffect(() => {
+    setAddDirectors((prev) => prev.map((d) => (d.appointmentDate ? { ...d, appointmentDate } : d)));
+  }, [appointmentDate]);
 
   const validateDirector = (d: NewDirector) => {
     const missing = {
@@ -222,7 +229,7 @@ export default function ChangeDirectorClient(props: {
         idNo: '',
         idTypeLabel: 'NRIC No.',
         email: '',
-        appointmentDate: '',
+        appointmentDate,
         address: '',
         lockedFromMember: false,
       },
@@ -231,6 +238,11 @@ export default function ChangeDirectorClient(props: {
 
   async function onSave() {
     setSubmitError(null);
+
+    if (!isYmdWithinPastDays(appointmentDate, 14)) {
+      setSubmitError('Date of appointment must be within the past 14 days and not in the future.');
+      return;
+    }
 
     const invalidIdx: number[] = [];
     addDirectors.forEach((d, idx) => {
@@ -250,13 +262,24 @@ export default function ChangeDirectorClient(props: {
 
     window.localStorage.setItem(
       draftKey(companyId),
-      JSON.stringify({ removeDirectorRoleId, useByBridgeNomineeDirector, addDirectors, savedAt: new Date().toISOString() }),
+      JSON.stringify({
+        removeDirectorRoleId,
+        appointmentDate,
+        useByBridgeNomineeDirector,
+        addDirectors,
+        savedAt: new Date().toISOString(),
+      }),
     );
     setEditing(false);
   }
 
   async function onApply() {
     setSubmitError(null);
+
+    if (!isYmdWithinPastDays(appointmentDate, 14)) {
+      setSubmitError('Date of appointment must be within the past 14 days and not in the future.');
+      return;
+    }
 
     const cleanedAdd = addDirectors
       .map((d) => ({
@@ -267,7 +290,7 @@ export default function ChangeDirectorClient(props: {
         nationality: d.nationality.trim(),
         idNo: d.idNo.trim(),
         idTypeLabel: d.idTypeLabel,
-        appointmentDate: d.appointmentDate.trim(),
+        appointmentDate: d.appointmentDate.trim() || appointmentDate,
         address: d.address.trim(),
       }))
       .filter((d) => !!d.fullName);
@@ -301,7 +324,7 @@ export default function ChangeDirectorClient(props: {
       }
     }
 
-    const effectiveDate = hasAdd ? cleanedAdd[0]!.appointmentDate : ymdToday();
+    const effectiveDate = appointmentDate;
 
     setSubmitting(true);
     try {
@@ -579,18 +602,35 @@ export default function ChangeDirectorClient(props: {
 
         <div>
           <div className="text-sm text-black">Resignation of director</div>
-          <select
-            value={removeDirectorRoleId}
-            onChange={(e) => setRemoveDirectorRoleId(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-          >
-            <option value=""></option>
-            {directors.map((d) => (
-              <option key={d.roleId} value={d.roleId}>
-                {d.fullName}
-              </option>
-            ))}
-          </select>
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="sm:col-span-7">
+              <select
+                value={removeDirectorRoleId}
+                onChange={(e) => setRemoveDirectorRoleId(e.target.value)}
+                className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+              >
+                <option value=""></option>
+                {directors.map((d) => (
+                  <option key={d.roleId} value={d.roleId}>
+                    {d.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="sm:col-span-5 text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Date of appointment
+              </div>
+              <input
+                type="date"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                min={ymdNDaysAgo(14)}
+                max={ymdToday()}
+                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-black/80">
@@ -619,4 +659,3 @@ export default function ChangeDirectorClient(props: {
     </ModalShell>
   );
 }
-
