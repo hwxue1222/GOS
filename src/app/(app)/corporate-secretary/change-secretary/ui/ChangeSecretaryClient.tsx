@@ -121,6 +121,85 @@ function isYmd(ymd: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(ymd ?? '').trim());
 }
 
+function maskWord(w: string) {
+  const s = String(w ?? '').trim();
+  if (!s) return '';
+  if (s.length === 1) return '*';
+  return `${s[0]}${'*'.repeat(Math.max(2, s.length - 1))}`;
+}
+
+function maskName(name: string) {
+  const parts = String(name ?? '')
+    .trim()
+    .split(/\s+/g)
+    .filter(Boolean);
+  if (!parts.length) return '';
+  return parts.map(maskWord).join(' ');
+}
+
+function maskDob(ymd: string) {
+  const v = String(ymd ?? '').trim();
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '*/**/****';
+  return `**/**/${m[1]}`;
+}
+
+function maskEmail(email: string) {
+  const v = String(email ?? '').trim();
+  const at = v.indexOf('@');
+  if (at <= 0) return '*'.repeat(Math.max(6, v.length));
+  const local = v.slice(0, at);
+  const domain = v.slice(at + 1);
+  const lastDot = domain.lastIndexOf('.');
+  const domainName = lastDot > 0 ? domain.slice(0, lastDot) : domain;
+  const tld = lastDot > 0 ? domain.slice(lastDot) : '';
+  const keepTail = Math.min(4, Math.max(0, local.length - 1));
+  const maskedLocal =
+    local.length <= 1
+      ? '*'
+      : `${local[0]}${'*'.repeat(Math.max(2, local.length - 1 - keepTail))}${keepTail ? local.slice(local.length - keepTail) : ''}`;
+  const maskedDomain = domainName ? `${domainName[0]}${'*'.repeat(Math.max(2, domainName.length - 1))}` : '*'.repeat(4);
+  return `${maskedLocal}@${maskedDomain}${tld}`;
+}
+
+function maskPhone(countryCode: string, local: string) {
+  const digits = String(local ?? '').replace(/\D/g, '');
+  if (!digits) return `${countryCode} ****`;
+  if (digits.length <= 4) return `${countryCode} ${'*'.repeat(digits.length)}`;
+  const head = digits.slice(0, 2);
+  const tail = digits.slice(-2);
+  return `${countryCode} ${head}${'*'.repeat(Math.max(2, digits.length - 4))}${tail}`;
+}
+
+function maskNationality(n: string) {
+  const parts = String(n ?? '')
+    .trim()
+    .split(/\s+/g)
+    .filter(Boolean);
+  if (!parts.length) return '';
+  return parts
+    .map((p) => {
+      if (p.length <= 2) return `${p[0] ?? '*'}${'*'.repeat(2)}`;
+      return `${p[0]}${'*'.repeat(Math.max(6, p.length - 1))}`;
+    })
+    .join(' ');
+}
+
+function maskAddress(addr: string) {
+  const parts = String(addr ?? '')
+    .trim()
+    .split(/\s+/g)
+    .filter(Boolean);
+  if (!parts.length) return '';
+  return parts
+    .map((p) => {
+      const s = String(p);
+      if (!s) return '';
+      return `${s[0]}**`;
+    })
+    .join(' ');
+}
+
 export default function ChangeSecretaryClient() {
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
@@ -456,7 +535,7 @@ export default function ChangeSecretaryClient() {
                           <span className="text-red-500">*</span> Full Name
                         </div>
                         <input
-                          value={s.fullName}
+                          value={s.lockedFromMember ? maskName(s.fullName) : s.fullName}
                           onChange={(e) => patchSecretary(i, { fullName: e.target.value })}
                           disabled={s.lockedFromMember}
                           className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.fullName ? 'border-red-500' : 'border-black/10'}`}
@@ -516,20 +595,28 @@ export default function ChangeSecretaryClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Date Of Birth
                         </div>
-                        <input
-                          type="date"
-                          value={s.dob}
-                          onChange={(e) => patchSecretary(i, { dob: e.target.value, dobLocked: false })}
-                          disabled={s.dobLocked}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.dobLocked ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
-                        />
+                        {s.dobLocked ? (
+                          <input
+                            type="text"
+                            value={maskDob(s.dob)}
+                            disabled
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                          />
+                        ) : (
+                          <input
+                            type="date"
+                            value={s.dob}
+                            onChange={(e) => patchSecretary(i, { dob: e.target.value, dobLocked: false })}
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                          />
+                        )}
                       </label>
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
                           <span className="text-red-500">*</span> Email
                         </div>
                         <input
-                          value={s.email}
+                          value={s.lockedFromMember ? maskEmail(s.email) : s.email}
                           onChange={(e) => patchSecretary(i, { email: e.target.value })}
                           disabled={s.lockedFromMember}
                           className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.email ? 'border-red-500' : 'border-black/10'}`}
@@ -540,18 +627,25 @@ export default function ChangeSecretaryClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Nationality
                         </div>
-                        <select
-                          value={s.nationality}
-                          onChange={(e) => patchSecretary(i, { nationality: e.target.value })}
-                          disabled={s.lockedFromMember}
-                          className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
-                        >
-                          {NATIONALITY_OPTIONS.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
+                        {s.lockedFromMember ? (
+                          <input
+                            value={maskNationality(s.nationality)}
+                            disabled
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
+                          />
+                        ) : (
+                          <select
+                            value={s.nationality}
+                            onChange={(e) => patchSecretary(i, { nationality: e.target.value })}
+                            className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.nationality ? 'border-red-500' : 'border-black/10'}`}
+                          >
+                            {NATIONALITY_OPTIONS.map((n) => (
+                              <option key={n} value={n}>
+                                {n}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </label>
 
                       <label className="sm:col-span-6 text-sm">
@@ -585,7 +679,8 @@ export default function ChangeSecretaryClient() {
                           <select
                             value={s.phoneCountryCode}
                             onChange={(e) => patchSecretary(i, { phoneCountryCode: e.target.value as PhoneCountryCode })}
-                            className="bg-white px-3 py-2 text-sm border-r border-black/10"
+                            disabled={s.lockedFromMember}
+                            className={`px-3 py-2 text-sm border-r border-black/10 ${s.lockedFromMember ? 'bg-black/5 text-black/60' : 'bg-white'}`}
                           >
                             {PHONE_COUNTRY_CODES.map((c) => (
                               <option key={c.value} value={c.value}>
@@ -594,7 +689,7 @@ export default function ChangeSecretaryClient() {
                             ))}
                           </select>
                           <input
-                            value={s.phoneLocal}
+                            value={s.lockedFromMember ? maskPhone(s.phoneCountryCode, s.phoneLocal) : s.phoneLocal}
                             onChange={(e) => patchSecretary(i, { phoneLocal: e.target.value })}
                             disabled={s.lockedFromMember}
                             className={`flex-1 px-3 py-2 text-sm outline-none ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''}`}
@@ -607,12 +702,19 @@ export default function ChangeSecretaryClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Address
                         </div>
-                        <textarea
-                          value={s.address}
-                          onChange={(e) => patchSecretary(i, { address: e.target.value })}
-                          disabled={s.lockedFromMember}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] ${s.lockedFromMember ? 'bg-black/5 text-black/60' : ''} ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
-                        />
+                        {s.lockedFromMember ? (
+                          <textarea
+                            value={maskAddress(s.address)}
+                            disabled
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] bg-black/5 text-black/60 ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
+                          />
+                        ) : (
+                          <textarea
+                            value={s.address}
+                            onChange={(e) => patchSecretary(i, { address: e.target.value })}
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[90px] ${showErrorsByIdx[i] && validateSecretary(s).missing.address ? 'border-red-500' : 'border-black/10'}`}
+                          />
+                        )}
                       </label>
 
                       <div className="sm:col-span-12 text-sm">
