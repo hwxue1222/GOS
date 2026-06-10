@@ -434,7 +434,7 @@ export default function ChangeDirectorClient(props: {
                 return (
                   <div key={i}>
                     {i > 0 ? <div className="my-4 border-t border-dashed border-black/20" /> : null}
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
                       <div className="text-sm font-medium text-black">Director {i + 1}</div>
                       <button
                         type="button"
