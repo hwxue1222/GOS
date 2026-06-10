@@ -175,14 +175,16 @@ export default function ChangeDirectorClient(props: {
     setAddDirectors((prev) => prev.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
   }
 
-  async function lookupMemberByIdNo(idx: number, idNoRaw: string) {
+  async function lookupMemberByIdNo(idx: number, idNoRaw: string, idTypeLabel: string) {
     const idNo = String(idNoRaw ?? '').trim();
     if (!idNo) return;
 
     const seq = (lookupSeqByIdx.get(idx) ?? 0) + 1;
     lookupSeqByIdx.set(idx, seq);
 
-    const res = await fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}`).catch(() => null);
+    const res = await fetch(
+      `/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(idTypeLabel)}`,
+    ).catch(() => null);
     const json = (await res?.json().catch(() => null)) as
       | {
           ok: true;
@@ -465,7 +467,35 @@ export default function ChangeDirectorClient(props: {
                         <div className="mt-1 flex items-center gap-2">
                           <select
                             value={d.idTypeLabel}
-                            onChange={(e) => patchDirector(i, { idTypeLabel: e.target.value as NewDirector['idTypeLabel'] })}
+                            onChange={(e) => {
+                              const next = e.target.value as NewDirector['idTypeLabel'];
+                              const wasLocked = d.lockedFromMember;
+                              patchDirector(i, {
+                                idTypeLabel: next,
+                                ...(wasLocked
+                                  ? {
+                                      lockedFromMember: false,
+                                      fullName: '',
+                                      email: '',
+                                      phoneLocal: '',
+                                      dob: '',
+                                      dobLocked: false,
+                                      nationality: 'Singapore',
+                                      address: '',
+                                    }
+                                  : {}),
+                              });
+                              if (!wasLocked && d.idNo.trim()) {
+                                const t = lookupTimerByIdx.get(i);
+                                if (t) clearTimeout(t);
+                                lookupTimerByIdx.set(
+                                  i,
+                                  setTimeout(() => {
+                                    void lookupMemberByIdNo(i, d.idNo, next);
+                                  }, 350),
+                                );
+                              }
+                            }}
                             className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
                           >
                             <option value="Passport No.">Passport No.</option>
@@ -498,7 +528,7 @@ export default function ChangeDirectorClient(props: {
                               lookupTimerByIdx.set(
                                 i,
                                 setTimeout(() => {
-                                  void lookupMemberByIdNo(i, next);
+                                  void lookupMemberByIdNo(i, next, d.idTypeLabel);
                                 }, 350),
                               );
                             }}
