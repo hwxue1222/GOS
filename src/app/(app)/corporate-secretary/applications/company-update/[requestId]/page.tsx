@@ -273,36 +273,6 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
       }
       right={
         <>
-          <SectionCard title="Actions" subtitle="Shortcuts for common tasks.">
-            <div className="space-y-3">
-              <a
-                href="#assets"
-                className="inline-flex w-full items-center justify-center rounded-lg bg-[#2f7bdc] text-white px-4 py-2.5 text-sm font-medium hover:opacity-95"
-              >
-                View signatures & documents
-              </a>
-              {me.role === 'client' && req.status === 'PENDING_SIGNATURES' && req.createdByUserId === me.id ? (
-                <DeleteActionClient
-                  deleteUrl={`/api/secretary/companies/${encodeURIComponent(req.clientId)}/company-update-requests/${encodeURIComponent(req.id)}`}
-                  confirmText="Delete this application?"
-                  label="Delete"
-                  className="w-full rounded-lg bg-white border border-red-200 text-red-700 px-4 py-2.5 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
-                  onDoneHref={`/corporate-secretary/applications?companyId=${encodeURIComponent(req.clientId)}`}
-                />
-              ) : null}
-              <div className="rounded-lg border border-black/5 bg-black/[0.02] p-3">
-                <div className="text-xs text-black/50">Signature progress</div>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <div className="text-black/70">Signed</div>
-                  <div className="font-medium text-black/80">{signatureSummary.signed}</div>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-sm">
-                  <div className="text-black/70">Total</div>
-                  <div className="font-medium text-black/80">{signatureSummary.total}</div>
-                </div>
-              </div>
-            </div>
-          </SectionCard>
           <SignaturesDocumentsCardClient id="assets" signatureRows={signatureRows} documents={documentRows} />
         </>
       }
