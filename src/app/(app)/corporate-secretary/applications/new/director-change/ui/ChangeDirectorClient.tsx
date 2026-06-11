@@ -118,7 +118,7 @@ export default function ChangeDirectorClient(props: {
   };
 
   const [editing, setEditing] = useState(false);
-  const [removeDirectorRoleId, setRemoveDirectorRoleId] = useState('');
+  const [removeDirectorRoleIds, setRemoveDirectorRoleIds] = useState<string[]>([]);
   const [resignationDateYmd, setResignationDateYmd] = useState(ymdToday());
   const [useByBridgeNomineeDirector, setUseByBridgeNomineeDirector] = useState(false);
   const [addDirectors, setAddDirectors] = useState<NewDirector[]>([]);
@@ -134,12 +134,14 @@ export default function ChangeDirectorClient(props: {
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
-        removeDirectorRoleId?: string;
+        removeDirectorRoleIds?: string[];
         resignationDateYmd?: string;
         useByBridgeNomineeDirector?: boolean;
         addDirectors?: NewDirector[];
       };
-      if (typeof d.removeDirectorRoleId === 'string') setRemoveDirectorRoleId(d.removeDirectorRoleId);
+      if (Array.isArray(d.removeDirectorRoleIds)) {
+        setRemoveDirectorRoleIds(d.removeDirectorRoleIds.filter((x) => typeof x === 'string'));
+      }
       if (typeof d.resignationDateYmd === 'string' && isYmd(d.resignationDateYmd)) setResignationDateYmd(d.resignationDateYmd);
       if (typeof d.useByBridgeNomineeDirector === 'boolean') setUseByBridgeNomineeDirector(d.useByBridgeNomineeDirector);
       if (Array.isArray(d.addDirectors)) setAddDirectors(d.addDirectors);
@@ -262,7 +264,7 @@ export default function ChangeDirectorClient(props: {
   async function onSave() {
     setSubmitError(null);
 
-    if (removeDirectorRoleId && !isYmdWithinPastDays(resignationDateYmd, 14)) {
+    if (removeDirectorRoleIds.length && !isYmdWithinPastDays(resignationDateYmd, 14)) {
       setSubmitError('Date of resignation must be within the past 14 days and not in the future.');
       return;
     }
@@ -286,7 +288,7 @@ export default function ChangeDirectorClient(props: {
     window.localStorage.setItem(
       draftKey(companyId),
       JSON.stringify({
-        removeDirectorRoleId,
+        removeDirectorRoleIds,
         resignationDateYmd,
         useByBridgeNomineeDirector,
         addDirectors,
@@ -299,7 +301,7 @@ export default function ChangeDirectorClient(props: {
   async function onApply() {
     setSubmitError(null);
 
-    if (removeDirectorRoleId && !isYmdWithinPastDays(resignationDateYmd, 14)) {
+    if (removeDirectorRoleIds.length && !isYmdWithinPastDays(resignationDateYmd, 14)) {
       setSubmitError('Date of resignation must be within the past 14 days and not in the future.');
       return;
     }
@@ -318,7 +320,7 @@ export default function ChangeDirectorClient(props: {
       }))
       .filter((d) => !!d.fullName);
 
-    const hasDelete = !!removeDirectorRoleId.trim();
+    const hasDelete = removeDirectorRoleIds.length > 0;
     const hasAdd = cleanedAdd.length > 0;
     if (!useByBridgeNomineeDirector && !hasDelete && !hasAdd) {
       setSubmitError('Please add or resign at least one director.');
@@ -326,7 +328,7 @@ export default function ChangeDirectorClient(props: {
     }
 
     const existingLocal = directors.filter((d) => d.isLocal).length;
-    const removedLocal = removeDirectorRoleId ? (directors.find((d) => d.roleId === removeDirectorRoleId)?.isLocal ? 1 : 0) : 0;
+    const removedLocal = directors.filter((d) => removeDirectorRoleIds.includes(d.roleId)).filter((d) => d.isLocal).length;
     const addedLocal = cleanedAdd.filter((d) => isLocalDirector(d.nationality)).length + (useByBridgeNomineeDirector ? 1 : 0);
     const remainingLocal = existingLocal - removedLocal + addedLocal;
     if (remainingLocal < 1) {
@@ -367,7 +369,7 @@ export default function ChangeDirectorClient(props: {
           effectiveDate,
           resignationDateYmd: hasDelete ? resignationDateYmd : undefined,
           useByBridgeNomineeDirector,
-          removeDirectorRoleIds: removeDirectorRoleId ? [removeDirectorRoleId] : [],
+          removeDirectorRoleIds,
           addDirectors: cleanedAdd.map((d) => ({
             fullName: d.fullName,
             email: d.email,
@@ -667,18 +669,30 @@ export default function ChangeDirectorClient(props: {
           <div className="text-sm text-black">Resignation of director</div>
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="sm:col-span-7">
-              <select
-                value={removeDirectorRoleId}
-                onChange={(e) => setRemoveDirectorRoleId(e.target.value)}
-                className="w-full max-w-[420px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                <option value=""></option>
-                {directors.map((d) => (
-                  <option key={d.roleId} value={d.roleId}>
-                    {d.fullName}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                {directors.length ? (
+                  directors.map((d) => {
+                    const checked = removeDirectorRoleIds.includes(d.roleId);
+                    return (
+                      <label key={d.roleId} className="flex items-center gap-2 text-sm text-black/80">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const next = e.target.checked;
+                            setRemoveDirectorRoleIds((prev) => (next ? Array.from(new Set([...prev, d.roleId])) : prev.filter((x) => x !== d.roleId)));
+                            setSubmitError(null);
+                          }}
+                          className="h-4 w-4"
+                        />
+                        {d.fullName}
+                      </label>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-black/50">No directors found.</div>
+                )}
+              </div>
             </div>
             <label className="sm:col-span-5 text-sm">
               <div className="text-black">

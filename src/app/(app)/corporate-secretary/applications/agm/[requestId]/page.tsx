@@ -1,8 +1,13 @@
-import Link from 'next/link';
-import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { getAnnualGeneralMeetingRequestContext, readDb } from '@/lib/db';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
+import ApplicationDetailShell from '@/app/(app)/corporate-secretary/applications/ui/ApplicationDetailShell';
+import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
+import KeyValueCard from '@/app/(app)/corporate-secretary/applications/ui/KeyValueCard';
+import SectionCard from '@/app/(app)/corporate-secretary/applications/ui/SectionCard';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
+import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusBadge';
+import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -37,7 +42,6 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
   if (!ctx) {
     return (
       <div className="min-h-screen flex flex-col">
-        <AppTopNav active="corporate-secretary" />
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
@@ -52,7 +56,6 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
     if (!ok) {
       return (
         <div className="min-h-screen flex flex-col">
-          <AppTopNav active="corporate-secretary" />
           <div className="flex-1">
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
@@ -65,92 +68,79 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
 
   const r = ctx.request;
   const db = await readDb();
-  const docHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?download=1`;
-  const previewHref = `/api/documents/${encodeURIComponent(ctx.document.id)}/pdf?disposition=inline`;
+
+  const company = db.clients.find((c) => c.id === r.clientId && !c.deletedAt) ?? null;
+  const signatureRows = ctx.signatures
+    .map((s) => {
+      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
+      return {
+        documentTitle: ctx.document.title,
+        signerName: meta.fullName,
+        signerRole: meta.role,
+        email: s.email,
+        status: s.status,
+        signedAt: s.signedAt,
+      };
+    })
+    .sort((a, b) => a.email.localeCompare(b.email));
+  const documents = [{ documentId: ctx.document.id, title: ctx.document.title, signerCount: ctx.signatures.length }];
+
+  const summaryRows = [
+    { label: 'Company', value: company?.name ?? r.clientId },
+    { label: 'Type', value: 'Annual General Meeting' },
+    { label: 'Status', value: r.status },
+    { label: 'Meeting date', value: r.meetingDate },
+    { label: 'Chairman', value: r.chairman },
+    { label: 'Venue', value: r.meetingVenue },
+    { label: 'Submitted', value: (r.submittedAt ?? r.createdAt).slice(0, 10) },
+  ];
+
+  const auditLogs = (db.auditLogs ?? [])
+    .filter((l) => l.entityType === 'annual_general_meeting_request' && l.entityId === r.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const timelineItems = [
+    ...auditLogsToTimelineItems({ logs: auditLogs }),
+    ...signatureEventsToTimelineItems({ signatures: signatureRows }),
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold">Annual General Meeting</h1>
-              <div className="mt-1 text-sm text-black/60">Request ID: {r.id}</div>
+    <ApplicationDetailShell
+      title="Annual General Meeting"
+      requestId={r.id}
+      statusBadge={<StatusBadge status={r.status} />}
+      left={
+        <>
+          <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />
+          {r.agendaSummary?.trim() ? (
+            <SectionCard title="Agenda" subtitle="Agenda summary for the meeting.">
+              <div className="text-sm text-black/70 whitespace-pre-wrap">{r.agendaSummary}</div>
+            </SectionCard>
+          ) : null}
+          <ActivityTimelineCard items={timelineItems} />
+        </>
+      }
+      right={
+        <>
+          <SectionCard title="Actions" subtitle="Shortcuts for common tasks.">
+            <div className="space-y-2">
+              <a
+                href="#assets"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-[#2f7bdc] text-white px-4 py-2.5 text-sm font-medium hover:opacity-95"
+              >
+                View signatures & documents
+              </a>
+              <a
+                href="/corporate-secretary/applications"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-white border border-black/10 text-black/70 px-4 py-2.5 text-sm font-medium hover:bg-black/[0.02]"
+              >
+                Back to applications
+              </a>
             </div>
-            <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
-              Back
-            </Link>
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div>
-                <div className="text-black/50">Status</div>
-                <div className="mt-1 font-medium">{r.status}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Meeting date</div>
-                <div className="mt-1 font-medium">{r.meetingDate}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Submitted</div>
-                <div className="mt-1 font-medium">{(r.submittedAt ?? r.createdAt).slice(0, 19).replace('T', ' ')}</div>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div>
-                <div className="text-black/50">Chairman</div>
-                <div className="mt-1 font-medium">{r.chairman}</div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-black/50">Venue</div>
-                <div className="mt-1 font-medium">{r.meetingVenue}</div>
-              </div>
-            </div>
-            {r.agendaSummary?.trim() ? <div className="mt-3 text-sm whitespace-pre-wrap">{r.agendaSummary}</div> : null}
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-medium">Signatures</div>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {ctx.signatures.map((s) => (
-                <div key={s.id} className="rounded-md bg-[#f8fafc] border border-black/5 px-3 py-2">
-                  <div className="text-sm font-medium truncate">
-                    {(() => {
-                      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
-                      const left = meta.fullName ? meta.fullName : s.email;
-                      const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                      return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                    })()}
-                  </div>
-                  <div className="mt-0.5 text-xs text-black/50">
-                    {s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div id="documents" className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Documents</div>
-                <div className="mt-0.5 text-xs text-black/50">PDF is generated from the signed document HTML.</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <a href={previewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
-                  Preview
-                </a>
-                <a href={docHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                  Download PDF
-                </a>
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-black/50">{ctx.document.title}</div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </SectionCard>
+          <SignaturesDocumentsCardClient id="assets" signatureRows={signatureRows} documents={documents} />
+        </>
+      }
+    />
   );
 }

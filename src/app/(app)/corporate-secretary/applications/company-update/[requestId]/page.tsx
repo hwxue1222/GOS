@@ -3,7 +3,13 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import DeleteActionClient from '@/components/DeleteActionClient';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
-import SignaturesDocumentsCardClient from './ui/SignaturesDocumentsCardClient';
+import ApplicationDetailShell from '@/app/(app)/corporate-secretary/applications/ui/ApplicationDetailShell';
+import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
+import KeyValueCard from '@/app/(app)/corporate-secretary/applications/ui/KeyValueCard';
+import SectionCard from '@/app/(app)/corporate-secretary/applications/ui/SectionCard';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
+import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusBadge';
+import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -99,20 +105,6 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   const payload = req.payload as Record<string, unknown>;
   const label = typeLabel(req.type);
 
-  const statusLabel = req.status === 'PENDING_SIGNATURES' ? 'SIGNING' : req.status;
-  const statusClass =
-    req.status === 'PENDING_SIGNATURES'
-      ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
-      : req.status === 'PENDING_REVIEW'
-        ? 'bg-[#faf5ff] text-[#6d28d9] border-[#e9d5ff]'
-        : req.status === 'NEED_MORE_INFO'
-          ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
-          : req.status === 'COMPLETE'
-            ? 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'
-            : req.status === 'REJECTED'
-              ? 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
-              : 'bg-white text-black/70 border-black/10';
-
   const packets = db.signaturePackets
     .filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === req.id)
     .slice()
@@ -156,6 +148,15 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     title: row.document.title,
     signerCount: row.signatures.length,
   }));
+
+  const auditLogs = (db.auditLogs ?? [])
+    .filter((l) => l.entityType === 'company_update_request' && l.entityId === req.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const timelineItems = [
+    ...auditLogsToTimelineItems({ logs: auditLogs }),
+    ...signatureEventsToTimelineItems({ signatures: signatureRows }),
+  ];
 
   const diffRows = (() => {
     if (!company) return [] as Array<{ k: string; before: string; after: string }>;
@@ -215,139 +216,96 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     return [] as Array<{ k: string; before: string; after: string }>;
   })();
 
+  const summaryRows = [
+    { label: 'Company', value: company?.name ?? req.clientId },
+    { label: 'Company code', value: company?.code ?? req.clientId },
+    { label: 'Type', value: label },
+    { label: 'Status', value: req.status },
+    { label: 'Submitted', value: (req.submittedAt ?? req.createdAt).slice(0, 10) },
+    { label: 'Signed', value: req.signedAt ? req.signedAt.slice(0, 10) : '-' },
+    { label: 'Decided', value: req.decidedAt ? req.decidedAt.slice(0, 10) : '-' },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <AppTopNav active="corporate-secretary" />
-      <div className="flex-1 bg-[#f7f8fa]">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-semibold">{label}</h1>
-              <div className="mt-1 text-sm text-black/60">ID: {req.id}</div>
+    <ApplicationDetailShell
+      title={label}
+      requestId={req.id}
+      statusBadge={<StatusBadge status={req.status} />}
+      left={
+        <>
+          <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(req.updatedAt ?? req.createdAt).slice(0, 10)}</div>} />
+          {req.decisionNote ? (
+            <SectionCard title="Decision note" subtitle="Reason or feedback from review.">
+              <div className="text-sm text-black/70 whitespace-pre-wrap">{req.decisionNote}</div>
+            </SectionCard>
+          ) : null}
+          <SectionCard title="Requested changes" subtitle="Before → after preview for this request." right={<div className="text-xs text-black/50">Rows: {diffRows.length}</div>}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-black/60 bg-black/[0.02]">
+                  <tr className="border-b border-black/10">
+                    <th className="px-3 py-2 font-medium">Field</th>
+                    <th className="px-3 py-2 font-medium">Before</th>
+                    <th className="px-3 py-2 font-medium">After</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diffRows.map((r) => (
+                    <tr key={r.k} className="border-b border-black/5 hover:bg-black/[0.02]">
+                      <td className="px-3 py-2 align-top font-medium text-black/80">{r.k}</td>
+                      <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.before || '-'}</td>
+                      <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.after || '-'}</td>
+                    </tr>
+                  ))}
+                  {diffRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-8 text-center text-black/40">
+                        No preview available
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
-            <div className="flex items-center gap-3">
+          </SectionCard>
+          <ActivityTimelineCard items={timelineItems} />
+        </>
+      }
+      right={
+        <>
+          <SectionCard title="Actions" subtitle="Shortcuts for common tasks.">
+            <div className="space-y-3">
+              <a
+                href="#assets"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-[#2f7bdc] text-white px-4 py-2.5 text-sm font-medium hover:opacity-95"
+              >
+                View signatures & documents
+              </a>
               {me.role === 'client' && req.status === 'PENDING_SIGNATURES' && req.createdByUserId === me.id ? (
                 <DeleteActionClient
                   deleteUrl={`/api/secretary/companies/${encodeURIComponent(req.clientId)}/company-update-requests/${encodeURIComponent(req.id)}`}
                   confirmText="Delete this application?"
                   label="Delete"
-                  className="rounded-md bg-white border border-red-200 text-red-700 px-3 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
+                  className="w-full rounded-lg bg-white border border-red-200 text-red-700 px-4 py-2.5 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
                   onDoneHref={`/corporate-secretary/applications?companyId=${encodeURIComponent(req.clientId)}`}
                 />
               ) : null}
-              <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-7 space-y-4">
-              <div className="rounded-xl bg-white border border-black/5 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-sm font-medium">Overview</div>
-                    <div className="mt-1 text-xs text-black/50">Quick summary of the application.</div>
-                  </div>
-                  <div className="text-xs text-black/50">Updated: {(req.updatedAt ?? req.createdAt).slice(0, 10)}</div>
+              <div className="rounded-lg border border-black/5 bg-black/[0.02] p-3">
+                <div className="text-xs text-black/50">Signature progress</div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <div className="text-black/70">Signed</div>
+                  <div className="font-medium text-black/80">{signatureSummary.signed}</div>
                 </div>
-
-                <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Company</dt>
-                    <dd className="text-right text-black/80">{company?.name ?? req.clientId}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Company code</dt>
-                    <dd className="text-right text-black/80">{company?.code ?? req.clientId}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Type</dt>
-                    <dd className="text-right text-black/80">{label}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Status</dt>
-                    <dd className="text-right text-black/80">{req.status}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Submitted</dt>
-                    <dd className="text-right text-black/80">{(req.submittedAt ?? req.createdAt).slice(0, 10)}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Signed</dt>
-                    <dd className="text-right text-black/80">{req.signedAt ? req.signedAt.slice(0, 10) : '-'}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-black/50">Decided</dt>
-                    <dd className="text-right text-black/80">{req.decidedAt ? req.decidedAt.slice(0, 10) : '-'}</dd>
-                  </div>
-                </dl>
-
-                {req.decisionNote ? (
-                  <div className="mt-4 rounded-lg border border-black/5 bg-black/[0.02] p-3">
-                    <div className="text-xs font-medium text-black/70">Decision note</div>
-                    <div className="mt-1 text-sm text-black/70 whitespace-pre-wrap">{req.decisionNote}</div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl bg-white border border-black/5 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-medium">Requested changes</div>
-                    <div className="mt-1 text-xs text-black/50">Before → after preview for this request.</div>
-                  </div>
-                  <div className="text-xs text-black/50">Rows: {diffRows.length}</div>
-                </div>
-                <div className="mt-4 overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="text-left text-black/60 bg-black/[0.02]">
-                      <tr className="border-b border-black/10">
-                        <th className="px-3 py-2 font-medium">Field</th>
-                        <th className="px-3 py-2 font-medium">Before</th>
-                        <th className="px-3 py-2 font-medium">After</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {diffRows.map((r) => (
-                        <tr key={r.k} className="border-b border-black/5 hover:bg-black/[0.02]">
-                          <td className="px-3 py-2 align-top font-medium text-black/80">{r.k}</td>
-                          <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.before || '-'}</td>
-                          <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.after || '-'}</td>
-                        </tr>
-                      ))}
-                      {diffRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} className="px-3 py-8 text-center text-black/40">
-                            No preview available
-                          </td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <div className="text-black/70">Total</div>
+                  <div className="font-medium text-black/80">{signatureSummary.total}</div>
                 </div>
               </div>
             </div>
-
-            <div className="lg:col-span-5">
-              <div className="space-y-4 lg:sticky lg:top-20">
-                <div className="rounded-xl bg-white border border-black/5 p-5">
-                  <div className="text-sm font-medium">Progress</div>
-                  <div className="mt-1 text-xs text-black/50">Signatures across all documents.</div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="text-sm text-black/70">Signed</div>
-                    <div className="text-sm font-medium">{signatureSummary.signed}</div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-sm text-black/70">Total</div>
-                    <div className="text-sm font-medium">{signatureSummary.total}</div>
-                  </div>
-                </div>
-
-                <SignaturesDocumentsCardClient signatureRows={signatureRows} documents={documentRows} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </SectionCard>
+          <SignaturesDocumentsCardClient id="assets" signatureRows={signatureRows} documents={documentRows} />
+        </>
+      }
+    />
   );
 }

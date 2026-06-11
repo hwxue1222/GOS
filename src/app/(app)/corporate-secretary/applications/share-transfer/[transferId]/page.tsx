@@ -1,8 +1,13 @@
-import Link from 'next/link';
-import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
+import ApplicationDetailShell from '@/app/(app)/corporate-secretary/applications/ui/ApplicationDetailShell';
+import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
+import KeyValueCard from '@/app/(app)/corporate-secretary/applications/ui/KeyValueCard';
+import SectionCard from '@/app/(app)/corporate-secretary/applications/ui/SectionCard';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
+import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusBadge';
+import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -42,7 +47,6 @@ export default async function ShareTransferApplicationDetailPage({
   if (!transfer) {
     return (
       <div className="min-h-screen flex flex-col">
-        <AppTopNav active="corporate-secretary" />
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
@@ -57,7 +61,6 @@ export default async function ShareTransferApplicationDetailPage({
     if (!ok) {
       return (
         <div className="min-h-screen flex flex-col">
-          <AppTopNav active="corporate-secretary" />
           <div className="flex-1">
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
@@ -77,130 +80,100 @@ export default async function ShareTransferApplicationDetailPage({
   const staSigns = staPacket ? db.signatureRequests.filter((r) => r.packetId === staPacket.id) : [];
   const brSigns = brPacket ? db.signatureRequests.filter((r) => r.packetId === brPacket.id) : [];
 
-  const staHref = staDoc ? `/api/documents/${encodeURIComponent(staDoc.id)}/pdf?download=1` : '';
-  const brHref = brDoc ? `/api/documents/${encodeURIComponent(brDoc.id)}/pdf?download=1` : '';
-  const staPreviewHref = staDoc ? `/api/documents/${encodeURIComponent(staDoc.id)}/pdf?disposition=inline` : '';
-  const brPreviewHref = brDoc ? `/api/documents/${encodeURIComponent(brDoc.id)}/pdf?disposition=inline` : '';
+  const signatureRows = [...staSigns.map((s) => ({ s, doc: staDoc })), ...brSigns.map((s) => ({ s, doc: brDoc }))]
+    .map(({ s, doc }) => {
+      const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
+      return {
+        documentTitle: doc?.title ?? s.packetId,
+        signerName: meta.fullName,
+        signerRole: meta.role,
+        email: s.email,
+        status: s.status,
+        signedAt: s.signedAt,
+      };
+    })
+    .sort((a, b) => (a.documentTitle !== b.documentTitle ? a.documentTitle.localeCompare(b.documentTitle) : a.email.localeCompare(b.email)));
+
+  const documents = [
+    staDoc ? { documentId: staDoc.id, title: staDoc.title, signerCount: staSigns.length } : null,
+    brDoc ? { documentId: brDoc.id, title: brDoc.title, signerCount: brSigns.length } : null,
+  ].filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const transferorParty = partyById.get(transfer.transferorPartyId) ?? null;
+  const transfereeParty = partyById.get(transfer.transfereePartyId) ?? null;
+  const transferorName = transferorParty?.type === 'PERSON' && transferorParty.personId ? personById.get(transferorParty.personId)?.fullName ?? transferorParty.displayName : transferorParty?.displayName;
+  const transfereeName = transfereeParty?.type === 'PERSON' && transfereeParty.personId ? personById.get(transfereeParty.personId)?.fullName ?? transfereeParty.displayName : transfereeParty?.displayName;
+
+  const summaryRows = [
+    { label: 'Company', value: client?.name ?? transfer.clientId },
+    { label: 'Status', value: transfer.status },
+    { label: 'Effective date', value: transfer.effectiveDate },
+    { label: 'Shares', value: transfer.shares.toLocaleString() },
+    { label: 'Share class', value: transfer.shareClass ?? '-' },
+    { label: 'Created', value: transfer.createdAt.slice(0, 10) },
+    { label: 'Updated', value: (transfer.updatedAt ?? transfer.createdAt).slice(0, 10) },
+  ];
+
+  const auditLogs = (db.auditLogs ?? [])
+    .filter((l) => l.entityType === 'share_transfer' && l.entityId === transfer.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const timelineItems = [
+    ...auditLogsToTimelineItems({ logs: auditLogs }),
+    ...signatureEventsToTimelineItems({ signatures: signatureRows }),
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <AppTopNav active="corporate-secretary" />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold">Transfer of Shares</h1>
-              <div className="mt-1 text-sm text-black/60">Transfer ID: {transfer.id}</div>
-            </div>
-            <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
-              Back
-            </Link>
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+    <ApplicationDetailShell
+      title="Transfer of Shares"
+      requestId={transfer.id}
+      statusBadge={<StatusBadge status={transfer.status} />}
+      left={
+        <>
+          <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(transfer.updatedAt ?? transfer.createdAt).slice(0, 10)}</div>} />
+          <SectionCard title="Transfer details" subtitle="Parties and shares being transferred.">
+            <div className="space-y-3 text-sm">
               <div>
-                <div className="text-black/50">Company</div>
-                <div className="mt-1 font-medium">{client?.name ?? transfer.clientId}</div>
+                <div className="text-black/50">Transferor</div>
+                <div className="mt-1 text-black/80">{transferorName || transfer.transferorPartyId}</div>
               </div>
               <div>
-                <div className="text-black/50">Effective date</div>
-                <div className="mt-1 font-medium">{transfer.effectiveDate}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Status</div>
-                <div className="mt-1 font-medium">{transfer.status}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Shares</div>
-                <div className="mt-1 font-medium">{transfer.shares.toLocaleString()}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Share class</div>
-                <div className="mt-1 font-medium">{transfer.shareClass ?? '-'}</div>
-              </div>
-              <div>
-                <div className="text-black/50">Created</div>
-                <div className="mt-1 font-medium">{transfer.createdAt.slice(0, 19).replace('T', ' ')}</div>
+                <div className="text-black/50">Transferee</div>
+                <div className="mt-1 text-black/80">{transfereeName || transfer.transfereePartyId}</div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-medium">Signatures</div>
-
-            <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="rounded-lg bg-[#f8fafc] border border-black/5 p-3">
-                <div className="text-sm font-medium">Share Transfer Agreement</div>
-                <div className="mt-2 space-y-2">
-                  {staSigns.map((s) => (
-                    <div key={s.id} className="rounded-md bg-white border border-black/5 px-3 py-2">
-                      <div className="text-sm font-medium truncate">
-                        {(() => {
-                          const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
-                          const left = meta.fullName ? meta.fullName : s.email;
-                          const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                          return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                        })()}
-                      </div>
-                      <div className="mt-0.5 text-xs text-black/50">{s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}</div>
-                    </div>
-                  ))}
-                  {staSigns.length === 0 ? <div className="text-sm text-black/50">No signatures</div> : null}
+          </SectionCard>
+          <ActivityTimelineCard items={timelineItems} />
+        </>
+      }
+      right={
+        <>
+          <SectionCard title="Actions" subtitle="Shortcuts for common tasks.">
+            <div className="space-y-2">
+              <a
+                href="#assets"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-[#2f7bdc] text-white px-4 py-2.5 text-sm font-medium hover:opacity-95"
+              >
+                View signatures & documents
+              </a>
+              <a
+                href="/corporate-secretary/applications"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-white border border-black/10 text-black/70 px-4 py-2.5 text-sm font-medium hover:bg-black/[0.02]"
+              >
+                Back to applications
+              </a>
+              {transfer.status === 'BLOCKED_REPRESENTATIVE' ? (
+                <div className="rounded-lg border border-[#fed7aa] bg-[#fff7ed] p-3 text-xs text-[#c2410c]">
+                  This transfer is blocked and requires representative action.
                 </div>
-              </div>
-
-              <div className="rounded-lg bg-[#f8fafc] border border-black/5 p-3">
-                <div className="text-sm font-medium">Director Resolution</div>
-                <div className="mt-2 space-y-2">
-                  {brSigns.map((s) => (
-                    <div key={s.id} className="rounded-md bg-white border border-black/5 px-3 py-2">
-                      <div className="text-sm font-medium truncate">
-                        {(() => {
-                          const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
-                          const left = meta.fullName ? meta.fullName : s.email;
-                          const extra = meta.role ? `(${meta.role}) · ${s.email}` : s.email;
-                          return left === s.email ? extra : `${left} ${meta.role ? `(${meta.role})` : ''} · ${s.email}`;
-                        })()}
-                      </div>
-                      <div className="mt-0.5 text-xs text-black/50">{s.status}{s.signedAt ? ` · ${s.signedAt.slice(0, 19).replace('T', ' ')}` : ''}</div>
-                    </div>
-                  ))}
-                  {brSigns.length === 0 ? <div className="text-sm text-black/50">No signatures</div> : null}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div id="documents" className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-medium">Documents</div>
-            <div className="mt-3 flex flex-col sm:flex-row gap-2">
-              {staDoc ? (
-                <>
-                  <a href={staPreviewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
-                    Preview STA
-                  </a>
-                  <a href={staHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                    Download STA PDF
-                  </a>
-                </>
               ) : null}
-              {brDoc ? (
-                <>
-                  <a href={brPreviewHref} target="_blank" rel="noreferrer" className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium">
-                    Preview BR
-                  </a>
-                  <a href={brHref} target="_blank" rel="noreferrer" className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium">
-                    Download BR PDF
-                  </a>
-                </>
-              ) : null}
-              {!staDoc && !brDoc ? <div className="text-sm text-black/50">No documents</div> : null}
             </div>
-            <div className="mt-2 text-xs text-black/50">Documents are generated from the signed document HTML.</div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </SectionCard>
+          <SignaturesDocumentsCardClient id="assets" signatureRows={signatureRows} documents={documents} />
+        </>
+      }
+    />
   );
 }

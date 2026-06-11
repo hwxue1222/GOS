@@ -1,9 +1,13 @@
-import Link from 'next/link';
-import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { getDirectorChangeRequestContext, readDb } from '@/lib/db';
 import { getSignerIdentityForClient } from '@/lib/signerInfo';
-import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/company-update/[requestId]/ui/SignaturesDocumentsCardClient';
+import ApplicationDetailShell from '@/app/(app)/corporate-secretary/applications/ui/ApplicationDetailShell';
+import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
+import KeyValueCard from '@/app/(app)/corporate-secretary/applications/ui/KeyValueCard';
+import SectionCard from '@/app/(app)/corporate-secretary/applications/ui/SectionCard';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
+import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusBadge';
+import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -42,7 +46,6 @@ export default async function DirectorChangeApplicationDetailPage({
   if (!ctx) {
     return (
       <div className="min-h-screen flex flex-col">
-        <AppTopNav active="corporate-secretary" />
         <div className="flex-1 bg-[#f7f8fa]">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NOT_FOUND</div>
@@ -57,7 +60,6 @@ export default async function DirectorChangeApplicationDetailPage({
     if (!ok) {
       return (
         <div className="min-h-screen flex flex-col">
-          <AppTopNav active="corporate-secretary" />
           <div className="flex-1 bg-[#f7f8fa]">
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
@@ -70,6 +72,8 @@ export default async function DirectorChangeApplicationDetailPage({
 
   const r = ctx.request;
   const db = await readDb();
+
+  const client = db.clients.find((c) => c.id === r.clientId && !c.deletedAt) ?? null;
 
   const docById = new Map(ctx.documents.map((d) => [d.id, d]));
   const docByPacketId = new Map(ctx.packets.map((p) => [p.id, docById.get(p.documentId) ?? null]));
@@ -124,73 +128,77 @@ export default async function DirectorChangeApplicationDetailPage({
     })
     .filter(Boolean);
 
-  const statusLabel = r.status === 'PENDING_SIGNATURES' ? 'SIGNING' : r.status;
-  const statusClass =
-    r.status === 'PENDING_SIGNATURES'
-      ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
-      : r.status === 'PENDING_REVIEW'
-        ? 'bg-[#faf5ff] text-[#6d28d9] border-[#e9d5ff]'
-        : r.status === 'NEED_MORE_INFO'
-          ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
-          : r.status === 'APPROVED'
-            ? 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'
-            : r.status === 'REJECTED'
-              ? 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
-              : 'bg-white text-black/70 border-black/10';
+  const auditLogs = (db.auditLogs ?? [])
+    .filter((l) => l.entityType === 'director_change_request' && l.entityId === r.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const timelineItems = [
+    ...auditLogsToTimelineItems({ logs: auditLogs }),
+    ...signatureEventsToTimelineItems({ signatures: signatureRows }),
+  ];
+
+  const summaryRows = [
+    { label: 'Company', value: client?.name ?? r.clientId },
+    { label: 'Type', value: 'Change of Director' },
+    { label: 'Status', value: <span className="text-black/80">{r.status}</span> },
+    { label: 'Effective date', value: r.effectiveDate },
+    { label: 'Submitted', value: (r.submittedAt ?? r.createdAt).slice(0, 10) },
+    { label: 'Updated', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
+  ];
+
+  const addNames = r.addDirectors.map((d) => d.fullName).filter(Boolean).join(', ') || '-';
+  const removeNames = removedDirectors.join(', ') || '-';
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <AppTopNav active="corporate-secretary" />
-      <div className="flex-1 bg-[#f7f8fa]">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold">Change of Director</h1>
-              <div className="mt-1 text-sm text-black/60">Request ID: {r.id}</div>
-            </div>
-            <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
-              Back
-            </Link>
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+    <ApplicationDetailShell
+      title="Change of Director"
+      requestId={r.id}
+      statusBadge={<StatusBadge status={r.status} />}
+      left={
+        <>
+          <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />
+          <SectionCard title="Requested changes" subtitle="What will be added or removed.">
+            <div className="space-y-3 text-sm">
               <div>
-                <div className="text-black/50">Status</div>
-                <div className="mt-1">
-                  <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
-                </div>
+                <div className="text-black/50">Add directors</div>
+                <div className="mt-1 text-black/80">{addNames}</div>
               </div>
               <div>
-                <div className="text-black/50">Effective date</div>
-                <div className="mt-1 font-medium">{r.effectiveDate}</div>
+                <div className="text-black/50">Remove directors</div>
+                <div className="mt-1 text-black/80">{removeNames}</div>
               </div>
-              <div>
-                <div className="text-black/50">Submitted</div>
-                <div className="mt-1 font-medium">{(r.submittedAt ?? r.createdAt).slice(0, 19).replace('T', ' ')}</div>
-              </div>
+              {r.useByBridgeNomineeDirector ? <div className="text-xs text-black/50">Includes ByBridge nominee director service</div> : null}
             </div>
-            {r.message?.trim() ? <div className="mt-3 text-sm whitespace-pre-wrap">{r.message}</div> : null}
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-medium">Changes</div>
-            <div className="mt-2 text-sm">
-              <div className="text-black/50">Add directors</div>
-              <div className="mt-1">{r.addDirectors.length ? r.addDirectors.map((d) => d.fullName).filter(Boolean).join(', ') : '-'}</div>
+          </SectionCard>
+          {r.message?.trim() ? (
+            <SectionCard title="Message" subtitle="Notes provided when submitting this request.">
+              <div className="text-sm text-black/70 whitespace-pre-wrap">{r.message}</div>
+            </SectionCard>
+          ) : null}
+          <ActivityTimelineCard items={timelineItems} />
+        </>
+      }
+      right={
+        <>
+          <SectionCard title="Actions" subtitle="Shortcuts for common tasks.">
+            <div className="space-y-2">
+              <a
+                href="#assets"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-[#2f7bdc] text-white px-4 py-2.5 text-sm font-medium hover:opacity-95"
+              >
+                View signatures & documents
+              </a>
+              <a
+                href="/corporate-secretary/applications"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-white border border-black/10 text-black/70 px-4 py-2.5 text-sm font-medium hover:bg-black/[0.02]"
+              >
+                Back to applications
+              </a>
             </div>
-            <div className="mt-3 text-sm">
-              <div className="text-black/50">Remove directors</div>
-              <div className="mt-1">{removedDirectors.length ? removedDirectors.join(', ') : '-'}</div>
-            </div>
-            {r.useByBridgeNomineeDirector ? <div className="mt-3 text-xs text-black/50">Includes ByBridge nominee director service</div> : null}
-          </div>
-
-          <div className="mt-4">
-            <SignaturesDocumentsCardClient signatureRows={signatureRows} documents={documents} />
-          </div>
-        </div>
-      </div>
-    </div>
+          </SectionCard>
+          <SignaturesDocumentsCardClient id="assets" signatureRows={signatureRows} documents={documents} />
+        </>
+      }
+    />
   );
 }
