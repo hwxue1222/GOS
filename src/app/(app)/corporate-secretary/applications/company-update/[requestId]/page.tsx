@@ -111,10 +111,20 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     .filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === req.id)
     .slice()
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const isDeprecatedCompanyNameDoc = (title: string) => {
+    const t = String(title ?? '').trim();
+    return (
+      t.startsWith('Director Resolution - Change of Company Name -') ||
+      t.startsWith('Notice of Extraordinary General Meeting - Change of Company Name -') ||
+      t.startsWith('Minutes of Extraordinary General Meeting - Change of Company Name -')
+    );
+  };
   const packetRows = packets
     .map((p) => {
       const document = db.documents.find((d) => d.id === p.documentId) ?? null;
       if (!document) return null;
+      if (req.type === 'CHANGE_COMPANY_NAME' && isDeprecatedCompanyNameDoc(document.title)) return null;
       const signatures = db.signatureRequests
         .filter((r) => r.packetId === p.id)
         .sort((a, b) => a.email.localeCompare(b.email))
