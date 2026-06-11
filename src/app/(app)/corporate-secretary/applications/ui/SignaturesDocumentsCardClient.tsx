@@ -137,14 +137,23 @@ export default function SignaturesDocumentsCardClient(props: {
                   <td className="px-3 py-2 align-top">
                     <div className="flex flex-wrap items-center gap-2">
                       {d.href ? (
-                        <a
-                          href={d.href}
-                          className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/[0.02]"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Download
-                        </a>
+                        <>
+                          <a
+                            href={d.href}
+                            className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/[0.02]"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Preview
+                          </a>
+                          <a
+                            href={d.href}
+                            download
+                            className="inline-flex items-center rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium hover:bg-black/[0.02]"
+                          >
+                            Download
+                          </a>
+                        </>
                       ) : (
                         <>
                           <a
