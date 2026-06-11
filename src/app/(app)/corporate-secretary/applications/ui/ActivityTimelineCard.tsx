@@ -1,5 +1,6 @@
 import React from 'react';
 import SectionCard from './SectionCard';
+import { formatDateTimeDMY } from '@/lib/date';
 
 export type TimelineItem = {
   ts: string;
@@ -10,7 +11,7 @@ export type TimelineItem = {
 function formatTs(ts: string) {
   const s = String(ts ?? '').trim();
   if (!s) return '';
-  return s.slice(0, 19).replace('T', ' ');
+  return formatDateTimeDMY(s);
 }
 
 export default function ActivityTimelineCard(props: { items: TimelineItem[] }) {
@@ -42,4 +43,3 @@ export default function ActivityTimelineCard(props: { items: TimelineItem[] }) {
     </SectionCard>
   );
 }
-

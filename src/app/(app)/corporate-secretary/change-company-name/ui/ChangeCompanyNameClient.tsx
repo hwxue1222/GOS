@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
+import { formatDateDMY, parseDateDMYToYmd } from '@/lib/date';
 
 export default function ChangeCompanyNameClient() {
   const router = useRouter();
@@ -27,26 +28,52 @@ export default function ChangeCompanyNameClient() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();
     const nextChairman = chairman.trim();
-    const nextMeetingDate = meetingDate.trim();
-    const nextNoticeDate = noticeDate.trim();
+    const nextMeetingDateRaw = meetingDate.trim();
+    const nextNoticeDateRaw = noticeDate.trim();
     const nextVenue = meetingVenue.trim();
-    if (!companyId || !client || !nextName || !nextChairman || !nextMeetingDate || !nextNoticeDate || !nextVenue) {
-      setSubmitError('Please fill all required fields.');
+    if (!companyId || !client) {
+      setSubmitError('Company not loaded.');
+      return;
+    }
+    if (!nextName) {
+      setSubmitError('New Company is required.');
+      return;
+    }
+    if (!nextChairman) {
+      setSubmitError('Chairman is required.');
+      return;
+    }
+    if (!nextMeetingDateRaw) {
+      setSubmitError('Meeting date is required.');
+      return;
+    }
+    if (!nextNoticeDateRaw) {
+      setSubmitError('Notice date is required.');
+      return;
+    }
+    if (!nextVenue) {
+      setSubmitError('Meeting venue is required.');
       return;
     }
 
-    const isYmd = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
-    if (!isYmd(nextMeetingDate) || !isYmd(nextNoticeDate)) {
-      setSubmitError('Please enter valid dates.');
+    const meetingYmd = parseDateDMYToYmd(nextMeetingDateRaw);
+    if (!meetingYmd) {
+      setSubmitError('Meeting date must be DD/MM/YYYY.');
       return;
     }
+    const noticeYmd = parseDateDMYToYmd(nextNoticeDateRaw);
+    if (!noticeYmd) {
+      setSubmitError('Notice date must be DD/MM/YYYY.');
+      return;
+    }
+
     {
-      const md = new Date(`${nextMeetingDate}T00:00:00.000Z`);
-      const nd = new Date(`${nextNoticeDate}T00:00:00.000Z`);
-      const min = new Date(md);
-      min.setUTCDate(min.getUTCDate() - 14);
-      if (!(nd.getTime() <= min.getTime())) {
-        setSubmitError('Notice date must be at least 14 days earlier than Meeting date.');
+      const md = new Date(`${meetingYmd}T00:00:00.000Z`);
+      const nd = new Date(`${noticeYmd}T00:00:00.000Z`);
+      const latest = new Date(md);
+      latest.setUTCDate(latest.getUTCDate() - 14);
+      if (nd.getTime() > latest.getTime()) {
+        setSubmitError(`Notice date must be on or before ${formatDateDMY(latest.toISOString().slice(0, 10))}.`);
         return;
       }
     }
@@ -61,8 +88,8 @@ export default function ChangeCompanyNameClient() {
             originalCompanyName: client.name,
             newCompanyName: nextName,
             chairman: nextChairman,
-            meetingDate: nextMeetingDate,
-            noticeDateYmd: nextNoticeDate,
+            meetingDate: meetingYmd,
+            noticeDateYmd: noticeYmd,
             meetingVenue: nextVenue,
             useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
           },
@@ -70,7 +97,8 @@ export default function ChangeCompanyNameClient() {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
       if (!res?.ok || !j?.ok || !j.request?.id) {
-        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        if (j?.error === 'INVALID_INPUT') setSubmitError('Invalid input. Please check meeting date, notice date and required fields.');
+        else setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
       router.push(`/corporate-secretary/applications/company-update/${encodeURIComponent(j.request.id)}`);
@@ -127,10 +155,11 @@ export default function ChangeCompanyNameClient() {
                 <span className="text-red-500">*</span> Meeting date :
               </div>
               <input
-                type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                placeholder="DD/MM/YYYY"
+                inputMode="numeric"
               />
             </label>
 
@@ -139,10 +168,11 @@ export default function ChangeCompanyNameClient() {
                 <span className="text-red-500">*</span> Notice date :
               </div>
               <input
-                type="date"
                 value={noticeDate}
                 onChange={(e) => setNoticeDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                placeholder="DD/MM/YYYY"
+                inputMode="numeric"
               />
             </label>
 

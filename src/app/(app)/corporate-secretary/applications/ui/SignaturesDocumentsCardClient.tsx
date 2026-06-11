@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { formatDateTimeDMY } from '@/lib/date';
 
 export type SignatureRow = {
   documentTitle: string;
@@ -22,9 +23,7 @@ function normalizeDocTitle(title: string) {
 }
 
 function formatTs(ts?: string) {
-  const s = String(ts ?? '').trim();
-  if (!s) return '-';
-  return s.slice(0, 19).replace('T', ' ');
+  return formatDateTimeDMY(ts);
 }
 
 function signatureStatusClass(status: string) {
@@ -170,4 +169,3 @@ export default function SignaturesDocumentsCardClient(props: {
     </div>
   );
 }
-

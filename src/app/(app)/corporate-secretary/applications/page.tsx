@@ -5,6 +5,7 @@ import { readDb } from '@/lib/db';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 import { buildIncorporationApplications } from '@/lib/incorporationApplications';
 import DeleteActionClient from '@/components/DeleteActionClient';
+import { formatDateDMY } from '@/lib/date';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -325,8 +326,8 @@ export default async function CorporateSecretaryApplicationsPage({
                         <tr key={r.id} className="border-b border-black/5 hover:bg-black/[0.02]">
                           <td className="px-3 py-2">{r.typeLabel}</td>
                           <td className="px-3 py-2">{r.companyName}</td>
-                          <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
-                          <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>
+                          <td className="px-3 py-2">{formatDateDMY(r.applicationDate.slice(0, 10))}</td>
+                          <td className="px-3 py-2">{formatDateDMY(r.editDate.slice(0, 10))}</td>
                           <td className="px-3 py-2">
                             <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusPill(r.status)}`}>{r.status}</span>
                           </td>
