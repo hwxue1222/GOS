@@ -7,9 +7,7 @@ import ApplicationDetailShell from '@/app/(app)/corporate-secretary/applications
 import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
 import KeyValueCard from '@/app/(app)/corporate-secretary/applications/ui/KeyValueCard';
 import SectionCard from '@/app/(app)/corporate-secretary/applications/ui/SectionCard';
-import SignaturesDocumentsCardClient, {
-  type DocumentRow,
-} from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
+import SignaturesDocumentsCardClient from '@/app/(app)/corporate-secretary/applications/ui/SignaturesDocumentsCardClient';
 import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusBadge';
 import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
@@ -155,28 +153,11 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     };
   });
 
-  const documentRows: DocumentRow[] = packetRows.map((row) => ({
+  const documentRows = packetRows.map((row) => ({
     documentId: row.document.id,
     title: row.document.title,
     signerCount: row.signatures.length,
   }));
-
-  if (req.type === 'CHANGE_COMPANY_NAME') {
-    documentRows.push(
-      {
-        documentId: 'template_notice_egm_change_company_name',
-        title: 'Notice of Extraordinary General Meeting',
-        signerCount: 0,
-        href: '/templates/notice-egm-authority-given-to-issue-new-shares.docx',
-      },
-      {
-        documentId: 'template_minutes_egm_change_company_name',
-        title: 'Minutes of Extraordinary General Meeting',
-        signerCount: 0,
-        href: '/templates/minutes-egm-change-of-company-name.docx',
-      },
-    );
-  }
 
   const auditLogs = (db.auditLogs ?? [])
     .filter((l) => l.entityType === 'company_update_request' && l.entityId === req.id)

@@ -8094,15 +8094,20 @@ export async function createCompanyUpdateRequest(input: {
   if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const directors = await listClientDirectors(input.clientId);
-  const signerEmails = Array.from(
-    new Set(
-      directors
-        .map((d) => (d.person.email ?? '').trim())
-        .filter(Boolean)
-        .map((e) => e.toLowerCase()),
-    ),
-  );
-  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  const signerEmails =
+    input.type === 'CHANGE_COMPANY_NAME'
+      ? []
+      : Array.from(
+          new Set(
+            directors
+              .map((d) => (d.person.email ?? '').trim())
+              .filter(Boolean)
+              .map((e) => e.toLowerCase()),
+          ),
+        );
+  if (input.type !== 'CHANGE_COMPANY_NAME' && signerEmails.length !== directors.length) {
+    return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  }
 
   const type = input.type;
   const p = input.payload ?? {};
@@ -8294,46 +8299,171 @@ export async function createCompanyUpdateRequest(input: {
     payload: p,
   };
 
-  const html = type === 'CHANGE_SECRETARY' ? templates.renderCompanyUpdateRequestHtml(commonTplInput) : templates.renderCompanyUpdateRequestHtml(commonTplInput);
-
-  const doc: Document = {
-    id: newId('doc'),
-    type: 'CO_UPD',
-    title: `${titlePrefix} - ${client.name}`,
-    html,
-    sha256: sha256Hex(html),
-    createdAt: now,
-  };
-  db.documents.unshift(doc);
-
-  const packet: SignaturePacket = {
-    id: newId('spk'),
-    kind: 'CO_UPD',
-    relatedType: 'COMPANY_UPDATE',
-    relatedId: id,
-    documentId: doc.id,
-    status: 'SIGNING',
-    createdAt: now,
-    updatedAt: now,
-  };
-  db.signaturePackets.unshift(packet);
-
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
   const signLinks: Array<{ email: string; url: string; title?: string }> = [];
-  for (const emailKey of signerEmails) {
-    const token = newToken();
-    const req: SignatureRequest = {
-      id: newId('sgr'),
-      packetId: packet.id,
-      email: emailKey,
-      tokenHash: sha256Hex(token),
-      expiresAt,
-      status: 'PENDING',
+
+  let primaryPacketId = '';
+  let requestStatus: CompanyUpdateRequest['status'] = 'PENDING_SIGNATURES';
+  let signedAt: string | undefined = undefined;
+
+  if (type === 'CHANGE_COMPANY_NAME') {
+    const newCompanyName = String(p.newCompanyName ?? '').trim();
+    const chairman = String(p.chairman ?? '').trim();
+    const meetingDateYmd = String(p.meetingDate ?? p.startDate ?? '').trim();
+    const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
+    const meetingVenue = String(p.meetingVenue ?? '').trim();
+
+    const partyById = new Map(db.parties.map((x) => [x.id, x]));
+    const personById = new Map(db.persons.map((x) => [x.id, x]));
+    const shareholders = db.clientPartyRoles
+      .filter((r) => r.clientId === input.clientId)
+      .filter((r) => r.role === 'SHAREHOLDER')
+      .filter((r) => !r.toDate)
+      .map((r) => {
+        const party = partyById.get(r.partyId);
+        if (!party) return null;
+        if (party.type === 'PERSON' && party.personId) {
+          const p = personById.get(party.personId);
+          if (!p) return null;
+          return { fullName: p.fullName, email: p.email };
+        }
+        return { fullName: party.displayName, email: undefined };
+      })
+      .filter(Boolean) as Array<{ fullName: string; email?: string }>;
+
+    const shareholderEmails = Array.from(
+      new Set(
+        shareholders
+          .map((s) => String(s.email ?? '').trim())
+          .filter(Boolean)
+          .map((e) => e.toLowerCase()),
+      ),
+    );
+
+    const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
+      companyName,
+      companyRegistrationNo: client.companyRegistrationNo,
+      noticeDateYmd,
+      meetingDateYmd,
+      meetingVenue,
+      chairman,
+      newCompanyName,
+    });
+    const noticeDoc: Document = {
+      id: newId('doc'),
+      type: 'CO_UPD',
+      title: 'Notice of Extraordinary General Meeting',
+      html: noticeHtml,
+      sha256: sha256Hex(noticeHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(noticeDoc);
+    db.signaturePackets.unshift({
+      id: newId('spk'),
+      kind: 'CO_UPD',
+      relatedType: 'COMPANY_UPDATE',
+      relatedId: id,
+      documentId: noticeDoc.id,
+      status: 'SIGNED',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const minutesHtml = templates.renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
+      companyName,
+      companyRegistrationNo: client.companyRegistrationNo,
+      meetingDateYmd,
+      meetingVenue,
+      chairman,
+      oldCompanyName: companyName,
+      newCompanyName,
+      shareholders,
+    });
+    const minutesDoc: Document = {
+      id: newId('doc'),
+      type: 'CO_UPD',
+      title: 'Minutes of Extraordinary General Meeting',
+      html: minutesHtml,
+      sha256: sha256Hex(minutesHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(minutesDoc);
+
+    const minutesPacketId = newId('spk');
+    primaryPacketId = minutesPacketId;
+    const minutesPacket: SignaturePacket = {
+      id: minutesPacketId,
+      kind: 'CO_UPD',
+      relatedType: 'COMPANY_UPDATE',
+      relatedId: id,
+      documentId: minutesDoc.id,
+      status: shareholderEmails.length ? 'SIGNING' : 'SIGNED',
       createdAt: now,
       updatedAt: now,
     };
-    db.signatureRequests.unshift(req);
-    signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+    db.signaturePackets.unshift(minutesPacket);
+
+    if (shareholderEmails.length) {
+      for (const emailKey of shareholderEmails) {
+        const token = newToken();
+        const req: SignatureRequest = {
+          id: newId('sgr'),
+          packetId: minutesPacket.id,
+          email: emailKey,
+          tokenHash: sha256Hex(token),
+          expiresAt,
+          status: 'PENDING',
+          createdAt: now,
+          updatedAt: now,
+        };
+        db.signatureRequests.unshift(req);
+        signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+      }
+    } else {
+      requestStatus = 'PENDING_REVIEW';
+      signedAt = now;
+    }
+  } else {
+    const html = templates.renderCompanyUpdateRequestHtml(commonTplInput);
+
+    const doc: Document = {
+      id: newId('doc'),
+      type: 'CO_UPD',
+      title: `${titlePrefix} - ${client.name}`,
+      html,
+      sha256: sha256Hex(html),
+      createdAt: now,
+    };
+    db.documents.unshift(doc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'CO_UPD',
+      relatedType: 'COMPANY_UPDATE',
+      relatedId: id,
+      documentId: doc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(packet);
+    primaryPacketId = packet.id;
+
+    for (const emailKey of signerEmails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email: emailKey,
+        tokenHash: sha256Hex(token),
+        expiresAt,
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+    }
   }
 
   if (type === 'CHANGE_SECRETARY') {
@@ -8455,13 +8585,14 @@ export async function createCompanyUpdateRequest(input: {
     id,
     clientId: input.clientId,
     type,
-    status: 'PENDING_SIGNATURES',
+    status: requestStatus,
     payload: p,
     createdByUserId: input.createdByUserId,
-    packetId: packet.id,
+    packetId: primaryPacketId,
     createdAt: now,
     updatedAt: now,
     submittedAt: now,
+    signedAt,
   };
 
   const list = getCompanyUpdateRequestList(db);
