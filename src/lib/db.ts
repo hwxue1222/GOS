@@ -8133,10 +8133,13 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
+    const noticeSigner = String((p as { noticeSigner?: unknown }).noticeSigner ?? '').trim();
     const meetingDate = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
-    if (!newCompanyName || !chairman || !meetingDate || !noticeDateYmd || !meetingVenue) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!newCompanyName || !chairman || !noticeSigner || !meetingDate || !noticeDateYmd || !meetingVenue) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
     if (!isYmd(meetingDate) || !isYmd(noticeDateYmd)) return { ok: false as const, error: 'INVALID_INPUT' as const };
     {
       const md = new Date(`${meetingDate}T00:00:00.000Z`);
@@ -8309,6 +8312,7 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
+    const noticeSigner = String((p as { noticeSigner?: unknown }).noticeSigner ?? '').trim();
     const meetingDateYmd = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
@@ -8340,13 +8344,18 @@ export async function createCompanyUpdateRequest(input: {
       ),
     );
 
+    const noticeSignerEmail =
+      directors.find((d) => d.person.fullName.trim() === noticeSigner && (d.person.email ?? '').trim())?.person.email ?? '';
+    if (!noticeSignerEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
     const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
       companyName,
       companyRegistrationNo: client.companyRegistrationNo,
       noticeDateYmd,
       meetingDateYmd,
       meetingVenue,
-      chairman,
+      chairman: noticeSigner,
+      chairmanEmail: noticeSignerEmail,
       newCompanyName,
     });
     const noticeDoc: Document = {
@@ -8358,16 +8367,34 @@ export async function createCompanyUpdateRequest(input: {
       createdAt: now,
     };
     db.documents.unshift(noticeDoc);
-    db.signaturePackets.unshift({
-      id: newId('spk'),
+    const noticePacketId = newId('spk');
+    const noticePacket: SignaturePacket = {
+      id: noticePacketId,
       kind: 'CO_UPD',
       relatedType: 'COMPANY_UPDATE',
       relatedId: id,
       documentId: noticeDoc.id,
-      status: 'SIGNED',
+      status: 'SIGNING',
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    db.signaturePackets.unshift(noticePacket);
+
+    {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: noticePacket.id,
+        email: noticeSignerEmail.trim().toLowerCase(),
+        tokenHash: sha256Hex(token),
+        expiresAt,
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      signLinks.push({ email: req.email, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+    }
 
     const minutesHtml = templates.renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
       companyName,
@@ -8419,9 +8446,6 @@ export async function createCompanyUpdateRequest(input: {
         db.signatureRequests.unshift(req);
         signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
       }
-    } else {
-      requestStatus = 'PENDING_REVIEW';
-      signedAt = now;
     }
   } else {
     const html = templates.renderCompanyUpdateRequestHtml(commonTplInput);

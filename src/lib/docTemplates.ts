@@ -232,8 +232,11 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
   meetingDateYmd: string;
   meetingVenue: string;
   chairman: string;
+  chairmanEmail?: string;
   newCompanyName: string;
 }) {
+  const signer = [{ fullName: input.chairman, email: input.chairmanEmail }];
+  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
   return `
 <!doctype html>
 <html>
@@ -269,7 +272,7 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
     </ol>
 
     <div class="block">By Order of the Board</div>
-    <div class="block">${esc(input.chairman)}</div>
+    ${blocks}
     <div class="muted">Chairman</div>
   </body>
 </html>
