@@ -29,7 +29,7 @@ export default function ChangeCompanyNameClient() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();
     const nextChairman = chairman.trim();
-    const nextDirectorSendingNotice = directorSendingNotice.trim();
+    const nextDirectorSendingNotice = directorSendingNotice.trim() || directors[0]?.entity.person.fullName?.trim() || '';
     const nextMeetingDate = meetingDate.trim();
     const nextNoticeDate = noticeDate.trim();
     const nextVenue = meetingVenue.trim();

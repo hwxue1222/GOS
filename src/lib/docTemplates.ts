@@ -54,6 +54,28 @@ function signatureBlocksByEmail(input: {
     .join('');
 }
 
+function signatureLineBlocks(input: {
+  signers: Array<{ fullName: string; email?: string }>;
+  nameColor?: string;
+}) {
+  const list = input.signers.length ? input.signers : [{ fullName: '', email: undefined }];
+  const nameColor = String(input.nameColor ?? '').trim();
+  const nameStyle = nameColor ? ` style="color:${esc(nameColor)}"` : '';
+  return list
+    .map((d) => {
+      const emailKey = d.email ? esc(String(d.email).toLowerCase()) : '';
+      const marker = emailKey ? `<span class="sig-mark" data-signer="${emailKey}"></span>` : '<span class="sig-mark"></span>';
+      const name = d.fullName ? esc(d.fullName) : '___________________';
+      return `
+<div class="sig-row">
+  <div class="sig-line">${marker}</div>
+  <div class="sig-name"${nameStyle}>${name}</div>
+</div>
+`.trim();
+    })
+    .join('');
+}
+
 function directorResolutionHeaderLabel(directorCount: number) {
   return directorCount > 1
     ? "DIRECTORS' RESOLUTION IN WRITING PURSUANT TO THE CONSTITUTION OF THE COMPANY"
@@ -236,7 +258,7 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
   newCompanyName: string;
 }) {
   const signer = [{ fullName: input.chairman, email: input.chairmanEmail }];
-  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  const blocks = signatureLineBlocks({ signers: signer, nameColor: '#ee0000' });
   const meetingLong = toDayOfMonthLong(input.meetingDateYmd);
   return `
 <!doctype html>
@@ -250,11 +272,10 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
       .title { font-weight: 700; text-transform: uppercase; }
       .center { text-align: center; }
       .block { margin-top: 10px; }
-      .u { text-decoration: underline; text-underline-offset: 3px; }
-      .sig-block { margin-top: 18px; }
-      .sig-line { width: 220px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-row { margin-top: 16px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
       .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
-      .sig-name { margin-top: 2px; }
+      .sig-name { margin-top: 4px; }
     </style>
   </head>
   <body>
@@ -263,12 +284,12 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
     <div>(Incorporated in the Republic of Singapore)</div>
 
     <div class="block title center">NOTICE OF EXTRAORDINARY GENERAL MEETING</div>
-    <div class="block">NOTICE IS HEREBY GIVEN THAT an Extraordinary General Meeting of the Company will be held at <span class="u">&nbsp;&nbsp;&nbsp;</span> ${esc(input.meetingVenue)} <span class="u">&nbsp;&nbsp;&nbsp;</span> on the ${esc(meetingLong)} at 10.00 a.m. for the purpose of considering and, if thought fit, passing the following resolution(s):-</div>
+    <div class="block">NOTICE IS HEREBY GIVEN THAT an Extraordinary General Meeting of the Company will be held at&nbsp;&nbsp;&nbsp;&nbsp;${esc(input.meetingVenue)}&nbsp;&nbsp;on the ${esc(meetingLong)} at 10.00 a.m. for the purpose of considering and, if thought fit, passing the following resolution(s):-</div>
 
     <div class="block"><strong>SPECIAL RESOLUTION</strong></div>
     <div class="block"><strong>THE PROPOSED CHANGE OF NAME OF THE COMPANY</strong></div>
-    <div class="block">subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.companyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.companyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
-    <div class="block">each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
+    <div class="block">(a)&nbsp;&nbsp;subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.companyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.companyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
+    <div class="block">(b)&nbsp;&nbsp;each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
 
     <div class="block"><strong>BY ORDER OF THE BOARD</strong></div>
     ${blocks}
@@ -289,7 +310,7 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
   newCompanyName: string;
   shareholders?: Array<{ fullName: string; email?: string }>;
 }) {
-  const blocks = signatureBlocksByEmail({ signers: input.shareholders ?? [], label: '' });
+  const blocks = signatureLineBlocks({ signers: input.shareholders ?? [], nameColor: '#ee0000' });
   return `
 <!doctype html>
 <html>
@@ -302,11 +323,11 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
       .title { font-weight: 700; text-transform: uppercase; }
       .block { margin-top: 10px; }
       .u { text-decoration: underline; text-underline-offset: 3px; }
-      .sig-line { width: 240px; height: 26px; border-bottom: 1px solid #111; margin-top: 18px; }
-      .sig-block { margin-top: 14px; }
-      .sig-line2 { width: 220px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-row { margin-top: 8px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
       .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
-      .sig-name { margin-top: 2px; }
+      .sig-name { margin-top: 4px; }
+      .chair-line { width: 240px; height: 20px; border-bottom: 1px solid #111; margin-top: 16px; }
     </style>
   </head>
   <body>
@@ -315,27 +336,27 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
     <div>(Incorporated in the Republic of Singapore)</div>
 
     <div class="block title">MINUTES OF EXTRAORDINARY GENERAL MEETING</div>
-    <div class="block">Minutes of the Extraordinary General Meeting of the Company held at <span class="u">__</span>${esc(input.meetingVenue)}<span class="u">&nbsp;&nbsp;</span> on <span class="u">&nbsp;&nbsp;</span>${esc(toDdMmYyyy(input.meetingDateYmd))} 10:00</div>
+    <div class="block">Minutes of the Extraordinary General Meeting of the Company held at&nbsp;&nbsp;${esc(input.meetingVenue)}&nbsp;&nbsp;on&nbsp;&nbsp;${esc(toDdMmYyyy(input.meetingDateYmd))} 10:00</div>
 
     <div class="block"><strong>PRESENT:</strong></div>
-    <div class="block"><span class="u">_____________</span></div>
+    <div class="block">_____________</div>
     <div class="block">${blocks || '-'}</div>
 
-    <div class="block">Chairman: <strong>${esc(input.chairman)}</strong> was in the chair.</div>
-    <div class="block">Notice of Meeting: The notice was taken as read.</div>
+    <div class="block">Chairman&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;${esc(input.chairman)} was in the chair.</div>
+    <div class="block">Notice of Meeting&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;The notice was taken as read.</div>
 
     <div class="block"><strong>SPECIAL RESOLUTION</strong></div>
     <div class="block"><strong>THE PROPOSED CHANGE OF NAME OF THE COMPANY</strong></div>
-    <div class="block">subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.oldCompanyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.oldCompanyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
-    <div class="block">each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
+    <div class="block">(a)&nbsp;&nbsp;subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.oldCompanyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.oldCompanyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
+    <div class="block">(b)&nbsp;&nbsp;each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
 
     <div class="block">There being no other business, the meeting ended with a vote of thanks to the Chairman.</div>
 
     <div class="block">Certified as a True Record of Minutes</div>
-    <div class="sig-line"></div>
-    <div class="block">Name: ${esc(input.chairman)}</div>
+    <div class="chair-line"></div>
+    <div class="block">Name:&nbsp;&nbsp;${esc(input.chairman)}</div>
     <div class="block">Chairman</div>
-    <div class="block">Date: ${esc(toDdMmYyyy(input.meetingDateYmd))}</div>
+    <div class="block">Date:&nbsp;&nbsp;${esc(toDdMmYyyy(input.meetingDateYmd))}</div>
   </body>
 </html>
 `.trim();

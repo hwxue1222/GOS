@@ -8141,7 +8141,7 @@ export async function createCompanyUpdateRequest(input: {
     const meetingDate = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
-    if (!newCompanyName || !chairman || !directorSendingNotice || !meetingDate || !noticeDateYmd || !meetingVenue) {
+    if (!newCompanyName || !chairman || !meetingDate || !noticeDateYmd || !meetingVenue) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
     if (!isYmd(meetingDate) || !isYmd(noticeDateYmd)) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -8353,7 +8353,15 @@ export async function createCompanyUpdateRequest(input: {
     );
 
     const noticeSignerEmail =
-      directors.find((d) => d.person.fullName.trim() === directorSendingNotice && (d.person.email ?? '').trim())?.person.email ?? '';
+      (directorSendingNotice
+        ? directors.find((d) => d.person.fullName.trim() === directorSendingNotice && (d.person.email ?? '').trim())?.person.email
+        : undefined) ??
+      directors.find((d) => (d.person.email ?? '').trim())?.person.email ??
+      '';
+    const noticeSignerName =
+      (directorSendingNotice ? directors.find((d) => d.person.fullName.trim() === directorSendingNotice)?.person.fullName : undefined) ??
+      directors[0]?.person.fullName ??
+      '';
     if (!noticeSignerEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
     const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
@@ -8362,7 +8370,7 @@ export async function createCompanyUpdateRequest(input: {
       noticeDateYmd,
       meetingDateYmd,
       meetingVenue,
-      chairman: directorSendingNotice,
+      chairman: noticeSignerName,
       chairmanEmail: noticeSignerEmail,
       newCompanyName,
     });
