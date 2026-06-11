@@ -8343,6 +8343,10 @@ export async function createCompanyUpdateRequest(input: {
       })
       .filter(Boolean) as Array<{ fullName: string; email?: string }>;
 
+    if (!shareholders.some((s) => s.fullName.trim() === chairman)) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+
     const shareholderEmails = Array.from(
       new Set(
         shareholders

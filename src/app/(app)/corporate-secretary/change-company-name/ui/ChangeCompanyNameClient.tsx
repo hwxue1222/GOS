@@ -24,6 +24,8 @@ export default function ChangeCompanyNameClient() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const directors = roles?.directors ?? [];
+  const shareholders = roles?.shareholders ?? [];
+  const shareholderNames = shareholders.map((s) => (s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name));
 
   async function onSubmit() {
     setSubmitError(null);
@@ -43,6 +45,10 @@ export default function ChangeCompanyNameClient() {
     }
     if (!nextChairman) {
       setSubmitError('Chairman is required.');
+      return;
+    }
+    if (!shareholderNames.some((n) => n.trim() === nextChairman)) {
+      setSubmitError('Chairman must be a shareholder.');
       return;
     }
     if (!nextDirectorSendingNotice) {
@@ -148,9 +154,12 @@ export default function ChangeCompanyNameClient() {
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Select</option>
-                {directors.map((d) => (
-                  <option key={d.role.id} value={d.entity.person.fullName}>
-                    {d.entity.person.fullName}
+                {shareholders.map((s) => (
+                  <option
+                    key={s.role.id}
+                    value={s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name}
+                  >
+                    {s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name}
                   </option>
                 ))}
               </select>
