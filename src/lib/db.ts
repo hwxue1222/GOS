@@ -8383,7 +8383,7 @@ export async function createCompanyUpdateRequest(input: {
 
         if (!minutesSignerEmails.has(repEmail)) {
           minutesSignerEmails.add(repEmail);
-          minutesSigners.push({ fullName: `${rep.representativeName} (for ${shareholderCompanyName})`, email: repEmail });
+          minutesSigners.push({ fullName: `${rep.representativeName} (on behalf of ${shareholderCompanyName})`, email: repEmail });
         }
 
         const shareholderDirectors = db.clientPartyRoles
