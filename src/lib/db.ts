@@ -8325,36 +8325,143 @@ export async function createCompanyUpdateRequest(input: {
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
 
+    const corporateReps = Array.isArray((p as { corporateRepresentatives?: unknown }).corporateRepresentatives)
+      ? ((p as { corporateRepresentatives: any[] }).corporateRepresentatives
+          .map((x) => ({
+            shareholderCompanyClientId: String(x?.shareholderCompanyClientId ?? '').trim(),
+            representativeName: String(x?.representativeName ?? '').trim(),
+            representativeIdNo: String(x?.representativeIdNo ?? '').trim(),
+            representativeAddress: String(x?.representativeAddress ?? '').trim(),
+            representativeEmail: String(x?.representativeEmail ?? '').trim(),
+            representativePhone: String(x?.representativePhone ?? '').trim(),
+          }))
+          .filter((x) => !!x.shareholderCompanyClientId))
+      : [];
+    const corporateRepByCompanyId = new Map(corporateReps.map((x) => [x.shareholderCompanyClientId, x]));
+
     const partyById = new Map(db.parties.map((x) => [x.id, x]));
     const personById = new Map(db.persons.map((x) => [x.id, x]));
-    const shareholders = db.clientPartyRoles
+    const shareholderRoles = db.clientPartyRoles
       .filter((r) => r.clientId === input.clientId)
       .filter((r) => r.role === 'SHAREHOLDER')
       .filter((r) => !r.toDate)
-      .map((r) => {
-        const party = partyById.get(r.partyId);
-        if (!party) return null;
-        if (party.type === 'PERSON' && party.personId) {
-          const p = personById.get(party.personId);
-          if (!p) return null;
-          return { fullName: p.fullName, email: p.email };
-        }
-        return { fullName: party.displayName, email: undefined };
-      })
-      .filter(Boolean) as Array<{ fullName: string; email?: string }>;
+      .slice();
 
-    if (!shareholders.some((s) => s.fullName.trim() === chairman)) {
-      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const minutesSigners: Array<{ fullName: string; email: string }> = [];
+    const minutesSignerEmails = new Set<string>();
+    const personShareholderNames = new Set<string>();
+
+    for (const r of shareholderRoles) {
+      const party = partyById.get(r.partyId);
+      if (!party) continue;
+      if (party.type === 'PERSON' && party.personId) {
+        const sp = personById.get(party.personId);
+        if (!sp) continue;
+        personShareholderNames.add(sp.fullName.trim());
+        const email = String(sp.email ?? '').trim().toLowerCase();
+        if (!email) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+        if (!minutesSignerEmails.has(email)) {
+          minutesSignerEmails.add(email);
+          minutesSigners.push({ fullName: sp.fullName, email });
+        }
+        continue;
+      }
+
+      if (party.type === 'COMPANY' && party.clientId) {
+        const shareholderClientId = party.clientId;
+        const shareholderClient = db.clients.find((c) => c.id === shareholderClientId) ?? null;
+        const shareholderCompanyName = shareholderClient?.name ?? party.displayName;
+        const shareholderCompanyRegistrationNo = shareholderClient?.companyRegistrationNo;
+
+        const rep = corporateRepByCompanyId.get(shareholderClientId) ?? null;
+        if (!rep) return { ok: false as const, error: 'INVALID_INPUT' as const };
+        if (!rep.representativeName || !rep.representativeIdNo || !rep.representativeAddress || !rep.representativeEmail) {
+          return { ok: false as const, error: 'INVALID_INPUT' as const };
+        }
+        const repEmail = rep.representativeEmail.trim().toLowerCase();
+        if (!repEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+        if (!minutesSignerEmails.has(repEmail)) {
+          minutesSignerEmails.add(repEmail);
+          minutesSigners.push({ fullName: `${rep.representativeName} (for ${shareholderCompanyName})`, email: repEmail });
+        }
+
+        const shareholderDirectors = db.clientPartyRoles
+          .filter((x) => x.clientId === shareholderClientId)
+          .filter((x) => x.role === 'DIRECTOR')
+          .filter((x) => !x.toDate)
+          .map((x) => {
+            const pty = partyById.get(x.partyId);
+            if (!pty || pty.type !== 'PERSON' || !pty.personId) return null;
+            const person = personById.get(pty.personId) ?? null;
+            if (!person) return null;
+            const email = String(person.email ?? '').trim().toLowerCase();
+            if (!email) return null;
+            return { fullName: person.fullName, email };
+          })
+          .filter(Boolean) as Array<{ fullName: string; email: string }>;
+
+        const directorSigner = shareholderDirectors[0] ?? null;
+        if (!directorSigner) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+        const shareholderCompanyAddress =
+          (shareholderClient?.registeredOfficeAddress ?? shareholderClient?.address ?? '').trim() || '______________________________';
+
+        const certHtml = templates.renderCertificateOfAppointmentOfCorporateRepresentativeHtml({
+          shareholderCompanyName,
+          shareholderCompanyRegistrationNo,
+          shareholderCompanyAddress,
+          targetCompanyName: companyName,
+          representativeName: rep.representativeName,
+          representativeAddress: rep.representativeAddress,
+          witnessIdNo: rep.representativeIdNo,
+          witnessPhone: rep.representativePhone,
+          witnessEmail: repEmail,
+          directorSignerName: directorSigner.fullName,
+          directorSignerEmail: directorSigner.email,
+          dateYmd: noticeDateYmd || now.slice(0, 10),
+        });
+        const certDoc: Document = {
+          id: newId('doc'),
+          type: 'CO_UPD',
+          title: `Certificate of Appointment of Corporate Representative - ${shareholderCompanyName}`,
+          html: certHtml,
+          sha256: sha256Hex(certHtml),
+          createdAt: now,
+        };
+        db.documents.unshift(certDoc);
+
+        const certPacket: SignaturePacket = {
+          id: newId('spk'),
+          kind: 'CO_UPD',
+          relatedType: 'COMPANY_UPDATE',
+          relatedId: id,
+          documentId: certDoc.id,
+          status: 'SIGNING',
+          createdAt: now,
+          updatedAt: now,
+        };
+        db.signaturePackets.unshift(certPacket);
+
+        for (const dir of shareholderDirectors) {
+          const token = newToken();
+          const req: SignatureRequest = {
+            id: newId('sgr'),
+            packetId: certPacket.id,
+            email: dir.email,
+            tokenHash: sha256Hex(token),
+            expiresAt,
+            status: 'PENDING',
+            createdAt: now,
+            updatedAt: now,
+          };
+          db.signatureRequests.unshift(req);
+          signLinks.push({ email: req.email, url: `/sign/${token}`, title: `corporate representative certificate - ${shareholderCompanyName}` });
+        }
+      }
     }
 
-    const shareholderEmails = Array.from(
-      new Set(
-        shareholders
-          .map((s) => String(s.email ?? '').trim())
-          .filter(Boolean)
-          .map((e) => e.toLowerCase()),
-      ),
-    );
+    if (!personShareholderNames.has(chairman)) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     const noticeSignerEmail =
       (directorSendingNotice
@@ -8424,7 +8531,7 @@ export async function createCompanyUpdateRequest(input: {
       chairman,
       oldCompanyName: companyName,
       newCompanyName,
-      shareholders,
+      shareholders: minutesSigners,
     });
     const minutesDoc: Document = {
       id: newId('doc'),
@@ -8444,14 +8551,14 @@ export async function createCompanyUpdateRequest(input: {
       relatedType: 'COMPANY_UPDATE',
       relatedId: id,
       documentId: minutesDoc.id,
-      status: shareholderEmails.length ? 'SIGNING' : 'SIGNED',
+      status: minutesSignerEmails.size ? 'SIGNING' : 'SIGNED',
       createdAt: now,
       updatedAt: now,
     };
     db.signaturePackets.unshift(minutesPacket);
 
-    if (shareholderEmails.length) {
-      for (const emailKey of shareholderEmails) {
+    if (minutesSignerEmails.size) {
+      for (const emailKey of Array.from(minutesSignerEmails)) {
         const token = newToken();
         const req: SignatureRequest = {
           id: newId('sgr'),

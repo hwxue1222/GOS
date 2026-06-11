@@ -16,7 +16,7 @@ type CompanyApiResponse = {
     directors: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
     shareholders: Array<
       | { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }
-      | { role: { id: string }; entity: { type: 'COMPANY'; company: { name: string } } }
+      | { role: { id: string }; entity: { type: 'COMPANY'; company: { id: string; code: string; name: string } } }
     >;
     rorc: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } | { type: 'COMPANY'; company: { name: string } } }>;
     secretaries: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;

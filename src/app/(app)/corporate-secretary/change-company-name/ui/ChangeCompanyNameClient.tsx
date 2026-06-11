@@ -1,12 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { formatDateDMY } from '@/lib/date';
+
+type CorporateRepresentativeDraft = {
+  shareholderCompanyClientId: string;
+  representativeName: string;
+  representativeIdNo: string;
+  representativeAddress: string;
+  representativeEmail: string;
+  representativePhone: string;
+};
 
 export default function ChangeCompanyNameClient() {
   const router = useRouter();
@@ -19,13 +28,42 @@ export default function ChangeCompanyNameClient() {
   const [meetingDate, setMeetingDate] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
+  const [corporateRepresentatives, setCorporateRepresentatives] = useState<Record<string, CorporateRepresentativeDraft>>({});
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const directors = roles?.directors ?? [];
   const shareholders = roles?.shareholders ?? [];
-  const shareholderNames = shareholders.map((s) => (s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name));
+  const shareholderPersonNames = shareholders
+    .filter((s) => s.entity.type === 'PERSON')
+    .map((s) => (s.entity.type === 'PERSON' ? s.entity.person.fullName : ''))
+    .filter(Boolean);
+
+  const shareholderCompanies = shareholders.filter((s) => s.entity.type === 'COMPANY') as Array<{
+    role: { id: string };
+    entity: { type: 'COMPANY'; company: { id: string; code: string; name: string } };
+  }>;
+
+  useEffect(() => {
+    if (!shareholderCompanies.length) return;
+    setCorporateRepresentatives((prev) => {
+      const next = { ...prev };
+      for (const s of shareholderCompanies) {
+        const id = s.entity.company.id;
+        if (next[id]) continue;
+        next[id] = {
+          shareholderCompanyClientId: id,
+          representativeName: '',
+          representativeIdNo: '',
+          representativeAddress: '',
+          representativeEmail: '',
+          representativePhone: '',
+        };
+      }
+      return next;
+    });
+  }, [shareholderCompanies.map((s) => s.entity.company.id).join('|')]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -47,9 +85,33 @@ export default function ChangeCompanyNameClient() {
       setSubmitError('Chairman is required.');
       return;
     }
-    if (!shareholderNames.some((n) => n.trim() === nextChairman)) {
+    if (!shareholderPersonNames.some((n) => n.trim() === nextChairman)) {
       setSubmitError('Chairman must be a shareholder.');
       return;
+    }
+
+    for (const s of shareholderCompanies) {
+      const d = corporateRepresentatives[s.entity.company.id];
+      if (!d) {
+        setSubmitError('Corporate representative details are required.');
+        return;
+      }
+      if (!d.representativeName.trim()) {
+        setSubmitError(`Corporate representative name is required for ${s.entity.company.name}.`);
+        return;
+      }
+      if (!d.representativeIdNo.trim()) {
+        setSubmitError(`Corporate representative ID no. is required for ${s.entity.company.name}.`);
+        return;
+      }
+      if (!d.representativeAddress.trim()) {
+        setSubmitError(`Corporate representative address is required for ${s.entity.company.name}.`);
+        return;
+      }
+      if (!d.representativeEmail.trim()) {
+        setSubmitError(`Corporate representative email is required for ${s.entity.company.name}.`);
+        return;
+      }
     }
     if (!nextDirectorSendingNotice) {
       setSubmitError('Director sending notice is required.');
@@ -104,6 +166,17 @@ export default function ChangeCompanyNameClient() {
             noticeDateYmd: nextNoticeDate,
             meetingVenue: nextVenue,
             useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
+            corporateRepresentatives: shareholderCompanies.map((s) => {
+              const d = corporateRepresentatives[s.entity.company.id];
+              return {
+                shareholderCompanyClientId: s.entity.company.id,
+                representativeName: String(d?.representativeName ?? '').trim(),
+                representativeIdNo: String(d?.representativeIdNo ?? '').trim(),
+                representativeAddress: String(d?.representativeAddress ?? '').trim(),
+                representativeEmail: String(d?.representativeEmail ?? '').trim(),
+                representativePhone: String(d?.representativePhone ?? '').trim(),
+              };
+            }),
           },
         }),
       }).catch(() => null);
@@ -132,6 +205,104 @@ export default function ChangeCompanyNameClient() {
             <span className="text-black/60">Original Company :</span> <span className="text-black">{client.name}</span>
           </div>
 
+          {shareholderCompanies.length ? (
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-black">Certificate of appointment of corporate representative</div>
+              {shareholderCompanies.map((s) => {
+                const company = s.entity.company;
+                const d = corporateRepresentatives[company.id] ?? {
+                  shareholderCompanyClientId: company.id,
+                  representativeName: '',
+                  representativeIdNo: '',
+                  representativeAddress: '',
+                  representativeEmail: '',
+                  representativePhone: '',
+                };
+                return (
+                  <div key={company.id} className="rounded-lg border border-black/10 p-4">
+                    <div className="text-sm text-black/80">Shareholder company: {company.name}</div>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3">
+                      <label className="sm:col-span-6 text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Name
+                        </div>
+                        <input
+                          value={d.representativeName}
+                          onChange={(e) =>
+                            setCorporateRepresentatives((prev) => ({
+                              ...prev,
+                              [company.id]: { ...d, representativeName: e.target.value },
+                            }))
+                          }
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-6 text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> ID no.
+                        </div>
+                        <input
+                          value={d.representativeIdNo}
+                          onChange={(e) =>
+                            setCorporateRepresentatives((prev) => ({
+                              ...prev,
+                              [company.id]: { ...d, representativeIdNo: e.target.value },
+                            }))
+                          }
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-6 text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Email
+                        </div>
+                        <input
+                          value={d.representativeEmail}
+                          onChange={(e) =>
+                            setCorporateRepresentatives((prev) => ({
+                              ...prev,
+                              [company.id]: { ...d, representativeEmail: e.target.value },
+                            }))
+                          }
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-6 text-sm">
+                        <div className="text-black">Phone</div>
+                        <input
+                          value={d.representativePhone}
+                          onChange={(e) =>
+                            setCorporateRepresentatives((prev) => ({
+                              ...prev,
+                              [company.id]: { ...d, representativePhone: e.target.value },
+                            }))
+                          }
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-12 text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Address
+                        </div>
+                        <textarea
+                          value={d.representativeAddress}
+                          onChange={(e) =>
+                            setCorporateRepresentatives((prev) => ({
+                              ...prev,
+                              [company.id]: { ...d, representativeAddress: e.target.value },
+                            }))
+                          }
+                          rows={3}
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <label className="sm:col-span-12 text-sm">
               <div className="text-black">
@@ -154,14 +325,13 @@ export default function ChangeCompanyNameClient() {
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Select</option>
-                {shareholders.map((s) => (
-                  <option
-                    key={s.role.id}
-                    value={s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name}
-                  >
-                    {s.entity.type === 'PERSON' ? s.entity.person.fullName : s.entity.company.name}
-                  </option>
-                ))}
+                {shareholders
+                  .filter((s): s is { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } } => s.entity.type === 'PERSON')
+                  .map((s) => (
+                    <option key={s.role.id} value={s.entity.person.fullName}>
+                      {s.entity.person.fullName}
+                    </option>
+                  ))}
               </select>
             </label>
 
