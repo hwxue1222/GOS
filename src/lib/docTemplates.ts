@@ -237,6 +237,7 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
 }) {
   const signer = [{ fullName: input.chairman, email: input.chairmanEmail }];
   const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  const meetingLong = toDayOfMonthLong(input.meetingDateYmd);
   return `
 <!doctype html>
 <html>
@@ -245,35 +246,34 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Notice of Extraordinary General Meeting</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
-      .title { font-weight: 700; margin-top: 10px; }
-      .muted { color: #444; }
-      .block { margin-top: 12px; }
-      .row { display: flex; gap: 16px; }
-      .row > div { flex: 1; }
-      ul { margin: 8px 0 0 18px; }
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .center { text-align: center; }
+      .block { margin-top: 10px; }
+      .u { text-decoration: underline; text-underline-offset: 3px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 220px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
     </style>
   </head>
   <body>
-    <div>Date: ${esc(toDdMmYyyy(input.noticeDateYmd))}</div>
     <div class="title">${esc(input.companyName)}</div>
-    ${input.companyRegistrationNo ? `<div class="muted">Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+    ${input.companyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+    <div>(Incorporated in the Republic of Singapore)</div>
 
-    <div class="title block">NOTICE OF EXTRAORDINARY GENERAL MEETING</div>
-    <div class="block">NOTICE IS HEREBY GIVEN that an Extraordinary General Meeting of the Company will be held on <strong>${esc(toDdMmYyyy(input.meetingDateYmd))}</strong> at <strong>${esc(input.meetingVenue)}</strong> for the following purpose:</div>
+    <div class="block title center">NOTICE OF EXTRAORDINARY GENERAL MEETING</div>
+    <div class="block">NOTICE IS HEREBY GIVEN THAT an Extraordinary General Meeting of the Company will be held at <span class="u">&nbsp;&nbsp;&nbsp;</span> ${esc(input.meetingVenue)} <span class="u">&nbsp;&nbsp;&nbsp;</span> on the ${esc(meetingLong)} at 10.00 a.m. for the purpose of considering and, if thought fit, passing the following resolution(s):-</div>
 
-    <div class="block"><strong>ORDINARY BUSINESS</strong></div>
-    <ol>
-      <li>
-        <strong>Change of Company Name</strong>
-        <div class="block">To consider and, if thought fit, to pass the following resolution:</div>
-        <div class="block"><strong>RESOLVED</strong> that the name of the Company be changed to <strong>${esc(input.newCompanyName)}</strong> and that the Directors of the Company be authorised to do all acts, deeds and things necessary to give effect to this resolution.</div>
-      </li>
-    </ol>
+    <div class="block"><strong>SPECIAL RESOLUTION</strong></div>
+    <div class="block"><strong>THE PROPOSED CHANGE OF NAME OF THE COMPANY</strong></div>
+    <div class="block">subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.companyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.companyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
+    <div class="block">each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
 
-    <div class="block">By Order of the Board</div>
+    <div class="block"><strong>BY ORDER OF THE BOARD</strong></div>
     ${blocks}
-    <div class="muted">Chairman</div>
+    <div class="block">DIRECTOR</div>
+    <div class="block">Date: ${esc(toDdMmYyyy(input.noticeDateYmd))}</div>
   </body>
 </html>
 `.trim();
@@ -289,7 +289,7 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
   newCompanyName: string;
   shareholders?: Array<{ fullName: string; email?: string }>;
 }) {
-  const blocks = signatureBlocksByEmail({ signers: input.shareholders ?? [], label: 'Shareholder:' });
+  const blocks = signatureBlocksByEmail({ signers: input.shareholders ?? [], label: '' });
   return `
 <!doctype html>
 <html>
@@ -298,45 +298,72 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Minutes of Extraordinary General Meeting</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
-      .title { font-weight: 700; margin-top: 10px; }
-      .muted { color: #444; }
-      .block { margin-top: 12px; }
-      .kv { margin-top: 10px; }
-      .kv div { margin-top: 4px; }
-      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; margin-top: 18px; }
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .block { margin-top: 10px; }
+      .u { text-decoration: underline; text-underline-offset: 3px; }
+      .sig-line { width: 240px; height: 26px; border-bottom: 1px solid #111; margin-top: 18px; }
+      .sig-block { margin-top: 14px; }
+      .sig-line2 { width: 220px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
     </style>
   </head>
   <body>
     <div class="title">${esc(input.companyName)}</div>
-    ${input.companyRegistrationNo ? `<div class="muted">Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+    ${input.companyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+    <div>(Incorporated in the Republic of Singapore)</div>
 
-    <div class="title block">MINUTES OF EXTRAORDINARY GENERAL MEETING</div>
+    <div class="block title">MINUTES OF EXTRAORDINARY GENERAL MEETING</div>
+    <div class="block">Minutes of the Extraordinary General Meeting of the Company held at <span class="u">__</span>${esc(input.meetingVenue)}<span class="u">&nbsp;&nbsp;</span> on <span class="u">&nbsp;&nbsp;</span>${esc(toDdMmYyyy(input.meetingDateYmd))} 10:00</div>
 
-    <div class="kv">
-      <div><span class="muted">Date:</span> ${esc(toDdMmYyyy(input.meetingDateYmd))}</div>
-      <div><span class="muted">Venue:</span> ${esc(input.meetingVenue)}</div>
-      <div><span class="muted">Chairman:</span> ${esc(input.chairman)}</div>
-    </div>
+    <div class="block"><strong>PRESENT:</strong></div>
+    <div class="block"><span class="u">_____________</span></div>
+    <div class="block">${blocks || '-'}</div>
 
-    <div class="block"><strong>PRESENT</strong></div>
-    <div class="block">${blocks || '<div class="muted">-</div>'}</div>
+    <div class="block">Chairman: <strong>${esc(input.chairman)}</strong> was in the chair.</div>
+    <div class="block">Notice of Meeting: The notice was taken as read.</div>
 
-    <div class="block"><strong>1. CHANGE OF COMPANY NAME</strong></div>
-    <div class="block">The Chairman informed the meeting that it was proposed to change the name of the Company from <strong>${esc(input.oldCompanyName)}</strong> to <strong>${esc(input.newCompanyName)}</strong>.</div>
+    <div class="block"><strong>SPECIAL RESOLUTION</strong></div>
+    <div class="block"><strong>THE PROPOSED CHANGE OF NAME OF THE COMPANY</strong></div>
+    <div class="block">subject to the approval of the Accounting and Corporate Regulatory Authority of Singapore (“ACRA”), the name of the Company be and is changed from “${esc(input.oldCompanyName)}” to “${esc(input.newCompanyName)}” and that the name “${esc(input.newCompanyName)}” be substituted for “${esc(input.oldCompanyName)}” wherever the latter name appears in the Constitution of the Company; and</div>
+    <div class="block">each of the Directors of the Company be and is hereby authorised to complete and do all such acts and things (including executing or amending all such documents as may be required) as he may consider expedient, necessary or appropriate to give effect to this resolution as he may deem fit.</div>
 
-    <div class="block"><strong>RESOLVED</strong> that the name of the Company be changed to <strong>${esc(input.newCompanyName)}</strong> and that the Directors be authorised to lodge all necessary filings and do all acts, deeds and things to give effect to this resolution.</div>
+    <div class="block">There being no other business, the meeting ended with a vote of thanks to the Chairman.</div>
 
-    <div class="block"><strong>2. CONCLUSION</strong></div>
-    <div class="block">There being no other business, the meeting ended.</div>
-
-    <div class="block">Confirmed as a correct record,</div>
+    <div class="block">Certified as a True Record of Minutes</div>
     <div class="sig-line"></div>
-    <div class="block">${esc(input.chairman)}</div>
-    <div class="muted">Chairman</div>
+    <div class="block">Name: ${esc(input.chairman)}</div>
+    <div class="block">Chairman</div>
+    <div class="block">Date: ${esc(toDdMmYyyy(input.meetingDateYmd))}</div>
   </body>
 </html>
 `.trim();
+}
+
+function toDayOfMonthLong(ymd: string) {
+  const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  const yyyy = Number(m[1]);
+  const mm = Number(m[2]);
+  const dd = Number(m[3]);
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const month = months[mm - 1] ?? '';
+  const suffix = dd % 100 >= 11 && dd % 100 <= 13 ? 'th' : dd % 10 === 1 ? 'st' : dd % 10 === 2 ? 'nd' : dd % 10 === 3 ? 'rd' : 'th';
+  return `${dd}${suffix} day of ${month} ${yyyy}`;
 }
 
 export function renderDirectorConsentToActHtml(input: {

@@ -15,7 +15,7 @@ export default function ChangeCompanyNameClient() {
 
   const [newCompanyName, setNewCompanyName] = useState('');
   const [chairman, setChairman] = useState('');
-  const [noticeSigner, setNoticeSigner] = useState('');
+  const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
@@ -29,7 +29,7 @@ export default function ChangeCompanyNameClient() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();
     const nextChairman = chairman.trim();
-    const nextNoticeSigner = noticeSigner.trim();
+    const nextDirectorSendingNotice = directorSendingNotice.trim();
     const nextMeetingDate = meetingDate.trim();
     const nextNoticeDate = noticeDate.trim();
     const nextVenue = meetingVenue.trim();
@@ -45,8 +45,8 @@ export default function ChangeCompanyNameClient() {
       setSubmitError('Chairman is required.');
       return;
     }
-    if (!nextNoticeSigner) {
-      setSubmitError('Notice signer is required.');
+    if (!nextDirectorSendingNotice) {
+      setSubmitError('Director sending notice is required.');
       return;
     }
     if (!nextMeetingDate) {
@@ -93,7 +93,7 @@ export default function ChangeCompanyNameClient() {
             originalCompanyName: client.name,
             newCompanyName: nextName,
             chairman: nextChairman,
-            noticeSigner: nextNoticeSigner,
+            directorSendingNotice: nextDirectorSendingNotice,
             meetingDate: nextMeetingDate,
             noticeDateYmd: nextNoticeDate,
             meetingVenue: nextVenue,
@@ -156,25 +156,7 @@ export default function ChangeCompanyNameClient() {
               </select>
             </label>
 
-            <label className="sm:col-span-4 text-sm">
-              <div className="text-black">
-                <span className="text-red-500">*</span> Notice signer :
-              </div>
-              <select
-                value={noticeSigner}
-                onChange={(e) => setNoticeSigner(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Select</option>
-                {directors.map((d) => (
-                  <option key={d.role.id} value={d.entity.person.fullName}>
-                    {d.entity.person.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="sm:col-span-4 text-sm">
+            <label className="sm:col-span-8 text-sm">
               <div className="text-black">
                 <span className="text-red-500">*</span> Meeting date :
               </div>
@@ -186,7 +168,25 @@ export default function ChangeCompanyNameClient() {
               />
             </label>
 
-            <label className="sm:col-span-4 text-sm">
+            <label className="sm:col-span-6 text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Director sending notice :
+              </div>
+              <select
+                value={directorSendingNotice}
+                onChange={(e) => setDirectorSendingNotice(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Select</option>
+                {directors.map((d) => (
+                  <option key={d.role.id} value={d.entity.person.fullName}>
+                    {d.entity.person.fullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="sm:col-span-6 text-sm">
               <div className="text-black">
                 <span className="text-red-500">*</span> Notice date :
               </div>

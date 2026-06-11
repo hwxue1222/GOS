@@ -8133,11 +8133,15 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
-    const noticeSigner = String((p as { noticeSigner?: unknown }).noticeSigner ?? '').trim();
+    const directorSendingNotice = String(
+      (p as { directorSendingNotice?: unknown; noticeSigner?: unknown }).directorSendingNotice ??
+        (p as { directorSendingNotice?: unknown; noticeSigner?: unknown }).noticeSigner ??
+        '',
+    ).trim();
     const meetingDate = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
-    if (!newCompanyName || !chairman || !noticeSigner || !meetingDate || !noticeDateYmd || !meetingVenue) {
+    if (!newCompanyName || !chairman || !directorSendingNotice || !meetingDate || !noticeDateYmd || !meetingVenue) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
     if (!isYmd(meetingDate) || !isYmd(noticeDateYmd)) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -8312,7 +8316,11 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
-    const noticeSigner = String((p as { noticeSigner?: unknown }).noticeSigner ?? '').trim();
+    const directorSendingNotice = String(
+      (p as { directorSendingNotice?: unknown; noticeSigner?: unknown }).directorSendingNotice ??
+        (p as { directorSendingNotice?: unknown; noticeSigner?: unknown }).noticeSigner ??
+        '',
+    ).trim();
     const meetingDateYmd = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
@@ -8345,7 +8353,7 @@ export async function createCompanyUpdateRequest(input: {
     );
 
     const noticeSignerEmail =
-      directors.find((d) => d.person.fullName.trim() === noticeSigner && (d.person.email ?? '').trim())?.person.email ?? '';
+      directors.find((d) => d.person.fullName.trim() === directorSendingNotice && (d.person.email ?? '').trim())?.person.email ?? '';
     if (!noticeSignerEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
     const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
@@ -8354,7 +8362,7 @@ export async function createCompanyUpdateRequest(input: {
       noticeDateYmd,
       meetingDateYmd,
       meetingVenue,
-      chairman: noticeSigner,
+      chairman: directorSendingNotice,
       chairmanEmail: noticeSignerEmail,
       newCompanyName,
     });
