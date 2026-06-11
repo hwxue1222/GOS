@@ -271,6 +271,7 @@ export type DirectorChangeRequest = {
   createdByUserId: string;
   status: DirectorChangeRequestStatus;
   effectiveDate: string;
+  resignationDateYmd?: string;
   message?: string;
   useByBridgeNomineeDirector?: boolean;
   removeDirectorRoleIds: string[];

@@ -181,6 +181,50 @@ export function renderSecretaryResignationLetterHtml(input: {
 `.trim();
 }
 
+export function renderDirectorResignationLetterHtml(input: {
+  companyName: string;
+  resignedDirector: { fullName: string; email?: string };
+  dateYmd: string;
+  resignationDateYmd?: string;
+}) {
+  const signer = [{ fullName: input.resignedDirector.fullName, email: input.resignedDirector.email }];
+  const blocks = signatureBlocksByEmail({ signers: signer, label: '' });
+  const resignationLine = input.resignationDateYmd
+    ? `I hereby tender my resignation as Director of the Company with effect from ${esc(toDdMmYyyy(input.resignationDateYmd))}.`
+    : 'I hereby tender my resignation as Director of the Company with immediate effect.';
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Letter of Resignation</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
+      .block { margin-top: 12px; }
+      .sig-block { margin-top: 18px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; position: relative; margin-top: 10px; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <div>Date: ${esc(toDdMmYyyy(input.dateYmd))}</div>
+    <div class="block">The Board of Directors</div>
+    <div>${esc(input.companyName)}</div>
+    <div class="block">Dear Sirs,</div>
+
+    <div class="block"><strong>LETTER OF RESIGNATION</strong></div>
+    <div class="block">${resignationLine}</div>
+    <div class="block">I acknowledge that I shall henceforth have no further claims against the Company in respect of all matters and disputes which have arisen prior to this date on the understanding that the Company shall likewise have no claims whatsoever against me.</div>
+    <div class="block">Yours faithfully</div>
+
+    ${blocks}
+  </body>
+</html>
+`.trim();
+}
+
 export function renderDirectorConsentToActHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;

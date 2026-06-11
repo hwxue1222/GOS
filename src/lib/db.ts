@@ -7690,6 +7690,11 @@ export async function createDirectorChangeRequest(input: {
       idTypeLabel: toIdTypeLabel((d.person as any).idType, (d.person as any).idNo),
     }));
 
+  const resignedSignerRows = directors.filter((d) => removeDirectorRoleIds.includes(d.role.id));
+  if (resignedSignerRows.some((d) => !String(d.person.email ?? '').trim())) {
+    return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  }
+
   const appointedDirectors = cleanedAdd.map((d) => ({
     fullName: d.fullName,
     idNo: d.idNo,
@@ -7801,12 +7806,58 @@ export async function createDirectorChangeRequest(input: {
     signLinks.push({ email: d.email, url: `/sign/${token}`, title: `consent to act as director - ${client.name}` });
   }
 
+  for (const resigned of resignedSignerRows) {
+    const letterHtml = templates.renderDirectorResignationLetterHtml({
+      companyName: client.name,
+      resignedDirector: { fullName: resigned.person.fullName, email: resigned.person.email },
+      dateYmd: now.slice(0, 10),
+      resignationDateYmd: resignationDateYmd || undefined,
+    });
+
+    const letterDoc: Document = {
+      id: newId('doc'),
+      type: 'DIR_CHG',
+      title: `Resignation Letter - Director - ${client.name} - ${resigned.person.fullName}`,
+      html: letterHtml,
+      sha256: sha256Hex(letterHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(letterDoc);
+
+    const letterPacket: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'DIR_CHG',
+      relatedType: 'DIRECTOR_CHANGE',
+      relatedId: id,
+      documentId: letterDoc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(letterPacket);
+
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: letterPacket.id,
+      email: String(resigned.person.email).trim().toLowerCase(),
+      tokenHash: sha256Hex(token),
+      expiresAt,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    signLinks.push({ email: req.email, url: `/sign/${token}`, title: `resignation letter - director - ${client.name}` });
+  }
+
   const request: DirectorChangeRequest = {
     id,
     clientId: input.clientId,
     createdByUserId: input.createdByUserId,
     status: 'PENDING_SIGNATURES',
     effectiveDate,
+    resignationDateYmd: resignationDateYmd || undefined,
     message: typeof input.message === 'string' ? input.message : undefined,
     useByBridgeNomineeDirector,
     removeDirectorRoleIds,
@@ -7852,7 +7903,11 @@ export async function decideDirectorChangeRequest(input: {
     for (const roleId of r.removeDirectorRoleIds) {
       const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'DIRECTOR');
       if (roleIdx >= 0) {
-        db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], resignationDate: r.effectiveDate, updatedAt: now };
+        db.clientPartyRoles[roleIdx] = {
+          ...db.clientPartyRoles[roleIdx],
+          resignationDate: (r as { resignationDateYmd?: string }).resignationDateYmd ?? r.effectiveDate,
+          updatedAt: now,
+        };
       }
     }
 
