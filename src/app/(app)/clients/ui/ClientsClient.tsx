@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
+import { formatDateDMY } from '@/lib/date';
 
 import type { Role } from '@/lib/types';
 
@@ -63,7 +64,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
     if (!search.trim()) return clients;
     return clients.filter((c) =>
       textMatch(
-        `${c.code} ${c.name} ${c.fka ?? ''} ${c.companyRegistrationNo ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
+        `${c.code} ${c.name} ${c.fka ?? ''} ${c.companyRegistrationNo ?? ''} ${c.incorporationDate ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
         search,
       ),
     );
@@ -161,6 +162,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Code</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Client</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Reg no.</th>
+                <th className="px-2 py-2 font-medium whitespace-nowrap">Incorporation date</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">FYE</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Contact</th>
                 <th className="px-2 py-2 font-medium whitespace-nowrap">Address</th>
@@ -186,6 +188,11 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
                   <td className="px-2 py-2 min-w-[120px] max-w-[160px]">
                     <div className="leading-tight break-words" title={c.companyRegistrationNo ?? ''}>
                       {c.companyRegistrationNo?.trim() ? c.companyRegistrationNo : '-'}
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 min-w-[120px] max-w-[140px]">
+                    <div className="leading-tight break-words" title={c.incorporationDate ?? ''}>
+                      {c.incorporationDate?.trim() ? formatDateDMY(c.incorporationDate) : '-'}
                     </div>
                   </td>
                   <td className="px-2 py-2 min-w-[90px] max-w-[120px]">
@@ -217,7 +224,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               ))}
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={9} className="px-4 py-10 text-center text-black/50">
                     No clients
                   </td>
                 </tr>

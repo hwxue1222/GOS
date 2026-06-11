@@ -14,6 +14,7 @@ type Client = {
   name: string;
   fka?: string;
   companyRegistrationNo?: string;
+  incorporationDate?: string;
   fye?: string;
   contactPerson?: string;
   address?: string;
@@ -462,6 +463,14 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                     disabled={!canUpdateClient}
                     value={draft.companyRegistrationNo}
                     onChange={(e) => setDraft((v) => ({ ...v, companyRegistrationNo: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Incorporation date</div>
+                  <input
+                    disabled
+                    value={client.incorporationDate?.trim() ? formatDateDMY(client.incorporationDate) : '-'}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
