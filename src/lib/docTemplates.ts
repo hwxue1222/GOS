@@ -258,7 +258,7 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
   newCompanyName: string;
 }) {
   const signer = [{ fullName: input.chairman, email: input.chairmanEmail }];
-  const blocks = signatureLineBlocks({ signers: signer, nameColor: '#ee0000' });
+  const blocks = signatureLineBlocks({ signers: signer });
   const meetingLong = toDayOfMonthLong(input.meetingDateYmd);
   return `
 <!doctype html>
@@ -310,7 +310,7 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
   newCompanyName: string;
   shareholders?: Array<{ fullName: string; email?: string }>;
 }) {
-  const blocks = signatureLineBlocks({ signers: input.shareholders ?? [], nameColor: '#ee0000' });
+  const blocks = signatureLineBlocks({ signers: input.shareholders ?? [] });
   return `
 <!doctype html>
 <html>
@@ -339,7 +339,6 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
     <div class="block">Minutes of the Extraordinary General Meeting of the Company held at&nbsp;&nbsp;${esc(input.meetingVenue)}&nbsp;&nbsp;on&nbsp;&nbsp;${esc(toDdMmYyyy(input.meetingDateYmd))} 10:00</div>
 
     <div class="block"><strong>PRESENT:</strong></div>
-    <div class="block">_____________</div>
     <div class="block">${blocks || '-'}</div>
 
     <div class="block">Chairman&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;${esc(input.chairman)} was in the chair.</div>
