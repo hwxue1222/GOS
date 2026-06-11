@@ -29,7 +29,7 @@ export default function ApplicationDetailShell(props: {
             <div className="flex items-center gap-3">
               {props.statusBadge ? <div>{props.statusBadge}</div> : null}
               {props.headerActions ? <div>{props.headerActions}</div> : null}
-              <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
+              <Link href="/dashboard" className="text-sm text-[#2f7bdc] hover:underline">
                 Back
               </Link>
             </div>
@@ -46,4 +46,3 @@ export default function ApplicationDetailShell(props: {
     </div>
   );
 }
-
