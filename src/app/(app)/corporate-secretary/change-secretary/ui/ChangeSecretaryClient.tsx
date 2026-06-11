@@ -811,18 +811,27 @@ export default function ChangeSecretaryClient() {
 
           <div>
             <div className="text-sm font-medium text-black">Resignation of secretary</div>
-            <select
-              value={removeSecretaryRoleId}
-              onChange={(e) => setRemoveSecretaryRoleId(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-            >
-              <option value=""></option>
-              {existing.map((r) => (
-                <option key={r.role.id} value={r.role.id}>
-                  {r.entity.person.fullName}
-                </option>
-              ))}
-            </select>
+            <div className="mt-2 space-y-2">
+              {existing.length ? (
+                existing.map((r) => (
+                  <label key={r.role.id} className="flex items-center gap-2 text-sm text-black/80">
+                    <input
+                      type="checkbox"
+                      checked={removeSecretaryRoleId === r.role.id}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setRemoveSecretaryRoleId(checked ? r.role.id : '');
+                        setSubmitError(null);
+                      }}
+                      className="h-4 w-4"
+                    />
+                    {r.entity.person.fullName}
+                  </label>
+                ))
+              ) : (
+                <div className="text-xs text-black/50">No secretaries found.</div>
+              )}
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-black/80">
