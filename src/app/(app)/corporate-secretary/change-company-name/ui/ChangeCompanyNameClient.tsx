@@ -14,7 +14,8 @@ export default function ChangeCompanyNameClient() {
 
   const [newCompanyName, setNewCompanyName] = useState('');
   const [chairman, setChairman] = useState('');
-  const [startDate, setStartDate] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [noticeDate, setNoticeDate] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -26,11 +27,28 @@ export default function ChangeCompanyNameClient() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();
     const nextChairman = chairman.trim();
-    const nextStartDate = startDate.trim();
+    const nextMeetingDate = meetingDate.trim();
+    const nextNoticeDate = noticeDate.trim();
     const nextVenue = meetingVenue.trim();
-    if (!companyId || !client || !nextName || !nextChairman || !nextStartDate || !nextVenue) {
+    if (!companyId || !client || !nextName || !nextChairman || !nextMeetingDate || !nextNoticeDate || !nextVenue) {
       setSubmitError('Please fill all required fields.');
       return;
+    }
+
+    const isYmd = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (!isYmd(nextMeetingDate) || !isYmd(nextNoticeDate)) {
+      setSubmitError('Please enter valid dates.');
+      return;
+    }
+    {
+      const md = new Date(`${nextMeetingDate}T00:00:00.000Z`);
+      const nd = new Date(`${nextNoticeDate}T00:00:00.000Z`);
+      const min = new Date(md);
+      min.setUTCDate(min.getUTCDate() - 14);
+      if (!(nd.getTime() <= min.getTime())) {
+        setSubmitError('Notice date must be at least 14 days earlier than Meeting date.');
+        return;
+      }
     }
     setSubmitting(true);
     try {
@@ -43,7 +61,8 @@ export default function ChangeCompanyNameClient() {
             originalCompanyName: client.name,
             newCompanyName: nextName,
             chairman: nextChairman,
-            startDate: nextStartDate,
+            meetingDate: nextMeetingDate,
+            noticeDateYmd: nextNoticeDate,
             meetingVenue: nextVenue,
             useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
           },
@@ -105,12 +124,24 @@ export default function ChangeCompanyNameClient() {
 
             <label className="sm:col-span-8 text-sm">
               <div className="text-black">
-                <span className="text-red-500">*</span> Start Time :
+                <span className="text-red-500">*</span> Meeting date :
               </div>
               <input
                 type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="sm:col-span-4 text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Notice date :
+              </div>
+              <input
+                type="date"
+                value={noticeDate}
+                onChange={(e) => setNoticeDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>
@@ -153,4 +184,3 @@ export default function ChangeCompanyNameClient() {
     </ModalShell>
   );
 }
-

@@ -8128,9 +8128,18 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
-    const startDate = String(p.startDate ?? '').trim();
+    const meetingDate = String(p.meetingDate ?? p.startDate ?? '').trim();
+    const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
-    if (!newCompanyName || !chairman || !startDate || !meetingVenue) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!newCompanyName || !chairman || !meetingDate || !noticeDateYmd || !meetingVenue) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!isYmd(meetingDate) || !isYmd(noticeDateYmd)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    {
+      const md = new Date(`${meetingDate}T00:00:00.000Z`);
+      const nd = new Date(`${noticeDateYmd}T00:00:00.000Z`);
+      const min = new Date(md);
+      min.setUTCDate(min.getUTCDate() - 14);
+      if (!(nd.getTime() <= min.getTime())) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
   } else if (type === 'CHANGE_FINANCIAL_YEAR_END') {
     const newFye = String(p.newFye ?? '').trim();
     if (!newFye) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -8330,12 +8339,32 @@ export async function createCompanyUpdateRequest(input: {
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();
     const chairman = String(p.chairman ?? '').trim();
-    const meetingDateYmd = String(p.startDate ?? '').trim();
+    const meetingDateYmd = String(p.meetingDate ?? p.startDate ?? '').trim();
+    const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
+
+    const partyById = new Map(db.parties.map((x) => [x.id, x]));
+    const personById = new Map(db.persons.map((x) => [x.id, x]));
+    const shareholders = db.clientPartyRoles
+      .filter((r) => r.clientId === input.clientId)
+      .filter((r) => r.role === 'SHAREHOLDER')
+      .filter((r) => !r.toDate)
+      .map((r) => {
+        const party = partyById.get(r.partyId);
+        if (!party) return null;
+        if (party.type === 'PERSON' && party.personId) {
+          const p = personById.get(party.personId);
+          if (!p) return null;
+          return { fullName: p.fullName, email: p.email };
+        }
+        return { fullName: party.displayName, email: undefined };
+      })
+      .filter(Boolean) as Array<{ fullName: string; email?: string }>;
 
     const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
       companyName,
       companyRegistrationNo: client.companyRegistrationNo,
+      noticeDateYmd,
       meetingDateYmd,
       meetingVenue,
       chairman,
@@ -8369,6 +8398,7 @@ export async function createCompanyUpdateRequest(input: {
       chairman,
       oldCompanyName: companyName,
       newCompanyName,
+      shareholders,
     });
     const minutesDoc: Document = {
       id: newId('doc'),

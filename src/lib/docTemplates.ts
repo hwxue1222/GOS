@@ -228,6 +228,7 @@ export function renderDirectorResignationLetterHtml(input: {
 export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;
+  noticeDateYmd: string;
   meetingDateYmd: string;
   meetingVenue: string;
   chairman: string;
@@ -251,6 +252,7 @@ export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(i
     </style>
   </head>
   <body>
+    <div>Date: ${esc(toDdMmYyyy(input.noticeDateYmd))}</div>
     <div class="title">${esc(input.companyName)}</div>
     ${input.companyRegistrationNo ? `<div class="muted">Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
 
@@ -282,7 +284,9 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
   chairman: string;
   oldCompanyName: string;
   newCompanyName: string;
+  shareholders?: Array<{ fullName: string; email?: string }>;
 }) {
+  const blocks = signatureBlocksByEmail({ signers: input.shareholders ?? [], label: 'Shareholder:' });
   return `
 <!doctype html>
 <html>
@@ -311,6 +315,9 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
       <div><span class="muted">Venue:</span> ${esc(input.meetingVenue)}</div>
       <div><span class="muted">Chairman:</span> ${esc(input.chairman)}</div>
     </div>
+
+    <div class="block"><strong>PRESENT</strong></div>
+    <div class="block">${blocks || '<div class="muted">-</div>'}</div>
 
     <div class="block"><strong>1. CHANGE OF COMPANY NAME</strong></div>
     <div class="block">The Chairman informed the meeting that it was proposed to change the name of the Company from <strong>${esc(input.oldCompanyName)}</strong> to <strong>${esc(input.newCompanyName)}</strong>.</div>
