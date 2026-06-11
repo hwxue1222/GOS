@@ -225,6 +225,110 @@ export function renderDirectorResignationLetterHtml(input: {
 `.trim();
 }
 
+export function renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  meetingDateYmd: string;
+  meetingVenue: string;
+  chairman: string;
+  newCompanyName: string;
+}) {
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Notice of Extraordinary General Meeting</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
+      .title { font-weight: 700; margin-top: 10px; }
+      .muted { color: #444; }
+      .block { margin-top: 12px; }
+      .row { display: flex; gap: 16px; }
+      .row > div { flex: 1; }
+      ul { margin: 8px 0 0 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${esc(input.companyName)}</div>
+    ${input.companyRegistrationNo ? `<div class="muted">Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+
+    <div class="title block">NOTICE OF EXTRAORDINARY GENERAL MEETING</div>
+    <div class="block">NOTICE IS HEREBY GIVEN that an Extraordinary General Meeting of the Company will be held on <strong>${esc(toDdMmYyyy(input.meetingDateYmd))}</strong> at <strong>${esc(input.meetingVenue)}</strong> for the following purpose:</div>
+
+    <div class="block"><strong>ORDINARY BUSINESS</strong></div>
+    <ol>
+      <li>
+        <strong>Change of Company Name</strong>
+        <div class="block">To consider and, if thought fit, to pass the following resolution:</div>
+        <div class="block"><strong>RESOLVED</strong> that the name of the Company be changed to <strong>${esc(input.newCompanyName)}</strong> and that the Directors of the Company be authorised to do all acts, deeds and things necessary to give effect to this resolution.</div>
+      </li>
+    </ol>
+
+    <div class="block">By Order of the Board</div>
+    <div class="block">${esc(input.chairman)}</div>
+    <div class="muted">Chairman</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  meetingDateYmd: string;
+  meetingVenue: string;
+  chairman: string;
+  oldCompanyName: string;
+  newCompanyName: string;
+}) {
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Minutes of Extraordinary General Meeting</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 24px; color: #111; }
+      .title { font-weight: 700; margin-top: 10px; }
+      .muted { color: #444; }
+      .block { margin-top: 12px; }
+      .kv { margin-top: 10px; }
+      .kv div { margin-top: 4px; }
+      .sig-line { width: 260px; height: 26px; border-bottom: 1px solid #111; margin-top: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${esc(input.companyName)}</div>
+    ${input.companyRegistrationNo ? `<div class="muted">Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+
+    <div class="title block">MINUTES OF EXTRAORDINARY GENERAL MEETING</div>
+
+    <div class="kv">
+      <div><span class="muted">Date:</span> ${esc(toDdMmYyyy(input.meetingDateYmd))}</div>
+      <div><span class="muted">Venue:</span> ${esc(input.meetingVenue)}</div>
+      <div><span class="muted">Chairman:</span> ${esc(input.chairman)}</div>
+    </div>
+
+    <div class="block"><strong>1. CHANGE OF COMPANY NAME</strong></div>
+    <div class="block">The Chairman informed the meeting that it was proposed to change the name of the Company from <strong>${esc(input.oldCompanyName)}</strong> to <strong>${esc(input.newCompanyName)}</strong>.</div>
+
+    <div class="block"><strong>RESOLVED</strong> that the name of the Company be changed to <strong>${esc(input.newCompanyName)}</strong> and that the Directors be authorised to lodge all necessary filings and do all acts, deeds and things to give effect to this resolution.</div>
+
+    <div class="block"><strong>2. CONCLUSION</strong></div>
+    <div class="block">There being no other business, the meeting ended.</div>
+
+    <div class="block">Confirmed as a correct record,</div>
+    <div class="sig-line"></div>
+    <div class="block">${esc(input.chairman)}</div>
+    <div class="muted">Chairman</div>
+  </body>
+</html>
+`.trim();
+}
+
 export function renderDirectorConsentToActHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;

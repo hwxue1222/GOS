@@ -8327,6 +8327,70 @@ export async function createCompanyUpdateRequest(input: {
     signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
   }
 
+  if (type === 'CHANGE_COMPANY_NAME') {
+    const newCompanyName = String(p.newCompanyName ?? '').trim();
+    const chairman = String(p.chairman ?? '').trim();
+    const meetingDateYmd = String(p.startDate ?? '').trim();
+    const meetingVenue = String(p.meetingVenue ?? '').trim();
+
+    const noticeHtml = templates.renderNoticeOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
+      companyName,
+      companyRegistrationNo: client.companyRegistrationNo,
+      meetingDateYmd,
+      meetingVenue,
+      chairman,
+      newCompanyName,
+    });
+    const noticeDoc: Document = {
+      id: newId('doc'),
+      type: 'CO_UPD',
+      title: `Notice of Extraordinary General Meeting - Change of Company Name - ${companyName}`,
+      html: noticeHtml,
+      sha256: sha256Hex(noticeHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(noticeDoc);
+    db.signaturePackets.unshift({
+      id: newId('spk'),
+      kind: 'CO_UPD',
+      relatedType: 'COMPANY_UPDATE',
+      relatedId: id,
+      documentId: noticeDoc.id,
+      status: 'SIGNED',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const minutesHtml = templates.renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
+      companyName,
+      companyRegistrationNo: client.companyRegistrationNo,
+      meetingDateYmd,
+      meetingVenue,
+      chairman,
+      oldCompanyName: companyName,
+      newCompanyName,
+    });
+    const minutesDoc: Document = {
+      id: newId('doc'),
+      type: 'CO_UPD',
+      title: `Minutes of Extraordinary General Meeting - Change of Company Name - ${companyName}`,
+      html: minutesHtml,
+      sha256: sha256Hex(minutesHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(minutesDoc);
+    db.signaturePackets.unshift({
+      id: newId('spk'),
+      kind: 'CO_UPD',
+      relatedType: 'COMPANY_UPDATE',
+      relatedId: id,
+      documentId: minutesDoc.id,
+      status: 'SIGNED',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
   if (type === 'CHANGE_SECRETARY') {
     const payload = p as {
       addSecretaries?: unknown;
