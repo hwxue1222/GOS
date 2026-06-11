@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
-import { formatDateDMY, parseDateDMYToYmd } from '@/lib/date';
+import { formatDateDMY } from '@/lib/date';
 
 export default function ChangeCompanyNameClient() {
   const router = useRouter();
@@ -28,8 +28,8 @@ export default function ChangeCompanyNameClient() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();
     const nextChairman = chairman.trim();
-    const nextMeetingDateRaw = meetingDate.trim();
-    const nextNoticeDateRaw = noticeDate.trim();
+    const nextMeetingDate = meetingDate.trim();
+    const nextNoticeDate = noticeDate.trim();
     const nextVenue = meetingVenue.trim();
     if (!companyId || !client) {
       setSubmitError('Company not loaded.');
@@ -43,11 +43,11 @@ export default function ChangeCompanyNameClient() {
       setSubmitError('Chairman is required.');
       return;
     }
-    if (!nextMeetingDateRaw) {
+    if (!nextMeetingDate) {
       setSubmitError('Meeting date is required.');
       return;
     }
-    if (!nextNoticeDateRaw) {
+    if (!nextNoticeDate) {
       setSubmitError('Notice date is required.');
       return;
     }
@@ -56,20 +56,19 @@ export default function ChangeCompanyNameClient() {
       return;
     }
 
-    const meetingYmd = parseDateDMYToYmd(nextMeetingDateRaw);
-    if (!meetingYmd) {
-      setSubmitError('Meeting date must be DD/MM/YYYY.');
+    const isYmd = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (!isYmd(nextMeetingDate)) {
+      setSubmitError('Meeting date is invalid.');
       return;
     }
-    const noticeYmd = parseDateDMYToYmd(nextNoticeDateRaw);
-    if (!noticeYmd) {
-      setSubmitError('Notice date must be DD/MM/YYYY.');
+    if (!isYmd(nextNoticeDate)) {
+      setSubmitError('Notice date is invalid.');
       return;
     }
 
     {
-      const md = new Date(`${meetingYmd}T00:00:00.000Z`);
-      const nd = new Date(`${noticeYmd}T00:00:00.000Z`);
+      const md = new Date(`${nextMeetingDate}T00:00:00.000Z`);
+      const nd = new Date(`${nextNoticeDate}T00:00:00.000Z`);
       const latest = new Date(md);
       latest.setUTCDate(latest.getUTCDate() - 14);
       if (nd.getTime() > latest.getTime()) {
@@ -88,8 +87,8 @@ export default function ChangeCompanyNameClient() {
             originalCompanyName: client.name,
             newCompanyName: nextName,
             chairman: nextChairman,
-            meetingDate: meetingYmd,
-            noticeDateYmd: noticeYmd,
+            meetingDate: nextMeetingDate,
+            noticeDateYmd: nextNoticeDate,
             meetingVenue: nextVenue,
             useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
           },
@@ -155,11 +154,10 @@ export default function ChangeCompanyNameClient() {
                 <span className="text-red-500">*</span> Meeting date :
               </div>
               <input
+                type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                placeholder="DD/MM/YYYY"
-                inputMode="numeric"
               />
             </label>
 
@@ -168,11 +166,20 @@ export default function ChangeCompanyNameClient() {
                 <span className="text-red-500">*</span> Notice date :
               </div>
               <input
+                type="date"
                 value={noticeDate}
                 onChange={(e) => setNoticeDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                placeholder="DD/MM/YYYY"
-                inputMode="numeric"
+                max={
+                  meetingDate && /^\d{4}-\d{2}-\d{2}$/.test(meetingDate)
+                    ? (() => {
+                        const md = new Date(`${meetingDate}T00:00:00.000Z`);
+                        const latest = new Date(md);
+                        latest.setUTCDate(latest.getUTCDate() - 14);
+                        return latest.toISOString().slice(0, 10);
+                      })()
+                    : undefined
+                }
               />
             </label>
 
