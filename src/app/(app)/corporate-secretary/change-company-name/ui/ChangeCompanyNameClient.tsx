@@ -80,7 +80,7 @@ export default function ChangeCompanyNameClient() {
       return;
     }
     if (!nextName) {
-      setSubmitError('New Company is required.');
+      setSubmitError('Proposed new name is required.');
       return;
     }
     if (!nextChairman) {
@@ -331,7 +331,7 @@ export default function ChangeCompanyNameClient() {
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <label className="sm:col-span-12 text-sm">
               <div className="text-black">
-                <span className="text-red-500">*</span> New Company :
+                <span className="text-red-500">*</span> Proposed new name :
               </div>
               <input
                 value={newCompanyName}
