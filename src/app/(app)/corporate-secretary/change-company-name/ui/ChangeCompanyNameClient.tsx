@@ -11,6 +11,7 @@ import { formatDateDMY } from '@/lib/date';
 type CorporateRepresentativeDraft = {
   shareholderCompanyClientId: string;
   representativeName: string;
+  representativeIdType: 'PASSPORT' | 'NRIC' | 'FIN' | 'IC';
   representativeIdNo: string;
   representativeAddress: string;
   representativeEmail: string;
@@ -55,6 +56,7 @@ export default function ChangeCompanyNameClient() {
         next[id] = {
           shareholderCompanyClientId: id,
           representativeName: '',
+          representativeIdType: 'PASSPORT',
           representativeIdNo: '',
           representativeAddress: '',
           representativeEmail: '',
@@ -100,6 +102,10 @@ export default function ChangeCompanyNameClient() {
         setSubmitError(`Corporate representative name is required for ${s.entity.company.name}.`);
         return;
       }
+        if (!String((d as any).representativeIdType ?? '').trim()) {
+          setSubmitError(`Corporate representative ID type is required for ${s.entity.company.name}.`);
+          return;
+        }
       if (!d.representativeIdNo.trim()) {
         setSubmitError(`Corporate representative ID no. is required for ${s.entity.company.name}.`);
         return;
@@ -171,6 +177,7 @@ export default function ChangeCompanyNameClient() {
               return {
                 shareholderCompanyClientId: s.entity.company.id,
                 representativeName: String(d?.representativeName ?? '').trim(),
+                representativeIdType: String((d as any)?.representativeIdType ?? '').trim(),
                 representativeIdNo: String(d?.representativeIdNo ?? '').trim(),
                 representativeAddress: String(d?.representativeAddress ?? '').trim(),
                 representativeEmail: String(d?.representativeEmail ?? '').trim(),
@@ -213,6 +220,7 @@ export default function ChangeCompanyNameClient() {
                 const d = corporateRepresentatives[company.id] ?? {
                   shareholderCompanyClientId: company.id,
                   representativeName: '',
+                  representativeIdType: 'PASSPORT',
                   representativeIdNo: '',
                   representativeAddress: '',
                   representativeEmail: '',
@@ -241,16 +249,33 @@ export default function ChangeCompanyNameClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> ID no.
                         </div>
-                        <input
-                          value={d.representativeIdNo}
-                          onChange={(e) =>
-                            setCorporateRepresentatives((prev) => ({
-                              ...prev,
-                              [company.id]: { ...d, representativeIdNo: e.target.value },
-                            }))
-                          }
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                        />
+                        <div className="mt-1 grid grid-cols-12 gap-2">
+                          <select
+                            value={d.representativeIdType}
+                            onChange={(e) =>
+                              setCorporateRepresentatives((prev) => ({
+                                ...prev,
+                                [company.id]: { ...d, representativeIdType: e.target.value as CorporateRepresentativeDraft['representativeIdType'] },
+                              }))
+                            }
+                            className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="PASSPORT">Passport</option>
+                            <option value="NRIC">NRIC</option>
+                            <option value="FIN">FIN</option>
+                            <option value="IC">IC</option>
+                          </select>
+                          <input
+                            value={d.representativeIdNo}
+                            onChange={(e) =>
+                              setCorporateRepresentatives((prev) => ({
+                                ...prev,
+                                [company.id]: { ...d, representativeIdNo: e.target.value },
+                              }))
+                            }
+                            className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          />
+                        </div>
                       </label>
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">

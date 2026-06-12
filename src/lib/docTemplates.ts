@@ -368,6 +368,7 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
   targetCompanyName: string;
   representativeName: string;
   representativeAddress: string;
+  witnessIdTypeLabel: string;
   witnessIdNo: string;
   witnessPhone?: string;
   witnessEmail: string;
@@ -438,7 +439,7 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
       <div>
         <div>Witnessed by</div>
         <div class="mt2">Name:&nbsp;&nbsp;${esc(input.representativeName)}</div>
-        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;${esc(input.witnessIdNo)}</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;${esc(input.witnessIdTypeLabel)} ${esc(input.witnessIdNo)}</div>
         <div class="mt2">Phone No.:&nbsp;&nbsp;${esc(witnessPhone)}</div>
         <div class="mt2">Email:&nbsp;&nbsp;${esc(input.witnessEmail)}</div>
       </div>

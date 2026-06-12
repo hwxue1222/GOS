@@ -8330,6 +8330,7 @@ export async function createCompanyUpdateRequest(input: {
           .map((x) => ({
             shareholderCompanyClientId: String(x?.shareholderCompanyClientId ?? '').trim(),
             representativeName: String(x?.representativeName ?? '').trim(),
+            representativeIdType: String(x?.representativeIdType ?? '').trim(),
             representativeIdNo: String(x?.representativeIdNo ?? '').trim(),
             representativeAddress: String(x?.representativeAddress ?? '').trim(),
             representativeEmail: String(x?.representativeEmail ?? '').trim(),
@@ -8375,7 +8376,13 @@ export async function createCompanyUpdateRequest(input: {
 
         const rep = corporateRepByCompanyId.get(shareholderClientId) ?? null;
         if (!rep) return { ok: false as const, error: 'INVALID_INPUT' as const };
-        if (!rep.representativeName || !rep.representativeIdNo || !rep.representativeAddress || !rep.representativeEmail) {
+        if (
+          !rep.representativeName ||
+          !rep.representativeIdType ||
+          !rep.representativeIdNo ||
+          !rep.representativeAddress ||
+          !rep.representativeEmail
+        ) {
           return { ok: false as const, error: 'INVALID_INPUT' as const };
         }
         const repEmail = rep.representativeEmail.trim().toLowerCase();
@@ -8407,6 +8414,14 @@ export async function createCompanyUpdateRequest(input: {
         const shareholderCompanyAddress =
           (shareholderClient?.registeredOfficeAddress ?? shareholderClient?.address ?? '').trim() || '______________________________';
 
+        const idTypeLabel =
+          rep.representativeIdType === 'NRIC'
+            ? 'NRIC'
+            : rep.representativeIdType === 'FIN'
+              ? 'FIN'
+              : rep.representativeIdType === 'IC'
+                ? 'IC'
+                : 'Passport';
         const certHtml = templates.renderCertificateOfAppointmentOfCorporateRepresentativeHtml({
           shareholderCompanyName,
           shareholderCompanyRegistrationNo,
@@ -8414,6 +8429,7 @@ export async function createCompanyUpdateRequest(input: {
           targetCompanyName: companyName,
           representativeName: rep.representativeName,
           representativeAddress: rep.representativeAddress,
+          witnessIdTypeLabel: idTypeLabel,
           witnessIdNo: rep.representativeIdNo,
           witnessPhone: rep.representativePhone,
           witnessEmail: repEmail,
