@@ -9689,8 +9689,10 @@ export async function createRorcDeclarationRequest(input: {
     controllerType === 'PERSON' || controllerType === 'COMPANY'
       ? templates.renderRorcControllerDeclarationHtml({
           companyName: client.name,
+          companyRegistrationNo: client.companyRegistrationNo,
           controllerType,
           effectiveDate,
+          signedDateYmd: now.slice(0, 10),
           controllerPerson: input.controllerPerson,
           controllerCompany: input.controllerCompany,
         })

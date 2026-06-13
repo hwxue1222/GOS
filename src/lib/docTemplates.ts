@@ -1565,8 +1565,10 @@ export function renderRorcDeclarationHtml(input: {
 
 export function renderRorcControllerDeclarationHtml(input: {
   companyName: string;
+  companyRegistrationNo?: string;
   controllerType: 'PERSON' | 'COMPANY';
   effectiveDate: string;
+  signedDateYmd?: string;
   controllerPerson?: {
     fullName: string;
     idType?: string;
@@ -1591,14 +1593,18 @@ export function renderRorcControllerDeclarationHtml(input: {
   };
 }) {
   const companyName = esc(input.companyName);
-  const effectiveDate = esc(toDdMmYyyy(input.effectiveDate));
+  const companyRegistrationNo = esc(String(input.companyRegistrationNo ?? '').trim());
+  const effectiveDateIso = String(input.effectiveDate ?? '').trim();
+  const effectiveDate = esc(toDdMmYyyy(effectiveDateIso));
+  const signedDateYmd = (String(input.signedDateYmd ?? '').trim() || effectiveDateIso || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const signedDate = esc(toDdMmYyyy(signedDateYmd));
   const t = input.controllerType;
   const p = input.controllerPerson;
   const c = input.controllerCompany;
 
-  const row = (k: string, v?: string | null) => {
+  const tableRow = (k: string, v?: string | null) => {
     const s = String(v ?? '').trim();
-    return `<div class="row"><div class="k">${esc(k)}</div><div class="v">${s ? esc(s) : '-'}</div></div>`;
+    return `<tr><td class="k">${esc(k)}</td><td class="v">${s ? esc(s) : ''}</td></tr>`;
   };
 
   return `
@@ -1610,29 +1616,66 @@ export function renderRorcControllerDeclarationHtml(input: {
     <title>Declaration of Company Controller (RORC)</title>
     <style>
       body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
-      h1 { font-size: 18px; margin: 0 0 12px; }
+      .center { text-align: center; }
+      h1 { font-size: 20px; margin: 0; font-weight: 700; }
+      h2 { font-size: 14px; margin: 18px 0 8px; font-weight: 700; }
+      .sub { margin-top: 4px; }
       .muted { color: #555; font-size: 12px; }
-      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
-      .row { display: grid; grid-template-columns: 220px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid #eee; }
-      .row:first-child { border-top: 0; }
-      .k { color: #444; }
-      .v { color: #111; }
+      table { width: 100%; border-collapse: collapse; }
+      td { vertical-align: top; padding: 10px 8px; border: 1px solid #ddd; }
+      td.k { width: 48%; color: #222; }
+      td.v { width: 52%; color: #111; }
+      .confirm { margin-top: 18px; }
+      .sig { margin-top: 18px; }
+      .line { margin-top: 12px; text-decoration: underline; letter-spacing: 1px; }
     </style>
   </head>
   <body>
-    <h1>Declaration of Company Controller (RORC)</h1>
-    <div class="muted">Company: ${companyName}</div>
-    <div class="muted" style="margin-top: 4px;">Effective date: ${effectiveDate}</div>
-    <div class="box" style="margin-top: 12px;">
-      ${t === 'PERSON' ? `<div class="muted" style="margin-bottom: 8px;">Personal Controller</div>` : `<div class="muted" style="margin-bottom: 8px;">Company Controller</div>`}
-      ${t === 'PERSON' ? row('RORC Controller Full Name', p?.fullName) : row('RORC Controller Company', c?.companyName)}
-      ${t === 'PERSON' ? row('Passport/NRIC/FIN', [p?.idType, p?.idNo].filter(Boolean).join(' ')) : row('RORC Controller Company Register Number', c?.registerNumber)}
-      ${t === 'PERSON' ? row('Date Of Birth', p?.dateOfBirth ? toDdMmYyyy(p.dateOfBirth) : '') : row('Legal Form Of The Entity', c?.legalForm)}
-      ${t === 'PERSON' ? row('Email', (p?.useCcEmailInstead ? p?.ccEmailAddress : p?.email) ?? '') : row('The Law By Which It Is Governed And In Which Jurisdiction', c?.governedByLawAndJurisdiction)}
-      ${t === 'PERSON' ? row('Nationality', p?.nationality) : row('The Register Of Companies', c?.registerOfCompanies)}
-      ${t === 'PERSON' ? row('Phone', p?.phone) : row('Date On Which The Company Becomes Controller', input.effectiveDate)}
-      ${t === 'PERSON' ? row('Address', p?.address) : row('RORC Controller Company Address', c?.companyAddress)}
-      ${row('Cc Email Address', (t === 'PERSON' ? p?.ccEmailAddress : c?.ccEmailAddress) ?? '')}
+    <div class="center">
+      <div style="font-size:16px; font-weight:700;">${companyName}</div>
+      ${companyRegistrationNo ? `<div class="sub" style="font-size:14px;">UEN No: ${companyRegistrationNo}</div>` : ''}
+      <div class="sub" style="font-size:14px; font-weight:700; margin-top: 10px;">Register of Registrable Controllers</div>
+      <div class="sub" style="font-size:14px; font-weight:700;">公司控制人登记簿</div>
+    </div>
+
+    <div style="margin-top: 18px;">The following particulars of individual controllers are likely to be provided and maintained in the register:</div>
+    <div class="muted" style="margin-top: 2px;">如果公司控制人是个人：</div>
+    <table style="margin-top: 10px;">
+      <tbody>
+        ${t === 'PERSON' ? tableRow('full name (including aliases) 姓名', p?.fullName) : tableRow('full name (including aliases) 姓名', '')}
+        ${t === 'PERSON' ? tableRow('residential address 常住地址', p?.address) : tableRow('residential address 常住地址', '')}
+        ${t === 'PERSON' ? tableRow('Nationality 国籍', p?.nationality) : tableRow('Nationality 国籍', '')}
+        ${t === 'PERSON' ? tableRow('identification number e.g. IC or passport number 证件号', [p?.idNo].filter(Boolean).join(' ')) : tableRow('identification number e.g. IC or passport number 证件号', '')}
+        ${t === 'PERSON' ? tableRow('date of birth 出生日期', p?.dateOfBirth) : tableRow('date of birth 出生日期', '')}
+        ${t === 'PERSON' ? tableRow('date on which the person becomes何时成为公司控制人', signedDateYmd) : tableRow('date on which the person becomes何时成为公司控制人', '')}
+        ${tableRow('if applicable, the date on which the person ceases to be a controller 何时不再是公司控制人（如适用）', '')}
+      </tbody>
+    </table>
+
+    <div style="margin-top: 18px;">The following particulars of corporate controllers are likely to be provided and maintained in the register:</div>
+    <div class="muted" style="margin-top: 2px;">如果公司控制人是一个公司：</div>
+    <table style="margin-top: 10px;">
+      <tbody>
+        ${t === 'COMPANY' ? tableRow('Name公司名字', c?.companyName) : tableRow('Name公司名字', '')}
+        ${t === 'COMPANY' ? tableRow('If applicable, Unique Entity Number or other similar identification number 公司注册号', c?.registerNumber) : tableRow('If applicable, Unique Entity Number or other similar identification number 公司注册号', '')}
+        ${t === 'COMPANY' ? tableRow('Address of registered office 公司注册地址', c?.companyAddress) : tableRow('Address of registered office 公司注册地址', '')}
+        ${t === 'COMPANY' ? tableRow('Legal form of the entity and the law by which it is governed 在何地成立', [c?.legalForm, c?.governedByLawAndJurisdiction].filter(Boolean).join(' / ')) : tableRow('Legal form of the entity and the law by which it is governed 在何地成立', '')}
+        ${t === 'COMPANY' ? tableRow('If applicable, the register of companies in which it is entered (including details of the state, country and the entity’s registration number in that register) 公司注册所在地区机构名称（如适用）', c?.registerOfCompanies) : tableRow('If applicable, the register of companies in which it is entered (including details of the state, country and the entity’s registration number in that register) 公司注册所在地区机构名称（如适用）', '')}
+        ${t === 'COMPANY' ? tableRow('Date on which the person becomes 何时成为公司控制人', signedDateYmd) : tableRow('Date on which the person becomes 何时成为公司控制人', '')}
+        ${tableRow('if applicable, the date on which the person ceases to be a controller 何时不再是公司控制人（如适用）', '')}
+      </tbody>
+    </table>
+
+    <div class="confirm">
+      <div>我确认以上信息真实和完整。</div>
+      <div style="margin-top: 6px;">I hereby confirm that I am a Registrable Person in relation to the Company and certify the information contained in this self-certification questionnaire to be true and complete</div>
+    </div>
+
+    <div class="sig">
+      <div style="font-weight:700;">签名Signatory</div>
+      <div class="line">_______________</div>
+      <div style="margin-top: 10px;">姓名Name: ${esc(t === 'PERSON' ? p?.fullName ?? '' : c?.companyName ?? '')}</div>
+      <div style="margin-top: 10px;">时间Date：${signedDate}</div>
     </div>
   </body>
 </html>
