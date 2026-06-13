@@ -8,6 +8,7 @@ type Member = {
   fullName: string;
   email?: string;
   phone?: string;
+  idType?: 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER';
   idNo?: string;
   nationality?: string;
   dob?: string;
@@ -174,7 +175,7 @@ export default function MembersTable({ members, loading, onFillMissing, onEdit, 
                   </td>
                   <td className="px-4 py-3">{p.email ?? '-'}</td>
                   <td className="px-4 py-3">{p.phone ?? '-'}</td>
-                  <td className="px-4 py-3">{String((p as { idType?: unknown }).idType ?? '-') }</td>
+                  <td className="px-4 py-3">{p.idType ?? '-'}</td>
                   <td className="px-4 py-3">{p.idNo ?? '-'}</td>
                   <td className="px-4 py-3">{normalizeCarToSar(p.nationality) ?? '-'}</td>
                   <td className="px-4 py-3">{p.dob ?? '-'}</td>

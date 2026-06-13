@@ -12,6 +12,7 @@ type Member = {
   fullName: string;
   email?: string;
   phone?: string;
+  idType?: 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER';
   idNo?: string;
   nationality?: string;
   dob?: string;
@@ -117,6 +118,10 @@ export default function MembersClient() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [idTypeFilter, setIdTypeFilter] = usePersistedState(
+    'gos.secretary.members.idTypeFilter',
+    'ALL' as 'ALL' | 'NRIC' | 'FIN' | 'PASSPORT' | 'IC' | 'OTHER' | 'MISSING',
+  );
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = usePersistedState('gos.secretary.members.page', 1);
   const [pageSize, setPageSize] = usePersistedState('gos.secretary.members.pageSize', 20);
@@ -179,12 +184,21 @@ export default function MembersClient() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((p) => {
-      const hay = [p.fullName, p.email ?? '', p.phone ?? '', p.idNo ?? ''].join(' ').toLowerCase();
+    const hit = (p: Member) => {
+      if (idTypeFilter !== 'ALL') {
+        const v = String(p.idType ?? '').trim().toUpperCase();
+        if (idTypeFilter === 'MISSING') {
+          if (v) return false;
+        } else {
+          if (v !== idTypeFilter) return false;
+        }
+      }
+      if (!q) return true;
+      const hay = [p.fullName, p.email ?? '', p.phone ?? '', p.idNo ?? '', p.idType ?? ''].join(' ').toLowerCase();
       return hay.includes(q);
-    });
-  }, [members, search]);
+    };
+    return members.filter(hit);
+  }, [members, search, idTypeFilter]);
 
   const safePageSize = Math.max(5, Math.min(100, Number(pageSize) || 20));
   const safePage = Math.max(1, Number(page) || 1);
@@ -492,6 +506,22 @@ export default function MembersClient() {
             placeholder={t('people.searchPlaceholder')}
             className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
           />
+          <select
+            value={idTypeFilter}
+            onChange={(e) => {
+              setIdTypeFilter(e.target.value as any);
+              setPage(1);
+            }}
+            className="w-[180px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+          >
+            <option value="ALL">ID type: All</option>
+            <option value="NRIC">NRIC</option>
+            <option value="FIN">FIN</option>
+            <option value="PASSPORT">Passport</option>
+            <option value="IC">IC</option>
+            <option value="OTHER">Other</option>
+            <option value="MISSING">(Missing)</option>
+          </select>
         </div>
       </div>
 
