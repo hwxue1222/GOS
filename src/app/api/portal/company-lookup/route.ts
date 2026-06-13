@@ -29,6 +29,7 @@ export async function GET(req: Request) {
       code: client.code,
       name: client.name,
       companyRegistrationNo: client.companyRegistrationNo ?? '',
+      countryOfBusinessRegistration: client.countryOfBusinessRegistration ?? '',
       address: client.address ?? '',
       registeredOfficeAddress: client.registeredOfficeAddress ?? '',
       email: client.email ?? '',
@@ -36,4 +37,3 @@ export async function GET(req: Request) {
     },
   });
 }
-

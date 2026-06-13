@@ -41,6 +41,7 @@ export type Client = {
   name: string;
   fka?: string;
   companyRegistrationNo?: string;
+  countryOfBusinessRegistration?: string;
   fye?: string;
   contactPerson?: string;
   address?: string;

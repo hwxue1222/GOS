@@ -796,6 +796,7 @@ function normalizeDb(parsed: Db): Db {
     tags: (c as Client).tags ?? [],
     fka: (c as Client).fka,
     companyRegistrationNo: (c as Client).companyRegistrationNo,
+    countryOfBusinessRegistration: (c as Client).countryOfBusinessRegistration,
     fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
@@ -7143,6 +7144,7 @@ export async function createShareTransferRequest(input: {
         kind: 'NEW_COMPANY';
         companyName: string;
         registrationNo: string;
+        registrationCountry?: string;
         address: string;
         email?: string;
         phone?: string;
@@ -7221,6 +7223,7 @@ export async function createShareTransferRequest(input: {
   const ensureExternalCompanyParty = (data: {
     name: string;
     registrationNo?: string;
+    jurisdiction?: string;
     address?: string;
     email?: string;
     phone?: string;
@@ -7234,6 +7237,7 @@ export async function createShareTransferRequest(input: {
           id: newId('exc'),
           name: data.name.trim(),
           registrationNo: data.registrationNo?.trim() || undefined,
+          jurisdiction: data.jurisdiction?.trim() || undefined,
           address: data.address?.trim() || undefined,
           email: data.email?.trim() || undefined,
           phone: data.phone?.trim() || undefined,
@@ -7319,6 +7323,7 @@ export async function createShareTransferRequest(input: {
               return ensureExternalCompanyParty({
                 name: input.transferee.companyName,
                 registrationNo: input.transferee.registrationNo,
+                jurisdiction: String((input.transferee as any).registrationCountry ?? '').trim() || undefined,
                 address: input.transferee.address,
                 email: input.transferee.email,
                 phone: input.transferee.phone,

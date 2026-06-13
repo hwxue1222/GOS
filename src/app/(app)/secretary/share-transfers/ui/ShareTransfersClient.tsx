@@ -49,6 +49,7 @@ type NewShareholderCompany = {
   clientId: string;
   companyName: string;
   registrationNo: string;
+  registrationCountry: string;
   address: string;
   email: string;
   phone: string;
@@ -103,6 +104,7 @@ export default function ShareTransfersClient(props: {
       clientId: '',
       companyName: '',
       registrationNo: '',
+      registrationCountry: '',
       address: '',
       email: '',
       phone: '',
@@ -187,6 +189,7 @@ export default function ShareTransfersClient(props: {
               address: addr || v.newCompany.address,
               email: String(c.email ?? v.newCompany.email),
               phone: String(c.phone ?? v.newCompany.phone),
+              registrationCountry: String(c.countryOfBusinessRegistration ?? v.newCompany.registrationCountry),
             },
           }));
         })
@@ -265,6 +268,7 @@ export default function ShareTransfersClient(props: {
         clientId: '',
         companyName: '',
         registrationNo: '',
+        registrationCountry: '',
         address: '',
         email: '',
         phone: '',
@@ -345,6 +349,7 @@ export default function ShareTransfersClient(props: {
         if (!c.registrationNo.trim()) return void setError('INVALID_INPUT');
         if (!c.address.trim()) return void setError('INVALID_INPUT');
         if (!c.clientId.trim()) {
+          if (!c.registrationCountry.trim()) return void setError('INVALID_INPUT');
           if (!c.corporateRepresentativeName.trim()) return void setError('INVALID_INPUT');
           if (!c.corporateRepresentativeEmail.trim()) return void setError('INVALID_INPUT');
           if (!c.directorSignerEmail.trim()) return void setError('INVALID_INPUT');
@@ -388,6 +393,7 @@ export default function ShareTransfersClient(props: {
                       kind: 'NEW_COMPANY',
                       companyName: draft.newCompany.companyName,
                       registrationNo: draft.newCompany.registrationNo,
+                      registrationCountry: draft.newCompany.registrationCountry,
                       address: draft.newCompany.address,
                       email: draft.newCompany.email,
                       phone: draft.newCompany.phone,
@@ -732,6 +738,19 @@ export default function ShareTransfersClient(props: {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <label className="text-sm">
+                            <div className="text-black/70">Company name</div>
+                            <input
+                              value={draft.newCompany.companyName}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, companyName: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
                             <div className="text-black/70">Company registration no.</div>
                             <input
                               value={draft.newCompany.registrationNo}
@@ -745,13 +764,13 @@ export default function ShareTransfersClient(props: {
                             />
                           </label>
                           <label className="text-sm">
-                            <div className="text-black/70">Company name</div>
+                            <div className="text-black/70">Country of business registration</div>
                             <input
-                              value={draft.newCompany.companyName}
+                              value={draft.newCompany.registrationCountry}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
-                                  newCompany: { ...v.newCompany, companyName: e.target.value },
+                                  newCompany: { ...v.newCompany, registrationCountry: e.target.value },
                                 }))
                               }
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
