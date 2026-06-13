@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { formatDateDMY } from '@/lib/date';
+import { maskAddress, maskDob, maskEmail, maskName, maskNationality } from '@/lib/mask';
 import { usePersistedState } from '@/lib/usePersistedState';
 
 type ClientLite = { id: string; code: string; name: string };
@@ -32,6 +33,17 @@ const ID_TYPE_LABEL_BY_VALUE: Record<string, string> = {
   FIN: 'fin no',
   IC: 'ic no',
 };
+
+function maskPhoneLoose(phone: string) {
+  const raw = String(phone ?? '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '*'.repeat(Math.max(6, raw.length));
+  if (digits.length <= 4) return '*'.repeat(digits.length);
+  const head = digits.slice(0, 2);
+  const tail = digits.slice(-2);
+  return `${head}${'*'.repeat(Math.max(2, digits.length - 4))}${tail}`;
+}
 
 type NewShareholderKind = 'PERSON' | 'COMPANY';
 type NewShareholderPerson = {
@@ -90,6 +102,7 @@ export default function ShareTransfersClient(props: {
     transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
     transfereePartyId: '',
     newShareholderKind: 'PERSON' as NewShareholderKind,
+    newPersonLockedFromLookup: false,
     newPerson: {
       fullName: '',
       idType: 'PASSPORT' as NewShareholderPerson['idType'],
@@ -100,6 +113,7 @@ export default function ShareTransfersClient(props: {
       nationality: '',
       address: '',
     },
+    newCompanyLockedFromLookup: false,
     newCompany: {
       clientId: '',
       companyName: '',
@@ -151,6 +165,7 @@ export default function ShareTransfersClient(props: {
               dob: String(p.dob ?? v.newPerson.dob),
               address: String(p.address ?? v.newPerson.address),
             },
+            newPersonLockedFromLookup: true,
           }));
         })
         .catch(() => null);
@@ -176,6 +191,7 @@ export default function ShareTransfersClient(props: {
                 ...v.newCompany,
                 clientId: '',
               },
+              newCompanyLockedFromLookup: false,
             }));
             return;
           }
@@ -191,6 +207,7 @@ export default function ShareTransfersClient(props: {
               phone: String(c.phone ?? v.newCompany.phone),
               registrationCountry: String(c.countryOfBusinessRegistration ?? v.newCompany.registrationCountry),
             },
+            newCompanyLockedFromLookup: true,
           }));
         })
         .catch(() => null);
@@ -254,6 +271,7 @@ export default function ShareTransfersClient(props: {
       transfereePartyId: '',
       transfereeMode: 'EXISTING',
       newShareholderKind: 'PERSON',
+      newPersonLockedFromLookup: false,
       newPerson: {
         fullName: '',
         idType: 'PASSPORT',
@@ -264,6 +282,7 @@ export default function ShareTransfersClient(props: {
         nationality: '',
         address: '',
       },
+      newCompanyLockedFromLookup: false,
       newCompany: {
         clientId: '',
         companyName: '',
@@ -604,7 +623,7 @@ export default function ShareTransfersClient(props: {
                             type="radio"
                             name="newShareholderKind"
                             checked={draft.newShareholderKind === 'PERSON'}
-                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'PERSON' }))}
+                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'PERSON', newPersonLockedFromLookup: false }))}
                           />
                           Individual
                         </label>
@@ -613,7 +632,7 @@ export default function ShareTransfersClient(props: {
                             type="radio"
                             name="newShareholderKind"
                             checked={draft.newShareholderKind === 'COMPANY'}
-                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'COMPANY' }))}
+                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'COMPANY', newCompanyLockedFromLookup: false }))}
                           />
                           Corporate
                         </label>
@@ -624,13 +643,14 @@ export default function ShareTransfersClient(props: {
                           <label className="text-sm">
                             <div className="text-black/70">Full name</div>
                             <input
-                              value={draft.newPerson.fullName}
+                              value={draft.newPersonLockedFromLookup ? maskName(draft.newPerson.fullName) : draft.newPerson.fullName}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newPerson: { ...v.newPerson, fullName: e.target.value },
                                 }))
                               }
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
@@ -671,59 +691,63 @@ export default function ShareTransfersClient(props: {
                             <div className="text-black/70">Date of birth</div>
                             <input
                               type="date"
-                              value={draft.newPerson.dob}
+                              value={draft.newPersonLockedFromLookup ? maskDob(draft.newPerson.dob) : draft.newPerson.dob}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newPerson: { ...v.newPerson, dob: e.target.value },
                                 }))
                               }
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm">
                             <div className="text-black/70">Email</div>
                             <input
-                              value={draft.newPerson.email}
+                              value={draft.newPersonLockedFromLookup ? maskEmail(draft.newPerson.email) : draft.newPerson.email}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newPerson: { ...v.newPerson, email: e.target.value },
                                 }))
                               }
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm">
                             <div className="text-black/70">Phone</div>
                             <input
-                              value={draft.newPerson.phone}
+                              value={draft.newPersonLockedFromLookup ? maskPhoneLoose(draft.newPerson.phone) : draft.newPerson.phone}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newPerson: { ...v.newPerson, phone: e.target.value },
                                 }))
                               }
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm">
                             <div className="text-black/70">Nationality</div>
                             <input
-                              value={draft.newPerson.nationality}
+                              value={draft.newPersonLockedFromLookup ? maskNationality(draft.newPerson.nationality) : draft.newPerson.nationality}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newPerson: { ...v.newPerson, nationality: e.target.value },
                                 }))
                               }
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm sm:col-span-2">
                             <div className="text-black/70">Address</div>
                             <textarea
-                              value={draft.newPerson.address}
+                              value={draft.newPersonLockedFromLookup ? maskAddress(draft.newPerson.address) : draft.newPerson.address}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
@@ -731,6 +755,7 @@ export default function ShareTransfersClient(props: {
                                 }))
                               }
                               rows={2}
+                              disabled={draft.newPersonLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
@@ -747,6 +772,7 @@ export default function ShareTransfersClient(props: {
                                   newCompany: { ...v.newCompany, companyName: e.target.value },
                                 }))
                               }
+                              disabled={draft.newCompanyLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
@@ -766,46 +792,49 @@ export default function ShareTransfersClient(props: {
                           <label className="text-sm">
                             <div className="text-black/70">Country of business registration</div>
                             <input
-                              value={draft.newCompany.registrationCountry}
+                              value={draft.newCompanyLockedFromLookup ? maskNationality(draft.newCompany.registrationCountry) : draft.newCompany.registrationCountry}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newCompany: { ...v.newCompany, registrationCountry: e.target.value },
                                 }))
                               }
+                              disabled={draft.newCompanyLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm">
                             <div className="text-black/70">Email</div>
                             <input
-                              value={draft.newCompany.email}
+                              value={draft.newCompanyLockedFromLookup ? maskEmail(draft.newCompany.email) : draft.newCompany.email}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newCompany: { ...v.newCompany, email: e.target.value },
                                 }))
                               }
+                              disabled={draft.newCompanyLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm">
                             <div className="text-black/70">Phone</div>
                             <input
-                              value={draft.newCompany.phone}
+                              value={draft.newCompanyLockedFromLookup ? maskPhoneLoose(draft.newCompany.phone) : draft.newCompany.phone}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
                                   newCompany: { ...v.newCompany, phone: e.target.value },
                                 }))
                               }
+                              disabled={draft.newCompanyLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
                           <label className="text-sm sm:col-span-2">
                             <div className="text-black/70">Address</div>
                             <textarea
-                              value={draft.newCompany.address}
+                              value={draft.newCompanyLockedFromLookup ? maskAddress(draft.newCompany.address) : draft.newCompany.address}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
@@ -813,6 +842,7 @@ export default function ShareTransfersClient(props: {
                                 }))
                               }
                               rows={2}
+                              disabled={draft.newCompanyLockedFromLookup}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
