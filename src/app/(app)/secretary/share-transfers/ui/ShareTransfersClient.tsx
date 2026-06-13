@@ -507,7 +507,7 @@ export default function ShareTransfersClient(props: {
 
           <div className="mt-4 rounded-lg bg-black/[0.02] border border-black/5 p-4">
             <div className="text-sm font-medium">New Share Transfer</div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="mt-3">
               <label className="text-sm">
                 <div className="text-black/70">Target company</div>
                 {lockedClientId ? (
@@ -528,55 +528,57 @@ export default function ShareTransfersClient(props: {
                   </select>
                 )}
               </label>
-              <label className="text-sm">
-                <div className="text-black/70">Effective date</div>
-                <DateInputDMY
-                  value={draft.effectiveDate}
-                  onChange={(next) => setDraft((v) => ({ ...v, effectiveDate: next }))}
-                  inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="text-sm">
-                <div className="text-black/70">Number of share transferred</div>
-                <input
-                  type="number"
-                  value={draft.shares || ''}
-                  onChange={(e) => setDraft((v) => ({ ...v, shares: Number(e.target.value) }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="text-sm">
-                <div className="text-black/70">Transfer price</div>
-                <div className="mt-1 flex">
-                  <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={draft.valueSgd}
-                    onChange={(e) => setDraft((v) => ({ ...v, valueSgd: e.target.value }))}
-                    className="w-full rounded-r-lg border border-black/10 border-l-0 px-3 py-2 text-sm"
-                  />
-                </div>
-              </label>
-              <label className="text-sm">
-                <div className="text-black/70">Share class</div>
-                <select
-                  value={draft.shareClass}
-                  onChange={(e) => setDraft((v) => ({ ...v, shareClass: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                >
-                  {SHARE_CLASS_OPTIONS.map((x) => (
-                    <option key={x} value={x}>
-                      {x === 'ORDINARY SHARE' ? 'Ordinary share' : 'Preference share'}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
 
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg bg-white border border-black/5 p-4">
                 <div className="text-sm font-medium">Transferor</div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <div className="text-black/70">Effective date</div>
+                    <DateInputDMY
+                      value={draft.effectiveDate}
+                      onChange={(next) => setDraft((v) => ({ ...v, effectiveDate: next }))}
+                      inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Number of share transferred</div>
+                    <input
+                      type="number"
+                      value={draft.shares || ''}
+                      onChange={(e) => setDraft((v) => ({ ...v, shares: Number(e.target.value) }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Transfer price</div>
+                    <div className="mt-1 flex">
+                      <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={draft.valueSgd}
+                        onChange={(e) => setDraft((v) => ({ ...v, valueSgd: e.target.value }))}
+                        className="w-full rounded-r-lg border border-black/10 border-l-0 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">Share class</div>
+                    <select
+                      value={draft.shareClass}
+                      onChange={(e) => setDraft((v) => ({ ...v, shareClass: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    >
+                      {SHARE_CLASS_OPTIONS.map((x) => (
+                        <option key={x} value={x}>
+                          {x === 'ORDINARY SHARE' ? 'Ordinary share' : 'Preference share'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <div className="mt-3">
                   <label className="text-sm block">
                     <div className="text-black/70">Shares</div>
