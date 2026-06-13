@@ -7361,12 +7361,46 @@ export async function createShareTransferRequest(input: {
   const transferorName = transferor.party.displayName;
   const transfereeName = transferee.party.displayName;
 
+  const formatPersonIdTypeLabel = (t?: string | null) => {
+    const v = String(t ?? '').trim().toUpperCase();
+    if (v === 'FIN') return 'FIN';
+    if (v === 'NRIC') return 'NRIC';
+    if (v === 'IC') return 'IC';
+    if (v === 'PASSPORT') return 'Passport/NRIC';
+    if (!v) return undefined;
+    return v;
+  };
+
+  const getPartyIdentityForDoc = (party: Party) => {
+    if (party.type === 'PERSON') {
+      const person = party.personId ? db.persons.find((p) => p.id === party.personId) ?? null : null;
+      return {
+        kind: 'PERSON' as const,
+        name: party.displayName,
+        idTypeLabel: formatPersonIdTypeLabel(person?.idType),
+        idNo: person?.idNo,
+        nationality: person?.nationality,
+      };
+    }
+
+    const companyRegNo = party.clientId
+      ? db.clients.find((c) => c.id === party.clientId)?.companyRegistrationNo
+      : party.externalCompanyId
+        ? db.externalCompanies.find((c) => c.id === party.externalCompanyId)?.registrationNo
+        : undefined;
+    return {
+      kind: 'COMPANY' as const,
+      name: party.displayName,
+      companyRegistrationNo: companyRegNo,
+    };
+  };
+
   const transferId = newId('stf');
 
   const staDoc: Document = {
     id: newId('doc'),
     type: 'STA',
-    title: `Share Transfer Agreement - ${client.name}`,
+    title: `Share Transfer Form - ${client.name}`,
     html: '',
     sha256: '',
     createdAt: now,
@@ -7406,20 +7440,31 @@ export async function createShareTransferRequest(input: {
 
   const shareClass = typeof input.shareClass === 'string' ? input.shareClass.trim() || undefined : undefined;
 
+  const directors = db.clientPartyRoles
+    .filter((r) => r.clientId === client.id && r.role === 'DIRECTOR' && !r.resignationDate)
+    .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+    .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+    .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+    .filter((p): p is Person => !!p);
+
   const staHtml = (await import('@/lib/docTemplates')).renderShareTransferAgreementHtml({
     targetCompanyName: client.name,
-    transferorName,
-    transfereeName,
+    transferor: getPartyIdentityForDoc(transferor.party),
+    transferee: getPartyIdentityForDoc(transferee.party),
     shares,
     valueSgd,
     shareClass,
-    effectiveDate,
+    dateYmd: now.slice(0, 10),
   });
-  const brSummary = `Approve the transfer of ${shares}${shareClass ? ` (${shareClass})` : ''} shares from ${transferorName} to ${transfereeName} for S$${valueSgd} effective on ${effectiveDate}.`;
-  const brHtml = (await import('@/lib/docTemplates')).renderBoardResolutionHtml({
+  const brHtml = (await import('@/lib/docTemplates')).renderShareTransferDirectorsResolutionHtml({
     companyName: client.name,
-    resolutionDate: effectiveDate,
-    summary: brSummary,
+    companyRegistrationNo: client.companyRegistrationNo,
+    considerationSgd: valueSgd,
+    transferorName,
+    transfereeName,
+    shares,
+    dateYmd: now.slice(0, 10),
+    directors: directors.map((d) => d.fullName),
   });
 
   const staSha = sha256Hex(staHtml);
@@ -7428,13 +7473,6 @@ export async function createShareTransferRequest(input: {
   const brIdx = db.documents.findIndex((d) => d.id === brDoc.id);
   if (staIdx >= 0) db.documents[staIdx] = { ...db.documents[staIdx], html: staHtml, sha256: staSha };
   if (brIdx >= 0) db.documents[brIdx] = { ...db.documents[brIdx], html: brHtml, sha256: brSha };
-
-  const directors = db.clientPartyRoles
-    .filter((r) => r.clientId === client.id && r.role === 'DIRECTOR' && !r.resignationDate)
-    .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
-    .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
-    .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
-    .filter((p): p is Person => !!p);
 
   const directorEmails = directors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
   if (directorEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };

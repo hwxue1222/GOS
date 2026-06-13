@@ -760,20 +760,61 @@ export function renderRdrAuthorizationHtml(input: {
 
 export function renderShareTransferAgreementHtml(input: {
   targetCompanyName: string;
-  transferorName: string;
-  transfereeName: string;
+  transferor: {
+    kind: 'PERSON' | 'COMPANY';
+    name: string;
+    idTypeLabel?: string;
+    idNo?: string;
+    nationality?: string;
+    companyRegistrationNo?: string;
+  };
+  transferee: {
+    kind: 'PERSON' | 'COMPANY';
+    name: string;
+    idTypeLabel?: string;
+    idNo?: string;
+    nationality?: string;
+    companyRegistrationNo?: string;
+  };
   shares: number;
   valueSgd?: number;
   shareClass?: string;
-  effectiveDate: string;
+  dateYmd?: string;
 }) {
-  const targetCompanyName = esc(input.targetCompanyName);
-  const transferorName = esc(input.transferorName);
-  const transfereeName = esc(input.transfereeName);
-  const shareClass = input.shareClass ? esc(input.shareClass) : '';
-  const effectiveDate = esc(input.effectiveDate);
-  const valueSgd = Number(input.valueSgd);
-  const valueLine = Number.isFinite(valueSgd) ? `<div style="margin-top: 10px;"><strong>Transfer price</strong>: S$${esc(String(valueSgd))}</div>` : '';
+  const companyName = esc(input.targetCompanyName);
+  const shareClassRaw = (input.shareClass ?? '').trim();
+  const shareClassDisplay = shareClassRaw ? esc(shareClassRaw === 'ORDINARY SHARE' ? 'Ordinary share' : shareClassRaw === 'PREFERENCE SHARE' ? 'Preference share' : shareClassRaw) : '';
+  const dateYmd = (input.dateYmd ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const signedDate = esc(toDdMmYyyy(dateYmd));
+  const sharesText = esc(String(input.shares));
+  const value = Number(input.valueSgd);
+  const considerationText = Number.isFinite(value) ? `S$${esc(value.toFixed(1))}` : '';
+
+  const idLabel = (raw?: string) => {
+    const v = String(raw ?? '').trim().toUpperCase();
+    if (v === 'FIN') return 'FIN';
+    if (v === 'NRIC') return 'NRIC';
+    if (v === 'IC') return 'IC';
+    return 'Passport/NRIC';
+  };
+
+  const partyPhrase = (p: typeof input.transferor, role: 'transferor' | 'transferee') => {
+    if (p.kind === 'COMPANY') {
+      const reg = String(p.companyRegistrationNo ?? '').trim();
+      const regPart = reg ? ` (Company Registration No. ${esc(reg)})` : '';
+      return `${esc(p.name)}${regPart} (the “${role}”)`;
+    }
+    const no = String(p.idNo ?? '').trim();
+    const nat = String(p.nationality ?? '').trim();
+    const natPart = nat ? `, ${esc(nat)}` : '';
+    const idPart = no ? `${idLabel(p.idTypeLabel)} No. ${esc(no)}` : `${idLabel(p.idTypeLabel)} No.`;
+    return `${esc(p.name)}, ${idPart}${natPart} (the “${role}”)`;
+  };
+
+  const transferorPhrase = partyPhrase(input.transferor, 'transferor');
+  const transfereePhrase = partyPhrase(input.transferee, 'transferee');
+  const transferorName = esc(input.transferor.name);
+  const transfereeName = esc(input.transferee.name);
 
   return `
 <!doctype html>
@@ -781,29 +822,128 @@ export function renderShareTransferAgreementHtml(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Share Transfer Agreement</title>
+    <title>Share Transfer Form</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
-      h1 { font-size: 18px; margin: 0 0 16px; }
-      .muted { color: #555; font-size: 12px; }
-      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
-      .sig { margin-top: 18px; padding-top: 18px; border-top: 1px dashed #ddd; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 28px 36px; color: #111; }
+      h1 { font-size: 20px; margin: 0 0 18px; text-align: center; }
+      .p { margin: 10px 0; }
+      .sigline { margin-top: 24px; }
+      .line { display: inline-block; min-width: 220px; border-bottom: 1px solid #111; height: 18px; vertical-align: bottom; }
+      .label { margin-top: 6px; }
     </style>
   </head>
   <body>
-    <h1>Share Transfer Agreement</h1>
-    <div class="muted">Effective Date: ${effectiveDate}</div>
-    <div class="box" style="margin-top: 12px;">
-      <div><strong>Target Company</strong>: ${targetCompanyName}</div>
-      <div style="margin-top: 10px;"><strong>Transferor</strong>: ${transferorName}</div>
-      <div style="margin-top: 10px;"><strong>Transferee</strong>: ${transfereeName}</div>
-      <div style="margin-top: 10px;"><strong>Shares</strong>: ${input.shares}${shareClass ? ` (${shareClass})` : ''}</div>
-      ${valueLine}
-      <div class="sig">
-        <div>Signatures:</div>
-        <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
-      </div>
+    <h1>SHARE TRANSFER FORM</h1>
+
+    <div class="p">I, ${transferorPhrase}, being the registered shareholder for the consideration stated here do hereby transfer to ${transfereePhrase}, or executors, assigns and administrators the shares as specified here standing in my name in the Register of Members of ${companyName} subject to the conditions on which I held the same at the date of signing hereof.</div>
+
+    <div class="p">I, the transferee, do hereby agree to accept the said shares on the same conditions.</div>
+
+    <div class="p">Full description of shares: ${shareClassDisplay}</div>
+    <div class="p">Number of shares: ${sharesText}</div>
+    <div class="p">Consideration: ${considerationText}</div>
+
+    <div class="p" style="margin-top: 18px;">Signed, sealed and delivered by the above named</div>
+
+    <div class="sigline">
+      <div class="line"></div>
+      <div class="label">${transferorName}</div>
+      <div class="label">Transferor</div>
     </div>
+
+    <div class="sigline">
+      <div class="line"></div>
+      <div class="label">${transfereeName}</div>
+      <div class="label">Transferee</div>
+    </div>
+
+    <div class="p" style="margin-top: 18px;">Date:${signedDate}</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderShareTransferDirectorsResolutionHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  considerationSgd?: number;
+  transferorName: string;
+  transfereeName: string;
+  shares: number;
+  dateYmd?: string;
+  directors: string[];
+}) {
+  const companyName = esc(input.companyName);
+  const companyRegistrationNo = esc(String(input.companyRegistrationNo ?? '').trim());
+  const dateYmd = (input.dateYmd ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const dated = esc(toDdMmYyyy(dateYmd));
+
+  const value = Number(input.considerationSgd);
+  const considerationText = Number.isFinite(value) ? `SGD ${esc(value.toLocaleString('en-SG', { maximumFractionDigits: 0 }))}` : 'SGD -';
+  const transferorName = esc(input.transferorName);
+  const transfereeName = esc(input.transfereeName);
+  const sharesText = esc(String(input.shares));
+  const directors = input.directors.map((x) => String(x ?? '').trim()).filter(Boolean);
+
+  const sigBlocks = directors.length
+    ? directors
+        .map(
+          (d) => `
+          <div style="margin-top: 18px;">
+            <div style="text-decoration: underline;">_______________</div>
+            <div style="margin-top: 6px;">${esc(d)}</div>
+          </div>
+        `.trim(),
+        )
+        .join('')
+    : `
+          <div style="margin-top: 18px;">
+            <div style="text-decoration: underline;">_______________</div>
+          </div>
+        `.trim();
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Director's Resolution</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 28px 36px; color: #111; }
+      .center { text-align: center; }
+      .h { font-weight: 700; }
+      .u { text-decoration: underline; }
+      .p { margin: 10px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="center" style="margin-bottom: 10px;">
+      <div class="h" style="color: #c00;">${companyName}</div>
+      <div>(Company Registration No. ${companyRegistrationNo || '-'})</div>
+      <div>(“the Company”)</div>
+      <div>(Incorporated in the Republic of Singapore)</div>
+    </div>
+
+    <div class="center h">DIRECTORS’ RESOLUTIONS IN WRITING PURSUANT TO</div>
+    <div class="center h u" style="margin-top: 2px;">ARTICLE 90 OF THE ARTICLES OF ASSOCIATION OF THE COMPANY</div>
+
+    <div class="p" style="margin-top: 18px;">RESOLVED</div>
+    <div class="p h u">TRANSFER OF SHARES</div>
+
+    <div class="p">That the transfer of the following shares in the capital of the Company at a total consideration price of ${considerationText} as described in the respective share transfer form hereby approved, subject to the instrument of transfer being properly executed and stamped in accordance with the provision of the Stamp Duties Act, and presented for registration accordingly.</div>
+
+    <div class="p"><span class="u">Transferor</span>: ${transferorName}</div>
+    <div class="p"><span class="u">Transferee</span>: ${transfereeName}</div>
+    <div class="p"><span class="u">No. of shares</span>: ${sharesText}</div>
+
+    <div class="p">Term of issue: payable in cash</div>
+    <div class="p">That the Secretary of the Company is hereby authorized to file the above transfer of shares with the relevant Authority.</div>
+
+    <div class="center h u" style="margin-top: 18px;">DIRECTORS</div>
+    ${sigBlocks}
+
+    <div class="p" style="margin-top: 18px;">Dated:${dated}</div>
   </body>
 </html>
 `.trim();
