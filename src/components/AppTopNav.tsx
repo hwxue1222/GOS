@@ -54,11 +54,7 @@ export default async function AppTopNav({ active }: Props) {
     const personById = new Map(db.persons.map((p) => [p.id, p]));
     const allowed = new Set<string>();
     for (const r of db.clientPartyRoles) {
-      if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') {
-        if (r.resignationDate) continue;
-      } else if (r.role === 'SHAREHOLDER' || r.role === 'RORC') {
-        if (r.toDate) continue;
-      }
+      if (r.role !== 'DIRECTOR' || r.resignationDate) continue;
       const party = partyById.get(r.partyId);
       if (!party || party.type !== 'PERSON' || !party.personId) continue;
       const person = personById.get(party.personId);
