@@ -76,6 +76,28 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
   }, [props.initialCompanyId, selectable]);
 
   useEffect(() => {
+    function syncFromStorage() {
+      const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
+      if (!stored) return;
+      if (!selectable.some((c) => c.id === stored)) return;
+      setCompanyId(stored);
+    }
+    function onStorage(e: StorageEvent) {
+      if (e.key !== 'gos.currentCompanyId') return;
+      syncFromStorage();
+    }
+    function onCompanyChanged() {
+      syncFromStorage();
+    }
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('gos.companyChanged', onCompanyChanged as EventListener);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('gos.companyChanged', onCompanyChanged as EventListener);
+    };
+  }, [selectable]);
+
+  useEffect(() => {
     if (!companyId) return;
     let ignore = false;
     setLoading(true);
@@ -147,23 +169,7 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
         <div className="min-w-0">
           <div className="text-xl font-semibold text-black/90 truncate">{heading}</div>
         </div>
-        <select
-          value={companyId}
-          onChange={(e) => {
-            const next = e.target.value;
-            setCompanyId(next);
-            if (next) window.localStorage.setItem('gos.currentCompanyId', next);
-          }}
-          disabled={!selectable.length}
-          className="w-[260px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
-        >
-          {!selectable.length ? <option value="">No companies</option> : null}
-          {selectable.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
-        </select>
+        <div />
       </div>
 
       {error ? <div className="mt-4 text-sm text-red-600">{error}</div> : null}

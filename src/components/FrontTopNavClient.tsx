@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import FrontUserMenuClient from '@/components/FrontUserMenuClient';
 import type { Role } from '@/lib/types';
@@ -66,6 +66,7 @@ function itemClass() {
 
 export default function FrontTopNavClient({ active, user, companies }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState<'inc' | 'cs' | null>(null);
   const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
 
@@ -86,7 +87,12 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
     if (!c || c.isStruckOff) return;
     setCurrentCompanyId(id);
     window.localStorage.setItem('gos.currentCompanyId', id);
-    router.push(`/portal/companies/${encodeURIComponent(id)}`);
+    window.dispatchEvent(new Event('gos.companyChanged'));
+    if (pathname?.startsWith('/portal/companies/')) {
+      router.replace(`/portal/companies/${encodeURIComponent(id)}`);
+    } else {
+      router.refresh();
+    }
   }
 
   function goCompanyService(service: 'director' | 'share_transfer') {
