@@ -7537,8 +7537,6 @@ export async function createShareTransferRequest(input: {
     considerationSgd: valueSgd,
     transferorName,
     transfereeName,
-    transferorOnBehalfName: getSignerNameForParty(transferor.party),
-    transfereeOnBehalfName: getSignerNameForParty(transferee.party),
     shares,
     dateYmd: now.slice(0, 10),
     directors: directors.map((d) => d.fullName),
