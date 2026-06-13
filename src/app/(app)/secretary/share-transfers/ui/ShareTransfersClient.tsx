@@ -45,6 +45,11 @@ function maskPhoneLoose(phone: string) {
   return `${head}${'*'.repeat(Math.max(2, digits.length - 4))}${tail}`;
 }
 
+function isSingaporeCompanyRegistrationNo(regNo: string) {
+  const v = String(regNo ?? '').trim();
+  return /^\d{9}[A-Za-z]$/.test(v);
+}
+
 type NewShareholderKind = 'PERSON' | 'COMPANY';
 type NewShareholderPerson = {
   fullName: string;
@@ -179,6 +184,13 @@ export default function ShareTransfersClient(props: {
     const regNo = String(draft.newCompany.registrationNo ?? '').trim();
     if (!regNo) return;
 
+    if (!draft.newCompanyLockedFromLookup && !draft.newCompany.registrationCountry.trim() && isSingaporeCompanyRegistrationNo(regNo)) {
+      setDraft((v) => ({
+        ...v,
+        newCompany: { ...v.newCompany, registrationCountry: 'Singapore' },
+      }));
+    }
+
     const t = window.setTimeout(() => {
       fetch(`/api/portal/company-lookup?registrationNo=${encodeURIComponent(regNo)}`, { cache: 'no-store' })
         .then((r) => r.json().catch(() => null))
@@ -196,6 +208,8 @@ export default function ShareTransfersClient(props: {
             return;
           }
           const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
+          const inferredCountry =
+            String(c.countryOfBusinessRegistration ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
           setDraft((v) => ({
             ...v,
             newCompany: {
@@ -205,7 +219,7 @@ export default function ShareTransfersClient(props: {
               address: addr || v.newCompany.address,
               email: String(c.email ?? v.newCompany.email),
               phone: String(c.phone ?? v.newCompany.phone),
-              registrationCountry: String(c.countryOfBusinessRegistration ?? v.newCompany.registrationCountry),
+              registrationCountry: inferredCountry || v.newCompany.registrationCountry,
             },
             newCompanyLockedFromLookup: true,
           }));
@@ -792,7 +806,7 @@ export default function ShareTransfersClient(props: {
                           <label className="text-sm">
                             <div className="text-black/70">Country of business registration</div>
                             <input
-                              value={draft.newCompanyLockedFromLookup ? maskNationality(draft.newCompany.registrationCountry) : draft.newCompany.registrationCountry}
+                              value={draft.newCompany.registrationCountry}
                               onChange={(e) =>
                                 setDraft((v) => ({
                                   ...v,
