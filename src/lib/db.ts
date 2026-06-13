@@ -74,6 +74,14 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function inferPersonIdTypeFromIdNo(idNo?: string | null) {
+  const s = String(idNo ?? '').trim().toUpperCase();
+  if (!s) return undefined;
+  if (/^[ST]\d{7}[A-Z]$/.test(s)) return 'NRIC' as const;
+  if (/^[FG]\d{7}[A-Z]$/.test(s)) return 'FIN' as const;
+  return undefined;
+}
+
 async function ensureDir() {
   await fs.mkdir(path.dirname(DB_FILE), { recursive: true });
 }
@@ -766,6 +774,21 @@ function dedupeClientsByNormalizedNameAlways(db: Db) {
         }
       }
     }
+  }
+  return changed;
+}
+
+function inferMissingPersonIdTypesFromIdNo(db: Db) {
+  let changed = false;
+  const now = nowIso();
+  for (let i = 0; i < db.persons.length; i++) {
+    const p = db.persons[i];
+    if (p.deletedAt) continue;
+    if (p.idType) continue;
+    const inferred = inferPersonIdTypeFromIdNo(p.idNo);
+    if (!inferred) continue;
+    db.persons[i] = { ...p, idType: inferred, updatedAt: now };
+    changed = true;
   }
   return changed;
 }
@@ -5242,6 +5265,7 @@ export async function readDb(): Promise<Db> {
   if (seedSecretaryCompaniesFromScreenshot6(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot7(db)) changed = true;
   if (dedupeClientsByNormalizedNameAlways(db)) changed = true;
+  if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
 
   if (db.users.length === 0) {
@@ -7420,14 +7444,6 @@ export async function createShareTransferRequest(input: {
 
   const transferorName = transferor.party.displayName;
   const transfereeName = transferee.party.displayName;
-
-  const inferPersonIdTypeFromIdNo = (idNo?: string | null) => {
-    const s = String(idNo ?? '').trim().toUpperCase();
-    if (!s) return undefined;
-    if (/^[ST]\d{7}[A-Z]$/.test(s)) return 'NRIC';
-    if (/^[FG]\d{7}[A-Z]$/.test(s)) return 'FIN';
-    return undefined;
-  };
 
   const formatPersonIdTypeLabel = (t?: string | null, idNo?: string | null) => {
     const inferred = inferPersonIdTypeFromIdNo(idNo);
