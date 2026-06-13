@@ -6,9 +6,7 @@ import { hasPermission } from '@/lib/permissions';
 import type { CompanyUpdateRequestType } from '@/lib/types';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 async function canAccessClient(user: { role: string; email: string }, clientId: string) {
@@ -59,8 +57,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { clientId } = await ctx.params;
-  if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (user.role !== 'client') {
+    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
   }
   if (!(await canAccessClient(user, clientId))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
@@ -75,8 +75,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { clientId } = await ctx.params;
-  if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (user.role !== 'client') {
+    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
   }
   if (!(await canAccessClient(user, clientId))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });

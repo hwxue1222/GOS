@@ -35,8 +35,11 @@ async function canAccessClient(user: { role: string; email: string }, clientId: 
 export async function GET(_req: Request, ctx: { params: Promise<{ clientId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  if (user.role !== 'client') {
+    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
   }
 
   const { clientId } = await ctx.params;
