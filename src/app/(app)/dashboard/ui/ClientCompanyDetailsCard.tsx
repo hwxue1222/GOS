@@ -16,6 +16,12 @@ type CompanyDetails = {
   address?: string;
   email?: string;
   phone?: string;
+  entityStatus?: string;
+  paidUpCapitalCurrency?: string;
+  paidUpCapitalAmount?: number;
+  totalShares?: number;
+  ssicPrimaryCode?: string;
+  ssicSecondaryCode?: string;
 };
 
 function formatYmd(v?: string) {
@@ -28,12 +34,36 @@ function pickAddress(c: CompanyDetails) {
   return a || '-';
 }
 
+function formatMoney(currency?: string, amount?: number) {
+  const cur = String(currency ?? '').trim();
+  if (!cur) return '-';
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) return `${cur} -`;
+  return `${cur} ${amount.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatNumber(v?: number) {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return '-';
+  return v.toLocaleString('en-SG');
+}
+
+function Row(props: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 py-3 border-t border-black/5">
+      <div className="sm:col-span-4 text-black/50">{props.label}</div>
+      <div className="sm:col-span-8 text-black/80 break-words">{props.value}</div>
+    </div>
+  );
+}
+
 export default function ClientCompanyDetailsCard(props: { companies: CompanyLite[]; initialCompanyId?: string }) {
   const selectable = useMemo(() => props.companies, [props.companies]);
   const [companyId, setCompanyId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<CompanyDetails | null>(null);
+
+  const [ssicPrimaryDesc, setSsicPrimaryDesc] = useState<string>('');
+  const [ssicSecondaryDesc, setSsicSecondaryDesc] = useState<string>('');
 
   useEffect(() => {
     const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
@@ -75,15 +105,47 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
     };
   }, [companyId]);
 
+  useEffect(() => {
+    const c = details;
+    if (!c) return;
+    const primary = String(c.ssicPrimaryCode ?? '').trim();
+    const secondary = String(c.ssicSecondaryCode ?? '').trim();
+
+    let ignore = false;
+    setSsicPrimaryDesc('');
+    setSsicSecondaryDesc('');
+
+    if (primary) {
+      fetch(`/api/ssic?code=${encodeURIComponent(primary)}`, { cache: 'force-cache' })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          if (ignore) return;
+          setSsicPrimaryDesc(String(j?.item?.description ?? '').trim());
+        })
+        .catch(() => null);
+    }
+    if (secondary) {
+      fetch(`/api/ssic?code=${encodeURIComponent(secondary)}`, { cache: 'force-cache' })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          if (ignore) return;
+          setSsicSecondaryDesc(String(j?.item?.description ?? '').trim());
+        })
+        .catch(() => null);
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [details?.id, details?.ssicPrimaryCode, details?.ssicSecondaryCode]);
+
   const c = details;
-  const heading = c ? `${c.code || ''} ${c.name || ''}`.trim() : companyId ? 'Company' : 'No company';
+  const heading = c?.name || (companyId ? 'Company' : 'No company');
 
   return (
-    <div className="rounded-xl bg-white border border-black/5 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-base font-semibold">{heading || 'Company'}</div>
-          <div className="mt-0.5 text-sm text-black/50">Company details</div>
+    <div className="rounded-xl bg-white border border-black/5 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-xl font-semibold text-black/90 truncate">{heading}</div>
         </div>
         <select
           value={companyId}
@@ -98,43 +160,50 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
           {!selectable.length ? <option value="">No companies</option> : null}
           {selectable.map((x) => (
             <option key={x.id} value={x.id}>
-              {x.code} {x.name}
+              {x.name}
             </option>
           ))}
         </select>
       </div>
 
-      {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="mt-4 text-sm text-red-600">{error}</div> : null}
+      {loading ? <div className="mt-4 text-xs text-black/50">Loading...</div> : null}
 
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3">
-          <div className="text-black/50">Company registration no.</div>
-          <div className="mt-1 text-black/80">{c?.companyRegistrationNo || '-'}</div>
-        </div>
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3">
-          <div className="text-black/50">Country of business registration</div>
-          <div className="mt-1 text-black/80">{c?.countryOfBusinessRegistration || '-'}</div>
-        </div>
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3">
-          <div className="text-black/50">Incorporation date</div>
-          <div className="mt-1 text-black/80">{formatYmd(c?.incorporationDate)}</div>
-        </div>
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3">
-          <div className="text-black/50">FYE</div>
-          <div className="mt-1 text-black/80">{c?.fye || '-'}</div>
-        </div>
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3 sm:col-span-2 lg:col-span-2">
-          <div className="text-black/50">Registered address</div>
-          <div className="mt-1 text-black/80">{c ? pickAddress(c) : '-'}</div>
-        </div>
-        <div className="rounded-lg bg-black/[0.02] border border-black/5 p-3">
-          <div className="text-black/50">Contact</div>
-          <div className="mt-1 text-black/80">{c?.email || '-'}{c?.phone ? ` / ${c.phone}` : ''}</div>
-        </div>
+      <div className="mt-4 text-sm">
+        <Row label="Company registration no." value={c?.companyRegistrationNo || '-'} />
+        <Row label="FYE" value={c?.fye || '-'} />
+        <Row label="Entity status" value={c?.entityStatus || '-'} />
+        <Row label="Incorporation date" value={formatYmd(c?.incorporationDate)} />
+        <Row label="Registered office address" value={c ? pickAddress(c) : '-'} />
+        <Row label="Paid-up capital" value={c ? formatMoney(c.paidUpCapitalCurrency, c.paidUpCapitalAmount) : '-'} />
+        <Row label="Total shares" value={c ? formatNumber(c.totalShares) : '-'} />
+        <Row
+          label="SSIC (Primary)"
+          value={
+            c?.ssicPrimaryCode ? (
+              <div>
+                <div>{c.ssicPrimaryCode}</div>
+                {ssicPrimaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicPrimaryDesc}</div> : null}
+              </div>
+            ) : (
+              '-'
+            )
+          }
+        />
+        <Row
+          label="SSIC (Secondary)"
+          value={
+            c?.ssicSecondaryCode ? (
+              <div>
+                <div>{c.ssicSecondaryCode}</div>
+                {ssicSecondaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicSecondaryDesc}</div> : null}
+              </div>
+            ) : (
+              '-'
+            )
+          }
+        />
       </div>
-
-      {loading ? <div className="mt-3 text-xs text-black/50">Loading...</div> : null}
     </div>
   );
 }
-
