@@ -9,6 +9,10 @@ type SsicRow = { code: string; description: string };
 const SSIC_ROWS = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
 const SSIC_DESC_BY_CODE = new Map(SSIC_ROWS.map((r) => [String(r.code ?? '').trim().toLowerCase(), String(r.description ?? '').trim()]));
 
+function isActiveDirector(r: { role: string; resignationDate?: string }) {
+  return r.role === 'DIRECTOR' && !r.resignationDate;
+}
+
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
   if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
@@ -22,7 +26,7 @@ function canAccessClient(db: Awaited<ReturnType<typeof readDb>>, user: { role: s
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   for (const r of db.clientPartyRoles) {
     if (r.clientId !== clientId) continue;
-    if (!isActiveRole(r)) continue;
+    if (!isActiveDirector(r)) continue;
     const party = partyById.get(r.partyId);
     if (!party || party.type !== 'PERSON' || !party.personId) continue;
     const person = personById.get(party.personId);

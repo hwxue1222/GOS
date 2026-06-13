@@ -7128,6 +7128,25 @@ export async function createShareTransferRequest(input: {
   transferee:
     | { kind: 'EXISTING_PARTY'; partyId: string }
     | { kind: 'PERSON'; fullName: string; email: string }
+    | {
+        kind: 'NEW_PERSON';
+        fullName: string;
+        idType: string;
+        idNo: string;
+        dob: string;
+        email: string;
+        phone: string;
+        nationality: string;
+        address: string;
+      }
+    | {
+        kind: 'NEW_COMPANY';
+        companyName: string;
+        registrationNo: string;
+        address: string;
+        email?: string;
+        phone?: string;
+      }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   shares: number;
   valueSgd?: number;
@@ -7146,11 +7165,25 @@ export async function createShareTransferRequest(input: {
   const valueSgd = Number(input.valueSgd);
   if (!Number.isFinite(valueSgd) || valueSgd < 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
-  const makePersonParty = (fullNameRaw: string, emailRaw: string) => {
+  const normalizeIdNo = (s: string) => String(s ?? '').trim().replace(/\s+/g, '').toLowerCase();
+
+  const makePersonParty = (fullNameRaw: string, emailRaw: string, patch?: Partial<Pick<Person, 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address'>>) => {
     const fullName = fullNameRaw.trim();
     const email = emailRaw.trim();
     if (!fullName || !email) return null;
-    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+    const person: Person = {
+      id: newId('per'),
+      fullName,
+      email,
+      phone: patch?.phone,
+      idType: patch?.idType as any,
+      idNo: patch?.idNo,
+      nationality: patch?.nationality,
+      dob: patch?.dob,
+      address: patch?.address,
+      createdAt: now,
+      updatedAt: now,
+    };
     const party: Party = {
       id: newId('pty'),
       type: 'PERSON',
@@ -7203,9 +7236,34 @@ export async function createShareTransferRequest(input: {
   const transferee =
     input.transferee.kind === 'EXISTING_PARTY'
       ? ensureExistingShareholderParty(input.transferee.partyId)
-      : input.transferee.kind === 'PERSON'
-        ? makePersonParty(input.transferee.fullName, input.transferee.email)
-        : ensureCompanyParty(input.transferee.clientId);
+      : input.transferee.kind === 'NEW_PERSON'
+        ? (() => {
+            const idNoKey = normalizeIdNo(input.transferee.idNo);
+            if (!idNoKey) return null;
+            const existingPerson = db.persons.find((p) => normalizeIdNo(String(p.idNo ?? '')) === idNoKey) ?? null;
+            if (existingPerson) {
+              const party = db.parties.find((x) => x.type === 'PERSON' && x.personId === existingPerson.id) ?? null;
+              if (party) return { party };
+            }
+            return makePersonParty(input.transferee.fullName, input.transferee.email, {
+              phone: input.transferee.phone,
+              idType: input.transferee.idType as any,
+              idNo: input.transferee.idNo,
+              nationality: input.transferee.nationality,
+              dob: input.transferee.dob,
+              address: input.transferee.address,
+            });
+          })()
+        : input.transferee.kind === 'NEW_COMPANY'
+          ? (() => {
+              const regKey = normalizeIdNo(input.transferee.registrationNo);
+              const hit = db.clients.find((c) => normalizeIdNo(c.companyRegistrationNo ?? '') === regKey && !c.deletedAt) ?? null;
+              if (!hit) return null;
+              return ensureCompanyParty(hit.id);
+            })()
+          : input.transferee.kind === 'PERSON'
+            ? makePersonParty(input.transferee.fullName, input.transferee.email)
+            : ensureCompanyParty(input.transferee.clientId);
   if (!transferee) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const transferorPartyId = transferor.party.id;

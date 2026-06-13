@@ -10,9 +10,7 @@ import StatusBadge from '@/app/(app)/corporate-secretary/applications/ui/StatusB
 import { auditLogsToTimelineItems, signatureEventsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 async function canClientAccessRequest(user: { email: string }, clientId: string) {

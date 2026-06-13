@@ -8,9 +8,7 @@ import DeleteActionClient from '@/components/DeleteActionClient';
 import { formatDateDMY } from '@/lib/date';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 export default async function CorporateSecretaryApplicationsPage({

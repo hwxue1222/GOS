@@ -26,6 +26,33 @@ type ShareTransfer = {
 
 const SHARE_CLASS_OPTIONS = ['ORDINARY SHARE', 'PREFERENCE SHARE'] as const;
 
+const ID_TYPE_LABEL_BY_VALUE: Record<string, string> = {
+  PASSPORT: 'passport no',
+  NRIC: 'nric no',
+  FIN: 'fin no',
+  IC: 'ic no',
+};
+
+type NewShareholderKind = 'PERSON' | 'COMPANY';
+type NewShareholderPerson = {
+  fullName: string;
+  idType: 'PASSPORT' | 'NRIC' | 'FIN' | 'IC';
+  idNo: string;
+  dob: string;
+  email: string;
+  phone: string;
+  nationality: string;
+  address: string;
+};
+
+type NewShareholderCompany = {
+  companyName: string;
+  registrationNo: string;
+  address: string;
+  email: string;
+  phone: string;
+};
+
 type ShareholderOption = {
   partyId: string;
   label: string;
@@ -56,8 +83,24 @@ export default function ShareTransfersClient(props: {
     transferorPartyId: '',
     transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
     transfereePartyId: '',
-    transfereeName: '',
-    transfereeEmail: '',
+    newShareholderKind: 'PERSON' as NewShareholderKind,
+    newPerson: {
+      fullName: '',
+      idType: 'PASSPORT' as NewShareholderPerson['idType'],
+      idNo: '',
+      dob: '',
+      email: '',
+      phone: '',
+      nationality: '',
+      address: '',
+    },
+    newCompany: {
+      companyName: '',
+      registrationNo: '',
+      address: '',
+      email: '',
+      phone: '',
+    },
   });
 
   useEffect(() => {
@@ -68,6 +111,69 @@ export default function ShareTransfersClient(props: {
 
   const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
   const [loadingShareholders, setLoadingShareholders] = useState(false);
+
+  useEffect(() => {
+    if (draft.transfereeMode !== 'NEW') return;
+    if (draft.newShareholderKind !== 'PERSON') return;
+
+    const idNo = String(draft.newPerson.idNo ?? '').trim();
+    if (!idNo) return;
+    const idTypeLabel = ID_TYPE_LABEL_BY_VALUE[draft.newPerson.idType] ?? '';
+
+    const t = window.setTimeout(() => {
+      fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(idTypeLabel)}`, {
+        cache: 'no-store',
+      })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          const p = j?.person;
+          if (!p) return;
+          setDraft((v) => ({
+            ...v,
+            newPerson: {
+              ...v.newPerson,
+              fullName: String(p.fullName ?? v.newPerson.fullName),
+              email: String(p.email ?? v.newPerson.email),
+              phone: String(p.phone ?? v.newPerson.phone),
+              nationality: String(p.nationality ?? v.newPerson.nationality),
+              dob: String(p.dob ?? v.newPerson.dob),
+              address: String(p.address ?? v.newPerson.address),
+            },
+          }));
+        })
+        .catch(() => null);
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [draft.transfereeMode, draft.newShareholderKind, draft.newPerson.idType, draft.newPerson.idNo]);
+
+  useEffect(() => {
+    if (draft.transfereeMode !== 'NEW') return;
+    if (draft.newShareholderKind !== 'COMPANY') return;
+    const regNo = String(draft.newCompany.registrationNo ?? '').trim();
+    if (!regNo) return;
+
+    const t = window.setTimeout(() => {
+      fetch(`/api/portal/company-lookup?registrationNo=${encodeURIComponent(regNo)}`, { cache: 'no-store' })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          const c = j?.company;
+          if (!c) return;
+          const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
+          setDraft((v) => ({
+            ...v,
+            newCompany: {
+              ...v.newCompany,
+              companyName: String(c.name ?? v.newCompany.companyName),
+              address: addr || v.newCompany.address,
+              email: String(c.email ?? v.newCompany.email),
+              phone: String(c.phone ?? v.newCompany.phone),
+            },
+          }));
+        })
+        .catch(() => null);
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [draft.transfereeMode, draft.newShareholderKind, draft.newCompany.registrationNo]);
 
   useEffect(() => {
     let ignore = false;
@@ -124,8 +230,24 @@ export default function ShareTransfersClient(props: {
       transferorPartyId: '',
       transfereePartyId: '',
       transfereeMode: 'EXISTING',
-      transfereeName: '',
-      transfereeEmail: '',
+      newShareholderKind: 'PERSON',
+      newPerson: {
+        fullName: '',
+        idType: 'PASSPORT',
+        idNo: '',
+        dob: '',
+        email: '',
+        phone: '',
+        nationality: '',
+        address: '',
+      },
+      newCompany: {
+        companyName: '',
+        registrationNo: '',
+        address: '',
+        email: '',
+        phone: '',
+      },
       valueSgd: '',
       shareClass: 'ORDINARY SHARE',
     }));
@@ -182,9 +304,22 @@ export default function ShareTransfersClient(props: {
       setError('INVALID_INPUT');
       return;
     }
-    if (draft.transfereeMode === 'NEW' && (!draft.transfereeName.trim() || !draft.transfereeEmail.trim())) {
-      setError('INVALID_INPUT');
-      return;
+    if (draft.transfereeMode === 'NEW') {
+      if (draft.newShareholderKind === 'PERSON') {
+        const p = draft.newPerson;
+        if (!p.fullName.trim()) return void setError('INVALID_INPUT');
+        if (!p.idNo.trim()) return void setError('INVALID_INPUT');
+        if (!p.dob.trim()) return void setError('INVALID_INPUT');
+        if (!p.email.trim()) return void setError('INVALID_INPUT');
+        if (!p.phone.trim()) return void setError('INVALID_INPUT');
+        if (!p.nationality.trim()) return void setError('INVALID_INPUT');
+        if (!p.address.trim()) return void setError('INVALID_INPUT');
+      } else {
+        const c = draft.newCompany;
+        if (!c.companyName.trim()) return void setError('INVALID_INPUT');
+        if (!c.registrationNo.trim()) return void setError('INVALID_INPUT');
+        if (!c.address.trim()) return void setError('INVALID_INPUT');
+      }
     }
 
     setSaving(true);
@@ -202,7 +337,26 @@ export default function ShareTransfersClient(props: {
           transferee:
             draft.transfereeMode === 'EXISTING'
               ? { kind: 'EXISTING_PARTY', partyId: draft.transfereePartyId }
-              : { kind: 'PERSON', fullName: draft.transfereeName, email: draft.transfereeEmail },
+              : draft.newShareholderKind === 'PERSON'
+                ? {
+                    kind: 'NEW_PERSON',
+                    fullName: draft.newPerson.fullName,
+                    idType: draft.newPerson.idType,
+                    idNo: draft.newPerson.idNo,
+                    dob: draft.newPerson.dob,
+                    email: draft.newPerson.email,
+                    phone: draft.newPerson.phone,
+                    nationality: draft.newPerson.nationality,
+                    address: draft.newPerson.address,
+                  }
+                : {
+                    kind: 'NEW_COMPANY',
+                    companyName: draft.newCompany.companyName,
+                    registrationNo: draft.newCompany.registrationNo,
+                    address: draft.newCompany.address,
+                    email: draft.newCompany.email,
+                    phone: draft.newCompany.phone,
+                  },
         }),
       });
       const j = await res.json().catch(() => null);
@@ -398,23 +552,214 @@ export default function ShareTransfersClient(props: {
                   </label>
 
                   {draft.transfereeMode === 'NEW' ? (
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="text-sm">
-                        <div className="text-black/70">Name</div>
-                        <input
-                          value={draft.transfereeName}
-                          onChange={(e) => setDraft((v) => ({ ...v, transfereeName: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                        />
-                      </label>
-                      <label className="text-sm">
-                        <div className="text-black/70">Email</div>
-                        <input
-                          value={draft.transfereeEmail}
-                          onChange={(e) => setDraft((v) => ({ ...v, transfereeEmail: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                        />
-                      </label>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center gap-3 text-sm text-black/80">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="newShareholderKind"
+                            checked={draft.newShareholderKind === 'PERSON'}
+                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'PERSON' }))}
+                          />
+                          Individual
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="newShareholderKind"
+                            checked={draft.newShareholderKind === 'COMPANY'}
+                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'COMPANY' }))}
+                          />
+                          Corporate
+                        </label>
+                      </div>
+
+                      {draft.newShareholderKind === 'PERSON' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="text-sm">
+                            <div className="text-black/70">Full name</div>
+                            <input
+                              value={draft.newPerson.fullName}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, fullName: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">ID No.</div>
+                            <div className="mt-1 grid grid-cols-12 gap-2">
+                              <select
+                                value={draft.newPerson.idType}
+                                onChange={(e) =>
+                                  setDraft((v) => ({
+                                    ...v,
+                                    newPerson: {
+                                      ...v.newPerson,
+                                      idType: e.target.value as NewShareholderPerson['idType'],
+                                    },
+                                  }))
+                                }
+                                className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="PASSPORT">Passport</option>
+                                <option value="NRIC">NRIC</option>
+                                <option value="FIN">FIN</option>
+                                <option value="IC">IC</option>
+                              </select>
+                              <input
+                                value={draft.newPerson.idNo}
+                                onChange={(e) =>
+                                  setDraft((v) => ({
+                                    ...v,
+                                    newPerson: { ...v.newPerson, idNo: e.target.value },
+                                  }))
+                                }
+                                className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                              />
+                            </div>
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Date of birth</div>
+                            <input
+                              type="date"
+                              value={draft.newPerson.dob}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, dob: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Email</div>
+                            <input
+                              value={draft.newPerson.email}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, email: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Phone</div>
+                            <input
+                              value={draft.newPerson.phone}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, phone: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Nationality</div>
+                            <input
+                              value={draft.newPerson.nationality}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, nationality: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm sm:col-span-2">
+                            <div className="text-black/70">Address</div>
+                            <textarea
+                              value={draft.newPerson.address}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newPerson: { ...v.newPerson, address: e.target.value },
+                                }))
+                              }
+                              rows={2}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="text-sm">
+                            <div className="text-black/70">Company registration no.</div>
+                            <input
+                              value={draft.newCompany.registrationNo}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, registrationNo: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Company name</div>
+                            <input
+                              value={draft.newCompany.companyName}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, companyName: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Email</div>
+                            <input
+                              value={draft.newCompany.email}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, email: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Phone</div>
+                            <input
+                              value={draft.newCompany.phone}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, phone: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm sm:col-span-2">
+                            <div className="text-black/70">Address</div>
+                            <textarea
+                              value={draft.newCompany.address}
+                              onChange={(e) =>
+                                setDraft((v) => ({
+                                  ...v,
+                                  newCompany: { ...v.newCompany, address: e.target.value },
+                                }))
+                              }
+                              rows={2}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   ) : null}
                 </div>

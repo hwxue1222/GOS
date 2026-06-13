@@ -4,9 +4,7 @@ import { readDb } from '@/lib/db';
 import ChangeDirectorClient from '@/app/(app)/corporate-secretary/applications/new/director-change/ui/ChangeDirectorClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 export default async function NewDirectorChangePage({

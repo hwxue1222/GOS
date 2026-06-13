@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { appendAuditLog, createShareTransferRequest, findClientById, listClients, listShareTransfers } from '@/lib/db';
+import { appendAuditLog, createShareTransferRequest, findClientById, listClients, listShareTransfers, readDb } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
 
 export async function GET() {
@@ -9,6 +9,27 @@ export async function GET() {
   if (user.role === 'staff') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const [clients, transfers] = await Promise.all([listClients(), listShareTransfers()]);
+  if (user.role === 'client') {
+    const db = await readDb();
+    const emailKey = user.email.trim().toLowerCase();
+    const partyById = new Map(db.parties.map((p) => [p.id, p]));
+    const personById = new Map(db.persons.map((p) => [p.id, p]));
+    const allowed = new Set<string>();
+    for (const r of db.clientPartyRoles) {
+      if (r.role !== 'DIRECTOR' || r.resignationDate) continue;
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) continue;
+      const person = personById.get(party.personId);
+      if (!person) continue;
+      if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+      allowed.add(r.clientId);
+    }
+    return NextResponse.json({
+      ok: true,
+      clients: clients.filter((c) => allowed.has(c.id) && !c.deletedAt).map((c) => ({ id: c.id, code: c.code, name: c.name })),
+      transfers: transfers.filter((t) => allowed.has(t.clientId)),
+    });
+  }
   return NextResponse.json({
     ok: true,
     clients: clients.filter((c) => !c.deletedAt).map((c) => ({ id: c.id, code: c.code, name: c.name })),
@@ -36,16 +57,41 @@ export async function POST(req: Request) {
           partyId?: string;
         };
         transferee?: {
-          kind?: 'PERSON' | 'COMPANY_CLIENT' | 'EXISTING_PARTY';
+          kind?: 'PERSON' | 'COMPANY_CLIENT' | 'EXISTING_PARTY' | 'NEW_PERSON' | 'NEW_COMPANY';
           fullName?: string;
           email?: string;
           clientId?: string;
           partyId?: string;
+          idType?: string;
+          idNo?: string;
+          dob?: string;
+          phone?: string;
+          nationality?: string;
+          address?: string;
+          companyName?: string;
+          registrationNo?: string;
         };
       }
     | null;
 
   const clientId = typeof body?.clientId === 'string' ? body.clientId : '';
+
+  if (user.role === 'client') {
+    const db = await readDb();
+    const emailKey = user.email.trim().toLowerCase();
+    const partyById = new Map(db.parties.map((p) => [p.id, p]));
+    const personById = new Map(db.persons.map((p) => [p.id, p]));
+    const ok = db.clientPartyRoles.some((r) => {
+      if (r.clientId !== clientId) return false;
+      if (r.role !== 'DIRECTOR' || r.resignationDate) return false;
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) return false;
+      const person = personById.get(party.personId);
+      if (!person) return false;
+      return (person.email ?? '').trim().toLowerCase() === emailKey;
+    });
+    if (!ok) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
   const effectiveDate = typeof body?.effectiveDate === 'string' ? body.effectiveDate : '';
   const shareClass = typeof body?.shareClass === 'string' ? body.shareClass : undefined;
   const shares = typeof body?.shares === 'number' ? body.shares : Number(body?.shares);
@@ -60,6 +106,27 @@ export async function POST(req: Request) {
   const transferee =
     body?.transferee?.kind === 'EXISTING_PARTY'
       ? ({ kind: 'EXISTING_PARTY', partyId: (body.transferee as any)?.partyId ?? '' } as const)
+      : body?.transferee?.kind === 'NEW_PERSON'
+        ? ({
+            kind: 'NEW_PERSON',
+            fullName: (body.transferee as any)?.fullName ?? '',
+            email: (body.transferee as any)?.email ?? '',
+            phone: (body.transferee as any)?.phone ?? '',
+            nationality: (body.transferee as any)?.nationality ?? '',
+            dob: (body.transferee as any)?.dob ?? '',
+            address: (body.transferee as any)?.address ?? '',
+            idType: (body.transferee as any)?.idType ?? '',
+            idNo: (body.transferee as any)?.idNo ?? '',
+          } as const)
+        : body?.transferee?.kind === 'NEW_COMPANY'
+          ? ({
+              kind: 'NEW_COMPANY',
+              companyName: (body.transferee as any)?.companyName ?? '',
+              registrationNo: (body.transferee as any)?.registrationNo ?? '',
+              address: (body.transferee as any)?.address ?? '',
+              email: (body.transferee as any)?.email ?? '',
+              phone: (body.transferee as any)?.phone ?? '',
+            } as const)
       : body?.transferee?.kind === 'COMPANY_CLIENT'
         ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
         : ({ kind: 'PERSON', fullName: body?.transferee?.fullName ?? '', email: body?.transferee?.email ?? '' } as const);

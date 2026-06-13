@@ -4,10 +4,8 @@ import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 
-function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+function isActiveDirector(r: { role: string; resignationDate?: string }) {
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 export default async function PortalCompaniesIndexPage() {
@@ -35,7 +33,7 @@ export default async function PortalCompaniesIndexPage() {
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const allowed = new Set<string>();
   for (const r of db.clientPartyRoles) {
-    if (!isActiveRole(r)) continue;
+    if (!isActiveDirector(r)) continue;
     const party = partyById.get(r.partyId);
     if (!party || party.type !== 'PERSON' || !party.personId) continue;
     const person = personById.get(party.personId);
@@ -62,4 +60,3 @@ export default async function PortalCompaniesIndexPage() {
     </div>
   );
 }
-

@@ -773,7 +773,7 @@ export function renderShareTransferAgreementHtml(input: {
   const shareClass = input.shareClass ? esc(input.shareClass) : '';
   const effectiveDate = esc(input.effectiveDate);
   const valueSgd = Number(input.valueSgd);
-  const valueLine = Number.isFinite(valueSgd) ? `<div style="margin-top: 10px;"><strong>Value of shares transferred</strong>: S$${esc(String(valueSgd))}</div>` : '';
+  const valueLine = Number.isFinite(valueSgd) ? `<div style="margin-top: 10px;"><strong>Transfer price</strong>: S$${esc(String(valueSgd))}</div>` : '';
 
   return `
 <!doctype html>

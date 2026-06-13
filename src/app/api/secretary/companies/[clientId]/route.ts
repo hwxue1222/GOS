@@ -9,6 +9,10 @@ function isActiveRole(r: { role: string; resignationDate?: string; toDate?: stri
   return true;
 }
 
+function isActiveDirector(r: { role: string; resignationDate?: string }) {
+  return r.role === 'DIRECTOR' && !r.resignationDate;
+}
+
 async function canAccessClient(user: { role: string; email: string }, clientId: string) {
   if (user.role !== 'client') return true;
   const db = await readDb();
@@ -17,7 +21,7 @@ async function canAccessClient(user: { role: string; email: string }, clientId: 
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   for (const r of db.clientPartyRoles) {
     if (r.clientId !== clientId) continue;
-    if (!isActiveRole(r)) continue;
+    if (!isActiveDirector(r)) continue;
     const party = partyById.get(r.partyId);
     if (!party || party.type !== 'PERSON' || !party.personId) continue;
     const person = personById.get(party.personId);

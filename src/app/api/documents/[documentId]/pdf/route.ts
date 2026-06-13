@@ -79,9 +79,7 @@ async function getBrowser() {
 }
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
-  if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-  if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-  return true;
+  return r.role === 'DIRECTOR' && !r.resignationDate;
 }
 
 async function canClientAccessDocument(user: { email: string }, documentId: string) {
