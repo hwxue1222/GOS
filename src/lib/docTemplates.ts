@@ -1327,6 +1327,82 @@ export function renderRorcDeclarationHtml(input: {
 `.trim();
 }
 
+export function renderRorcControllerDeclarationHtml(input: {
+  companyName: string;
+  controllerType: 'PERSON' | 'COMPANY';
+  effectiveDate: string;
+  controllerPerson?: {
+    fullName: string;
+    idType?: string;
+    idNo?: string;
+    dateOfBirth?: string;
+    email?: string;
+    nationality?: string;
+    phone?: string;
+    address?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
+  controllerCompany?: {
+    companyName: string;
+    registerNumber?: string;
+    legalForm?: string;
+    governedByLawAndJurisdiction?: string;
+    registerOfCompanies?: string;
+    companyAddress?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
+}) {
+  const companyName = esc(input.companyName);
+  const effectiveDate = esc(toDdMmYyyy(input.effectiveDate));
+  const t = input.controllerType;
+  const p = input.controllerPerson;
+  const c = input.controllerCompany;
+
+  const row = (k: string, v?: string | null) => {
+    const s = String(v ?? '').trim();
+    return `<div class="row"><div class="k">${esc(k)}</div><div class="v">${s ? esc(s) : '-'}</div></div>`;
+  };
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Declaration of Company Controller (RORC)</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
+      h1 { font-size: 18px; margin: 0 0 12px; }
+      .muted { color: #555; font-size: 12px; }
+      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
+      .row { display: grid; grid-template-columns: 220px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid #eee; }
+      .row:first-child { border-top: 0; }
+      .k { color: #444; }
+      .v { color: #111; }
+    </style>
+  </head>
+  <body>
+    <h1>Declaration of Company Controller (RORC)</h1>
+    <div class="muted">Company: ${companyName}</div>
+    <div class="muted" style="margin-top: 4px;">Effective date: ${effectiveDate}</div>
+    <div class="box" style="margin-top: 12px;">
+      ${t === 'PERSON' ? `<div class="muted" style="margin-bottom: 8px;">Personal Controller</div>` : `<div class="muted" style="margin-bottom: 8px;">Company Controller</div>`}
+      ${t === 'PERSON' ? row('RORC Controller Full Name', p?.fullName) : row('RORC Controller Company', c?.companyName)}
+      ${t === 'PERSON' ? row('Passport/NRIC/FIN', [p?.idType, p?.idNo].filter(Boolean).join(' ')) : row('RORC Controller Company Register Number', c?.registerNumber)}
+      ${t === 'PERSON' ? row('Date Of Birth', p?.dateOfBirth ? toDdMmYyyy(p.dateOfBirth) : '') : row('Legal Form Of The Entity', c?.legalForm)}
+      ${t === 'PERSON' ? row('Email', (p?.useCcEmailInstead ? p?.ccEmailAddress : p?.email) ?? '') : row('The Law By Which It Is Governed And In Which Jurisdiction', c?.governedByLawAndJurisdiction)}
+      ${t === 'PERSON' ? row('Nationality', p?.nationality) : row('The Register Of Companies', c?.registerOfCompanies)}
+      ${t === 'PERSON' ? row('Phone', p?.phone) : row('Date On Which The Company Becomes Controller', input.effectiveDate)}
+      ${t === 'PERSON' ? row('Address', p?.address) : row('RORC Controller Company Address', c?.companyAddress)}
+      ${row('Cc Email Address', (t === 'PERSON' ? p?.ccEmailAddress : c?.ccEmailAddress) ?? '')}
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
 export function renderAnnualGeneralMeetingMinutesHtml(input: {
   companyName: string;
   meetingDate: string;

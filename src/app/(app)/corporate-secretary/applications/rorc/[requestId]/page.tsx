@@ -90,6 +90,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     { label: 'Type', value: 'Declaration of Company Controller (RORC)' },
     { label: 'Status', value: r.status },
     { label: 'Effective date', value: r.effectiveDate },
+    ...(r.controllerType ? [{ label: 'Controller type', value: r.controllerType }] : []),
     { label: 'Submitted', value: (r.submittedAt ?? r.createdAt).slice(0, 10) },
     { label: 'Updated', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
   ];
@@ -115,16 +116,46 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />
           <SectionCard title="Requested changes" subtitle="What will be added or removed.">
-            <div className="space-y-3 text-sm">
-              <div>
-                <div className="text-black/50">Add controllers</div>
-                <div className="mt-1 text-black/80">{addNames}</div>
+            {r.controllerType ? (
+              <div className="space-y-3 text-sm">
+                {r.controllerType === 'PERSON' ? (
+                  <>
+                    <div>
+                      <div className="text-black/50">Personal controller</div>
+                      <div className="mt-1 text-black/80">{r.controllerPerson?.fullName ?? '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-black/50">Email</div>
+                      <div className="mt-1 text-black/80">
+                        {(r.controllerPerson?.useCcEmailInstead ? r.controllerPerson?.ccEmailAddress : r.controllerPerson?.email) ?? '-'}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <div className="text-black/50">Company controller</div>
+                      <div className="mt-1 text-black/80">{r.controllerCompany?.companyName ?? '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-black/50">Register number</div>
+                      <div className="mt-1 text-black/80">{r.controllerCompany?.registerNumber ?? '-'}</div>
+                    </div>
+                  </>
+                )}
               </div>
-              <div>
-                <div className="text-black/50">Remove controller role IDs</div>
-                <div className="mt-1 font-mono text-xs break-all text-black/70">{removeIds}</div>
+            ) : (
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-black/50">Add controllers</div>
+                  <div className="mt-1 text-black/80">{addNames}</div>
+                </div>
+                <div>
+                  <div className="text-black/50">Remove controller role IDs</div>
+                  <div className="mt-1 font-mono text-xs break-all text-black/70">{removeIds}</div>
+                </div>
               </div>
-            </div>
+            )}
           </SectionCard>
           {r.message?.trim() ? (
             <SectionCard title="Message" subtitle="Notes provided when submitting this request.">

@@ -62,6 +62,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const body = (await req.json().catch(() => null)) as
     | {
         effectiveDate?: string;
+        controllerType?: 'PERSON' | 'COMPANY';
+        controllerPerson?: unknown;
+        controllerCompany?: unknown;
         message?: string;
         removeRorcRoleIds?: unknown;
         addControllers?: unknown;
@@ -69,6 +72,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     | null;
 
   const effectiveDate = typeof body?.effectiveDate === 'string' ? body.effectiveDate.trim() : '';
+  const controllerType = body?.controllerType;
+  const controllerPerson = body?.controllerPerson as any;
+  const controllerCompany = body?.controllerCompany as any;
   const message = typeof body?.message === 'string' ? body.message : undefined;
   const removeRorcRoleIds = Array.isArray(body?.removeRorcRoleIds) ? body.removeRorcRoleIds : [];
   const addControllers = Array.isArray(body?.addControllers) ? body.addControllers : [];
@@ -78,6 +84,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     createdByUserId: user.id,
     effectiveDate,
     message,
+    controllerType,
+    controllerPerson,
+    controllerCompany,
     removeRorcRoleIds: removeRorcRoleIds as string[],
     addControllers: addControllers as Array<{ fullName: string; email?: string }>,
   });

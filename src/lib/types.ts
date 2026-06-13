@@ -434,6 +434,29 @@ export type RorcDeclarationRequest = {
   clientId: string;
   status: RorcDeclarationRequestStatus;
   effectiveDate: string;
+  controllerType?: 'PERSON' | 'COMPANY';
+  controllerPerson?: {
+    fullName: string;
+    idType?: string;
+    idNo?: string;
+    dateOfBirth?: string;
+    email?: string;
+    nationality?: string;
+    phone?: string;
+    address?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
+  controllerCompany?: {
+    companyName: string;
+    registerNumber?: string;
+    legalForm?: string;
+    governedByLawAndJurisdiction?: string;
+    registerOfCompanies?: string;
+    companyAddress?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
   message?: string;
   removeRorcRoleIds: string[];
   addControllers: Array<{ fullName: string; email?: string }>;

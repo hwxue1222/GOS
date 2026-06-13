@@ -8965,8 +8965,31 @@ export async function createRorcDeclarationRequest(input: {
   createdByUserId: string;
   effectiveDate: string;
   message?: string;
-  removeRorcRoleIds: string[];
-  addControllers: Array<{ fullName: string; email?: string }>;
+  removeRorcRoleIds?: string[];
+  addControllers?: Array<{ fullName: string; email?: string }>;
+  controllerType?: 'PERSON' | 'COMPANY';
+  controllerPerson?: {
+    fullName: string;
+    idType?: string;
+    idNo?: string;
+    dateOfBirth?: string;
+    email?: string;
+    nationality?: string;
+    phone?: string;
+    address?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
+  controllerCompany?: {
+    companyName: string;
+    registerNumber?: string;
+    legalForm?: string;
+    governedByLawAndJurisdiction?: string;
+    registerOfCompanies?: string;
+    companyAddress?: string;
+    ccEmailAddress?: string;
+    useCcEmailInstead?: boolean;
+  };
 }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
@@ -8974,6 +8997,8 @@ export async function createRorcDeclarationRequest(input: {
 
   const effectiveDate = input.effectiveDate.trim();
   if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const controllerType = input.controllerType;
 
   const removeRorcRoleIds = Array.isArray(input.removeRorcRoleIds)
     ? input.removeRorcRoleIds.map((x) => String(x).trim()).filter(Boolean)
@@ -8986,7 +9011,32 @@ export async function createRorcDeclarationRequest(input: {
         }))
         .filter((x) => !!x.fullName)
     : [];
-  if (!removeRorcRoleIds.length && !addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  if (controllerType === 'PERSON') {
+    const p = input.controllerPerson;
+    if (!p?.fullName?.trim() || !String(p.idType ?? '').trim() || !String(p.idNo ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (!String(p.dateOfBirth ?? '').trim() || !(p.useCcEmailInstead ? String(p.ccEmailAddress ?? '').trim() : String(p.email ?? '').trim())) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (!String(p.nationality ?? '').trim() || !String(p.phone ?? '').trim() || !String(p.address ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+  } else if (controllerType === 'COMPANY') {
+    const c = input.controllerCompany;
+    if (!c?.companyName?.trim() || !String(c.registerNumber ?? '').trim() || !String(c.legalForm ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (!String(c.governedByLawAndJurisdiction ?? '').trim() || !String(c.companyAddress ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (c.useCcEmailInstead && !String(c.ccEmailAddress ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+  } else {
+    if (!removeRorcRoleIds.length && !addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
 
   const directors = await listClientDirectors(input.clientId);
   const signerEmails = Array.from(
@@ -9029,13 +9079,23 @@ export async function createRorcDeclarationRequest(input: {
   const now = nowIso();
   const id = newId('rrc');
 
-  const html = (await import('@/lib/docTemplates')).renderRorcDeclarationHtml({
-    companyName: client.name,
-    effectiveDate,
-    message: input.message,
-    addControllers,
-    removeControllers: removed,
-  });
+  const templates = await import('@/lib/docTemplates');
+  const html =
+    controllerType === 'PERSON' || controllerType === 'COMPANY'
+      ? templates.renderRorcControllerDeclarationHtml({
+          companyName: client.name,
+          controllerType,
+          effectiveDate,
+          controllerPerson: input.controllerPerson,
+          controllerCompany: input.controllerCompany,
+        })
+      : templates.renderRorcDeclarationHtml({
+          companyName: client.name,
+          effectiveDate,
+          message: input.message,
+          addControllers,
+          removeControllers: removed,
+        });
 
   const doc: Document = {
     id: newId('doc'),
@@ -9082,6 +9142,9 @@ export async function createRorcDeclarationRequest(input: {
     clientId: input.clientId,
     status: 'PENDING_SIGNATURES',
     effectiveDate,
+    controllerType,
+    controllerPerson: input.controllerPerson,
+    controllerCompany: input.controllerCompany,
     message: typeof input.message === 'string' ? input.message.trim() || undefined : undefined,
     removeRorcRoleIds,
     addControllers,
@@ -9134,6 +9197,41 @@ export async function decideRorcDeclarationRequest(input: {
 
   if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
   if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+  if (r.controllerType === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
+    const fullName = r.controllerPerson.fullName.trim();
+    const email = typeof r.controllerPerson.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
+    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
+    const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+    const role: ClientPartyRole = {
+      id: newId('cpr'),
+      clientId: r.clientId,
+      partyId: party.id,
+      role: 'RORC',
+      fromDate: r.effectiveDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    db.parties.unshift(party);
+    db.clientPartyRoles.unshift(role);
+  }
+
+  if (r.controllerType === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
+    const companyName = r.controllerCompany.companyName.trim();
+    const party: Party = { id: newId('pty'), type: 'COMPANY', displayName: companyName, createdAt: now, updatedAt: now };
+    const role: ClientPartyRole = {
+      id: newId('cpr'),
+      clientId: r.clientId,
+      partyId: party.id,
+      role: 'RORC',
+      fromDate: r.effectiveDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.parties.unshift(party);
+    db.clientPartyRoles.unshift(role);
+  }
 
   for (const roleId of r.removeRorcRoleIds) {
     const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'RORC');
