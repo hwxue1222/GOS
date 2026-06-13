@@ -91,6 +91,9 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
     { label: 'Status', value: r.status },
     { label: 'Meeting date', value: r.meetingDate },
     { label: 'Chairman', value: r.chairman },
+    ...(r.noticeDirector ? [{ label: 'Noticed Director', value: r.noticeDirector }] : []),
+    ...(r.fiscalYearReport ? [{ label: 'Fiscal Financial Year Report', value: r.fiscalYearReport }] : []),
+    ...(r.companyCategory ? [{ label: 'Company Category', value: r.companyCategory }] : []),
     { label: 'Venue', value: r.meetingVenue },
     { label: 'Submitted', value: (r.submittedAt ?? r.createdAt).slice(0, 10) },
   ];

@@ -95,7 +95,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
       router.push(`/corporate-secretary/applications/new/director-change?companyId=${encodeURIComponent(currentCompanyId)}`);
       return;
     }
-    router.push(`/corporate-secretary/applications?type=share_transfer&companyId=${encodeURIComponent(currentCompanyId)}`);
+    router.push(`/secretary/share-transfers?clientId=${encodeURIComponent(currentCompanyId)}`);
   }
 
   return (

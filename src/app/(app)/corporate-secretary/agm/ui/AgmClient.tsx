@@ -1,21 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { getInvoiceIssuerConfig } from '@/lib/invoice';
 
 export default function AgmClient() {
   const router = useRouter();
-  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+
+  const shareholders = roles?.shareholders ?? [];
+  const shareholderPersons = shareholders.filter(
+    (s): s is { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } } => s.entity.type === 'PERSON',
+  );
+  const directors = roles?.directors ?? [];
 
   const [meetingDate, setMeetingDate] = useState('');
+  const [fiscalYearReport, setFiscalYearReport] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
   const [chairman, setChairman] = useState('');
-  const [agendaSummary, setAgendaSummary] = useState('');
+  const [noticeDirector, setNoticeDirector] = useState('');
+  const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | ''>('');
+  const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const yearOptions = useMemo(() => {
+    const y = new Date().getFullYear();
+    const years: string[] = [];
+    for (let i = 0; i < 12; i++) years.push(String(y - i));
+    return years;
+  }, []);
+
+  useEffect(() => {
+    if (!useByBridgeAddress) return;
+    const issuer = getInvoiceIssuerConfig('BYBRIDGE');
+    const addr = String(issuer.addressLine ?? '').trim();
+    if (addr) setMeetingVenue(addr);
+  }, [useByBridgeAddress]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -26,7 +50,9 @@ export default function AgmClient() {
     const md = meetingDate.trim();
     const mv = meetingVenue.trim();
     const ch = chairman.trim();
-    if (!md || !mv || !ch) {
+    const nd = noticeDirector.trim();
+    const fy = fiscalYearReport.trim();
+    if (!md || !mv || !ch || !nd || !fy) {
       setSubmitError('Please fill in required fields.');
       return;
     }
@@ -39,7 +65,10 @@ export default function AgmClient() {
           meetingDate: md,
           meetingVenue: mv,
           chairman: ch,
-          agendaSummary: agendaSummary.trim() || undefined,
+          noticeDirector: nd,
+          companyCategory: companyCategory || undefined,
+          fiscalYearReport: fy,
+          useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
         }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
@@ -62,48 +91,116 @@ export default function AgmClient() {
 
       {!loading && client ? (
         <div className="space-y-5">
-          <label className="text-sm">
-            <div className="text-black">
-              <span className="text-red-500">*</span> Meeting date
-            </div>
-            <input
-              type="date"
-              value={meetingDate}
-              onChange={(e) => setMeetingDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-            />
-          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Chairman
+              </div>
+              <select
+                value={chairman}
+                onChange={(e) => setChairman(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Select</option>
+                {shareholderPersons.map((s) => (
+                  <option key={s.role.id} value={s.entity.person.fullName}>
+                    {s.entity.person.fullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Noticed Director
+              </div>
+              <select
+                value={noticeDirector}
+                onChange={(e) => setNoticeDirector(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Select</option>
+                {directors.map((d) => (
+                  <option key={d.role.id} value={d.entity.person.fullName}>
+                    {d.entity.person.fullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="flex items-center gap-2 text-sm text-black/80">
+              <input
+                type="radio"
+                name="companyCategory"
+                checked={companyCategory === 'SME'}
+                onChange={() => setCompanyCategory('SME')}
+              />
+              Small and medium-sized enterprises(SME)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-black/80">
+              <input
+                type="radio"
+                name="companyCategory"
+                checked={companyCategory === 'DORMANT'}
+                onChange={() => setCompanyCategory('DORMANT')}
+              />
+              Dormant company
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Date Of Meeting
+              </div>
+              <input
+                type="date"
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Fiscal Financial Year Report
+              </div>
+              <select
+                value={fiscalYearReport}
+                onChange={(e) => setFiscalYearReport(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Select year</option>
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <label className="text-sm">
             <div className="text-black">
-              <span className="text-red-500">*</span> Chairman
+              <span className="text-red-500">*</span> Meeting Venue
             </div>
-            <input
-              value={chairman}
-              onChange={(e) => setChairman(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-            />
-          </label>
-
-          <label className="text-sm">
-            <div className="text-black">
-              <span className="text-red-500">*</span> Meeting venue
-            </div>
-            <input
+            <textarea
               value={meetingVenue}
               onChange={(e) => setMeetingVenue(e.target.value)}
+              rows={3}
               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
             />
           </label>
 
-          <label className="text-sm">
-            <div className="text-black/60">Agenda summary (optional)</div>
-            <textarea
-              value={agendaSummary}
-              onChange={(e) => setAgendaSummary(e.target.value)}
-              rows={5}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+          <label className="flex items-center gap-2 text-sm text-black/80">
+            <input
+              type="checkbox"
+              checked={useByBridgeAddress}
+              onChange={(e) => setUseByBridgeAddress(e.target.checked)}
             />
+            To use ByBridge registered office address
           </label>
 
           <button
@@ -118,4 +215,3 @@ export default function AgmClient() {
     </ModalShell>
   );
 }
-

@@ -1332,12 +1332,18 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
   meetingDate: string;
   meetingVenue: string;
   chairman: string;
+  noticeDirector?: string;
+  fiscalYearReport?: string;
+  companyCategory?: string;
   agendaSummary?: string;
 }) {
   const companyName = esc(input.companyName);
   const meetingDate = esc(input.meetingDate);
   const meetingVenue = esc(input.meetingVenue);
   const chairman = esc(input.chairman);
+  const noticeDirector = esc(String(input.noticeDirector ?? '').trim());
+  const fiscalYearReport = esc(String(input.fiscalYearReport ?? '').trim());
+  const companyCategory = esc(String(input.companyCategory ?? '').trim());
   const agendaSummary = typeof input.agendaSummary === 'string' ? esc(input.agendaSummary) : '';
 
   return `
@@ -1361,6 +1367,9 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
     <div class="box" style="margin-top: 12px;">
       <div><strong>Company</strong>: ${companyName}</div>
       <div style="margin-top: 10px;"><strong>Chairman</strong>: ${chairman}</div>
+      ${noticeDirector ? `<div style="margin-top: 10px;"><strong>Noticed Director</strong>: ${noticeDirector}</div>` : ''}
+      ${fiscalYearReport ? `<div style="margin-top: 10px;"><strong>Fiscal Financial Year Report</strong>: ${fiscalYearReport}</div>` : ''}
+      ${companyCategory ? `<div style="margin-top: 10px;"><strong>Company Category</strong>: ${companyCategory}</div>` : ''}
       <div style="margin-top: 10px;"><strong>Venue</strong>: ${meetingVenue}</div>
       ${agendaSummary ? `<div style="margin-top: 10px;"><strong>Agenda Summary</strong>:</div><div style="margin-top:6px; white-space: pre-wrap;">${agendaSummary}</div>` : ''}
       <div class="sig">

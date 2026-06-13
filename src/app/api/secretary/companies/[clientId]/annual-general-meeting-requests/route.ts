@@ -64,14 +64,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         meetingDate?: string;
         meetingVenue?: string;
         chairman?: string;
-        agendaSummary?: string;
+        noticeDirector?: string;
+        companyCategory?: string;
+        fiscalYearReport?: string;
+        useByBridgeRegisteredOfficeAddress?: boolean;
       }
     | null;
 
   const meetingDate = typeof body?.meetingDate === 'string' ? body.meetingDate.trim() : '';
   const meetingVenue = typeof body?.meetingVenue === 'string' ? body.meetingVenue.trim() : '';
   const chairman = typeof body?.chairman === 'string' ? body.chairman.trim() : '';
-  const agendaSummary = typeof body?.agendaSummary === 'string' ? body.agendaSummary : undefined;
+  const noticeDirector = typeof body?.noticeDirector === 'string' ? body.noticeDirector.trim() : '';
+  const companyCategory = typeof body?.companyCategory === 'string' ? body.companyCategory.trim() : undefined;
+  const fiscalYearReport = typeof body?.fiscalYearReport === 'string' ? body.fiscalYearReport.trim() : '';
+  const useByBridgeRegisteredOfficeAddress = !!body?.useByBridgeRegisteredOfficeAddress;
 
   const r = await createAnnualGeneralMeetingRequest({
     clientId,
@@ -79,7 +85,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     meetingDate,
     meetingVenue,
     chairman,
-    agendaSummary,
+    noticeDirector,
+    companyCategory,
+    fiscalYearReport,
+    useByBridgeRegisteredOfficeAddress,
   });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
 

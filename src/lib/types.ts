@@ -462,6 +462,10 @@ export type AnnualGeneralMeetingRequest = {
   meetingDate: string;
   meetingVenue: string;
   chairman: string;
+  noticeDirector?: string;
+  companyCategory?: string;
+  fiscalYearReport?: string;
+  useByBridgeRegisteredOfficeAddress?: boolean;
   agendaSummary?: string;
   createdByUserId: string;
   packetId: string;

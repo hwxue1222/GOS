@@ -9202,7 +9202,10 @@ export async function createAnnualGeneralMeetingRequest(input: {
   meetingDate: string;
   meetingVenue: string;
   chairman: string;
-  agendaSummary?: string;
+  noticeDirector: string;
+  companyCategory?: string;
+  fiscalYearReport: string;
+  useByBridgeRegisteredOfficeAddress?: boolean;
 }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
@@ -9211,8 +9214,13 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const meetingDate = input.meetingDate.trim();
   const meetingVenue = input.meetingVenue.trim();
   const chairman = input.chairman.trim();
-  const agendaSummary = typeof input.agendaSummary === 'string' ? input.agendaSummary.trim() || undefined : undefined;
-  if (!meetingDate || !meetingVenue || !chairman) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const noticeDirector = input.noticeDirector.trim();
+  const fiscalYearReport = input.fiscalYearReport.trim();
+  const companyCategory = typeof input.companyCategory === 'string' ? input.companyCategory.trim() || undefined : undefined;
+  const useByBridgeRegisteredOfficeAddress = !!input.useByBridgeRegisteredOfficeAddress;
+  if (!meetingDate || !meetingVenue || !chairman || !noticeDirector || !fiscalYearReport) {
+    return { ok: false as const, error: 'INVALID_INPUT' as const };
+  }
 
   const directors = await listClientDirectors(input.clientId);
   const signerEmails = Array.from(
@@ -9233,7 +9241,9 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingDate,
     meetingVenue,
     chairman,
-    agendaSummary,
+    noticeDirector,
+    fiscalYearReport,
+    companyCategory,
   });
 
   const doc: Document = {
@@ -9283,7 +9293,10 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingDate,
     meetingVenue,
     chairman,
-    agendaSummary,
+    noticeDirector,
+    fiscalYearReport,
+    companyCategory,
+    useByBridgeRegisteredOfficeAddress,
     createdByUserId: input.createdByUserId,
     packetId: packet.id,
     createdAt: now,
