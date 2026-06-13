@@ -6954,6 +6954,7 @@ async function maybeFinalizeShareTransferIfReady(db: Db, packet: SignaturePacket
   if (idx < 0) return;
   const t = db.shareTransfers[idx];
   if (t.status === 'APPLIED') return;
+  if ((t as any).status === 'APPROVED' || (t as any).status === 'REJECTED') return;
   const sta = db.signaturePackets.find((p) => p.id === t.staPacketId) ?? null;
   const br = db.signaturePackets.find((p) => p.id === t.brPacketId) ?? null;
   if (!sta || !br) return;
@@ -7949,7 +7950,8 @@ export async function decideShareTransfer(input: {
   const idx = db.shareTransfers.findIndex((t) => t.id === input.transferId);
   if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
   const t = db.shareTransfers[idx];
-  if (t.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+  const st = String((t as any).status ?? '');
+  if (st === 'APPLIED' || st === 'APPROVED' || st === 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const now = nowIso();
   const nextStatus: ShareTransfer['status'] =

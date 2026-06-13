@@ -24,13 +24,15 @@ function statusFromDirectorChange(r: DirectorChangeRequest): SecretaryServiceApp
 }
 
 function statusFromShareTransfer(t: ShareTransfer): SecretaryServiceApplicationRow['status'] {
-  if (t.status === 'SIGNING') return 'SIGNING';
-  if (t.status === 'BLOCKED_REPRESENTATIVE') return 'NEED_MORE_INFO';
-  if (t.status === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
-  if (t.status === 'PENDING_REVIEW') return 'PENDING_REVIEW';
-  if (t.status === 'APPROVED') return 'APPROVED';
-  if (t.status === 'REJECTED') return 'REJECTED';
-  if (t.status === 'APPLIED') return 'COMPLETE';
+  const st = String((t as any).status ?? '');
+  if (st === 'SIGNING') return 'SIGNING';
+  if (st === 'BLOCKED_REPRESENTATIVE') return 'NEED_MORE_INFO';
+  if (st === 'NEED_MORE_INFO') return 'NEED_MORE_INFO';
+  if (st === 'PENDING_REVIEW') return 'PENDING_REVIEW';
+  if (st === 'SIGNED') return 'PENDING_REVIEW';
+  if (st === 'APPROVED') return 'APPROVED';
+  if (st === 'REJECTED') return 'REJECTED';
+  if (st === 'APPLIED') return 'COMPLETE';
   return 'PROCESSING';
 }
 
