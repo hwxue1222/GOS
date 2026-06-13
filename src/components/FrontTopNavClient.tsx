@@ -220,8 +220,8 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
             className="w-[220px] truncate rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
           >
             {!selectableCompanies.length ? <option value="">No companies</option> : null}
-            {companies.map((c) => (
-              <option key={c.id} value={c.id} disabled={!!c.isStruckOff}>
+            {selectableCompanies.map((c) => (
+              <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
