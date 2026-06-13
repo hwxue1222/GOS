@@ -3,7 +3,11 @@ import ShareTransfersClient from '@/app/(app)/secretary/share-transfers/ui/Share
 import { getCurrentUser } from '@/lib/auth';
 import { listClients, listShareTransfers } from '@/lib/db';
 
-export default async function ShareTransfersPage() {
+export default async function ShareTransfersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const me = await getCurrentUser();
   if (!me) return null;
   if (me.role === 'staff') {
@@ -19,15 +23,17 @@ export default async function ShareTransfersPage() {
     );
   }
 
+  const sp = await searchParams;
+  const initialClientId = Array.isArray(sp.clientId) ? sp.clientId[0] : sp.clientId;
+
   const [clientsAll, transfersAll] = await Promise.all([listClients(), listShareTransfers()]);
   const clients = clientsAll.filter((c) => !c.deletedAt).map((c) => ({ id: c.id, code: c.code, name: c.name }));
-  const transfers = transfersAll;
+  const transfers = initialClientId ? transfersAll.filter((t) => t.clientId === initialClientId) : transfersAll;
 
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="secretary" />
-      <ShareTransfersClient initialClients={clients} initialTransfers={transfers} />
+      <ShareTransfersClient initialClients={clients} initialTransfers={transfers} initialClientId={initialClientId} />
     </div>
   );
 }
-

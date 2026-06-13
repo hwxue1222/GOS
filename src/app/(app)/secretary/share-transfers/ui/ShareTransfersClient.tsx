@@ -29,8 +29,12 @@ type ShareholderOption = {
   sharesHeld: number;
 };
 
-export default function ShareTransfersClient(props: { initialClients: ClientLite[]; initialTransfers: ShareTransfer[] }) {
-  const { initialClients, initialTransfers } = props;
+export default function ShareTransfersClient(props: {
+  initialClients: ClientLite[];
+  initialTransfers: ShareTransfer[];
+  initialClientId?: string;
+}) {
+  const { initialClients, initialTransfers, initialClientId } = props;
 
   const [clients] = useState<ClientLite[]>(initialClients);
   const [transfers, setTransfers] = useState<ShareTransfer[]>(initialTransfers);
@@ -39,8 +43,9 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = usePersistedState('gos.secretary.shareTransfers.search', '');
 
+  const lockedClientId = String(initialClientId ?? '').trim();
   const [draft, setDraft] = useState({
-    clientId: clients[0]?.id ?? '',
+    clientId: lockedClientId || clients[0]?.id || '',
     effectiveDate: '',
     shares: 0,
     shareClass: '',
@@ -50,6 +55,12 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
     transfereeName: '',
     transfereeEmail: '',
   });
+
+  useEffect(() => {
+    if (!lockedClientId) return;
+    setDraft((v) => ({ ...v, clientId: lockedClientId }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedClientId]);
 
   const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
   const [loadingShareholders, setLoadingShareholders] = useState(false);
@@ -115,11 +126,15 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.clientId]);
 
+  const visibleTransfers = useMemo(() => {
+    return lockedClientId ? transfers.filter((t) => t.clientId === lockedClientId) : transfers;
+  }, [lockedClientId, transfers]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return transfers;
-    return transfers.filter((t) => `${t.id} ${t.status}`.toLowerCase().includes(q));
-  }, [search, transfers]);
+    if (!q) return visibleTransfers;
+    return visibleTransfers.filter((t) => `${t.id} ${t.status}`.toLowerCase().includes(q));
+  }, [search, visibleTransfers]);
 
   async function refresh() {
     const res = await fetch('/api/secretary/share-transfers');
@@ -246,17 +261,23 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <label className="text-sm">
                 <div className="text-black/70">Target company</div>
-                <select
-                  value={draft.clientId}
-                  onChange={(e) => setDraft((v) => ({ ...v, clientId: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                >
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} {c.name}
-                    </option>
-                  ))}
-                </select>
+                {lockedClientId ? (
+                  <div className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/80">
+                    {clientNameById.get(lockedClientId) ?? lockedClientId}
+                  </div>
+                ) : (
+                  <select
+                    value={draft.clientId}
+                    onChange={(e) => setDraft((v) => ({ ...v, clientId: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  >
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
               <label className="text-sm">
                 <div className="text-black/70">Effective date</div>
