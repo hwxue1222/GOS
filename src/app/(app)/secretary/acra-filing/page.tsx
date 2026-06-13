@@ -85,8 +85,7 @@ export default async function SecretaryAcraFilingPage() {
   };
 
   const csRows = buildSecretaryServiceApplications(db, allowedClientIds)
-    .filter((r) => r.type !== 'SHARE_TRANSFER')
-    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'SIGNING')
+    .filter((r) => r.status !== 'DRAFT')
     .map((r) => {
       const map = (() => {
         if (r.type === 'DIRECTOR_CHANGE') {
@@ -111,6 +110,14 @@ export default async function SecretaryAcraFilingPage() {
             typeLabel: 'Annual General Meeting',
             detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`,
             decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}/decision`,
+          };
+        }
+        if (r.type === 'SHARE_TRANSFER') {
+          return {
+            id: `ST-${r.source.id}`,
+            typeLabel: 'Transfer of Shares',
+            detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
+            decisionUrl: `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}/decision`,
           };
         }
         return {
@@ -179,7 +186,7 @@ export default async function SecretaryAcraFilingPage() {
 
           <div className="mt-6">
             <div className="text-sm font-semibold">Corporate Secretary Services</div>
-            <div className="mt-1 text-sm text-black/60">Pending approvals</div>
+            <div className="mt-1 text-sm text-black/60">Applications (including approved/rejected history)</div>
             <div className="mt-3">
               <SecretaryCsReviewClient rows={csRows} />
             </div>

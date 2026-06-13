@@ -6962,7 +6962,7 @@ async function maybeFinalizeShareTransferIfReady(db: Db, packet: SignaturePacket
   );
   const csOk = csCertPackets.length === 0 || csCertPackets.every((p) => p.status === 'SIGNED');
   if (sta.status === 'SIGNED' && br.status === 'SIGNED' && csOk) {
-    db.shareTransfers[idx] = { ...t, status: 'SIGNED', updatedAt: nowIso(), blockingRdrIds: undefined };
+    db.shareTransfers[idx] = { ...t, status: 'PENDING_REVIEW', updatedAt: nowIso(), blockingRdrIds: undefined };
   }
 }
 
@@ -7937,6 +7937,33 @@ export async function resumeShareTransfer(transferId: string) {
 
   await writeDb(db);
   return { ok: true as const, signLinks: links };
+}
+
+export async function decideShareTransfer(input: {
+  transferId: string;
+  decidedByUserId: string;
+  decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO';
+  note?: string;
+}) {
+  const db = await readDb();
+  const idx = db.shareTransfers.findIndex((t) => t.id === input.transferId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const t = db.shareTransfers[idx];
+  if (t.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const now = nowIso();
+  const nextStatus: ShareTransfer['status'] =
+    input.decision === 'APPROVE' ? 'APPROVED' : input.decision === 'REJECT' ? 'REJECTED' : 'NEED_MORE_INFO';
+  db.shareTransfers[idx] = {
+    ...t,
+    status: nextStatus,
+    decidedAt: now,
+    decidedByUserId: input.decidedByUserId,
+    decisionNote: typeof input.note === 'string' ? input.note : undefined,
+    updatedAt: now,
+  };
+  await writeDb(db);
+  return { ok: true as const, transfer: db.shareTransfers[idx] };
 }
 
 export async function listDirectorChangeRequestsByClient(clientId: string) {

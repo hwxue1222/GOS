@@ -343,7 +343,14 @@ export type RepresentativeDesignationRequest = {
   updatedAt?: string;
 };
 
-export type ShareTransferStatus = 'SIGNING' | 'BLOCKED_REPRESENTATIVE' | 'SIGNED' | 'APPLIED';
+export type ShareTransferStatus =
+  | 'SIGNING'
+  | 'BLOCKED_REPRESENTATIVE'
+  | 'NEED_MORE_INFO'
+  | 'PENDING_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'APPLIED';
 
 export type ShareTransfer = {
   id: string;
@@ -360,6 +367,9 @@ export type ShareTransfer = {
   blockingRdrIds?: string[];
   createdAt: string;
   updatedAt?: string;
+  decidedAt?: string;
+  decidedByUserId?: string;
+  decisionNote?: string;
 };
 
 export type SecretaryServiceApplicationType =

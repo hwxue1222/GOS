@@ -103,7 +103,13 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                         </button>
                       </>
                     ) : (
-                      <div className="text-xs text-black/50">Waiting for signatures</div>
+                      <div className="text-xs text-black/50">
+                        {r.status === 'SIGNING'
+                          ? 'Waiting for signatures'
+                          : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
+                            ? 'Decided'
+                            : '-'}
+                      </div>
                     )}
                   </div>
                 </td>
