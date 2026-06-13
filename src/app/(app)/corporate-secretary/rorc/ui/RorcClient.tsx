@@ -12,8 +12,10 @@ export default function RorcClient() {
   const router = useRouter();
   const { companyId, client, loading, error, closeHref } = useCompanyContext();
 
+  const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   const [mode, setMode] = useState<'PERSON' | 'COMPANY'>('PERSON');
-  const [effectiveDate, setEffectiveDate] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState(todayYmd);
 
   const [person, setPerson] = useState({
     fullName: '',
@@ -433,4 +435,3 @@ export default function RorcClient() {
     </ModalShell>
   );
 }
-
