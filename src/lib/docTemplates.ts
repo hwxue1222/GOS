@@ -815,17 +815,19 @@ export function renderShareTransferAgreementHtml(input: {
 
   const transferorPhrase = partyPhrase(input.transferor, 'transferor');
   const transfereePhrase = partyPhrase(input.transferee, 'transferee');
-  const transferorName = esc(input.transferorSignerName ?? input.transferor.name);
-  const transfereeName = esc(input.transfereeSignerName ?? input.transferee.name);
+  const transferorPartyName = esc(input.transferor.name);
+  const transfereePartyName = esc(input.transferee.name);
+  const transferorSignerName = esc(input.transferorSignerName ?? input.transferor.name);
+  const transfereeSignerName = esc(input.transfereeSignerName ?? input.transferee.name);
 
   const transferorSigLabel =
     input.transferor.kind === 'COMPANY'
-      ? `${transferorName} (on behalf of transferor)`
-      : transferorName;
+      ? `${transferorSignerName} (on behalf of ${transferorPartyName})`
+      : transferorSignerName;
   const transfereeSigLabel =
     input.transferee.kind === 'COMPANY'
-      ? `${transfereeName} (on behalf of transferee)`
-      : transfereeName;
+      ? `${transfereeSignerName} (on behalf of ${transfereePartyName})`
+      : transfereeSignerName;
 
   return `
 <!doctype html>
