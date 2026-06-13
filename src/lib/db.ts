@@ -7146,6 +7146,10 @@ export async function createShareTransferRequest(input: {
         address: string;
         email?: string;
         phone?: string;
+        corporateRepresentativeName?: string;
+        corporateRepresentativeEmail?: string;
+        directorSignerName?: string;
+        directorSignerEmail?: string;
       }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   shares: number;
@@ -7214,6 +7218,55 @@ export async function createShareTransferRequest(input: {
     return { company: c, party };
   };
 
+  const ensureExternalCompanyParty = (data: {
+    name: string;
+    registrationNo?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+  }) => {
+    const regKey = normalizeIdNo(String(data.registrationNo ?? ''));
+    const existing =
+      regKey ? db.externalCompanies.find((c) => normalizeIdNo(String(c.registrationNo ?? '')) === regKey) ?? null : null;
+    const ext: ExternalCompany = existing
+      ? { ...existing, name: data.name.trim() || existing.name, address: data.address, email: data.email, phone: data.phone, updatedAt: now }
+      : {
+          id: newId('exc'),
+          name: data.name.trim(),
+          registrationNo: data.registrationNo?.trim() || undefined,
+          address: data.address?.trim() || undefined,
+          email: data.email?.trim() || undefined,
+          phone: data.phone?.trim() || undefined,
+          createdAt: now,
+          updatedAt: now,
+        };
+    if (existing) {
+      const i = db.externalCompanies.findIndex((c) => c.id === existing.id);
+      if (i >= 0) db.externalCompanies[i] = ext;
+    } else {
+      db.externalCompanies.unshift(ext);
+    }
+
+    const partyExisting = db.parties.find((p) => p.type === 'COMPANY' && p.externalCompanyId === ext.id) ?? null;
+    const party: Party = partyExisting
+      ? { ...partyExisting, displayName: ext.name, updatedAt: now }
+      : {
+          id: newId('pty'),
+          type: 'COMPANY',
+          displayName: ext.name,
+          externalCompanyId: ext.id,
+          createdAt: now,
+          updatedAt: now,
+        };
+    if (partyExisting) {
+      const i = db.parties.findIndex((p) => p.id === partyExisting.id);
+      if (i >= 0) db.parties[i] = party;
+    } else {
+      db.parties.unshift(party);
+    }
+    return { externalCompany: ext, party };
+  };
+
   const ensureExistingShareholderParty = (partyId: string) => {
     const pid = String(partyId ?? '').trim();
     if (!pid) return null;
@@ -7258,13 +7311,43 @@ export async function createShareTransferRequest(input: {
           ? (() => {
               const regKey = normalizeIdNo(input.transferee.registrationNo);
               const hit = db.clients.find((c) => normalizeIdNo(c.companyRegistrationNo ?? '') === regKey && !c.deletedAt) ?? null;
-              if (!hit) return null;
-              return ensureCompanyParty(hit.id);
+              if (hit) return ensureCompanyParty(hit.id);
+
+              if (!input.transferee.companyName?.trim() || !input.transferee.registrationNo?.trim() || !input.transferee.address?.trim()) {
+                return null;
+              }
+              return ensureExternalCompanyParty({
+                name: input.transferee.companyName,
+                registrationNo: input.transferee.registrationNo,
+                address: input.transferee.address,
+                email: input.transferee.email,
+                phone: input.transferee.phone,
+              });
             })()
           : input.transferee.kind === 'PERSON'
             ? makePersonParty(input.transferee.fullName, input.transferee.email)
             : ensureCompanyParty(input.transferee.clientId);
   if (!transferee) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const externalRdrConfigByPartyId = new Map<
+    string,
+    { companyName: string; repName: string; repEmail: string; signerEmail: string }
+  >();
+  if (input.transferee.kind === 'NEW_COMPANY') {
+    const party = transferee.party;
+    if (party.type === 'COMPANY' && party.externalCompanyId) {
+      const repName = String(input.transferee.corporateRepresentativeName ?? '').trim();
+      const repEmail = String(input.transferee.corporateRepresentativeEmail ?? '').trim();
+      const signerEmail = String(input.transferee.directorSignerEmail ?? '').trim();
+      if (!repName || !repEmail || !signerEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      externalRdrConfigByPartyId.set(party.id, {
+        companyName: party.displayName,
+        repName,
+        repEmail,
+        signerEmail,
+      });
+    }
+  }
 
   const transferorPartyId = transferor.party.id;
   const transfereePartyId = transferee.party.id;
@@ -7390,6 +7473,67 @@ export async function createShareTransferRequest(input: {
 
   const ensureAutoRdr = async (companyParty: Party) => {
     const companyClientId = companyParty.clientId;
+    if (!companyClientId && companyParty.externalCompanyId) {
+      const cfg = externalRdrConfigByPartyId.get(companyParty.id) ?? null;
+      if (!cfg) return null;
+
+      const rdrId = newId('rdr');
+      const html = (await import('@/lib/docTemplates')).renderRdrAuthorizationHtml({
+        companyName: cfg.companyName,
+        representativeName: cfg.repName,
+        purpose: `Appoint a GLOBAL corporate representative for signing documents (Share Transfer).`,
+        dateYmd: effectiveDate,
+      });
+      const doc: Document = {
+        id: newId('doc'),
+        type: 'RDR_AUTH',
+        title: `Corporate Representative - ${cfg.companyName}`,
+        html,
+        sha256: sha256Hex(html),
+        createdAt: now,
+      };
+      db.documents.unshift(doc);
+
+      const packet: SignaturePacket = {
+        id: newId('spk'),
+        kind: 'RDR',
+        relatedType: 'RDR',
+        relatedId: rdrId,
+        documentId: doc.id,
+        status: 'SIGNING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signaturePackets.unshift(packet);
+
+      const rdr: RepresentativeDesignationRequest = {
+        id: rdrId,
+        triggerType: 'AUTO_FOR_CHANGE_REQUEST',
+        companyPartyId: companyParty.id,
+        representativePersonId: undefined,
+        representativeName: cfg.repName,
+        representativeEmail: cfg.repEmail,
+        packetId: packet.id,
+        status: 'SIGNING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.representativeDesignationRequests.unshift(rdr);
+
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email: cfg.signerEmail,
+        tokenHash: sha256Hex(token),
+        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      return { rdrId, links: [{ email: cfg.signerEmail, url: `/sign/${token}` }] };
+    }
     if (!companyClientId) return null;
     const company = db.clients.find((c) => c.id === companyClientId) ?? null;
     if (!company || company.deletedAt) return null;

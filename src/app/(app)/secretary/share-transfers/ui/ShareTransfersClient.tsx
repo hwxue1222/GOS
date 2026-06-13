@@ -46,11 +46,16 @@ type NewShareholderPerson = {
 };
 
 type NewShareholderCompany = {
+  clientId: string;
   companyName: string;
   registrationNo: string;
   address: string;
   email: string;
   phone: string;
+  corporateRepresentativeName: string;
+  corporateRepresentativeEmail: string;
+  directorSignerName: string;
+  directorSignerEmail: string;
 };
 
 type ShareholderOption = {
@@ -95,11 +100,16 @@ export default function ShareTransfersClient(props: {
       address: '',
     },
     newCompany: {
+      clientId: '',
       companyName: '',
       registrationNo: '',
       address: '',
       email: '',
       phone: '',
+      corporateRepresentativeName: '',
+      corporateRepresentativeEmail: '',
+      directorSignerName: '',
+      directorSignerEmail: '',
     },
   });
 
@@ -157,12 +167,22 @@ export default function ShareTransfersClient(props: {
         .then((r) => r.json().catch(() => null))
         .then((j: any) => {
           const c = j?.company;
-          if (!c) return;
+          if (!c) {
+            setDraft((v) => ({
+              ...v,
+              newCompany: {
+                ...v.newCompany,
+                clientId: '',
+              },
+            }));
+            return;
+          }
           const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
           setDraft((v) => ({
             ...v,
             newCompany: {
               ...v.newCompany,
+              clientId: String(c.clientId ?? ''),
               companyName: String(c.name ?? v.newCompany.companyName),
               address: addr || v.newCompany.address,
               email: String(c.email ?? v.newCompany.email),
@@ -242,11 +262,16 @@ export default function ShareTransfersClient(props: {
         address: '',
       },
       newCompany: {
+        clientId: '',
         companyName: '',
         registrationNo: '',
         address: '',
         email: '',
         phone: '',
+        corporateRepresentativeName: '',
+        corporateRepresentativeEmail: '',
+        directorSignerName: '',
+        directorSignerEmail: '',
       },
       valueSgd: '',
       shareClass: 'ORDINARY SHARE',
@@ -319,6 +344,11 @@ export default function ShareTransfersClient(props: {
         if (!c.companyName.trim()) return void setError('INVALID_INPUT');
         if (!c.registrationNo.trim()) return void setError('INVALID_INPUT');
         if (!c.address.trim()) return void setError('INVALID_INPUT');
+        if (!c.clientId.trim()) {
+          if (!c.corporateRepresentativeName.trim()) return void setError('INVALID_INPUT');
+          if (!c.corporateRepresentativeEmail.trim()) return void setError('INVALID_INPUT');
+          if (!c.directorSignerEmail.trim()) return void setError('INVALID_INPUT');
+        }
       }
     }
 
@@ -349,14 +379,23 @@ export default function ShareTransfersClient(props: {
                     nationality: draft.newPerson.nationality,
                     address: draft.newPerson.address,
                   }
-                : {
-                    kind: 'NEW_COMPANY',
-                    companyName: draft.newCompany.companyName,
-                    registrationNo: draft.newCompany.registrationNo,
-                    address: draft.newCompany.address,
-                    email: draft.newCompany.email,
-                    phone: draft.newCompany.phone,
-                  },
+                : draft.newCompany.clientId.trim()
+                  ? {
+                      kind: 'COMPANY_CLIENT',
+                      clientId: draft.newCompany.clientId.trim(),
+                    }
+                  : {
+                      kind: 'NEW_COMPANY',
+                      companyName: draft.newCompany.companyName,
+                      registrationNo: draft.newCompany.registrationNo,
+                      address: draft.newCompany.address,
+                      email: draft.newCompany.email,
+                      phone: draft.newCompany.phone,
+                      corporateRepresentativeName: draft.newCompany.corporateRepresentativeName,
+                      corporateRepresentativeEmail: draft.newCompany.corporateRepresentativeEmail,
+                      directorSignerName: draft.newCompany.directorSignerName,
+                      directorSignerEmail: draft.newCompany.directorSignerEmail,
+                    },
         }),
       });
       const j = await res.json().catch(() => null);
@@ -758,6 +797,64 @@ export default function ShareTransfersClient(props: {
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                             />
                           </label>
+
+
+                          {!draft.newCompany.clientId.trim() ? (
+                            <>
+                              <label className="text-sm">
+                                <div className="text-black/70">Corporate representative name</div>
+                                <input
+                                  value={draft.newCompany.corporateRepresentativeName}
+                                  onChange={(e) =>
+                                    setDraft((v) => ({
+                                      ...v,
+                                      newCompany: { ...v.newCompany, corporateRepresentativeName: e.target.value },
+                                    }))
+                                  }
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Corporate representative email</div>
+                                <input
+                                  value={draft.newCompany.corporateRepresentativeEmail}
+                                  onChange={(e) =>
+                                    setDraft((v) => ({
+                                      ...v,
+                                      newCompany: { ...v.newCompany, corporateRepresentativeEmail: e.target.value },
+                                    }))
+                                  }
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Director signer name</div>
+                                <input
+                                  value={draft.newCompany.directorSignerName}
+                                  onChange={(e) =>
+                                    setDraft((v) => ({
+                                      ...v,
+                                      newCompany: { ...v.newCompany, directorSignerName: e.target.value },
+                                    }))
+                                  }
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Director signer email</div>
+                                <input
+                                  value={draft.newCompany.directorSignerEmail}
+                                  onChange={(e) =>
+                                    setDraft((v) => ({
+                                      ...v,
+                                      newCompany: { ...v.newCompany, directorSignerEmail: e.target.value },
+                                    }))
+                                  }
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                            </>
+                          ) : null}
                         </div>
                       )}
                     </div>

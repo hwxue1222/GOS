@@ -70,6 +70,10 @@ export async function POST(req: Request) {
           address?: string;
           companyName?: string;
           registrationNo?: string;
+          corporateRepresentativeName?: string;
+          corporateRepresentativeEmail?: string;
+          directorSignerName?: string;
+          directorSignerEmail?: string;
         };
       }
     | null;
@@ -126,6 +130,10 @@ export async function POST(req: Request) {
               address: (body.transferee as any)?.address ?? '',
               email: (body.transferee as any)?.email ?? '',
               phone: (body.transferee as any)?.phone ?? '',
+              corporateRepresentativeName: (body.transferee as any)?.corporateRepresentativeName ?? '',
+              corporateRepresentativeEmail: (body.transferee as any)?.corporateRepresentativeEmail ?? '',
+              directorSignerName: (body.transferee as any)?.directorSignerName ?? '',
+              directorSignerEmail: (body.transferee as any)?.directorSignerEmail ?? '',
             } as const)
       : body?.transferee?.kind === 'COMPANY_CLIENT'
         ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
