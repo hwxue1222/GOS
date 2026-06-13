@@ -101,7 +101,11 @@ export default async function ShareTransferApplicationDetailPage({
     .map((p) => {
       const doc = docById.get(p.documentId) ?? null;
       if (!doc) return null;
-      const signerCount = db.signatureRequests.filter((r) => r.packetId === p.id).length;
+      const signerEmails = db.signatureRequests
+        .filter((r) => r.packetId === p.id)
+        .map((r) => (r.email ?? '').trim().toLowerCase())
+        .filter(Boolean);
+      const signerCount = new Set(signerEmails).size;
       return { documentId: doc.id, title: doc.title, signerCount };
     })
     .filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;

@@ -7834,12 +7834,13 @@ export async function createShareTransferRequest(input: {
   const staLinks: Array<{ email: string; url: string }> = [];
   if (blockingRdrIds.length === 0) {
     (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
-    for (const email of staSignerEmails) {
+    const uniqueStaEmails = Array.from(new Set(staSignerEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+    for (const emailKey of uniqueStaEmails) {
       const token = newToken();
       const req: SignatureRequest = {
         id: newId('sgr'),
         packetId: staPacket.id,
-        email,
+        email: emailKey,
         tokenHash: sha256Hex(token),
         expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'PENDING',
@@ -7847,7 +7848,7 @@ export async function createShareTransferRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      staLinks.push({ email, url: `/sign/${token}` });
+      staLinks.push({ email: emailKey, url: `/sign/${token}` });
     }
   }
 
@@ -7913,9 +7914,15 @@ export async function resumeShareTransfer(transferId: string) {
   const emails = [resolveEmail(transferorParty), resolveEmail(transfereeParty)];
   if (emails.some((e) => !e)) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
 
+  const uniqueEmails = Array.from(new Set((emails as string[]).map((e) => e.trim().toLowerCase()).filter(Boolean)));
+
   const now = nowIso();
   const links: Array<{ email: string; url: string }> = [];
-  for (const email of emails as string[]) {
+  for (const email of uniqueEmails) {
+    const exists = db.signatureRequests.some(
+      (r) => r.packetId === staPacket.id && r.email.trim().toLowerCase() === email && r.status !== 'REVOKED' && r.status !== 'EXPIRED',
+    );
+    if (exists) continue;
     const token = newToken();
     const req: SignatureRequest = {
       id: newId('sgr'),

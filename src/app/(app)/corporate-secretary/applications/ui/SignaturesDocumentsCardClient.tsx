@@ -42,10 +42,35 @@ export default function SignaturesDocumentsCardClient(props: {
 }) {
   const [tab, setTab] = useState<'signatures' | 'documents'>('signatures');
 
-  const signatureSummary = useMemo(() => {
-    const signed = props.signatureRows.filter((r) => r.status === 'SIGNED').length;
-    return { signed, total: props.signatureRows.length };
+  const signatureRows = useMemo(() => {
+    const rank: Record<string, number> = { SIGNED: 5, OTP_SENT: 4, PENDING: 3, EXPIRED: 2, REVOKED: 1 };
+    const best = new Map<string, SignatureRow>();
+    for (const r of props.signatureRows) {
+      const key = `${normalizeDocTitle(r.documentTitle)}:${String(r.email ?? '').trim().toLowerCase()}`;
+      const prev = best.get(key);
+      if (!prev) {
+        best.set(key, r);
+        continue;
+      }
+      const a = rank[String(prev.status ?? '')] ?? 0;
+      const b = rank[String(r.status ?? '')] ?? 0;
+      if (b > a) {
+        best.set(key, r);
+        continue;
+      }
+      if (b === a) {
+        const prevAt = String(prev.signedAt ?? '').trim();
+        const nextAt = String(r.signedAt ?? '').trim();
+        if (nextAt && (!prevAt || nextAt > prevAt)) best.set(key, r);
+      }
+    }
+    return Array.from(best.values());
   }, [props.signatureRows]);
+
+  const signatureSummary = useMemo(() => {
+    const signed = signatureRows.filter((r) => r.status === 'SIGNED').length;
+    return { signed, total: signatureRows.length };
+  }, [signatureRows]);
 
   return (
     <div id={props.id} className="rounded-xl bg-white border border-black/5 p-5">
@@ -67,7 +92,7 @@ export default function SignaturesDocumentsCardClient(props: {
             tab === 'signatures' ? 'bg-white text-black shadow-sm' : 'text-black/60 hover:bg-white/60'
           }`}
         >
-          Signatures ({props.signatureRows.length})
+          Signatures ({signatureRows.length})
         </button>
         <button
           type="button"
@@ -92,7 +117,7 @@ export default function SignaturesDocumentsCardClient(props: {
               </tr>
             </thead>
             <tbody>
-              {props.signatureRows.map((r) => (
+              {signatureRows.map((r) => (
                 <tr key={`${r.documentTitle}:${r.email}`} className="border-b border-black/5 hover:bg-black/[0.02]">
                   <td className="px-3 py-2 align-top text-xs text-black/70">{normalizeDocTitle(r.documentTitle)}</td>
                   <td className="px-3 py-2 align-top">
@@ -108,7 +133,7 @@ export default function SignaturesDocumentsCardClient(props: {
                   <td className="px-3 py-2 align-top text-xs text-black/60">{formatTs(r.signedAt)}</td>
                 </tr>
               ))}
-              {props.signatureRows.length === 0 ? (
+              {signatureRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-3 py-8 text-center text-black/40">
                     No signatures
