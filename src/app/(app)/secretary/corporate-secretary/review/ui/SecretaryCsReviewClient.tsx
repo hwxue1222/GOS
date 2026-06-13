@@ -16,6 +16,12 @@ export type ReviewRow = {
   decisionUrl: string;
 };
 
+function ellipsizeId(id: string) {
+  const s = String(id ?? '');
+  if (s.length <= 18) return s;
+  return `${s.slice(0, 10)}…${s.slice(-4)}`;
+}
+
 export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -62,7 +68,9 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-black/5">
-                <td className="px-3 py-2">{r.id}</td>
+                <td className="px-3 py-2" title={r.id}>
+                  {ellipsizeId(r.id)}
+                </td>
                 <td className="px-3 py-2">{r.typeLabel}</td>
                 <td className="px-3 py-2">{r.companyName}</td>
                 <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
@@ -78,7 +86,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                     >
                       Details
                     </Link>
-                    {r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
+                    {r.status === 'PENDING_REVIEW' ? (
                       <>
                         <button
                           disabled={!!busyId}
@@ -104,7 +112,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                       </>
                     ) : (
                       <div className="text-xs text-black/50">
-                        {r.status === 'SIGNING'
+                        {r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO'
                           ? 'Waiting for signatures'
                           : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
                             ? 'Decided'

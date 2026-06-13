@@ -10,6 +10,12 @@ export default function ApplicationDetailShell(props: {
   left: React.ReactNode;
   right: React.ReactNode;
 }) {
+  const requestIdDisplay = (() => {
+    const id = String(props.requestId ?? '');
+    if (id.length <= 18) return id;
+    return `${id.slice(0, 10)}…${id.slice(-4)}`;
+  })();
+
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="corporate-secretary" />
@@ -24,7 +30,9 @@ export default function ApplicationDetailShell(props: {
                 <span> / Details</span>
               </div>
               <h1 className="mt-1 text-xl font-semibold">{props.title}</h1>
-              <div className="mt-1 text-sm text-black/60">Request ID: {props.requestId}</div>
+              <div className="mt-1 text-sm text-black/60" title={props.requestId}>
+                Request ID: {requestIdDisplay}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               {props.statusBadge ? <div>{props.statusBadge}</div> : null}

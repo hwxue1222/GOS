@@ -7956,6 +7956,56 @@ export async function decideShareTransfer(input: {
   const now = nowIso();
   const nextStatus: ShareTransfer['status'] =
     input.decision === 'APPROVE' ? 'APPROVED' : input.decision === 'REJECT' ? 'REJECTED' : 'NEED_MORE_INFO';
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
+  const allSigned = packets.length > 0 && packets.every((p) => p.status === 'SIGNED');
+  if (input.decision === 'APPROVE') {
+    if (st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
+    if (!allSigned) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+    const applyYmd = now.slice(0, 10);
+    const transferorRole =
+      db.clientPartyRoles.find(
+        (r) => r.clientId === t.clientId && r.partyId === t.transferorPartyId && r.role === 'SHAREHOLDER' && seedIsActiveRole(r),
+      ) ?? null;
+    if (!transferorRole || typeof transferorRole.shares !== 'number' || !Number.isFinite(transferorRole.shares)) {
+      return { ok: false as const, error: 'INVALID_STATE' as const };
+    }
+    if (transferorRole.shares < t.shares) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+    const newTransferorShares = transferorRole.shares - t.shares;
+    transferorRole.shares = newTransferorShares;
+    if (t.shareClass && !transferorRole.shareClass) transferorRole.shareClass = t.shareClass;
+    if (newTransferorShares <= 0) transferorRole.toDate = applyYmd;
+    transferorRole.updatedAt = now;
+
+    const transfereeActive =
+      db.clientPartyRoles.find(
+        (r) => r.clientId === t.clientId && r.partyId === t.transfereePartyId && r.role === 'SHAREHOLDER' && seedIsActiveRole(r),
+      ) ?? null;
+    if (transfereeActive) {
+      const prev = Number(transfereeActive.shares ?? 0);
+      transfereeActive.shares = Number.isFinite(prev) ? prev + t.shares : t.shares;
+      if (t.shareClass && !transfereeActive.shareClass) transfereeActive.shareClass = t.shareClass;
+      transfereeActive.updatedAt = now;
+    } else {
+      const role: ClientPartyRole = {
+        id: newId('cpr'),
+        clientId: t.clientId,
+        partyId: t.transfereePartyId,
+        role: 'SHAREHOLDER',
+        shareClass: t.shareClass,
+        shares: t.shares,
+        fromDate: applyYmd,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.clientPartyRoles.unshift(role);
+    }
+  } else {
+    if (st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
+  }
+
   db.shareTransfers[idx] = {
     ...t,
     status: nextStatus,
