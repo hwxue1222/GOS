@@ -24,6 +24,8 @@ type ShareTransfer = {
   createdAt: string;
 };
 
+const SHARE_CLASS_OPTIONS = ['ORDINARY SHARE', 'PREFERENCE SHARE'] as const;
+
 type ShareholderOption = {
   partyId: string;
   label: string;
@@ -50,7 +52,7 @@ export default function ShareTransfersClient(props: {
     effectiveDate: '',
     shares: 0,
     valueSgd: '',
-    shareClass: '',
+    shareClass: 'ORDINARY SHARE',
     transferorPartyId: '',
     transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
     transfereePartyId: '',
@@ -125,6 +127,7 @@ export default function ShareTransfersClient(props: {
       transfereeName: '',
       transfereeEmail: '',
       valueSgd: '',
+      shareClass: 'ORDINARY SHARE',
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.clientId]);
@@ -170,6 +173,11 @@ export default function ShareTransfersClient(props: {
       return;
     }
 
+    if (draft.transfereeMode === 'EXISTING' && draft.transfereePartyId && draft.transfereePartyId === draft.transferorPartyId) {
+      setError('INVALID_INPUT');
+      return;
+    }
+
     if (draft.transfereeMode === 'EXISTING' && !draft.transfereePartyId) {
       setError('INVALID_INPUT');
       return;
@@ -189,7 +197,7 @@ export default function ShareTransfersClient(props: {
           effectiveDate: draft.effectiveDate,
           shares: draft.shares,
           valueSgd,
-          shareClass: draft.shareClass || undefined,
+          shareClass: draft.shareClass.trim() || undefined,
           transferor: { kind: 'EXISTING_PARTY', partyId: draft.transferorPartyId },
           transferee:
             draft.transfereeMode === 'EXISTING'
@@ -320,11 +328,17 @@ export default function ShareTransfersClient(props: {
               </label>
               <label className="text-sm">
                 <div className="text-black/70">Share class</div>
-                <input
+                <select
                   value={draft.shareClass}
                   onChange={(e) => setDraft((v) => ({ ...v, shareClass: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                />
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  {SHARE_CLASS_OPTIONS.map((x) => (
+                    <option key={x} value={x}>
+                      {x === 'ORDINARY SHARE' ? 'Ordinary share' : 'Preference share'}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
 
@@ -371,11 +385,13 @@ export default function ShareTransfersClient(props: {
                       disabled={loadingShareholders}
                     >
                       <option value="">Select...</option>
-                      {shareholders.map((s) => (
-                        <option key={s.partyId} value={s.partyId}>
-                          {s.label}
-                        </option>
-                      ))}
+                      {shareholders
+                        .filter((s) => s.partyId !== draft.transferorPartyId)
+                        .map((s) => (
+                          <option key={s.partyId} value={s.partyId}>
+                            {s.label}
+                          </option>
+                        ))}
                       <option value="__NEW__">New Shareholder</option>
                     </select>
                     {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}

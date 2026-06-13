@@ -7210,6 +7210,7 @@ export async function createShareTransferRequest(input: {
 
   const transferorPartyId = transferor.party.id;
   const transfereePartyId = transferee.party.id;
+  if (transferorPartyId === transfereePartyId) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const transferorName = transferor.party.displayName;
   const transfereeName = transferee.party.displayName;
