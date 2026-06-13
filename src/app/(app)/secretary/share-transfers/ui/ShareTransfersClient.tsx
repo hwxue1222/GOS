@@ -305,7 +305,7 @@ export default function ShareTransfersClient(props: {
                 />
               </label>
               <label className="text-sm">
-                <div className="text-black/70">No of shares transferred</div>
+                <div className="text-black/70">Number of share transferred</div>
                 <input
                   type="number"
                   value={draft.shares || ''}
@@ -314,7 +314,7 @@ export default function ShareTransfersClient(props: {
                 />
               </label>
               <label className="text-sm">
-                <div className="text-black/70">Value of shares transferred</div>
+                <div className="text-black/70">Transfer price</div>
                 <div className="mt-1 flex">
                   <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
                   <input
