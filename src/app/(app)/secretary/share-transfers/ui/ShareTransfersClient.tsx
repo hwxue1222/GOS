@@ -150,7 +150,7 @@ export default function ShareTransfersClient(props: {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [search, setSearch] = usePersistedState('gos.secretary.shareTransfers.search', '');
+  usePersistedState('gos.secretary.shareTransfers.search', '');
 
   const lockedClientId = String(initialClientId ?? '').trim();
   const [drafts, setDrafts] = useState<ShareTransferDraft[]>(() => [makeDraft()]);
@@ -344,11 +344,7 @@ export default function ShareTransfersClient(props: {
     return lockedClientId ? transfers.filter((t) => t.clientId === lockedClientId) : transfers;
   }, [lockedClientId, transfers]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return visibleTransfers;
-    return visibleTransfers.filter((t) => `${t.id} ${t.status}`.toLowerCase().includes(q));
-  }, [search, visibleTransfers]);
+  const filtered = visibleTransfers;
 
   async function refresh() {
     const res = await fetch('/api/secretary/share-transfers');
@@ -516,20 +512,7 @@ export default function ShareTransfersClient(props: {
         <div className="rounded-xl bg-white border border-black/5 p-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div className="text-lg font-semibold">Share Transfers</div>
-            <div className="flex items-center gap-2">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full sm:w-72 rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
-                placeholder="Search"
-              />
-              <button
-                onClick={() => void refresh()}
-                className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.02]"
-              >
-                Refresh
-              </button>
-            </div>
+            <div />
           </div>
 
           <div className="mt-4 rounded-lg bg-black/[0.02] border border-black/5 p-4">
