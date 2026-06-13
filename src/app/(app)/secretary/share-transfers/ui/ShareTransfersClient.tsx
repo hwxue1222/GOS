@@ -868,9 +868,20 @@ export default function ShareTransfersClient(props: {
 
             <div className="mt-4 flex items-center justify-end">
               <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setInfo(null);
+                  setDrafts([makeDraft()]);
+                }}
+                className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black/70 hover:bg-black/[0.02]"
+              >
+                Cancel
+              </button>
+              <button
                 disabled={saving}
                 onClick={() => void createAll()}
-                className="rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                className="ml-2 rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {saving ? 'Creating...' : 'Create'}
               </button>
