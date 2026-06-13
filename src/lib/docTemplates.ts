@@ -776,6 +776,8 @@ export function renderShareTransferAgreementHtml(input: {
     nationality?: string;
     companyRegistrationNo?: string;
   };
+  transferorSignerName?: string;
+  transfereeSignerName?: string;
   shares: number;
   valueSgd?: number;
   shareClass?: string;
@@ -813,8 +815,17 @@ export function renderShareTransferAgreementHtml(input: {
 
   const transferorPhrase = partyPhrase(input.transferor, 'transferor');
   const transfereePhrase = partyPhrase(input.transferee, 'transferee');
-  const transferorName = esc(input.transferor.name);
-  const transfereeName = esc(input.transferee.name);
+  const transferorName = esc(input.transferorSignerName ?? input.transferor.name);
+  const transfereeName = esc(input.transfereeSignerName ?? input.transferee.name);
+
+  const transferorSigLabel =
+    input.transferor.kind === 'COMPANY'
+      ? `${transferorName} (on behalf of transferor)`
+      : transferorName;
+  const transfereeSigLabel =
+    input.transferee.kind === 'COMPANY'
+      ? `${transfereeName} (on behalf of transferee)`
+      : transfereeName;
 
   return `
 <!doctype html>
@@ -847,13 +858,13 @@ export function renderShareTransferAgreementHtml(input: {
 
     <div class="sigline">
       <div class="line"></div>
-      <div class="label">${transferorName}</div>
+      <div class="label">${transferorSigLabel}</div>
       <div class="label">Transferor</div>
     </div>
 
     <div class="sigline">
       <div class="line"></div>
-      <div class="label">${transfereeName}</div>
+      <div class="label">${transfereeSigLabel}</div>
       <div class="label">Transferee</div>
     </div>
 
@@ -869,6 +880,8 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
   considerationSgd?: number;
   transferorName: string;
   transfereeName: string;
+  transferorOnBehalfName?: string;
+  transfereeOnBehalfName?: string;
   shares: number;
   dateYmd?: string;
   directors: string[];
@@ -883,6 +896,8 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
   const transferorName = esc(input.transferorName);
   const transfereeName = esc(input.transfereeName);
   const sharesText = esc(String(input.shares));
+  const transferorOnBehalfName = esc(String(input.transferorOnBehalfName ?? '').trim());
+  const transfereeOnBehalfName = esc(String(input.transfereeOnBehalfName ?? '').trim());
   const directors = input.directors.map((x) => String(x ?? '').trim()).filter(Boolean);
 
   const sigBlocks = directors.length
@@ -934,7 +949,9 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
     <div class="p">That the transfer of the following shares in the capital of the Company at a total consideration price of ${considerationText} as described in the respective share transfer form hereby approved, subject to the instrument of transfer being properly executed and stamped in accordance with the provision of the Stamp Duties Act, and presented for registration accordingly.</div>
 
     <div class="p"><span class="u">Transferor</span>: ${transferorName}</div>
+    ${transferorOnBehalfName ? `<div class="p"><span class="u">Name (on behalf of Transferor)</span>: ${transferorOnBehalfName}</div>` : ''}
     <div class="p"><span class="u">Transferee</span>: ${transfereeName}</div>
+    ${transfereeOnBehalfName ? `<div class="p"><span class="u">Name (on behalf of Transferee)</span>: ${transfereeOnBehalfName}</div>` : ''}
     <div class="p"><span class="u">No. of shares</span>: ${sharesText}</div>
 
     <div class="p">Term of issue: payable in cash</div>

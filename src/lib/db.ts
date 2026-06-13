@@ -7153,7 +7153,7 @@ export async function createShareTransferRequest(input: {
         directorSignerName?: string;
         directorSignerEmail?: string;
       }
-    | { kind: 'COMPANY_CLIENT'; clientId: string };
+    | { kind: 'COMPANY_CLIENT'; clientId: string; representativePersonId?: string };
   shares: number;
   valueSgd?: number;
   shareClass?: string;
@@ -7218,6 +7218,41 @@ export async function createShareTransferRequest(input: {
     };
     db.parties.unshift(party);
     return { company: c, party };
+  };
+
+  const ensureCompanyRepresentativeIfNeeded = (companyParty: Party, personIdRaw: string) => {
+    const personId = String(personIdRaw ?? '').trim();
+    if (!personId) return { ok: false as const };
+    if (!companyParty.clientId) return { ok: false as const };
+
+    const activeRep = db.companyRepresentatives
+      .filter((r) => r.companyPartyId === companyParty.id && r.scope === 'GLOBAL')
+      .find((r) => !r.effectiveTo);
+    if (activeRep) return { ok: true as const, personId: activeRep.representativePersonId };
+
+    const person = db.persons.find((p) => p.id === personId) ?? null;
+    if (!person || !(person.email ?? '').trim()) return { ok: false as const };
+
+    const isDirector = db.clientPartyRoles.some((r) => {
+      if (r.clientId !== companyParty.clientId) return false;
+      if (r.role !== 'DIRECTOR' || r.resignationDate) return false;
+      const party = db.parties.find((p) => p.id === r.partyId) ?? null;
+      return !!party && party.type === 'PERSON' && party.personId === personId;
+    });
+    if (!isDirector) return { ok: false as const };
+
+    const now = nowIso();
+    const rep: CompanyRepresentative = {
+      id: newId('rep'),
+      companyPartyId: companyParty.id,
+      representativePersonId: personId,
+      scope: 'GLOBAL',
+      effectiveFrom: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.companyRepresentatives.unshift(rep);
+    return { ok: true as const, personId };
   };
 
   const ensureExternalCompanyParty = (data: {
@@ -7334,6 +7369,14 @@ export async function createShareTransferRequest(input: {
             : ensureCompanyParty(input.transferee.clientId);
   if (!transferee) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
+  if (input.transferee.kind === 'COMPANY_CLIENT' && input.transferee.representativePersonId) {
+    const companyParty = transferee.party;
+    if (companyParty.type === 'COMPANY' && companyParty.clientId) {
+      const ensured = ensureCompanyRepresentativeIfNeeded(companyParty, input.transferee.representativePersonId);
+      if (!ensured.ok) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+  }
+
   const externalRdrConfigByPartyId = new Map<
     string,
     { companyName: string; repName: string; repEmail: string; signerEmail: string }
@@ -7395,6 +7438,19 @@ export async function createShareTransferRequest(input: {
     };
   };
 
+  const getSignerNameForParty = (party: Party) => {
+    if (party.type === 'PERSON') return party.displayName;
+    if (party.type === 'COMPANY') {
+      const activeRep = db.companyRepresentatives
+        .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
+        .find((r) => !r.effectiveTo);
+      if (!activeRep) return undefined;
+      const person = db.persons.find((p) => p.id === activeRep.representativePersonId) ?? null;
+      return person?.fullName;
+    }
+    return undefined;
+  };
+
   const transferId = newId('stf');
 
   const staDoc: Document = {
@@ -7451,6 +7507,8 @@ export async function createShareTransferRequest(input: {
     targetCompanyName: client.name,
     transferor: getPartyIdentityForDoc(transferor.party),
     transferee: getPartyIdentityForDoc(transferee.party),
+    transferorSignerName: getSignerNameForParty(transferor.party),
+    transfereeSignerName: getSignerNameForParty(transferee.party),
     shares,
     valueSgd,
     shareClass,
@@ -7462,6 +7520,8 @@ export async function createShareTransferRequest(input: {
     considerationSgd: valueSgd,
     transferorName,
     transfereeName,
+    transferorOnBehalfName: getSignerNameForParty(transferor.party),
+    transfereeOnBehalfName: getSignerNameForParty(transferee.party),
     shares,
     dateYmd: now.slice(0, 10),
     directors: directors.map((d) => d.fullName),

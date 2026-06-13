@@ -64,6 +64,7 @@ type NewShareholderPerson = {
 
 type NewShareholderCompany = {
   clientId: string;
+  representativePersonId: string;
   companyName: string;
   registrationNo: string;
   registrationCountry: string;
@@ -124,6 +125,7 @@ function makeDraft(): ShareTransferDraft {
     newCompanyLockedFromLookup: false,
     newCompany: {
       clientId: '',
+      representativePersonId: '',
       companyName: '',
       registrationNo: '',
       registrationCountry: '',
@@ -170,6 +172,10 @@ export default function ShareTransfersClient(props: {
   const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
   const [loadingShareholders, setLoadingShareholders] = useState(false);
 
+  const [directorsByClientId, setDirectorsByClientId] = useState<
+    Record<string, Array<{ personId: string; fullName: string; email: string }>>
+  >({});
+
   const selectedClientId = lockedClientId || clients[0]?.id || '';
 
   const personLookupKey = useMemo(() => {
@@ -181,6 +187,10 @@ export default function ShareTransfersClient(props: {
     return JSON.stringify(
       drafts.map((d) => [d.id, d.transfereeMode, d.newShareholderKind, d.newCompanyLockedFromLookup, d.newCompany.registrationNo]),
     );
+  }, [drafts]);
+
+  const repLookupKey = useMemo(() => {
+    return JSON.stringify(drafts.map((d) => [d.id, d.transfereeMode, d.newShareholderKind, d.newCompany.clientId]));
   }, [drafts]);
 
   const personLookupTimersRef = useRef<Record<string, number>>({});
@@ -270,6 +280,7 @@ export default function ShareTransfersClient(props: {
                       newCompany: {
                         ...x.newCompany,
                         clientId: String(c.clientId ?? ''),
+                        representativePersonId: '',
                         companyName: String(c.name ?? x.newCompany.companyName),
                         address: addr || x.newCompany.address,
                         email: String(c.email ?? x.newCompany.email),
@@ -291,6 +302,29 @@ export default function ShareTransfersClient(props: {
       companyLookupTimersRef.current = {};
     };
   }, [companyLookupKey]);
+
+  useEffect(() => {
+    for (const d of drafts) {
+      if (d.transfereeMode !== 'NEW' || d.newShareholderKind !== 'COMPANY') continue;
+      const clientId = d.newCompany.clientId.trim();
+      if (!clientId) continue;
+      if (directorsByClientId[clientId]) continue;
+      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store' })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          const list = Array.isArray(j?.directors) ? (j.directors as any[]) : [];
+          const directors = list
+            .map((x) => ({
+              personId: String(x?.personId ?? '').trim(),
+              fullName: String(x?.fullName ?? '').trim(),
+              email: String(x?.email ?? '').trim(),
+            }))
+            .filter((x) => !!x.personId && !!x.fullName);
+          setDirectorsByClientId((prev) => ({ ...prev, [clientId]: directors }));
+        })
+        .catch(() => null);
+    }
+  }, [repLookupKey]);
 
   useEffect(() => {
     let ignore = false;
@@ -380,7 +414,9 @@ export default function ShareTransfersClient(props: {
         if (!c.companyName.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_NAME`;
         if (!c.registrationNo.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REGNO`;
         if (!c.address.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_ADDRESS`;
-        if (!c.clientId.trim()) {
+        if (c.clientId.trim()) {
+          if (!c.representativePersonId.trim()) return `Transfer #${index + 1}: INVALID_CORPORATE_REPRESENTATIVE`;
+        } else {
           if (!c.registrationCountry.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_COUNTRY`;
           if (!c.corporateRepresentativeName.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_NAME`;
           if (!c.corporateRepresentativeEmail.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_EMAIL`;
@@ -444,6 +480,7 @@ export default function ShareTransfersClient(props: {
                     ? {
                         kind: 'COMPANY_CLIENT',
                         clientId: d.newCompany.clientId.trim(),
+                        representativePersonId: d.newCompany.representativePersonId.trim(),
                       }
                     : {
                         kind: 'NEW_COMPANY',
@@ -775,6 +812,23 @@ export default function ShareTransfersClient(props: {
                                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                                 />
                               </label>
+                              {d.newCompany.clientId.trim() ? (
+                                <label className="text-sm">
+                                  <div className="text-black/70">Corporate representative</div>
+                                  <select
+                                    value={d.newCompany.representativePersonId}
+                                    onChange={(e) => patchDraftCompany(d.id, { representativePersonId: e.target.value })}
+                                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                                  >
+                                    <option value="">Select...</option>
+                                    {(directorsByClientId[d.newCompany.clientId.trim()] ?? []).map((x) => (
+                                      <option key={x.personId} value={x.personId}>
+                                        {x.fullName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : null}
                               <label className="text-sm">
                                 <div className="text-black/70">Country of business registration</div>
                                 <input

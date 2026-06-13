@@ -61,6 +61,7 @@ export async function POST(req: Request) {
           fullName?: string;
           email?: string;
           clientId?: string;
+          representativePersonId?: string;
           partyId?: string;
           idType?: string;
           idNo?: string;
@@ -138,7 +139,11 @@ export async function POST(req: Request) {
               directorSignerEmail: (body.transferee as any)?.directorSignerEmail ?? '',
             } as const)
       : body?.transferee?.kind === 'COMPANY_CLIENT'
-        ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
+        ? ({
+            kind: 'COMPANY_CLIENT',
+            clientId: body.transferee.clientId ?? '',
+            representativePersonId: (body.transferee as any)?.representativePersonId ?? '',
+          } as const)
         : ({ kind: 'PERSON', fullName: body?.transferee?.fullName ?? '', email: body?.transferee?.email ?? '' } as const);
 
   const r = await createShareTransferRequest({ clientId, transferor, transferee, shares, valueSgd, shareClass, effectiveDate });
