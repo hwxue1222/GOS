@@ -558,12 +558,23 @@ export default function ShareTransfersClient(props: {
         if (transfer) createdTransfers.push(transfer);
 
         const docLines: string[] = [];
-        const docs = j?.documents as { shareTransferFormDocumentId?: string; directorsResolutionDocumentId?: string } | undefined;
+        const docs = j?.documents as
+          | {
+              shareTransferFormDocumentId?: string;
+              directorsResolutionDocumentId?: string;
+              corporateSecretaryCertificateDocumentId?: string;
+            }
+          | undefined;
         if (docs?.shareTransferFormDocumentId) {
           docLines.push(`Share transfer form PDF — /api/documents/${docs.shareTransferFormDocumentId}/pdf`);
         }
         if (docs?.directorsResolutionDocumentId) {
           docLines.push(`Director's resolution PDF — /api/documents/${docs.directorsResolutionDocumentId}/pdf`);
+        }
+        if (docs?.corporateSecretaryCertificateDocumentId) {
+          docLines.push(
+            `Corporate secretary appointment certificate PDF — /api/documents/${docs.corporateSecretaryCertificateDocumentId}/pdf`,
+          );
         }
 
         const signLines: string[] = [];

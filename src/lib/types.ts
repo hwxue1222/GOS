@@ -232,7 +232,15 @@ export type CompanyRepresentative = {
   updatedAt?: string;
 };
 
-export type DocumentType = 'RDR_AUTH' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
+export type DocumentType =
+  | 'RDR_AUTH'
+  | 'STA'
+  | 'BR'
+  | 'CS_CERT'
+  | 'DIR_CHG'
+  | 'CO_UPD'
+  | 'RORC_DECL'
+  | 'AGM_MIN';
 
 export type Document = {
   id: string;
@@ -243,7 +251,7 @@ export type Document = {
   createdAt: string;
 };
 
-export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
+export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'CS_CERT' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 

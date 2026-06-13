@@ -6957,7 +6957,11 @@ async function maybeFinalizeShareTransferIfReady(db: Db, packet: SignaturePacket
   const sta = db.signaturePackets.find((p) => p.id === t.staPacketId) ?? null;
   const br = db.signaturePackets.find((p) => p.id === t.brPacketId) ?? null;
   if (!sta || !br) return;
-  if (sta.status === 'SIGNED' && br.status === 'SIGNED') {
+  const csCertPackets = db.signaturePackets.filter(
+    (p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id && p.kind === 'CS_CERT',
+  );
+  const csOk = csCertPackets.length === 0 || csCertPackets.every((p) => p.status === 'SIGNED');
+  if (sta.status === 'SIGNED' && br.status === 'SIGNED' && csOk) {
     db.shareTransfers[idx] = { ...t, status: 'SIGNED', updatedAt: nowIso(), blockingRdrIds: undefined };
   }
 }
@@ -7569,6 +7573,7 @@ export async function createShareTransferRequest(input: {
   const blockingRdrIds: string[] = [];
   const staSignerEmails: string[] = [];
   const rdrLinks: Array<{ email: string; url: string }> = [];
+  const csCertLinks: Array<{ email: string; url: string }> = [];
 
   const resolveStaEmail = (party: Party) => {
     if (party.type === 'PERSON') {
@@ -7584,6 +7589,14 @@ export async function createShareTransferRequest(input: {
       return person?.email ?? null;
     }
     return null;
+  };
+
+  const isNonSingaporeClient = (clientId: string) => {
+    const c = db.clients.find((x) => x.id === clientId) ?? null;
+    if (!c || c.deletedAt) return false;
+    const country = String((c as Client).countryOfBusinessRegistration ?? '').trim().toLowerCase();
+    if (!country) return false;
+    return country !== 'singapore';
   };
 
   const ensureAutoRdr = async (companyParty: Party) => {
@@ -7741,6 +7754,84 @@ export async function createShareTransferRequest(input: {
     return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
   }
 
+  const documents: { shareTransferFormDocumentId: string; directorsResolutionDocumentId: string; corporateSecretaryCertificateDocumentId?: string } = {
+    shareTransferFormDocumentId: staDoc.id,
+    directorsResolutionDocumentId: brDoc.id,
+  };
+
+  if (transferee.party.type === 'COMPANY' && transferee.party.clientId && isNonSingaporeClient(transferee.party.clientId)) {
+    const repEmail = resolveStaEmail(transferee.party);
+    if (!repEmail) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+    const repName = getSignerNameForParty(transferee.party);
+    if (!repName) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+
+    const foreignClient = db.clients.find((c) => c.id === transferee.party.clientId) ?? null;
+    if (!foreignClient || foreignClient.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+    const foreignDirectors = db.clientPartyRoles
+      .filter((r) => r.clientId === foreignClient.id && r.role === 'DIRECTOR' && !r.resignationDate)
+      .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+      .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+      .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+      .filter((p): p is Person => !!p);
+
+    const foreignDirectorEmails = foreignDirectors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
+    if (!foreignDirectorEmails.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+    const byBridgeCorporateSecretaryName = 'Bybridge Consultancy Pte Ltd';
+    const country = String((foreignClient as Client).countryOfBusinessRegistration ?? '').trim();
+    const csHtml = (await import('@/lib/docTemplates')).renderCertificateOfAppointmentOfCorporateSecretaryHtml({
+      companyName: foreignClient.name,
+      companyRegistrationNo: foreignClient.companyRegistrationNo,
+      countryOfBusinessRegistration: country,
+      corporateSecretaryName: byBridgeCorporateSecretaryName,
+      corporateRepresentativeName: repName,
+      directorNames: foreignDirectors.map((d) => d.fullName),
+      dateYmd: now.slice(0, 10),
+    });
+
+    const csDoc: Document = {
+      id: newId('doc'),
+      type: 'CS_CERT',
+      title: `Certificate of Appointment of Corporate Secretary - ${foreignClient.name}`,
+      html: csHtml,
+      sha256: sha256Hex(csHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(csDoc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'CS_CERT',
+      relatedType: 'SHARE_TRANSFER',
+      relatedId: transferId,
+      documentId: csDoc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(packet);
+
+    const uniqueEmails = Array.from(new Set([...foreignDirectorEmails, repEmail]));
+    for (const email of uniqueEmails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email,
+        tokenHash: sha256Hex(token),
+        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      csCertLinks.push({ email, url: `/sign/${token}` });
+    }
+
+    documents.corporateSecretaryCertificateDocumentId = csDoc.id;
+  }
+
   const staLinks: Array<{ email: string; url: string }> = [];
   if (blockingRdrIds.length === 0) {
     (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
@@ -7784,8 +7875,8 @@ export async function createShareTransferRequest(input: {
   return {
     ok: true as const,
     transfer,
-    documents: { shareTransferFormDocumentId: staDoc.id, directorsResolutionDocumentId: brDoc.id },
-    signLinks: { br: brLinks, sta: staLinks, rdr: rdrLinks },
+    documents,
+    signLinks: { br: brLinks, sta: staLinks, rdr: rdrLinks, cs: csCertLinks },
   };
 }
 

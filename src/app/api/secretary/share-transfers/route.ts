@@ -173,10 +173,12 @@ export async function POST(req: Request) {
     br: Array<{ email: string; url: string }>;
     sta: Array<{ email: string; url: string }>;
     rdr?: Array<{ email: string; url: string }>;
+    cs?: Array<{ email: string; url: string }>;
   };
   const titleBr = `share transfer - ${companyName} - director's resolution (${r.transfer.id})`;
   const titleSta = `share transfer - ${companyName} - share transfer form (${r.transfer.id})`;
   const titleRdr = `share transfer - ${companyName} - corporate representative (${r.transfer.id})`;
+  const titleCs = `share transfer - ${companyName} - corporate secretary appointment (${r.transfer.id})`;
 
   const jobs: Array<Promise<{ ok: boolean }>> = [];
   for (const l of signLinks.br) {
@@ -192,6 +194,11 @@ export async function POST(req: Request) {
   for (const l of signLinks.rdr ?? []) {
     jobs.push(
       baseUrl ? sendSigningInvite({ to: l.email, title: titleRdr, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+    );
+  }
+  for (const l of signLinks.cs ?? []) {
+    jobs.push(
+      baseUrl ? sendSigningInvite({ to: l.email, title: titleCs, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
     );
   }
   await Promise.all(jobs);

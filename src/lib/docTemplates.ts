@@ -966,6 +966,84 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
 `.trim();
 }
 
+export function renderCertificateOfAppointmentOfCorporateSecretaryHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  countryOfBusinessRegistration: string;
+  corporateSecretaryName: string;
+  corporateRepresentativeName: string;
+  directorNames: string[];
+  dateYmd?: string;
+}) {
+  const companyName = esc(input.companyName);
+  const companyRegistrationNo = esc(String(input.companyRegistrationNo ?? '').trim());
+  const country = esc(input.countryOfBusinessRegistration);
+  const csName = esc(input.corporateSecretaryName);
+  const corpRepName = esc(input.corporateRepresentativeName);
+  const directors = input.directorNames.map((x) => String(x ?? '').trim()).filter(Boolean);
+  const dateYmd = (input.dateYmd ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const dated = esc(toDdMmYyyy(dateYmd));
+
+  const directorSig = directors.length
+    ? directors
+        .map(
+          (d) => `
+          <div style="margin-top: 16px;">
+            <div style="text-decoration: underline;">_______________</div>
+            <div style="margin-top: 6px;">${esc(d)}</div>
+            <div style="margin-top: 2px;">Director</div>
+          </div>
+        `.trim(),
+        )
+        .join('')
+    : `
+          <div style="margin-top: 16px;">
+            <div style="text-decoration: underline;">_______________</div>
+            <div style="margin-top: 2px;">Director</div>
+          </div>
+        `.trim();
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Certificate of Appointment of Corporate Secretary</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.6; padding: 28px 36px; color: #111; }
+      .center { text-align: center; }
+      .h { font-weight: 700; }
+      .p { margin: 10px 0; }
+      .u { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="center">
+      <div class="h">CERTIFICATE OF APPOINTMENT OF CORPORATE SECRETARY</div>
+    </div>
+
+    <div class="p" style="margin-top: 18px;">
+      We, the undersigned, being a Director and the Corporate Representative of ${companyName}
+      ${companyRegistrationNo ? `(Company Registration No. ${companyRegistrationNo})` : ''}
+      (Country of business registration: ${country}), hereby certify that ${csName} is appointed as the corporate secretary of the Company.
+    </div>
+
+    <div class="p">Dated: ${dated}</div>
+
+    <div class="p h u" style="margin-top: 18px;">DIRECTOR</div>
+    ${directorSig}
+
+    <div class="p h u" style="margin-top: 18px;">CORPORATE REPRESENTATIVE</div>
+    <div style="margin-top: 16px;">
+      <div style="text-decoration: underline;">_______________</div>
+      <div style="margin-top: 6px;">${corpRepName} (on behalf of the Company)</div>
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
 export function renderBoardResolutionHtml(input: {
   companyName: string;
   resolutionDate: string;

@@ -70,15 +70,18 @@ export default async function ShareTransferApplicationDetailPage({
   }
 
   const client = db.clients.find((c) => c.id === transfer.clientId) ?? null;
-  const staPacket = db.signaturePackets.find((p) => p.id === transfer.staPacketId) ?? null;
-  const brPacket = db.signaturePackets.find((p) => p.id === transfer.brPacketId) ?? null;
-  const staDoc = staPacket ? db.documents.find((d) => d.id === staPacket.documentId) ?? null : null;
-  const brDoc = brPacket ? db.documents.find((d) => d.id === brPacket.documentId) ?? null : null;
+  const packets = db.signaturePackets
+    .filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === transfer.id)
+    .slice()
+    .sort((a, b) => a.kind.localeCompare(b.kind));
+  const docById = new Map(db.documents.map((d) => [d.id, d]));
 
-  const staSigns = staPacket ? db.signatureRequests.filter((r) => r.packetId === staPacket.id) : [];
-  const brSigns = brPacket ? db.signatureRequests.filter((r) => r.packetId === brPacket.id) : [];
-
-  const signatureRows = [...staSigns.map((s) => ({ s, doc: staDoc })), ...brSigns.map((s) => ({ s, doc: brDoc }))]
+  const signatureRows = packets
+    .flatMap((p) => {
+      const doc = docById.get(p.documentId) ?? null;
+      const signs = db.signatureRequests.filter((r) => r.packetId === p.id);
+      return signs.map((s) => ({ s, doc }));
+    })
     .map(({ s, doc }) => {
       const meta = getSignerIdentityForClient(db, transfer.clientId, s.email);
       return {
@@ -90,12 +93,18 @@ export default async function ShareTransferApplicationDetailPage({
         signedAt: s.signedAt,
       };
     })
-    .sort((a, b) => (a.documentTitle !== b.documentTitle ? a.documentTitle.localeCompare(b.documentTitle) : a.email.localeCompare(b.email)));
+    .sort((a, b) =>
+      a.documentTitle !== b.documentTitle ? a.documentTitle.localeCompare(b.documentTitle) : a.email.localeCompare(b.email),
+    );
 
-  const documents = [
-    staDoc ? { documentId: staDoc.id, title: staDoc.title, signerCount: staSigns.length } : null,
-    brDoc ? { documentId: brDoc.id, title: brDoc.title, signerCount: brSigns.length } : null,
-  ].filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
+  const documents = packets
+    .map((p) => {
+      const doc = docById.get(p.documentId) ?? null;
+      if (!doc) return null;
+      const signerCount = db.signatureRequests.filter((r) => r.packetId === p.id).length;
+      return { documentId: doc.id, title: doc.title, signerCount };
+    })
+    .filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
