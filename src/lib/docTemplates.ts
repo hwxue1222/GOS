@@ -797,7 +797,8 @@ export function renderShareTransferAgreementHtml(input: {
     if (v === 'FIN') return 'FIN';
     if (v === 'NRIC') return 'NRIC';
     if (v === 'IC') return 'IC';
-    return 'Passport/NRIC';
+    if (v === 'PASSPORT') return 'Passport';
+    return v ? esc(String(raw ?? '').trim()) : 'Passport/NRIC';
   };
 
   const partyPhrase = (p: typeof input.transferor, role: 'transferor' | 'transferee') => {

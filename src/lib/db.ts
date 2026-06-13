@@ -7426,7 +7426,7 @@ export async function createShareTransferRequest(input: {
     if (v === 'FIN') return 'FIN';
     if (v === 'NRIC') return 'NRIC';
     if (v === 'IC') return 'IC';
-    if (v === 'PASSPORT') return 'Passport/NRIC';
+    if (v === 'PASSPORT') return 'Passport';
     if (!v) return undefined;
     return v;
   };
