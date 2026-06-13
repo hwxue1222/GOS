@@ -316,6 +316,10 @@ export type SignatureRequest = {
   status: SignatureRequestStatus;
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
+  signerFullName?: string;
+  signerIdType?: PersonIdType;
+  signerIdNo?: string;
+  signerPhone?: string;
   otpHash?: string;
   otpExpiresAt?: string;
   otpSentAt?: string;

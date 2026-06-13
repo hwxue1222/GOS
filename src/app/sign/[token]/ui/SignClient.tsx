@@ -13,8 +13,13 @@ export default function SignClient(props: {
   expired: boolean;
   packetKind: string;
   requiresRepresentative: boolean;
+  requiresSignerProfile: boolean;
   initialRepresentativeName: string;
   initialRepresentativeEmail: string;
+  initialSignerFullName: string;
+  initialSignerIdType: string;
+  initialSignerIdNo: string;
+  initialSignerPhone: string;
 }) {
   const {
     token,
@@ -27,8 +32,13 @@ export default function SignClient(props: {
     expired,
     packetKind,
     requiresRepresentative,
+    requiresSignerProfile,
     initialRepresentativeName,
     initialRepresentativeEmail,
+    initialSignerFullName,
+    initialSignerIdType,
+    initialSignerIdNo,
+    initialSignerPhone,
   } = props;
 
   const [otp, setOtp] = useState('');
@@ -38,6 +48,11 @@ export default function SignClient(props: {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const [signerFullName, setSignerFullName] = useState(initialSignerFullName);
+  const [signerIdType, setSignerIdType] = useState(initialSignerIdType || 'NRIC');
+  const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
+  const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
 
   async function requestOtp() {
     setError(null);
@@ -71,6 +86,12 @@ export default function SignClient(props: {
         return;
       }
     }
+    if (requiresSignerProfile) {
+      if (!signerFullName.trim() || !signerIdNo.trim() || !signerPhone.trim()) {
+        setError('SIGNER_PROFILE_REQUIRED');
+        return;
+      }
+    }
     setSigning(true);
     try {
       const res = await fetch(`/api/sign/${token}/sign`, {
@@ -80,6 +101,10 @@ export default function SignClient(props: {
           otp: code,
           rdrRepresentativeName: repName.trim() || undefined,
           rdrRepresentativeEmail: repEmail.trim() || undefined,
+          signerFullName: signerFullName.trim() || undefined,
+          signerIdType: signerIdType || undefined,
+          signerIdNo: signerIdNo.trim() || undefined,
+          signerPhone: signerPhone.trim() || undefined,
         }),
       });
       const j = await res.json().catch(() => null);
@@ -131,6 +156,67 @@ export default function SignClient(props: {
               {requiresRepresentative ? (
                 <div className="mt-2 text-xs text-black/50">All directors must sign to confirm the representative.</div>
               ) : null}
+            </div>
+          ) : null}
+
+          {requiresSignerProfile ? (
+            <div className="mt-5 rounded-lg border border-black/5 bg-black/[0.02] p-4">
+              <div className="text-sm font-medium">Signer information</div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="text-sm">
+                  <div className="text-black/70">Full name</div>
+                  <input
+                    disabled={signing}
+                    value={signerFullName}
+                    onChange={(e) => setSignerFullName(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Email</div>
+                  <input
+                    disabled
+                    value={requestEmail}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">ID type</div>
+                  <select
+                    disabled={signing}
+                    value={signerIdType}
+                    onChange={(e) => setSignerIdType(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  >
+                    <option value="NRIC">NRIC</option>
+                    <option value="FIN">FIN</option>
+                    <option value="PASSPORT">Passport</option>
+                    <option value="IC">IC</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">ID no.</div>
+                  <input
+                    disabled={signing}
+                    value={signerIdNo}
+                    onChange={(e) => setSignerIdNo(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm sm:col-span-2">
+                  <div className="text-black/70">Phone</div>
+                  <input
+                    disabled={signing}
+                    value={signerPhone}
+                    onChange={(e) => setSignerPhone(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+              </div>
+              <div className="mt-2 text-xs text-black/50">
+                Required for CC signers who are not in our member records.
+              </div>
             </div>
           ) : null}
 

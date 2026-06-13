@@ -77,9 +77,9 @@ function nowIso() {
 function inferPersonIdTypeFromIdNo(idNo?: string | null) {
   const s = String(idNo ?? '').trim().toUpperCase();
   if (!s) return undefined;
-  if (/^[ST]\d{7}[A-Z]$/.test(s)) return 'NRIC' as const;
-  if (/^[FG]\d{7}[A-Z]$/.test(s)) return 'FIN' as const;
-  return undefined;
+  if (/^S\d{7}[A-Z]$/.test(s)) return 'NRIC' as const;
+  if (/^G\d{7}[A-Z]$/.test(s)) return 'FIN' as const;
+  return 'PASSPORT' as const;
 }
 
 async function ensureDir() {
@@ -6890,11 +6890,12 @@ export async function getSignatureContextByToken(token: string) {
   if (!packet) return null;
   const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
   if (!document) return null;
+  const person = db.persons.find((p) => (p.email ?? '').trim().toLowerCase() === request.email.trim().toLowerCase()) ?? null;
   const rdr =
     packet.relatedType === 'RDR'
       ? (db.representativeDesignationRequests.find((x) => x.id === packet.relatedId) ?? null)
       : null;
-  return { request, packet, document, rdr };
+  return { request, packet, document, rdr, person };
 }
 
 export async function issueSignatureOtp(token: string) {
@@ -7068,6 +7069,10 @@ export async function signByToken(input: {
   userAgent?: string;
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
+  signerFullName?: string;
+  signerIdType?: string;
+  signerIdNo?: string;
+  signerPhone?: string;
 }) {
   const tokenHash = sha256Hex(input.token);
   const db = await readDb();
@@ -7122,6 +7127,24 @@ export async function signByToken(input: {
       }
     } else if (!rdr.representativeEmail || !rdr.representativeName) {
       return { ok: false as const, error: 'REPRESENTATIVE_REQUIRED' as const };
+    }
+  }
+
+  if (packet.relatedType === 'RORC_DECLARATION') {
+    const knownPerson = db.persons.find((p) => (p.email ?? '').trim().toLowerCase() === req.email.trim().toLowerCase()) ?? null;
+    if (!knownPerson) {
+      const fullName = String(input.signerFullName ?? '').trim();
+      const idType = String(input.signerIdType ?? '').trim().toUpperCase();
+      const idNo = String(input.signerIdNo ?? '').trim();
+      const phone = String(input.signerPhone ?? '').trim();
+      if (!fullName || !idNo || !phone) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
+      if (idType !== 'NRIC' && idType !== 'FIN' && idType !== 'PASSPORT' && idType !== 'IC' && idType !== 'OTHER') {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
+      nextReq.signerFullName = fullName;
+      nextReq.signerIdType = idType as any;
+      nextReq.signerIdNo = idNo;
+      nextReq.signerPhone = phone;
     }
   }
 
@@ -9623,6 +9646,14 @@ export async function createRorcDeclarationRequest(input: {
   );
   if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
+  const ccEmailRaw =
+    controllerType === 'PERSON'
+      ? String(input.controllerPerson?.ccEmailAddress ?? '').trim()
+      : controllerType === 'COMPANY'
+        ? String(input.controllerCompany?.ccEmailAddress ?? '').trim()
+        : '';
+  const ccEmail = ccEmailRaw ? ccEmailRaw.toLowerCase() : '';
+
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
@@ -9694,13 +9725,21 @@ export async function createRorcDeclarationRequest(input: {
   db.signaturePackets.unshift(packet);
 
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string }> = [];
-  for (const emailKey of signerEmails) {
+  const signerPairs: Array<{ email: string; role: string }> = [
+    ...signerEmails.map((e) => ({ email: e, role: 'Director' })),
+    ...(ccEmail ? [{ email: ccEmail, role: 'CC Signatory' }] : []),
+  ];
+  const uniqueSignerPairs = Array.from(
+    new Map(signerPairs.map((p) => [p.email.trim().toLowerCase(), { email: p.email.trim().toLowerCase(), role: p.role }])).values(),
+  );
+
+  const signLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
+  for (const p of uniqueSignerPairs) {
     const token = newToken();
     const req: SignatureRequest = {
       id: newId('sgr'),
       packetId: packet.id,
-      email: emailKey,
+      email: p.email,
       tokenHash: sha256Hex(token),
       expiresAt,
       status: 'PENDING',
@@ -9708,7 +9747,7 @@ export async function createRorcDeclarationRequest(input: {
       updatedAt: now,
     };
     db.signatureRequests.unshift(req);
-    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+    signLinks.push({ email: p.email, url: `/sign/${token}`, signerRole: p.role, documentTitle: doc.title });
   }
 
   const request: RorcDeclarationRequest = {

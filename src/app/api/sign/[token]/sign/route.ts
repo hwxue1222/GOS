@@ -4,7 +4,15 @@ import { signByToken } from '@/lib/db';
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const body = (await req.json().catch(() => null)) as
-    | { otp?: string; rdrRepresentativeName?: string; rdrRepresentativeEmail?: string }
+    | {
+        otp?: string;
+        rdrRepresentativeName?: string;
+        rdrRepresentativeEmail?: string;
+        signerFullName?: string;
+        signerIdType?: string;
+        signerIdNo?: string;
+        signerPhone?: string;
+      }
     | null;
   const otp = typeof body?.otp === 'string' ? body.otp.trim() : '';
   if (!otp) return NextResponse.json({ ok: false, error: 'OTP_REQUIRED' }, { status: 400 });
@@ -19,8 +27,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     userAgent,
     rdrRepresentativeName: typeof body?.rdrRepresentativeName === 'string' ? body.rdrRepresentativeName : undefined,
     rdrRepresentativeEmail: typeof body?.rdrRepresentativeEmail === 'string' ? body.rdrRepresentativeEmail : undefined,
+    signerFullName: typeof body?.signerFullName === 'string' ? body.signerFullName : undefined,
+    signerIdType: typeof body?.signerIdType === 'string' ? body.signerIdType : undefined,
+    signerIdNo: typeof body?.signerIdNo === 'string' ? body.signerIdNo : undefined,
+    signerPhone: typeof body?.signerPhone === 'string' ? body.signerPhone : undefined,
   });
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
-

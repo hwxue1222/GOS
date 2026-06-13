@@ -16,6 +16,8 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
 
   const requiresRepresentative =
     ctx.packet.relatedType === 'RDR' && (!ctx.rdr?.representativeEmail || !ctx.rdr?.representativeName);
+  const requiresSignerProfile =
+    ctx.packet.relatedType === 'RORC_DECLARATION' && !ctx.person && (!ctx.request.signerFullName || !ctx.request.signerIdNo || !ctx.request.signerPhone);
   const expired = ctx.request.status === 'EXPIRED';
 
   return (
@@ -30,8 +32,13 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
       expired={expired}
       packetKind={ctx.packet.kind}
       requiresRepresentative={requiresRepresentative}
+      requiresSignerProfile={requiresSignerProfile}
       initialRepresentativeName={ctx.rdr?.representativeName ?? ''}
       initialRepresentativeEmail={ctx.rdr?.representativeEmail ?? ''}
+      initialSignerFullName={ctx.request.signerFullName ?? ''}
+      initialSignerIdType={(ctx.request.signerIdType as string) ?? ''}
+      initialSignerIdNo={ctx.request.signerIdNo ?? ''}
+      initialSignerPhone={ctx.request.signerPhone ?? ''}
     />
   );
 }
