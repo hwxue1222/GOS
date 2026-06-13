@@ -7421,8 +7421,17 @@ export async function createShareTransferRequest(input: {
   const transferorName = transferor.party.displayName;
   const transfereeName = transferee.party.displayName;
 
-  const formatPersonIdTypeLabel = (t?: string | null) => {
-    const v = String(t ?? '').trim().toUpperCase();
+  const inferPersonIdTypeFromIdNo = (idNo?: string | null) => {
+    const s = String(idNo ?? '').trim().toUpperCase();
+    if (!s) return undefined;
+    if (/^[ST]\d{7}[A-Z]$/.test(s)) return 'NRIC';
+    if (/^[FG]\d{7}[A-Z]$/.test(s)) return 'FIN';
+    return undefined;
+  };
+
+  const formatPersonIdTypeLabel = (t?: string | null, idNo?: string | null) => {
+    const inferred = inferPersonIdTypeFromIdNo(idNo);
+    const v = String(t ?? inferred ?? '').trim().toUpperCase();
     if (v === 'FIN') return 'FIN';
     if (v === 'NRIC') return 'NRIC';
     if (v === 'IC') return 'IC';
@@ -7437,7 +7446,7 @@ export async function createShareTransferRequest(input: {
       return {
         kind: 'PERSON' as const,
         name: party.displayName,
-        idTypeLabel: formatPersonIdTypeLabel(person?.idType),
+        idTypeLabel: formatPersonIdTypeLabel(person?.idType, person?.idNo),
         idNo: person?.idNo,
         nationality: person?.nationality,
       };
