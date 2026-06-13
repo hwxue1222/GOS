@@ -7709,7 +7709,12 @@ export async function createShareTransferRequest(input: {
   db.shareTransfers.unshift(transfer);
 
   await writeDb(db);
-  return { ok: true as const, transfer, signLinks: { br: brLinks, sta: staLinks, rdr: rdrLinks } };
+  return {
+    ok: true as const,
+    transfer,
+    documents: { shareTransferFormDocumentId: staDoc.id, directorsResolutionDocumentId: brDoc.id },
+    signLinks: { br: brLinks, sta: staLinks, rdr: rdrLinks },
+  };
 }
 
 export async function resumeShareTransfer(transferId: string) {

@@ -31,10 +31,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ transfe
   const transfer = db.shareTransfers.find((t) => t.id === transferId) ?? null;
   const client = transfer ? db.clients.find((c) => c.id === transfer.clientId) ?? null : null;
   const companyName = client?.name ?? (transfer?.clientId ?? transferId);
+  const title = `share transfer - ${companyName} - share transfer form (${transferId})`;
   await Promise.all(
     r.signLinks.map((l) =>
       baseUrl
-        ? sendSigningInvite({ to: l.email, title: `share transfer - ${companyName}`, url: `${baseUrl}${l.url}` })
+        ? sendSigningInvite({ to: l.email, title, url: `${baseUrl}${l.url}` })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),
   );

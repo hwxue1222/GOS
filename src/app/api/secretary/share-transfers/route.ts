@@ -164,13 +164,27 @@ export async function POST(req: Request) {
     sta: Array<{ email: string; url: string }>;
     rdr?: Array<{ email: string; url: string }>;
   };
-  const allLinks = [...signLinks.br, ...signLinks.sta, ...(signLinks.rdr ?? [])];
-  await Promise.all(
-    allLinks.map((l) =>
-      baseUrl
-        ? sendSigningInvite({ to: l.email, title: `share transfer - ${companyName}`, url: `${baseUrl}${l.url}` })
-        : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
-    ),
-  );
-  return NextResponse.json({ ok: true, transfer: r.transfer, signLinks: r.signLinks });
+  const titleBr = `share transfer - ${companyName} - director's resolution (${r.transfer.id})`;
+  const titleSta = `share transfer - ${companyName} - share transfer form (${r.transfer.id})`;
+  const titleRdr = `share transfer - ${companyName} - corporate representative (${r.transfer.id})`;
+
+  const jobs: Array<Promise<{ ok: boolean }>> = [];
+  for (const l of signLinks.br) {
+    jobs.push(
+      baseUrl ? sendSigningInvite({ to: l.email, title: titleBr, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+    );
+  }
+  for (const l of signLinks.sta) {
+    jobs.push(
+      baseUrl ? sendSigningInvite({ to: l.email, title: titleSta, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+    );
+  }
+  for (const l of signLinks.rdr ?? []) {
+    jobs.push(
+      baseUrl ? sendSigningInvite({ to: l.email, title: titleRdr, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+    );
+  }
+  await Promise.all(jobs);
+
+  return NextResponse.json({ ok: true, transfer: r.transfer, documents: (r as any).documents, signLinks: r.signLinks });
 }

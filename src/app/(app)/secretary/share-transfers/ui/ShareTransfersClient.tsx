@@ -465,7 +465,17 @@ export default function ShareTransfersClient(props: {
           setError(`Transfer #${i + 1}: ${j?.error ?? `HTTP_${res.status}`}`);
           return;
         }
-        if (j?.transfer) createdTransfers.push(j.transfer as ShareTransfer);
+        const transfer = j?.transfer as ShareTransfer | undefined;
+        if (transfer) createdTransfers.push(transfer);
+
+        const docLines: string[] = [];
+        const docs = j?.documents as { shareTransferFormDocumentId?: string; directorsResolutionDocumentId?: string } | undefined;
+        if (docs?.shareTransferFormDocumentId) {
+          docLines.push(`Share transfer form PDF — /api/documents/${docs.shareTransferFormDocumentId}/pdf`);
+        }
+        if (docs?.directorsResolutionDocumentId) {
+          docLines.push(`Director's resolution PDF — /api/documents/${docs.directorsResolutionDocumentId}/pdf`);
+        }
 
         const signLines: string[] = [];
         const all: Array<{ email: string; url: string }> = [
@@ -474,7 +484,10 @@ export default function ShareTransfersClient(props: {
           ...(j?.signLinks?.rdr ?? []),
         ];
         for (const x of all) signLines.push(`${x.email} — ${x.url}`);
-        if (signLines.length) infoBlocks.push(`Transfer #${i + 1}\n${signLines.join('\n')}`);
+
+        const header = `Transfer #${i + 1}${transfer?.id ? ` (${transfer.id})` : ''}`;
+        const parts = [docLines.length ? docLines.join('\n') : null, signLines.length ? signLines.join('\n') : null].filter(Boolean);
+        if (parts.length) infoBlocks.push(`${header}\n${parts.join('\n\n')}`);
       }
 
       if (createdTransfers.length) {
