@@ -932,7 +932,7 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
   </head>
   <body>
     <div class="center" style="margin-bottom: 10px;">
-      <div class="h" style="color: #c00;">${companyName}</div>
+      <div class="h">${companyName}</div>
       <div>(Company Registration No. ${companyRegistrationNo || '-'})</div>
       <div>(“the Company”)</div>
       <div>(Incorporated in the Republic of Singapore)</div>
