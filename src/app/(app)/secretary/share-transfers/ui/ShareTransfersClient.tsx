@@ -581,7 +581,6 @@ export default function ShareTransfersClient(props: {
                 </div>
                 <div className="mt-3">
                   <label className="text-sm block">
-                    <div className="text-black/70">Shares</div>
                     <select
                       value={draft.transferorPartyId}
                       onChange={(e) => setDraft((v) => ({ ...v, transferorPartyId: e.target.value }))}
@@ -604,7 +603,6 @@ export default function ShareTransfersClient(props: {
                 <div className="text-sm font-medium">Transferee</div>
                 <div className="mt-3">
                   <label className="text-sm block">
-                    <div className="text-black/70">Shares</div>
                     <select
                       value={draft.transfereeMode === 'NEW' ? '__NEW__' : draft.transfereePartyId}
                       onChange={(e) => {
