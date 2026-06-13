@@ -7123,7 +7123,7 @@ export async function listShareTransfers() {
 export async function createShareTransferRequest(input: {
   clientId: string;
   transferor:
-    | { kind: 'EXISTING_PARTY'; partyId: string }
+    | { kind: 'EXISTING_PARTY'; partyId: string; representativePersonId?: string }
     | { kind: 'PERSON'; fullName: string; email: string }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   transferee:
@@ -7228,7 +7228,12 @@ export async function createShareTransferRequest(input: {
     const activeRep = db.companyRepresentatives
       .filter((r) => r.companyPartyId === companyParty.id && r.scope === 'GLOBAL')
       .find((r) => !r.effectiveTo);
-    if (activeRep) return { ok: true as const, personId: activeRep.representativePersonId };
+    const now = nowIso();
+    if (activeRep) {
+      if (activeRep.representativePersonId === personId) return { ok: true as const, personId: activeRep.representativePersonId };
+      const i = db.companyRepresentatives.findIndex((r) => r.id === activeRep.id);
+      if (i >= 0) db.companyRepresentatives[i] = { ...db.companyRepresentatives[i], effectiveTo: now, updatedAt: now };
+    }
 
     const person = db.persons.find((p) => p.id === personId) ?? null;
     if (!person || !(person.email ?? '').trim()) return { ok: false as const };
@@ -7241,7 +7246,6 @@ export async function createShareTransferRequest(input: {
     });
     if (!isDirector) return { ok: false as const };
 
-    const now = nowIso();
     const rep: CompanyRepresentative = {
       id: newId('rep'),
       companyPartyId: companyParty.id,
@@ -7325,6 +7329,14 @@ export async function createShareTransferRequest(input: {
         ? makePersonParty(input.transferor.fullName, input.transferor.email)
         : ensureCompanyParty(input.transferor.clientId);
   if (!transferor) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  if (input.transferor.kind === 'EXISTING_PARTY' && input.transferor.representativePersonId) {
+    const companyParty = transferor.party;
+    if (companyParty.type === 'COMPANY' && companyParty.clientId) {
+      const ensured = ensureCompanyRepresentativeIfNeeded(companyParty, input.transferor.representativePersonId);
+      if (!ensured.ok) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+  }
   const transferee =
     input.transferee.kind === 'EXISTING_PARTY'
       ? ensureExistingShareholderParty(input.transferee.partyId)

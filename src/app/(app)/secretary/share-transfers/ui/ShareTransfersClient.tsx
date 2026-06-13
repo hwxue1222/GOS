@@ -81,6 +81,8 @@ type ShareholderOption = {
   partyId: string;
   label: string;
   sharesHeld: number;
+  kind: 'PERSON' | 'COMPANY';
+  companyClientId?: string;
 };
 
 type ShareTransferDraft = {
@@ -90,6 +92,7 @@ type ShareTransferDraft = {
   valueSgd: string;
   shareClass: (typeof SHARE_CLASS_OPTIONS)[number];
   transferorPartyId: string;
+  transferorRepresentativePersonId: string;
   transfereeMode: 'EXISTING' | 'NEW';
   transfereePartyId: string;
   newShareholderKind: NewShareholderKind;
@@ -108,6 +111,7 @@ function makeDraft(): ShareTransferDraft {
     valueSgd: '',
     shareClass: 'ORDINARY SHARE',
     transferorPartyId: '',
+    transferorRepresentativePersonId: '',
     transfereeMode: 'EXISTING',
     transfereePartyId: '',
     newShareholderKind: 'PERSON',
@@ -176,6 +180,12 @@ export default function ShareTransfersClient(props: {
     Record<string, Array<{ personId: string; fullName: string; email: string }>>
   >({});
 
+  const shareholderByPartyId = useMemo(() => {
+    const m = new Map<string, ShareholderOption>();
+    for (const s of shareholders) m.set(s.partyId, s);
+    return m;
+  }, [shareholders]);
+
   const selectedClientId = lockedClientId || clients[0]?.id || '';
 
   const personLookupKey = useMemo(() => {
@@ -190,7 +200,12 @@ export default function ShareTransfersClient(props: {
   }, [drafts]);
 
   const repLookupKey = useMemo(() => {
-    return JSON.stringify(drafts.map((d) => [d.id, d.transfereeMode, d.newShareholderKind, d.newCompany.clientId]));
+    return JSON.stringify(
+      drafts.map((d) => {
+        const transferorClientId = shareholderByPartyId.get(d.transferorPartyId)?.companyClientId ?? '';
+        return [d.id, d.transfereeMode, d.newShareholderKind, d.newCompany.clientId, transferorClientId];
+      }),
+    );
   }, [drafts]);
 
   const personLookupTimersRef = useRef<Record<string, number>>({});
@@ -324,6 +339,27 @@ export default function ShareTransfersClient(props: {
         })
         .catch(() => null);
     }
+
+    for (const d of drafts) {
+      const transferorClientId = shareholderByPartyId.get(d.transferorPartyId)?.companyClientId ?? '';
+      const clientId = String(transferorClientId).trim();
+      if (!clientId) continue;
+      if (directorsByClientId[clientId]) continue;
+      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store' })
+        .then((r) => r.json().catch(() => null))
+        .then((j: any) => {
+          const list = Array.isArray(j?.directors) ? (j.directors as any[]) : [];
+          const directors = list
+            .map((x) => ({
+              personId: String(x?.personId ?? '').trim(),
+              fullName: String(x?.fullName ?? '').trim(),
+              email: String(x?.email ?? '').trim(),
+            }))
+            .filter((x) => !!x.personId && !!x.fullName);
+          setDirectorsByClientId((prev) => ({ ...prev, [clientId]: directors }));
+        })
+        .catch(() => null);
+    }
   }, [repLookupKey]);
 
   useEffect(() => {
@@ -358,7 +394,13 @@ export default function ShareTransfersClient(props: {
             if (!name) return null;
             const kindLabel = entity?.type === 'COMPANY' ? 'Corporate' : 'Individual';
             const label = `${name} (${kindLabel} shareholder Number of shares held: ${sharesHeld.toLocaleString()})`;
-            return { partyId, label, sharesHeld };
+            return {
+              partyId,
+              label,
+              sharesHeld,
+              kind: entity?.type === 'COMPANY' ? 'COMPANY' : 'PERSON',
+              companyClientId: entity?.type === 'COMPANY' ? String(entity?.company?.id ?? '').trim() || undefined : undefined,
+            };
           })
           .filter(Boolean) as ShareholderOption[];
 
@@ -389,6 +431,12 @@ export default function ShareTransfersClient(props: {
   function validateDraft(d: ShareTransferDraft, index: number) {
     if (!selectedClientId) return `Transfer #${index + 1}: INVALID_COMPANY`;
     if (!d.transferorPartyId) return `Transfer #${index + 1}: INVALID_TRANSFEROR`;
+
+    const transferor = shareholderByPartyId.get(d.transferorPartyId) ?? null;
+    if (transferor?.kind === 'COMPANY' && transferor.companyClientId) {
+      if (!d.transferorRepresentativePersonId.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_REPRESENTATIVE`;
+    }
+
     if (!d.effectiveDate) return `Transfer #${index + 1}: INVALID_EFFECTIVE_DATE`;
     if (!d.shares || d.shares <= 0) return `Transfer #${index + 1}: INVALID_SHARES`;
     const valueSgd = Number(d.valueSgd);
@@ -460,7 +508,11 @@ export default function ShareTransfersClient(props: {
             shares: d.shares,
             valueSgd,
             shareClass: d.shareClass.trim() || undefined,
-            transferor: { kind: 'EXISTING_PARTY', partyId: d.transferorPartyId },
+            transferor: {
+              kind: 'EXISTING_PARTY',
+              partyId: d.transferorPartyId,
+              representativePersonId: d.transferorRepresentativePersonId,
+            },
             transferee:
               d.transfereeMode === 'EXISTING'
                 ? { kind: 'EXISTING_PARTY', partyId: d.transfereePartyId }
@@ -600,7 +652,12 @@ export default function ShareTransfersClient(props: {
                       <div className="mt-2">
                         <select
                           value={d.transferorPartyId}
-                          onChange={(e) => patchDraft(d.id, { transferorPartyId: e.target.value })}
+                          onChange={(e) =>
+                            patchDraft(d.id, {
+                              transferorPartyId: e.target.value,
+                              transferorRepresentativePersonId: '',
+                            })
+                          }
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                           disabled={loadingShareholders}
                         >
@@ -613,6 +670,29 @@ export default function ShareTransfersClient(props: {
                         </select>
                         {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
                       </div>
+
+                      {shareholderByPartyId.get(d.transferorPartyId)?.kind === 'COMPANY' &&
+                      shareholderByPartyId.get(d.transferorPartyId)?.companyClientId ? (
+                        <div className="mt-3">
+                          <label className="text-sm block">
+                            <div className="text-black/70">Corporate representative</div>
+                            <select
+                              value={d.transferorRepresentativePersonId}
+                              onChange={(e) => patchDraft(d.id, { transferorRepresentativePersonId: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Select...</option>
+                              {(directorsByClientId[
+                                shareholderByPartyId.get(d.transferorPartyId)?.companyClientId ?? ''
+                              ] ?? []).map((x) => (
+                                <option key={x.personId} value={x.personId}>
+                                  {x.fullName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                      ) : null}
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label className="text-sm">

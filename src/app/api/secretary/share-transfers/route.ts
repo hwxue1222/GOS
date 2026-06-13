@@ -55,6 +55,7 @@ export async function POST(req: Request) {
           email?: string;
           clientId?: string;
           partyId?: string;
+          representativePersonId?: string;
         };
         transferee?: {
           kind?: 'PERSON' | 'COMPANY_CLIENT' | 'EXISTING_PARTY' | 'NEW_PERSON' | 'NEW_COMPANY';
@@ -105,7 +106,11 @@ export async function POST(req: Request) {
 
   const transferor =
     body?.transferor?.kind === 'EXISTING_PARTY'
-      ? ({ kind: 'EXISTING_PARTY', partyId: (body.transferor as any)?.partyId ?? '' } as const)
+      ? ({
+          kind: 'EXISTING_PARTY',
+          partyId: (body.transferor as any)?.partyId ?? '',
+          representativePersonId: (body.transferor as any)?.representativePersonId ?? '',
+        } as const)
       : body?.transferor?.kind === 'COMPANY_CLIENT'
         ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferor.clientId ?? '' } as const)
         : ({ kind: 'PERSON', fullName: body?.transferor?.fullName ?? '', email: body?.transferor?.email ?? '' } as const);
