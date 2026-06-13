@@ -108,7 +108,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const client = db.clients.find((c) => c.id === clientId) ?? null;
   const companyName = client?.name ?? clientId;
   await Promise.all(
-    r.signLinks.map((l) => sendSigningInvite({ to: l.email, title: `annual general meeting (AGM) - ${companyName}`, url: `${baseUrl}${l.url}` })),
+    r.signLinks.map((l) =>
+      sendSigningInvite({
+        to: l.email,
+        url: `${baseUrl}${l.url}`,
+        companyName,
+        applicationName: 'Corporate Secretary Service',
+        documentTitle: 'Annual General Meeting (AGM) Minutes',
+        signerRole: 'Director',
+      }),
+    ),
   );
 
   await appendAuditLog({

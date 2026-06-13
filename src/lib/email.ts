@@ -114,7 +114,15 @@ export async function sendEmail(input: {
   }
 }
 
-export async function sendSigningInvite(input: { to: string; title: string; url: string }) {
+export async function sendSigningInvite(input: {
+  to: string;
+  url: string;
+  title?: string;
+  applicationName?: string;
+  companyName?: string;
+  documentTitle?: string;
+  signerRole?: string;
+}) {
   const issuer = getInvoiceIssuerConfig('BBY_SG');
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, '0');
@@ -122,24 +130,32 @@ export async function sendSigningInvite(input: { to: string; title: string; url:
   const yyyy = String(today.getFullYear());
   const dated = `${dd}/${mm}/${yyyy}`;
 
-  const m = input.title.match(/^(.+?)\s+-\s+(.+)$/);
-  const applicationName = (m?.[1] ?? input.title).trim();
-  const companyName = (m?.[2] ?? '').trim();
+  const title = String(input.title ?? '').trim();
+  const m = title ? title.match(/^(.+?)\s+-\s+(.+)$/) : null;
+  const applicationName = String(input.applicationName ?? (m?.[1] ?? title) ?? '').trim();
+  const companyName = String(input.companyName ?? (m?.[2] ?? '')).trim();
+  const documentTitle = String(input.documentTitle ?? '').trim();
+  const signerRole = String(input.signerRole ?? '').trim();
 
-  const appKey = applicationName.toLowerCase();
-  const isDirectorFlow = !appKey.includes('share transfer') && !appKey.includes('consent') && !appKey.includes('resignation');
-  const salutation = isDirectorFlow ? 'Dear Director,' : 'Dear Signatory,';
-  const roleLine = isDirectorFlow
-    ? 'As a Director of the Company, please click the link below to sign and approve the Directors\' Resolution.'
-    : 'Please click the link below to review and sign.';
+  const salutation = signerRole.toLowerCase().includes('director') ? 'Dear Director,' : 'Dear Signatory,';
+  const subjectParts = [companyName || 'Company', documentTitle || applicationName || 'Signing', signerRole ? `(${signerRole})` : '']
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const subject = subjectParts.join(' ');
 
-  const subject = `${applicationName}_${companyName || 'Company'}`;
+  const intro = (() => {
+    const pieces: string[] = [];
+    if (companyName) pieces.push(`Company: <strong>${companyName}</strong>`);
+    if (applicationName) pieces.push(`Application: <strong>${applicationName}</strong>`);
+    if (documentTitle) pieces.push(`Document: <strong>${documentTitle}</strong>`);
+    if (signerRole) pieces.push(`Signing as: <strong>${signerRole}</strong>`);
+    return pieces.length ? pieces.join('<br />') : '';
+  })();
   const html = `
 <div style="font-family: ui-sans-serif,system-ui; line-height:1.6; font-size:14px; color:#111;">
   <div>${salutation}</div>
   <div style="margin-top:10px;">
-    The Company, <strong>${companyName || 'your company'}</strong>, has submitted an application for <strong>${applicationName}</strong>.
-    ${roleLine}
+    ${intro || 'Please click the link below to review and sign.'}
   </div>
   <div style="margin-top:12px;">
     <a href="${input.url}">${input.url}</a>

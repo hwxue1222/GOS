@@ -7552,7 +7552,7 @@ export async function createShareTransferRequest(input: {
   const directorEmails = directors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
   if (directorEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
-  const brLinks: Array<{ email: string; url: string }> = [];
+  const brLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
   for (const email of directorEmails) {
     const token = newToken();
     const req: SignatureRequest = {
@@ -7566,13 +7566,13 @@ export async function createShareTransferRequest(input: {
       updatedAt: now,
     };
     db.signatureRequests.unshift(req);
-    brLinks.push({ email, url: `/sign/${token}` });
+    brLinks.push({ email, url: `/sign/${token}`, signerRole: 'Director', documentTitle: brDoc.title });
   }
 
   const blockingRdrIds: string[] = [];
   const staSignerEmails: string[] = [];
-  const rdrLinks: Array<{ email: string; url: string }> = [];
-  const csCertLinks: Array<{ email: string; url: string }> = [];
+  const rdrLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
+  const csCertLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
 
   const resolveStaEmail = (party: Party) => {
     if (party.type === 'PERSON') {
@@ -7737,9 +7737,19 @@ export async function createShareTransferRequest(input: {
     return { rdrId, links };
   };
 
+  const staSignerPairs: Array<{ email: string; signerRole: string }> = [];
   for (const party of [transferor.party, transferee.party]) {
     const email = resolveStaEmail(party);
     if (email) {
+      const roleLabel =
+        party.id === transferor.party.id
+          ? party.type === 'COMPANY'
+            ? 'Corporate Representative (Transferor)'
+            : 'Transferor'
+          : party.type === 'COMPANY'
+            ? 'Corporate Representative (Transferee)'
+            : 'Transferee';
+      staSignerPairs.push({ email, signerRole: roleLabel });
       staSignerEmails.push(email);
       continue;
     }
@@ -7747,7 +7757,9 @@ export async function createShareTransferRequest(input: {
       const created = await ensureAutoRdr(party);
       if (!created) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
       blockingRdrIds.push(created.rdrId);
-      rdrLinks.push(...created.links);
+      rdrLinks.push(
+        ...created.links.map((l) => ({ ...l, signerRole: 'Director', documentTitle: `Corporate Representative - ${party.displayName}` })),
+      );
       continue;
     }
     return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
@@ -7811,7 +7823,7 @@ export async function createShareTransferRequest(input: {
     };
     db.signaturePackets.unshift(packet);
 
-    const uniqueEmails = Array.from(new Set([...foreignDirectorEmails, repEmail]));
+    const uniqueEmails = Array.from(new Set([...foreignDirectorEmails, repEmail].map((e) => e.trim().toLowerCase()).filter(Boolean)));
     for (const email of uniqueEmails) {
       const token = newToken();
       const req: SignatureRequest = {
@@ -7825,13 +7837,18 @@ export async function createShareTransferRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      csCertLinks.push({ email, url: `/sign/${token}` });
+      csCertLinks.push({
+        email,
+        url: `/sign/${token}`,
+        signerRole: email === repEmail.trim().toLowerCase() ? 'Corporate Representative' : 'Director',
+        documentTitle: csDoc.title,
+      });
     }
 
     documents.corporateSecretaryCertificateDocumentId = csDoc.id;
   }
 
-  const staLinks: Array<{ email: string; url: string }> = [];
+  const staLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
   if (blockingRdrIds.length === 0) {
     (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
     const uniqueStaEmails = Array.from(new Set(staSignerEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
@@ -7848,7 +7865,13 @@ export async function createShareTransferRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      staLinks.push({ email: emailKey, url: `/sign/${token}` });
+      const role =
+        staSignerPairs
+          .filter((p) => p.email.trim().toLowerCase() === emailKey)
+          .map((p) => p.signerRole)
+          .filter(Boolean);
+      const signerRole = role.length ? Array.from(new Set(role)).join(' & ') : 'Signatory';
+      staLinks.push({ email: emailKey, url: `/sign/${token}`, signerRole, documentTitle: staDoc.title });
     }
   }
 

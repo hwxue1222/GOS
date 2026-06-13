@@ -170,35 +170,69 @@ export async function POST(req: Request) {
   const client = await findClientById(clientId);
   const companyName = client?.name ?? clientId;
   const signLinks = r.signLinks as {
-    br: Array<{ email: string; url: string }>;
-    sta: Array<{ email: string; url: string }>;
-    rdr?: Array<{ email: string; url: string }>;
-    cs?: Array<{ email: string; url: string }>;
+    br: Array<{ email: string; url: string; signerRole?: string; documentTitle?: string }>;
+    sta: Array<{ email: string; url: string; signerRole?: string; documentTitle?: string }>;
+    rdr?: Array<{ email: string; url: string; signerRole?: string; documentTitle?: string }>;
+    cs?: Array<{ email: string; url: string; signerRole?: string; documentTitle?: string }>;
   };
-  const titleBr = `share transfer - ${companyName} - director's resolution (${r.transfer.id})`;
-  const titleSta = `share transfer - ${companyName} - share transfer form (${r.transfer.id})`;
-  const titleRdr = `share transfer - ${companyName} - corporate representative (${r.transfer.id})`;
-  const titleCs = `share transfer - ${companyName} - corporate secretary appointment (${r.transfer.id})`;
 
   const jobs: Array<Promise<{ ok: boolean }>> = [];
+  const appName = 'Transfer of Shares';
+
   for (const l of signLinks.br) {
     jobs.push(
-      baseUrl ? sendSigningInvite({ to: l.email, title: titleBr, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+      baseUrl
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: appName,
+            documentTitle: l.documentTitle ?? "Director Resolution",
+            signerRole: l.signerRole ?? 'Director',
+          })
+        : Promise.resolve({ ok: false }),
     );
   }
   for (const l of signLinks.sta) {
     jobs.push(
-      baseUrl ? sendSigningInvite({ to: l.email, title: titleSta, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+      baseUrl
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: appName,
+            documentTitle: l.documentTitle ?? 'Share Transfer Form',
+            signerRole: l.signerRole ?? 'Signatory',
+          })
+        : Promise.resolve({ ok: false }),
     );
   }
   for (const l of signLinks.rdr ?? []) {
     jobs.push(
-      baseUrl ? sendSigningInvite({ to: l.email, title: titleRdr, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+      baseUrl
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: appName,
+            documentTitle: l.documentTitle ?? 'Corporate Representative Authorization',
+            signerRole: l.signerRole ?? 'Director',
+          })
+        : Promise.resolve({ ok: false }),
     );
   }
   for (const l of signLinks.cs ?? []) {
     jobs.push(
-      baseUrl ? sendSigningInvite({ to: l.email, title: titleCs, url: `${baseUrl}${l.url}` }) : Promise.resolve({ ok: false }),
+      baseUrl
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: appName,
+            documentTitle: l.documentTitle ?? 'Certificate of Appointment of Corporate Secretary',
+            signerRole: l.signerRole ?? 'Signatory',
+          })
+        : Promise.resolve({ ok: false }),
     );
   }
   await Promise.all(jobs);

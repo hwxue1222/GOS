@@ -111,7 +111,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   await Promise.all(
     signLinks.map((l) =>
       baseUrl
-        ? sendSigningInvite({ to: l.email, title: `corporate representative designation - ${client.name}`, url: `${baseUrl}${l.url}` })
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName: client.name,
+            applicationName: 'Corporate representative designation',
+            documentTitle: `Corporate Representative - ${client.name}`,
+            signerRole: 'Director',
+          })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),
   );

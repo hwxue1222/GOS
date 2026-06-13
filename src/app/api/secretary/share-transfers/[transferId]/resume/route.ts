@@ -31,11 +31,45 @@ export async function POST(req: Request, { params }: { params: Promise<{ transfe
   const transfer = db.shareTransfers.find((t) => t.id === transferId) ?? null;
   const client = transfer ? db.clients.find((c) => c.id === transfer.clientId) ?? null : null;
   const companyName = client?.name ?? (transfer?.clientId ?? transferId);
-  const title = `share transfer - ${companyName} - share transfer form (${transferId})`;
+
+  const resolveEmail = (partyId: string) => {
+    const party = db.parties.find((p) => p.id === partyId) ?? null;
+    if (!party) return null;
+    if (party.type === 'PERSON' && party.personId) {
+      const person = db.persons.find((p) => p.id === party.personId) ?? null;
+      return person?.email ?? null;
+    }
+    if (party.type === 'COMPANY') {
+      const rep = db.companyRepresentatives
+        .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
+        .find((r) => !r.effectiveTo);
+      if (!rep) return null;
+      const person = db.persons.find((p) => p.id === rep.representativePersonId) ?? null;
+      return person?.email ?? null;
+    }
+    return null;
+  };
+
+  const transferorEmail = transfer ? resolveEmail(transfer.transferorPartyId) : null;
+  const transfereeEmail = transfer ? resolveEmail(transfer.transfereePartyId) : null;
   await Promise.all(
     r.signLinks.map((l) =>
       baseUrl
-        ? sendSigningInvite({ to: l.email, title, url: `${baseUrl}${l.url}` })
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: 'Transfer of Shares',
+            documentTitle: 'Share Transfer Form',
+            signerRole:
+              transferorEmail && transfereeEmail && l.email === transferorEmail && l.email === transfereeEmail
+                ? 'Transferor & Transferee'
+                : transferorEmail && l.email === transferorEmail
+                  ? 'Transferor'
+                  : transfereeEmail && l.email === transfereeEmail
+                    ? 'Transferee'
+                    : 'Signatory',
+          })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),
   );

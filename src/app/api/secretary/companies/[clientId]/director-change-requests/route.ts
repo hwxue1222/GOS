@@ -150,7 +150,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const companyName = client?.name ?? clientId;
   await Promise.all(
     r.signLinks.map((l) =>
-      sendSigningInvite({ to: l.email, title: l.title ?? `change of director - ${companyName}`, url: `${baseUrl}${l.url}` }),
+      sendSigningInvite({
+        to: l.email,
+        url: `${baseUrl}${l.url}`,
+        companyName,
+        applicationName: 'Corporate Secretary Service',
+        documentTitle: l.title ?? 'Director change documents',
+        signerRole: 'Director',
+      }),
     ),
   );
 
