@@ -307,6 +307,9 @@ export default async function CorporateSecretaryApplicationsPage({
                         if (r.typeKey === 'agm') {
                           return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.sourceId)}`;
                         }
+                        if (r.typeKey === 'share_transfer') {
+                          return `/api/secretary/share-transfers/${encodeURIComponent(r.sourceId)}`;
+                        }
                         if (
                           r.typeKey === 'change_company_name' ||
                           r.typeKey === 'change_fye' ||

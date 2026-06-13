@@ -237,6 +237,9 @@ export default async function DashboardPage() {
                         if (r.type === 'ANNUAL_GENERAL_MEETING') {
                           return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}`;
                         }
+                        if (r.type === 'SHARE_TRANSFER') {
+                          return `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}`;
+                        }
                         if (
                           r.type === 'CHANGE_COMPANY_NAME' ||
                           r.type === 'CHANGE_FINANCIAL_YEAR_END' ||

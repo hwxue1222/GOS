@@ -8585,6 +8585,29 @@ export async function deleteAnnualGeneralMeetingRequest(input: { requestId: stri
   return { ok: true as const, request: r };
 }
 
+export async function deleteShareTransfer(input: { transferId: string }) {
+  const db = await readDb();
+  const idx = db.shareTransfers.findIndex((t) => t.id === input.transferId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const t = db.shareTransfers[idx];
+
+  const st = String((t as any).status ?? '');
+  if (st !== 'SIGNING') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
+  for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  if (Array.isArray((t as any).blockingRdrIds)) {
+    for (const id of (t as any).blockingRdrIds as string[]) {
+      deleteSignaturePacketCascade(db, id);
+    }
+  }
+
+  db.shareTransfers.splice(idx, 1);
+  db.auditLogs = (db.auditLogs ?? []).filter((a) => !(a.entityType === 'share_transfer' && a.entityId === t.id));
+  await writeDb(db);
+  return { ok: true as const, transfer: t };
+}
+
 export async function listCompanyUpdateRequestsByClient(clientId: string) {
   const db = await readDb();
   const list = getCompanyUpdateRequestList(db);
