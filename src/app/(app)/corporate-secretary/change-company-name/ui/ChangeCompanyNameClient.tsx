@@ -214,7 +214,6 @@ export default function ChangeCompanyNameClient() {
 
           {shareholderCompanies.length ? (
             <div className="space-y-3">
-              <div className="text-sm font-medium text-black">Certificate of appointment of corporate representative</div>
               {shareholderCompanies.map((s) => {
                 const company = s.entity.company;
                 const d = corporateRepresentatives[company.id] ?? {
@@ -228,7 +227,8 @@ export default function ChangeCompanyNameClient() {
                 };
                 return (
                   <div key={company.id} className="rounded-lg border border-black/10 p-4">
-                    <div className="text-sm text-black/80">Shareholder company: {company.name}</div>
+                    <div className="text-sm font-medium text-black">Corporate representative</div>
+                    <div className="text-sm text-black/80 mt-1">Shareholder company: {company.name}</div>
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3">
                       <label className="sm:col-span-6 text-sm">
                         <div className="text-black">
