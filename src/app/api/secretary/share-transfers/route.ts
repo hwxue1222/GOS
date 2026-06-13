@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     | {
         clientId?: string;
         shares?: number;
+        valueSgd?: number;
         shareClass?: string;
         effectiveDate?: string;
         transferor?: {
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
   const effectiveDate = typeof body?.effectiveDate === 'string' ? body.effectiveDate : '';
   const shareClass = typeof body?.shareClass === 'string' ? body.shareClass : undefined;
   const shares = typeof body?.shares === 'number' ? body.shares : Number(body?.shares);
+  const valueSgd = typeof body?.valueSgd === 'number' ? body.valueSgd : Number((body as any)?.valueSgd);
 
   const transferor =
     body?.transferor?.kind === 'EXISTING_PARTY'
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
         ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
         : ({ kind: 'PERSON', fullName: body?.transferee?.fullName ?? '', email: body?.transferee?.email ?? '' } as const);
 
-  const r = await createShareTransferRequest({ clientId, transferor, transferee, shares, shareClass, effectiveDate });
+  const r = await createShareTransferRequest({ clientId, transferor, transferee, shares, valueSgd, shareClass, effectiveDate });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
   await appendAuditLog({
     actorUserId: user.id,

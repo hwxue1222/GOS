@@ -763,6 +763,7 @@ export function renderShareTransferAgreementHtml(input: {
   transferorName: string;
   transfereeName: string;
   shares: number;
+  valueSgd?: number;
   shareClass?: string;
   effectiveDate: string;
 }) {
@@ -771,6 +772,8 @@ export function renderShareTransferAgreementHtml(input: {
   const transfereeName = esc(input.transfereeName);
   const shareClass = input.shareClass ? esc(input.shareClass) : '';
   const effectiveDate = esc(input.effectiveDate);
+  const valueSgd = Number(input.valueSgd);
+  const valueLine = Number.isFinite(valueSgd) ? `<div style="margin-top: 10px;"><strong>Value of shares transferred</strong>: S$${esc(String(valueSgd))}</div>` : '';
 
   return `
 <!doctype html>
@@ -795,6 +798,7 @@ export function renderShareTransferAgreementHtml(input: {
       <div style="margin-top: 10px;"><strong>Transferor</strong>: ${transferorName}</div>
       <div style="margin-top: 10px;"><strong>Transferee</strong>: ${transfereeName}</div>
       <div style="margin-top: 10px;"><strong>Shares</strong>: ${input.shares}${shareClass ? ` (${shareClass})` : ''}</div>
+      ${valueLine}
       <div class="sig">
         <div>Signatures:</div>
         <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
@@ -1408,7 +1412,7 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
   meetingDate: string;
   meetingVenue: string;
   chairman: string;
-  noticeDirector?: string;
+  directorSendingNotice?: string;
   fiscalYearReport?: string;
   companyCategory?: string;
   agendaSummary?: string;
@@ -1417,7 +1421,7 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
   const meetingDate = esc(input.meetingDate);
   const meetingVenue = esc(input.meetingVenue);
   const chairman = esc(input.chairman);
-  const noticeDirector = esc(String(input.noticeDirector ?? '').trim());
+  const noticeDirector = esc(String(input.directorSendingNotice ?? '').trim());
   const fiscalYearReport = esc(String(input.fiscalYearReport ?? '').trim());
   const companyCategory = esc(String(input.companyCategory ?? '').trim());
   const agendaSummary = typeof input.agendaSummary === 'string' ? esc(input.agendaSummary) : '';
@@ -1443,7 +1447,7 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
     <div class="box" style="margin-top: 12px;">
       <div><strong>Company</strong>: ${companyName}</div>
       <div style="margin-top: 10px;"><strong>Chairman</strong>: ${chairman}</div>
-      ${noticeDirector ? `<div style="margin-top: 10px;"><strong>Noticed Director</strong>: ${noticeDirector}</div>` : ''}
+      ${noticeDirector ? `<div style="margin-top: 10px;"><strong>Director sending notice</strong>: ${noticeDirector}</div>` : ''}
       ${fiscalYearReport ? `<div style="margin-top: 10px;"><strong>Fiscal Financial Year Report</strong>: ${fiscalYearReport}</div>` : ''}
       ${companyCategory ? `<div style="margin-top: 10px;"><strong>Company Category</strong>: ${companyCategory}</div>` : ''}
       <div style="margin-top: 10px;"><strong>Venue</strong>: ${meetingVenue}</div>

@@ -343,6 +343,7 @@ export type ShareTransfer = {
   transfereePartyId: string;
   shareClass?: string;
   shares: number;
+  valueSgd?: number;
   effectiveDate: string;
   status: ShareTransferStatus;
   staPacketId: string;
@@ -485,7 +486,7 @@ export type AnnualGeneralMeetingRequest = {
   meetingDate: string;
   meetingVenue: string;
   chairman: string;
-  noticeDirector?: string;
+  directorSendingNotice?: string;
   companyCategory?: string;
   fiscalYearReport?: string;
   useByBridgeRegisteredOfficeAddress?: boolean;

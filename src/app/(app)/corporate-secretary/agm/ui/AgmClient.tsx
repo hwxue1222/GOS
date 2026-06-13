@@ -21,7 +21,7 @@ export default function AgmClient() {
   const [fiscalYearReport, setFiscalYearReport] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
   const [chairman, setChairman] = useState('');
-  const [noticeDirector, setNoticeDirector] = useState('');
+  const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | ''>('');
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +50,7 @@ export default function AgmClient() {
     const md = meetingDate.trim();
     const mv = meetingVenue.trim();
     const ch = chairman.trim();
-    const nd = noticeDirector.trim();
+    const nd = directorSendingNotice.trim();
     const fy = fiscalYearReport.trim();
     if (!md || !mv || !ch || !nd || !fy) {
       setSubmitError('Please fill in required fields.');
@@ -65,7 +65,7 @@ export default function AgmClient() {
           meetingDate: md,
           meetingVenue: mv,
           chairman: ch,
-          noticeDirector: nd,
+          directorSendingNotice: nd,
           companyCategory: companyCategory || undefined,
           fiscalYearReport: fy,
           useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
@@ -112,11 +112,11 @@ export default function AgmClient() {
 
             <label className="text-sm">
               <div className="text-black">
-                <span className="text-red-500">*</span> Noticed Director
+                <span className="text-red-500">*</span> Director sending notice
               </div>
               <select
-                value={noticeDirector}
-                onChange={(e) => setNoticeDirector(e.target.value)}
+                value={directorSendingNotice}
+                onChange={(e) => setDirectorSendingNotice(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Select</option>

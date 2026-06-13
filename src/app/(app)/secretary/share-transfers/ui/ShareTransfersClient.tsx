@@ -15,6 +15,7 @@ type ShareTransfer = {
   transfereePartyId: string;
   shareClass?: string;
   shares: number;
+  valueSgd?: number;
   effectiveDate: string;
   status: string;
   staPacketId: string;
@@ -48,6 +49,7 @@ export default function ShareTransfersClient(props: {
     clientId: lockedClientId || clients[0]?.id || '',
     effectiveDate: '',
     shares: 0,
+    valueSgd: '',
     shareClass: '',
     transferorPartyId: '',
     transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
@@ -122,6 +124,7 @@ export default function ShareTransfersClient(props: {
       transfereeMode: 'EXISTING',
       transfereeName: '',
       transfereeEmail: '',
+      valueSgd: '',
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.clientId]);
@@ -157,6 +160,11 @@ export default function ShareTransfersClient(props: {
       setError('INVALID_INPUT');
       return;
     }
+    const valueSgd = Number(draft.valueSgd);
+    if (!Number.isFinite(valueSgd) || valueSgd < 0) {
+      setError('INVALID_INPUT');
+      return;
+    }
     if (!draft.transferorPartyId) {
       setError('INVALID_INPUT');
       return;
@@ -180,6 +188,7 @@ export default function ShareTransfersClient(props: {
           clientId: draft.clientId,
           effectiveDate: draft.effectiveDate,
           shares: draft.shares,
+          valueSgd,
           shareClass: draft.shareClass || undefined,
           transferor: { kind: 'EXISTING_PARTY', partyId: draft.transferorPartyId },
           transferee:
@@ -288,13 +297,26 @@ export default function ShareTransfersClient(props: {
                 />
               </label>
               <label className="text-sm">
-                <div className="text-black/70">Shares</div>
+                <div className="text-black/70">No of shares transferred</div>
                 <input
                   type="number"
                   value={draft.shares || ''}
                   onChange={(e) => setDraft((v) => ({ ...v, shares: Number(e.target.value) }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
+              </label>
+              <label className="text-sm">
+                <div className="text-black/70">Value of shares transferred</div>
+                <div className="mt-1 flex">
+                  <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={draft.valueSgd}
+                    onChange={(e) => setDraft((v) => ({ ...v, valueSgd: e.target.value }))}
+                    className="w-full rounded-r-lg border border-black/10 border-l-0 px-3 py-2 text-sm"
+                  />
+                </div>
               </label>
               <label className="text-sm">
                 <div className="text-black/70">Share class</div>
@@ -430,7 +452,10 @@ export default function ShareTransfersClient(props: {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatDateDMY(t.effectiveDate)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {t.shares}
+                      <div>{t.shares}</div>
+                      {typeof t.valueSgd === 'number' && Number.isFinite(t.valueSgd) ? (
+                        <div className="text-xs text-black/50">S${t.valueSgd}</div>
+                      ) : null}
                       {t.shareClass ? <span className="text-black/50">{` (${t.shareClass})`}</span> : null}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{t.status}</td>

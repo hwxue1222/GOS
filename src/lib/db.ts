@@ -7130,6 +7130,7 @@ export async function createShareTransferRequest(input: {
     | { kind: 'PERSON'; fullName: string; email: string }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   shares: number;
+  valueSgd?: number;
   shareClass?: string;
   effectiveDate: string;
 }) {
@@ -7142,6 +7143,8 @@ export async function createShareTransferRequest(input: {
   if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const shares = Number(input.shares);
   if (!Number.isFinite(shares) || shares <= 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const valueSgd = Number(input.valueSgd);
+  if (!Number.isFinite(valueSgd) || valueSgd < 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const makePersonParty = (fullNameRaw: string, emailRaw: string) => {
     const fullName = fullNameRaw.trim();
@@ -7261,10 +7264,11 @@ export async function createShareTransferRequest(input: {
     transferorName,
     transfereeName,
     shares,
+    valueSgd,
     shareClass,
     effectiveDate,
   });
-  const brSummary = `Approve the transfer of ${shares}${shareClass ? ` (${shareClass})` : ''} shares from ${transferorName} to ${transfereeName} effective on ${effectiveDate}.`;
+  const brSummary = `Approve the transfer of ${shares}${shareClass ? ` (${shareClass})` : ''} shares from ${transferorName} to ${transfereeName} for S$${valueSgd} effective on ${effectiveDate}.`;
   const brHtml = (await import('@/lib/docTemplates')).renderBoardResolutionHtml({
     companyName: client.name,
     resolutionDate: effectiveDate,
@@ -7447,6 +7451,7 @@ export async function createShareTransferRequest(input: {
     transfereePartyId,
     shareClass,
     shares,
+    valueSgd,
     effectiveDate,
     status,
     staPacketId: staPacket.id,
@@ -9339,7 +9344,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingDate,
     meetingVenue,
     chairman,
-    noticeDirector,
+    directorSendingNotice: noticeDirector,
     fiscalYearReport,
     companyCategory,
   });
@@ -9391,7 +9396,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingDate,
     meetingVenue,
     chairman,
-    noticeDirector,
+    directorSendingNotice: noticeDirector,
     fiscalYearReport,
     companyCategory,
     useByBridgeRegisteredOfficeAddress,

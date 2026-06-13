@@ -64,7 +64,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         meetingDate?: string;
         meetingVenue?: string;
         chairman?: string;
-        noticeDirector?: string;
+        directorSendingNotice?: string;
         companyCategory?: string;
         fiscalYearReport?: string;
         useByBridgeRegisteredOfficeAddress?: boolean;
@@ -74,7 +74,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const meetingDate = typeof body?.meetingDate === 'string' ? body.meetingDate.trim() : '';
   const meetingVenue = typeof body?.meetingVenue === 'string' ? body.meetingVenue.trim() : '';
   const chairman = typeof body?.chairman === 'string' ? body.chairman.trim() : '';
-  const noticeDirector = typeof body?.noticeDirector === 'string' ? body.noticeDirector.trim() : '';
+  const noticeDirector = typeof body?.directorSendingNotice === 'string' ? body.directorSendingNotice.trim() : '';
   const companyCategory = typeof body?.companyCategory === 'string' ? body.companyCategory.trim() : undefined;
   const fiscalYearReport = typeof body?.fiscalYearReport === 'string' ? body.fiscalYearReport.trim() : '';
   const useByBridgeRegisteredOfficeAddress = !!body?.useByBridgeRegisteredOfficeAddress;
