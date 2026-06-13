@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 import { buildIncorporationApplications } from '@/lib/incorporationApplications';
 import DeleteActionClient from '@/components/DeleteActionClient';
+import ClientCompanyDetailsCard from '@/app/(app)/dashboard/ui/ClientCompanyDetailsCard';
 
 export default async function DashboardPage() {
   const me = await getCurrentUser();
@@ -12,10 +13,8 @@ export default async function DashboardPage() {
 
   const db = await readDb();
 
-  const isActiveRole = (r: { role: string; resignationDate?: string; toDate?: string }) => {
-    if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
-    if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
-    return true;
+  const isActiveDirector = (r: { role: string; resignationDate?: string }) => {
+    return r.role === 'DIRECTOR' && !r.resignationDate;
   };
 
   const allowedClientIds = (() => {
@@ -25,7 +24,7 @@ export default async function DashboardPage() {
     const personById = new Map(db.persons.map((p) => [p.id, p]));
     const allowed = new Set<string>();
     for (const r of db.clientPartyRoles) {
-      if (!isActiveRole(r)) continue;
+      if (!isActiveDirector(r)) continue;
       const party = partyById.get(r.partyId);
       if (!party || party.type !== 'PERSON' || !party.personId) continue;
       const person = personById.get(party.personId);
@@ -35,6 +34,15 @@ export default async function DashboardPage() {
     }
     return allowed;
   })();
+
+  const clientCompanies =
+    me.role === 'client'
+      ? db.clients
+          .filter((c) => !c.deletedAt)
+          .filter((c) => (allowedClientIds ? allowedClientIds.has(c.id) : true))
+          .map((c) => ({ id: c.id, code: c.code, name: c.name }))
+          .sort((a, b) => `${a.code} ${a.name}`.localeCompare(`${b.code} ${b.name}`))
+      : [];
 
   const apps = buildSecretaryServiceApplications(db, allowedClientIds);
   const csRows = apps.slice(0, 10);
@@ -49,6 +57,12 @@ export default async function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <h1 className="text-xl font-semibold">Home</h1>
 
+          {me.role === 'client' ? (
+            <div className="mt-6">
+              <ClientCompanyDetailsCard companies={clientCompanies} initialCompanyId={clientCompanies[0]?.id} />
+            </div>
+          ) : null}
+
           <div className="mt-6 space-y-4">
             <div className="rounded-xl bg-white border border-black/5 p-4">
               <div className="flex items-center justify-between gap-3">
@@ -56,26 +70,28 @@ export default async function DashboardPage() {
                   <div className="text-base font-semibold">Incorporation of Company</div>
                   <div className="mt-0.5 text-sm text-black/50">Applications</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/corporate-secretary/applications"
-                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                  >
-                    View all
-                  </Link>
-                  <Link
-                    href="/incorporation/register"
-                    className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
-                  >
-                    Register
-                  </Link>
-                  <Link
-                    href="/incorporation/transfer-secretary"
-                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                  >
-                    Transfer
-                  </Link>
-                </div>
+                {me.role === 'client' ? <div /> : (
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/corporate-secretary/applications"
+                      className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                    >
+                      View all
+                    </Link>
+                    <Link
+                      href="/incorporation/register"
+                      className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
+                    >
+                      Register
+                    </Link>
+                    <Link
+                      href="/incorporation/transfer-secretary"
+                      className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                    >
+                      Transfer
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 overflow-x-auto">
@@ -136,20 +152,22 @@ export default async function DashboardPage() {
                   <div className="text-base font-semibold">Corporate Secretary</div>
                   <div className="mt-0.5 text-sm text-black/50">Applications</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/corporate-secretary/applications"
-                    className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-                  >
-                    View all
-                  </Link>
-                  <Link
-                    href="/corporate-secretary/applications/new/director-change"
-                    className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
-                  >
-                    New
-                  </Link>
-                </div>
+                {me.role === 'client' ? <div /> : (
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/corporate-secretary/applications"
+                      className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+                    >
+                      View all
+                    </Link>
+                    <Link
+                      href="/corporate-secretary/applications/new/director-change"
+                      className="rounded-md bg-[#2f7bdc] text-white px-3 py-2 text-sm font-medium"
+                    >
+                      New
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 overflow-x-auto">
