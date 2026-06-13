@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { formatDateDMY } from '@/lib/date';
@@ -23,6 +23,12 @@ type ShareTransfer = {
   createdAt: string;
 };
 
+type ShareholderOption = {
+  partyId: string;
+  label: string;
+  sharesHeld: number;
+};
+
 export default function ShareTransfersClient(props: { initialClients: ClientLite[]; initialTransfers: ShareTransfer[] }) {
   const { initialClients, initialTransfers } = props;
 
@@ -38,15 +44,76 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
     effectiveDate: '',
     shares: 0,
     shareClass: '',
-    transferorKind: 'PERSON' as 'PERSON' | 'COMPANY_CLIENT',
-    transferorName: '',
-    transferorEmail: '',
-    transferorClientId: '',
-    transfereeKind: 'PERSON' as 'PERSON' | 'COMPANY_CLIENT',
+    transferorPartyId: '',
+    transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
+    transfereePartyId: '',
     transfereeName: '',
     transfereeEmail: '',
-    transfereeClientId: '',
   });
+
+  const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
+  const [loadingShareholders, setLoadingShareholders] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      const clientId = draft.clientId;
+      if (!clientId) {
+        if (!ignore) setShareholders([]);
+        return;
+      }
+      setLoadingShareholders(true);
+      try {
+        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}`, { cache: 'no-store' }).catch(() => null);
+        if (!res?.ok) {
+          if (!ignore) setShareholders([]);
+          return;
+        }
+        const j = (await res.json().catch(() => null)) as { ok?: boolean; roles?: { shareholders?: any[] } } | null;
+        const rows = Array.isArray(j?.roles?.shareholders) ? (j!.roles!.shareholders as any[]) : [];
+        const opts: ShareholderOption[] = rows
+          .map((r) => {
+            const partyId = String(r?.role?.partyId ?? '').trim();
+            const sharesHeld = Number(r?.role?.shares);
+            if (!partyId || !Number.isFinite(sharesHeld)) return null;
+            const entity = r?.entity;
+            const name =
+              entity?.type === 'PERSON'
+                ? String(entity?.person?.fullName ?? '').trim()
+                : entity?.type === 'COMPANY'
+                  ? String(entity?.company?.name ?? '').trim()
+                  : '';
+            if (!name) return null;
+            const kindLabel = entity?.type === 'COMPANY' ? 'Corporate' : 'Individual';
+            const label = `${name} (${kindLabel} shareholder Number of shares held: ${sharesHeld.toLocaleString()})`;
+            return { partyId, label, sharesHeld };
+          })
+          .filter(Boolean) as ShareholderOption[];
+
+        opts.sort((a, b) => b.sharesHeld - a.sharesHeld || a.label.localeCompare(b.label));
+        if (!ignore) setShareholders(opts);
+      } finally {
+        if (!ignore) setLoadingShareholders(false);
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [draft.clientId]);
+
+  useEffect(() => {
+    if (!draft.clientId) return;
+    setDraft((v) => ({
+      ...v,
+      transferorPartyId: '',
+      transfereePartyId: '',
+      transfereeMode: 'EXISTING',
+      transfereeName: '',
+      transfereeEmail: '',
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.clientId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -75,19 +142,16 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
       setError('INVALID_INPUT');
       return;
     }
-    if (draft.transferorKind === 'PERSON' && (!draft.transferorName.trim() || !draft.transferorEmail.trim())) {
+    if (!draft.transferorPartyId) {
       setError('INVALID_INPUT');
       return;
     }
-    if (draft.transferorKind === 'COMPANY_CLIENT' && !draft.transferorClientId) {
+
+    if (draft.transfereeMode === 'EXISTING' && !draft.transfereePartyId) {
       setError('INVALID_INPUT');
       return;
     }
-    if (draft.transfereeKind === 'PERSON' && (!draft.transfereeName.trim() || !draft.transfereeEmail.trim())) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    if (draft.transfereeKind === 'COMPANY_CLIENT' && !draft.transfereeClientId) {
+    if (draft.transfereeMode === 'NEW' && (!draft.transfereeName.trim() || !draft.transfereeEmail.trim())) {
       setError('INVALID_INPUT');
       return;
     }
@@ -102,14 +166,11 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
           effectiveDate: draft.effectiveDate,
           shares: draft.shares,
           shareClass: draft.shareClass || undefined,
-          transferor:
-            draft.transferorKind === 'PERSON'
-              ? { kind: 'PERSON', fullName: draft.transferorName, email: draft.transferorEmail }
-              : { kind: 'COMPANY_CLIENT', clientId: draft.transferorClientId },
+          transferor: { kind: 'EXISTING_PARTY', partyId: draft.transferorPartyId },
           transferee:
-            draft.transfereeKind === 'PERSON'
-              ? { kind: 'PERSON', fullName: draft.transfereeName, email: draft.transfereeEmail }
-              : { kind: 'COMPANY_CLIENT', clientId: draft.transfereeClientId },
+            draft.transfereeMode === 'EXISTING'
+              ? { kind: 'EXISTING_PARTY', partyId: draft.transfereePartyId }
+              : { kind: 'PERSON', fullName: draft.transfereeName, email: draft.transfereeEmail },
         }),
       });
       const j = await res.json().catch(() => null);
@@ -227,85 +288,58 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg bg-white border border-black/5 p-4">
                 <div className="text-sm font-medium">Transferor</div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <label className="text-sm">
-                    <div className="text-black/70">Type</div>
+                <div className="mt-3">
+                  <label className="text-sm block">
+                    <div className="text-black/70">Shares</div>
                     <select
-                      value={draft.transferorKind}
-                      onChange={(e) =>
-                        setDraft((v) => ({
-                          ...v,
-                          transferorKind: e.target.value as 'PERSON' | 'COMPANY_CLIENT',
-                          transferorClientId: '',
-                        }))
-                      }
+                      value={draft.transferorPartyId}
+                      onChange={(e) => setDraft((v) => ({ ...v, transferorPartyId: e.target.value }))}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      disabled={loadingShareholders}
                     >
-                      <option value="PERSON">Person</option>
-                      <option value="COMPANY_CLIENT">Existing client company</option>
+                      <option value="">Select...</option>
+                      {shareholders.map((s) => (
+                        <option key={s.partyId} value={s.partyId}>
+                          {s.label}
+                        </option>
+                      ))}
                     </select>
+                    {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
                   </label>
-                  {draft.transferorKind === 'PERSON' ? (
-                    <>
-                      <label className="text-sm">
-                        <div className="text-black/70">Name</div>
-                        <input
-                          value={draft.transferorName}
-                          onChange={(e) => setDraft((v) => ({ ...v, transferorName: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                        />
-                      </label>
-                      <label className="text-sm">
-                        <div className="text-black/70">Email</div>
-                        <input
-                          value={draft.transferorEmail}
-                          onChange={(e) => setDraft((v) => ({ ...v, transferorEmail: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                        />
-                      </label>
-                    </>
-                  ) : (
-                    <label className="text-sm sm:col-span-2">
-                      <div className="text-black/70">Client company</div>
-                      <select
-                        value={draft.transferorClientId}
-                        onChange={(e) => setDraft((v) => ({ ...v, transferorClientId: e.target.value }))}
-                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      >
-                        <option value="">Select...</option>
-                        {clients.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.code} {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
                 </div>
               </div>
 
               <div className="rounded-lg bg-white border border-black/5 p-4">
                 <div className="text-sm font-medium">Transferee</div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <label className="text-sm">
-                    <div className="text-black/70">Type</div>
+                <div className="mt-3">
+                  <label className="text-sm block">
+                    <div className="text-black/70">Shares</div>
                     <select
-                      value={draft.transfereeKind}
-                      onChange={(e) =>
-                        setDraft((v) => ({
-                          ...v,
-                          transfereeKind: e.target.value as 'PERSON' | 'COMPANY_CLIENT',
-                          transfereeClientId: '',
-                        }))
-                      }
+                      value={draft.transfereeMode === 'NEW' ? '__NEW__' : draft.transfereePartyId}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '__NEW__') {
+                          setDraft((p) => ({ ...p, transfereeMode: 'NEW', transfereePartyId: '' }));
+                        } else {
+                          setDraft((p) => ({ ...p, transfereeMode: 'EXISTING', transfereePartyId: v }));
+                        }
+                      }}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      disabled={loadingShareholders}
                     >
-                      <option value="PERSON">Person</option>
-                      <option value="COMPANY_CLIENT">Existing client company</option>
+                      <option value="">Select...</option>
+                      {shareholders.map((s) => (
+                        <option key={s.partyId} value={s.partyId}>
+                          {s.label}
+                        </option>
+                      ))}
+                      <option value="__NEW__">New Shareholder</option>
                     </select>
+                    {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
                   </label>
-                  {draft.transfereeKind === 'PERSON' ? (
-                    <>
+
+                  {draft.transfereeMode === 'NEW' ? (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <label className="text-sm">
                         <div className="text-black/70">Name</div>
                         <input
@@ -322,24 +356,8 @@ export default function ShareTransfersClient(props: { initialClients: ClientLite
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                         />
                       </label>
-                    </>
-                  ) : (
-                    <label className="text-sm sm:col-span-2">
-                      <div className="text-black/70">Client company</div>
-                      <select
-                        value={draft.transfereeClientId}
-                        onChange={(e) => setDraft((v) => ({ ...v, transfereeClientId: e.target.value }))}
-                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      >
-                        <option value="">Select...</option>
-                        {clients.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.code} {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

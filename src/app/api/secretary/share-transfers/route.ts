@@ -27,8 +27,20 @@ export async function POST(req: Request) {
         shares?: number;
         shareClass?: string;
         effectiveDate?: string;
-        transferor?: { kind?: 'PERSON' | 'COMPANY_CLIENT'; fullName?: string; email?: string; clientId?: string };
-        transferee?: { kind?: 'PERSON' | 'COMPANY_CLIENT'; fullName?: string; email?: string; clientId?: string };
+        transferor?: {
+          kind?: 'PERSON' | 'COMPANY_CLIENT' | 'EXISTING_PARTY';
+          fullName?: string;
+          email?: string;
+          clientId?: string;
+          partyId?: string;
+        };
+        transferee?: {
+          kind?: 'PERSON' | 'COMPANY_CLIENT' | 'EXISTING_PARTY';
+          fullName?: string;
+          email?: string;
+          clientId?: string;
+          partyId?: string;
+        };
       }
     | null;
 
@@ -38,13 +50,17 @@ export async function POST(req: Request) {
   const shares = typeof body?.shares === 'number' ? body.shares : Number(body?.shares);
 
   const transferor =
-    body?.transferor?.kind === 'COMPANY_CLIENT'
-      ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferor.clientId ?? '' } as const)
-      : ({ kind: 'PERSON', fullName: body?.transferor?.fullName ?? '', email: body?.transferor?.email ?? '' } as const);
+    body?.transferor?.kind === 'EXISTING_PARTY'
+      ? ({ kind: 'EXISTING_PARTY', partyId: (body.transferor as any)?.partyId ?? '' } as const)
+      : body?.transferor?.kind === 'COMPANY_CLIENT'
+        ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferor.clientId ?? '' } as const)
+        : ({ kind: 'PERSON', fullName: body?.transferor?.fullName ?? '', email: body?.transferor?.email ?? '' } as const);
   const transferee =
-    body?.transferee?.kind === 'COMPANY_CLIENT'
-      ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
-      : ({ kind: 'PERSON', fullName: body?.transferee?.fullName ?? '', email: body?.transferee?.email ?? '' } as const);
+    body?.transferee?.kind === 'EXISTING_PARTY'
+      ? ({ kind: 'EXISTING_PARTY', partyId: (body.transferee as any)?.partyId ?? '' } as const)
+      : body?.transferee?.kind === 'COMPANY_CLIENT'
+        ? ({ kind: 'COMPANY_CLIENT', clientId: body.transferee.clientId ?? '' } as const)
+        : ({ kind: 'PERSON', fullName: body?.transferee?.fullName ?? '', email: body?.transferee?.email ?? '' } as const);
 
   const r = await createShareTransferRequest({ clientId, transferor, transferee, shares, shareClass, effectiveDate });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });

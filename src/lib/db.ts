@@ -7122,9 +7122,11 @@ export async function listShareTransfers() {
 export async function createShareTransferRequest(input: {
   clientId: string;
   transferor:
+    | { kind: 'EXISTING_PARTY'; partyId: string }
     | { kind: 'PERSON'; fullName: string; email: string }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   transferee:
+    | { kind: 'EXISTING_PARTY'; partyId: string }
     | { kind: 'PERSON'; fullName: string; email: string }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   shares: number;
@@ -7176,15 +7178,31 @@ export async function createShareTransferRequest(input: {
     return { company: c, party };
   };
 
+  const ensureExistingShareholderParty = (partyId: string) => {
+    const pid = String(partyId ?? '').trim();
+    if (!pid) return null;
+    const party = db.parties.find((p) => p.id === pid) ?? null;
+    if (!party) return null;
+    const active = db.clientPartyRoles.some(
+      (r) => r.clientId === client.id && r.partyId === pid && r.role === 'SHAREHOLDER' && !r.toDate,
+    );
+    if (!active) return null;
+    return { party };
+  };
+
   const transferor =
-    input.transferor.kind === 'PERSON'
-      ? makePersonParty(input.transferor.fullName, input.transferor.email)
-      : ensureCompanyParty(input.transferor.clientId);
+    input.transferor.kind === 'EXISTING_PARTY'
+      ? ensureExistingShareholderParty(input.transferor.partyId)
+      : input.transferor.kind === 'PERSON'
+        ? makePersonParty(input.transferor.fullName, input.transferor.email)
+        : ensureCompanyParty(input.transferor.clientId);
   if (!transferor) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const transferee =
-    input.transferee.kind === 'PERSON'
-      ? makePersonParty(input.transferee.fullName, input.transferee.email)
-      : ensureCompanyParty(input.transferee.clientId);
+    input.transferee.kind === 'EXISTING_PARTY'
+      ? ensureExistingShareholderParty(input.transferee.partyId)
+      : input.transferee.kind === 'PERSON'
+        ? makePersonParty(input.transferee.fullName, input.transferee.email)
+        : ensureCompanyParty(input.transferee.clientId);
   if (!transferee) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const transferorPartyId = transferor.party.id;
