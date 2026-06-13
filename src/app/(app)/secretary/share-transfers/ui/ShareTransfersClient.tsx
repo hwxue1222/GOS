@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { formatDateDMY } from '@/lib/date';
@@ -82,35 +82,38 @@ type ShareholderOption = {
   sharesHeld: number;
 };
 
-export default function ShareTransfersClient(props: {
-  initialClients: ClientLite[];
-  initialTransfers: ShareTransfer[];
-  initialClientId?: string;
-}) {
-  const { initialClients, initialTransfers, initialClientId } = props;
+type ShareTransferDraft = {
+  id: string;
+  effectiveDate: string;
+  shares: number;
+  valueSgd: string;
+  shareClass: (typeof SHARE_CLASS_OPTIONS)[number];
+  transferorPartyId: string;
+  transfereeMode: 'EXISTING' | 'NEW';
+  transfereePartyId: string;
+  newShareholderKind: NewShareholderKind;
+  newPersonLockedFromLookup: boolean;
+  newPerson: NewShareholderPerson;
+  newCompanyLockedFromLookup: boolean;
+  newCompany: NewShareholderCompany;
+};
 
-  const [clients] = useState<ClientLite[]>(initialClients);
-  const [transfers, setTransfers] = useState<ShareTransfer[]>(initialTransfers);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [search, setSearch] = usePersistedState('gos.secretary.shareTransfers.search', '');
-
-  const lockedClientId = String(initialClientId ?? '').trim();
-  const [draft, setDraft] = useState({
-    clientId: lockedClientId || clients[0]?.id || '',
+function makeDraft(): ShareTransferDraft {
+  const id = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return {
+    id,
     effectiveDate: '',
     shares: 0,
     valueSgd: '',
     shareClass: 'ORDINARY SHARE',
     transferorPartyId: '',
-    transfereeMode: 'EXISTING' as 'EXISTING' | 'NEW',
+    transfereeMode: 'EXISTING',
     transfereePartyId: '',
-    newShareholderKind: 'PERSON' as NewShareholderKind,
+    newShareholderKind: 'PERSON',
     newPersonLockedFromLookup: false,
     newPerson: {
       fullName: '',
-      idType: 'PASSPORT' as NewShareholderPerson['idType'],
+      idType: 'PASSPORT',
       idNo: '',
       dob: '',
       email: '',
@@ -132,107 +135,167 @@ export default function ShareTransfersClient(props: {
       directorSignerName: '',
       directorSignerEmail: '',
     },
-  });
+  };
+}
 
-  useEffect(() => {
-    if (!lockedClientId) return;
-    setDraft((v) => ({ ...v, clientId: lockedClientId }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockedClientId]);
+export default function ShareTransfersClient(props: {
+  initialClients: ClientLite[];
+  initialTransfers: ShareTransfer[];
+  initialClientId?: string;
+}) {
+  const { initialClients, initialTransfers, initialClientId } = props;
+
+  const [clients] = useState<ClientLite[]>(initialClients);
+  const [transfers, setTransfers] = useState<ShareTransfer[]>(initialTransfers);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = usePersistedState('gos.secretary.shareTransfers.search', '');
+
+  const lockedClientId = String(initialClientId ?? '').trim();
+  const [drafts, setDrafts] = useState<ShareTransferDraft[]>(() => [makeDraft()]);
+
+  const patchDraft = (id: string, patch: Partial<ShareTransferDraft>) => {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  };
+
+  const patchDraftPerson = (id: string, patch: Partial<NewShareholderPerson>) => {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, newPerson: { ...d.newPerson, ...patch } } : d)));
+  };
+
+  const patchDraftCompany = (id: string, patch: Partial<NewShareholderCompany>) => {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, newCompany: { ...d.newCompany, ...patch } } : d)));
+  };
 
   const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
   const [loadingShareholders, setLoadingShareholders] = useState(false);
 
+  const selectedClientId = lockedClientId || clients[0]?.id || '';
+
+  const personLookupKey = useMemo(() => {
+    return JSON.stringify(
+      drafts.map((d) => [d.id, d.transfereeMode, d.newShareholderKind, d.newPersonLockedFromLookup, d.newPerson.idType, d.newPerson.idNo]),
+    );
+  }, [drafts]);
+  const companyLookupKey = useMemo(() => {
+    return JSON.stringify(
+      drafts.map((d) => [d.id, d.transfereeMode, d.newShareholderKind, d.newCompanyLockedFromLookup, d.newCompany.registrationNo]),
+    );
+  }, [drafts]);
+
+  const personLookupTimersRef = useRef<Record<string, number>>({});
+  const companyLookupTimersRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
-    if (draft.transfereeMode !== 'NEW') return;
-    if (draft.newShareholderKind !== 'PERSON') return;
+    for (const d of drafts) {
+      if (d.transfereeMode !== 'NEW' || d.newShareholderKind !== 'PERSON') continue;
+      if (d.newPersonLockedFromLookup) continue;
+      const idNo = String(d.newPerson.idNo ?? '').trim();
+      if (!idNo) continue;
+      const idTypeLabel = ID_TYPE_LABEL_BY_VALUE[d.newPerson.idType] ?? '';
 
-    const idNo = String(draft.newPerson.idNo ?? '').trim();
-    if (!idNo) return;
-    const idTypeLabel = ID_TYPE_LABEL_BY_VALUE[draft.newPerson.idType] ?? '';
-
-    const t = window.setTimeout(() => {
-      fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(idTypeLabel)}`, {
-        cache: 'no-store',
-      })
-        .then((r) => r.json().catch(() => null))
-        .then((j: any) => {
-          const p = j?.person;
-          if (!p) return;
-          setDraft((v) => ({
-            ...v,
-            newPerson: {
-              ...v.newPerson,
-              fullName: String(p.fullName ?? v.newPerson.fullName),
-              email: String(p.email ?? v.newPerson.email),
-              phone: String(p.phone ?? v.newPerson.phone),
-              nationality: String(p.nationality ?? v.newPerson.nationality),
-              dob: String(p.dob ?? v.newPerson.dob),
-              address: String(p.address ?? v.newPerson.address),
-            },
-            newPersonLockedFromLookup: true,
-          }));
+      const prev = personLookupTimersRef.current[d.id];
+      if (prev) window.clearTimeout(prev);
+      personLookupTimersRef.current[d.id] = window.setTimeout(() => {
+        fetch(`/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(idTypeLabel)}`, {
+          cache: 'no-store',
         })
-        .catch(() => null);
-    }, 250);
-    return () => window.clearTimeout(t);
-  }, [draft.transfereeMode, draft.newShareholderKind, draft.newPerson.idType, draft.newPerson.idNo]);
-
-  useEffect(() => {
-    if (draft.transfereeMode !== 'NEW') return;
-    if (draft.newShareholderKind !== 'COMPANY') return;
-    const regNo = String(draft.newCompany.registrationNo ?? '').trim();
-    if (!regNo) return;
-
-    if (!draft.newCompanyLockedFromLookup && !draft.newCompany.registrationCountry.trim() && isSingaporeCompanyRegistrationNo(regNo)) {
-      setDraft((v) => ({
-        ...v,
-        newCompany: { ...v.newCompany, registrationCountry: 'Singapore' },
-      }));
+          .then((r) => r.json().catch(() => null))
+          .then((j: any) => {
+            const p = j?.person;
+            if (!p) return;
+            setDrafts((prevDrafts) =>
+              prevDrafts.map((x) =>
+                x.id !== d.id
+                  ? x
+                  : {
+                      ...x,
+                      newPerson: {
+                        ...x.newPerson,
+                        fullName: String(p.fullName ?? x.newPerson.fullName),
+                        email: String(p.email ?? x.newPerson.email),
+                        phone: String(p.phone ?? x.newPerson.phone),
+                        nationality: String(p.nationality ?? x.newPerson.nationality),
+                        dob: String(p.dob ?? x.newPerson.dob),
+                        address: String(p.address ?? x.newPerson.address),
+                      },
+                      newPersonLockedFromLookup: true,
+                    },
+              ),
+            );
+          })
+          .catch(() => null);
+      }, 250);
     }
+    return () => {
+      for (const k of Object.keys(personLookupTimersRef.current)) {
+        window.clearTimeout(personLookupTimersRef.current[k]);
+      }
+      personLookupTimersRef.current = {};
+    };
+  }, [personLookupKey]);
 
-    const t = window.setTimeout(() => {
-      fetch(`/api/portal/company-lookup?registrationNo=${encodeURIComponent(regNo)}`, { cache: 'no-store' })
-        .then((r) => r.json().catch(() => null))
-        .then((j: any) => {
-          const c = j?.company;
-          if (!c) {
-            setDraft((v) => ({
-              ...v,
-              newCompany: {
-                ...v.newCompany,
-                clientId: '',
-              },
-              newCompanyLockedFromLookup: false,
-            }));
-            return;
-          }
-          const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
-          const inferredCountry =
-            String(c.countryOfBusinessRegistration ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
-          setDraft((v) => ({
-            ...v,
-            newCompany: {
-              ...v.newCompany,
-              clientId: String(c.clientId ?? ''),
-              companyName: String(c.name ?? v.newCompany.companyName),
-              address: addr || v.newCompany.address,
-              email: String(c.email ?? v.newCompany.email),
-              phone: String(c.phone ?? v.newCompany.phone),
-              registrationCountry: inferredCountry || v.newCompany.registrationCountry,
-            },
-            newCompanyLockedFromLookup: true,
-          }));
-        })
-        .catch(() => null);
-    }, 250);
-    return () => window.clearTimeout(t);
-  }, [draft.transfereeMode, draft.newShareholderKind, draft.newCompany.registrationNo]);
+  useEffect(() => {
+    for (const d of drafts) {
+      if (d.transfereeMode !== 'NEW' || d.newShareholderKind !== 'COMPANY') continue;
+      const regNo = String(d.newCompany.registrationNo ?? '').trim();
+      if (!regNo) continue;
+
+      if (!d.newCompanyLockedFromLookup && !d.newCompany.registrationCountry.trim() && isSingaporeCompanyRegistrationNo(regNo)) {
+        patchDraftCompany(d.id, { registrationCountry: 'Singapore' });
+      }
+
+      if (d.newCompanyLockedFromLookup) continue;
+      const prev = companyLookupTimersRef.current[d.id];
+      if (prev) window.clearTimeout(prev);
+      companyLookupTimersRef.current[d.id] = window.setTimeout(() => {
+        fetch(`/api/portal/company-lookup?registrationNo=${encodeURIComponent(regNo)}`, { cache: 'no-store' })
+          .then((r) => r.json().catch(() => null))
+          .then((j: any) => {
+            const c = j?.company;
+            if (!c) {
+              patchDraft(d.id, { newCompanyLockedFromLookup: false });
+              patchDraftCompany(d.id, { clientId: '' });
+              return;
+            }
+            const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
+            const inferredCountry =
+              String(c.countryOfBusinessRegistration ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
+            setDrafts((prevDrafts) =>
+              prevDrafts.map((x) =>
+                x.id !== d.id
+                  ? x
+                  : {
+                      ...x,
+                      newCompany: {
+                        ...x.newCompany,
+                        clientId: String(c.clientId ?? ''),
+                        companyName: String(c.name ?? x.newCompany.companyName),
+                        address: addr || x.newCompany.address,
+                        email: String(c.email ?? x.newCompany.email),
+                        phone: String(c.phone ?? x.newCompany.phone),
+                        registrationCountry: inferredCountry || x.newCompany.registrationCountry,
+                      },
+                      newCompanyLockedFromLookup: true,
+                    },
+              ),
+            );
+          })
+          .catch(() => null);
+      }, 250);
+    }
+    return () => {
+      for (const k of Object.keys(companyLookupTimersRef.current)) {
+        window.clearTimeout(companyLookupTimersRef.current[k]);
+      }
+      companyLookupTimersRef.current = {};
+    };
+  }, [companyLookupKey]);
 
   useEffect(() => {
     let ignore = false;
     async function load() {
-      const clientId = draft.clientId;
+      const clientId = selectedClientId;
       if (!clientId) {
         if (!ignore) setShareholders([]);
         return;
@@ -275,46 +338,7 @@ export default function ShareTransfersClient(props: {
     return () => {
       ignore = true;
     };
-  }, [draft.clientId]);
-
-  useEffect(() => {
-    if (!draft.clientId) return;
-    setDraft((v) => ({
-      ...v,
-      transferorPartyId: '',
-      transfereePartyId: '',
-      transfereeMode: 'EXISTING',
-      newShareholderKind: 'PERSON',
-      newPersonLockedFromLookup: false,
-      newPerson: {
-        fullName: '',
-        idType: 'PASSPORT',
-        idNo: '',
-        dob: '',
-        email: '',
-        phone: '',
-        nationality: '',
-        address: '',
-      },
-      newCompanyLockedFromLookup: false,
-      newCompany: {
-        clientId: '',
-        companyName: '',
-        registrationNo: '',
-        registrationCountry: '',
-        address: '',
-        email: '',
-        phone: '',
-        corporateRepresentativeName: '',
-        corporateRepresentativeEmail: '',
-        directorSignerName: '',
-        directorSignerEmail: '',
-      },
-      valueSgd: '',
-      shareClass: 'ORDINARY SHARE',
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.clientId]);
+  }, [selectedClientId]);
 
   const visibleTransfers = useMemo(() => {
     return lockedClientId ? transfers.filter((t) => t.clientId === lockedClientId) : transfers;
@@ -332,132 +356,135 @@ export default function ShareTransfersClient(props: {
     if (res.ok && Array.isArray(j?.transfers)) setTransfers(j.transfers);
   }
 
-  async function create() {
+  function validateDraft(d: ShareTransferDraft, index: number) {
+    if (!selectedClientId) return `Transfer #${index + 1}: INVALID_COMPANY`;
+    if (!d.transferorPartyId) return `Transfer #${index + 1}: INVALID_TRANSFEROR`;
+    if (!d.effectiveDate) return `Transfer #${index + 1}: INVALID_EFFECTIVE_DATE`;
+    if (!d.shares || d.shares <= 0) return `Transfer #${index + 1}: INVALID_SHARES`;
+    const valueSgd = Number(d.valueSgd);
+    if (!Number.isFinite(valueSgd) || valueSgd < 0) return `Transfer #${index + 1}: INVALID_TRANSFER_PRICE`;
+
+    if (d.transfereeMode === 'EXISTING') {
+      if (!d.transfereePartyId) return `Transfer #${index + 1}: INVALID_TRANSFEREE`;
+      if (d.transfereePartyId === d.transferorPartyId) return `Transfer #${index + 1}: TRANSFEROR_EQUALS_TRANSFEREE`;
+    }
+
+    if (d.transfereeMode === 'NEW') {
+      if (d.newShareholderKind === 'PERSON') {
+        const p = d.newPerson;
+        if (!p.fullName.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_NAME`;
+        if (!p.idNo.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_IDNO`;
+        if (!p.dob.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_DOB`;
+        if (!p.email.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_EMAIL`;
+        if (!p.phone.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_PHONE`;
+        if (!p.nationality.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_NATIONALITY`;
+        if (!p.address.trim()) return `Transfer #${index + 1}: INVALID_NEW_PERSON_ADDRESS`;
+      } else {
+        const c = d.newCompany;
+        if (!c.companyName.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_NAME`;
+        if (!c.registrationNo.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REGNO`;
+        if (!c.address.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_ADDRESS`;
+        if (!c.clientId.trim()) {
+          if (!c.registrationCountry.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_COUNTRY`;
+          if (!c.corporateRepresentativeName.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_NAME`;
+          if (!c.corporateRepresentativeEmail.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_EMAIL`;
+          if (!c.directorSignerEmail.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_SIGNER_EMAIL`;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  async function createAll() {
     setError(null);
     setInfo(null);
-    if (!draft.clientId) {
-      setError('INVALID_INPUT');
+    if (!selectedClientId) {
+      setError('INVALID_COMPANY');
       return;
     }
-    if (!draft.effectiveDate) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    if (!draft.shares || draft.shares <= 0) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    const valueSgd = Number(draft.valueSgd);
-    if (!Number.isFinite(valueSgd) || valueSgd < 0) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    if (!draft.transferorPartyId) {
-      setError('INVALID_INPUT');
-      return;
-    }
-
-    if (draft.transfereeMode === 'EXISTING' && draft.transfereePartyId && draft.transfereePartyId === draft.transferorPartyId) {
-      setError('INVALID_INPUT');
-      return;
-    }
-
-    if (draft.transfereeMode === 'EXISTING' && !draft.transfereePartyId) {
-      setError('INVALID_INPUT');
-      return;
-    }
-    if (draft.transfereeMode === 'NEW') {
-      if (draft.newShareholderKind === 'PERSON') {
-        const p = draft.newPerson;
-        if (!p.fullName.trim()) return void setError('INVALID_INPUT');
-        if (!p.idNo.trim()) return void setError('INVALID_INPUT');
-        if (!p.dob.trim()) return void setError('INVALID_INPUT');
-        if (!p.email.trim()) return void setError('INVALID_INPUT');
-        if (!p.phone.trim()) return void setError('INVALID_INPUT');
-        if (!p.nationality.trim()) return void setError('INVALID_INPUT');
-        if (!p.address.trim()) return void setError('INVALID_INPUT');
-      } else {
-        const c = draft.newCompany;
-        if (!c.companyName.trim()) return void setError('INVALID_INPUT');
-        if (!c.registrationNo.trim()) return void setError('INVALID_INPUT');
-        if (!c.address.trim()) return void setError('INVALID_INPUT');
-        if (!c.clientId.trim()) {
-          if (!c.registrationCountry.trim()) return void setError('INVALID_INPUT');
-          if (!c.corporateRepresentativeName.trim()) return void setError('INVALID_INPUT');
-          if (!c.corporateRepresentativeEmail.trim()) return void setError('INVALID_INPUT');
-          if (!c.directorSignerEmail.trim()) return void setError('INVALID_INPUT');
-        }
+    for (let i = 0; i < drafts.length; i++) {
+      const msg = validateDraft(drafts[i], i);
+      if (msg) {
+        setError(msg);
+        return;
       }
     }
 
     setSaving(true);
     try {
-      const res = await fetch('/api/secretary/share-transfers', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          clientId: draft.clientId,
-          effectiveDate: draft.effectiveDate,
-          shares: draft.shares,
-          valueSgd,
-          shareClass: draft.shareClass.trim() || undefined,
-          transferor: { kind: 'EXISTING_PARTY', partyId: draft.transferorPartyId },
-          transferee:
-            draft.transfereeMode === 'EXISTING'
-              ? { kind: 'EXISTING_PARTY', partyId: draft.transfereePartyId }
-              : draft.newShareholderKind === 'PERSON'
-                ? {
-                    kind: 'NEW_PERSON',
-                    fullName: draft.newPerson.fullName,
-                    idType: draft.newPerson.idType,
-                    idNo: draft.newPerson.idNo,
-                    dob: draft.newPerson.dob,
-                    email: draft.newPerson.email,
-                    phone: draft.newPerson.phone,
-                    nationality: draft.newPerson.nationality,
-                    address: draft.newPerson.address,
-                  }
-                : draft.newCompany.clientId.trim()
+      const createdTransfers: ShareTransfer[] = [];
+      const infoBlocks: string[] = [];
+
+      for (let i = 0; i < drafts.length; i++) {
+        const d = drafts[i];
+        const valueSgd = Number(d.valueSgd);
+        const res = await fetch('/api/secretary/share-transfers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            clientId: selectedClientId,
+            effectiveDate: d.effectiveDate,
+            shares: d.shares,
+            valueSgd,
+            shareClass: d.shareClass.trim() || undefined,
+            transferor: { kind: 'EXISTING_PARTY', partyId: d.transferorPartyId },
+            transferee:
+              d.transfereeMode === 'EXISTING'
+                ? { kind: 'EXISTING_PARTY', partyId: d.transfereePartyId }
+                : d.newShareholderKind === 'PERSON'
                   ? {
-                      kind: 'COMPANY_CLIENT',
-                      clientId: draft.newCompany.clientId.trim(),
+                      kind: 'NEW_PERSON',
+                      fullName: d.newPerson.fullName,
+                      idType: d.newPerson.idType,
+                      idNo: d.newPerson.idNo,
+                      dob: d.newPerson.dob,
+                      email: d.newPerson.email,
+                      phone: d.newPerson.phone,
+                      nationality: d.newPerson.nationality,
+                      address: d.newPerson.address,
                     }
-                  : {
-                      kind: 'NEW_COMPANY',
-                      companyName: draft.newCompany.companyName,
-                      registrationNo: draft.newCompany.registrationNo,
-                      registrationCountry: draft.newCompany.registrationCountry,
-                      address: draft.newCompany.address,
-                      email: draft.newCompany.email,
-                      phone: draft.newCompany.phone,
-                      corporateRepresentativeName: draft.newCompany.corporateRepresentativeName,
-                      corporateRepresentativeEmail: draft.newCompany.corporateRepresentativeEmail,
-                      directorSignerName: draft.newCompany.directorSignerName,
-                      directorSignerEmail: draft.newCompany.directorSignerEmail,
-                    },
-        }),
-      });
-      const j = await res.json().catch(() => null);
-      if (!res.ok) {
-        setError(j?.error ?? `HTTP_${res.status}`);
-        return;
-      }
-      if (j?.transfer) {
-        setTransfers((prev) => [j.transfer as ShareTransfer, ...prev]);
-        setInfo(
-          j.transfer.status === 'BLOCKED_REPRESENTATIVE'
-            ? 'BLOCKED_REPRESENTATIVE: complete corporate representative appointment first.'
-            : 'CREATED',
-        );
-      }
-      if (Array.isArray(j?.signLinks?.br) || Array.isArray(j?.signLinks?.sta) || Array.isArray(j?.signLinks?.rdr)) {
+                  : d.newCompany.clientId.trim()
+                    ? {
+                        kind: 'COMPANY_CLIENT',
+                        clientId: d.newCompany.clientId.trim(),
+                      }
+                    : {
+                        kind: 'NEW_COMPANY',
+                        companyName: d.newCompany.companyName,
+                        registrationNo: d.newCompany.registrationNo,
+                        registrationCountry: d.newCompany.registrationCountry,
+                        address: d.newCompany.address,
+                        email: d.newCompany.email,
+                        phone: d.newCompany.phone,
+                        corporateRepresentativeName: d.newCompany.corporateRepresentativeName,
+                        corporateRepresentativeEmail: d.newCompany.corporateRepresentativeEmail,
+                        directorSignerName: d.newCompany.directorSignerName,
+                        directorSignerEmail: d.newCompany.directorSignerEmail,
+                      },
+          }),
+        });
+        const j = await res.json().catch(() => null);
+        if (!res.ok) {
+          setError(`Transfer #${i + 1}: ${j?.error ?? `HTTP_${res.status}`}`);
+          return;
+        }
+        if (j?.transfer) createdTransfers.push(j.transfer as ShareTransfer);
+
+        const signLines: string[] = [];
         const all: Array<{ email: string; url: string }> = [
           ...(j?.signLinks?.br ?? []),
           ...(j?.signLinks?.sta ?? []),
           ...(j?.signLinks?.rdr ?? []),
         ];
-        const lines = all.map((x) => `${x.email} — ${x.url}`).join('\n');
-        if (lines) setInfo((prev) => (prev ? `${prev}\n\n${lines}` : lines));
+        for (const x of all) signLines.push(`${x.email} — ${x.url}`);
+        if (signLines.length) infoBlocks.push(`Transfer #${i + 1}\n${signLines.join('\n')}`);
+      }
+
+      if (createdTransfers.length) {
+        setTransfers((prev) => [...createdTransfers, ...prev]);
+        setInfo(infoBlocks.length ? infoBlocks.join('\n\n') : `CREATED_${createdTransfers.length}`);
+        setDrafts([makeDraft()]);
       }
       await refresh();
     } finally {
@@ -506,424 +533,334 @@ export default function ShareTransfersClient(props: {
           </div>
 
           <div className="mt-4 rounded-lg bg-black/[0.02] border border-black/5 p-4">
-            <div className="text-sm font-medium">New Share Transfer</div>
-            <div className="mt-3">
-              <label className="text-sm">
-                <div className="text-black/70">Target company</div>
-                {lockedClientId ? (
-                  <div className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/80">
-                    {clientNameById.get(lockedClientId) ?? lockedClientId}
-                  </div>
-                ) : (
-                  <select
-                    value={draft.clientId}
-                    onChange={(e) => setDraft((v) => ({ ...v, clientId: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  >
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} {c.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </label>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">New Share Transfer</div>
+              <button
+                type="button"
+                disabled={drafts.length >= 3}
+                onClick={() => setDrafts((prev) => (prev.length >= 3 ? prev : [...prev, makeDraft()]))}
+                className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm hover:bg-black/[0.02] disabled:opacity-50"
+              >
+                Add
+              </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-lg bg-white border border-black/5 p-4">
-                <div className="text-sm font-medium">Transferor</div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    <div className="text-black/70">Effective date</div>
-                    <DateInputDMY
-                      value={draft.effectiveDate}
-                      onChange={(next) => setDraft((v) => ({ ...v, effectiveDate: next }))}
-                      inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-black/70">Number of share transferred</div>
-                    <input
-                      type="number"
-                      value={draft.shares || ''}
-                      onChange={(e) => setDraft((v) => ({ ...v, shares: Number(e.target.value) }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-black/70">Transfer price</div>
-                    <div className="mt-1 flex">
-                      <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={draft.valueSgd}
-                        onChange={(e) => setDraft((v) => ({ ...v, valueSgd: e.target.value }))}
-                        className="w-full rounded-r-lg border border-black/10 border-l-0 px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </label>
-                  <label className="text-sm">
-                    <div className="text-black/70">Share class</div>
-                    <select
-                      value={draft.shareClass}
-                      onChange={(e) => setDraft((v) => ({ ...v, shareClass: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                    >
-                      {SHARE_CLASS_OPTIONS.map((x) => (
-                        <option key={x} value={x}>
-                          {x === 'ORDINARY SHARE' ? 'Ordinary share' : 'Preference share'}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="mt-3">
-                  <label className="text-sm block">
-                    <select
-                      value={draft.transferorPartyId}
-                      onChange={(e) => setDraft((v) => ({ ...v, transferorPartyId: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      disabled={loadingShareholders}
-                    >
-                      <option value="">Select...</option>
-                      {shareholders.map((s) => (
-                        <option key={s.partyId} value={s.partyId}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                    {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
-                  </label>
-                </div>
-              </div>
+            <div className="mt-3 space-y-4">
+              {drafts.map((d, idx) => (
+                <div key={d.id} className="rounded-lg bg-white border border-black/5 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Transfer {idx + 1}</div>
+                    {drafts.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setDrafts((prev) => prev.filter((x) => x.id !== d.id))}
+                        className="text-sm text-black/60 hover:text-black"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
 
-              <div className="rounded-lg bg-white border border-black/5 p-4">
-                <div className="text-sm font-medium">Transferee</div>
-                <div className="mt-3">
-                  <label className="text-sm block">
-                    <select
-                      value={draft.transfereeMode === 'NEW' ? '__NEW__' : draft.transfereePartyId}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === '__NEW__') {
-                          setDraft((p) => ({ ...p, transfereeMode: 'NEW', transfereePartyId: '' }));
-                        } else {
-                          setDraft((p) => ({ ...p, transfereeMode: 'EXISTING', transfereePartyId: v }));
-                        }
-                      }}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                      disabled={loadingShareholders}
-                    >
-                      <option value="">Select...</option>
-                      {shareholders
-                        .filter((s) => s.partyId !== draft.transferorPartyId)
-                        .map((s) => (
-                          <option key={s.partyId} value={s.partyId}>
-                            {s.label}
-                          </option>
-                        ))}
-                      <option value="__NEW__">New Shareholder</option>
-                    </select>
-                    {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
-                  </label>
-
-                  {draft.transfereeMode === 'NEW' ? (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex items-center gap-3 text-sm text-black/80">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="newShareholderKind"
-                            checked={draft.newShareholderKind === 'PERSON'}
-                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'PERSON', newPersonLockedFromLookup: false }))}
-                          />
-                          Individual
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="newShareholderKind"
-                            checked={draft.newShareholderKind === 'COMPANY'}
-                            onChange={() => setDraft((v) => ({ ...v, newShareholderKind: 'COMPANY', newCompanyLockedFromLookup: false }))}
-                          />
-                          Corporate
-                        </label>
+                  <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="rounded-lg bg-white border border-black/5 p-4">
+                      <div className="text-sm font-medium">Transferor</div>
+                      <div className="mt-2">
+                        <select
+                          value={d.transferorPartyId}
+                          onChange={(e) => patchDraft(d.id, { transferorPartyId: e.target.value })}
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          disabled={loadingShareholders}
+                        >
+                          <option value="">Select...</option>
+                          {shareholders.map((s) => (
+                            <option key={s.partyId} value={s.partyId}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                        {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
                       </div>
 
-                      {draft.newShareholderKind === 'PERSON' ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="text-sm">
-                            <div className="text-black/70">Full name</div>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="text-sm">
+                          <div className="text-black/70">Effective date</div>
+                          <DateInputDMY
+                            value={d.effectiveDate}
+                            onChange={(next) => patchDraft(d.id, { effectiveDate: next })}
+                            inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-black/70">Number of share transferred</div>
+                          <input
+                            type="number"
+                            value={d.shares || ''}
+                            onChange={(e) => patchDraft(d.id, { shares: Number(e.target.value) })}
+                            className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-black/70">Transfer price</div>
+                          <div className="mt-1 flex">
+                            <div className="rounded-l-lg border border-black/10 bg-white px-3 py-2 text-sm text-black/70">S$</div>
                             <input
-                              value={draft.newPersonLockedFromLookup ? maskName(draft.newPerson.fullName) : draft.newPerson.fullName}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, fullName: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                              type="number"
+                              step="0.01"
+                              value={d.valueSgd}
+                              onChange={(e) => patchDraft(d.id, { valueSgd: e.target.value })}
+                              className="w-full rounded-r-lg border border-black/10 border-l-0 px-3 py-2 text-sm"
                             />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">ID No.</div>
-                            <div className="mt-1 grid grid-cols-12 gap-2">
-                              <select
-                                value={draft.newPerson.idType}
-                                onChange={(e) =>
-                                  setDraft((v) => ({
-                                    ...v,
-                                    newPerson: {
-                                      ...v.newPerson,
-                                      idType: e.target.value as NewShareholderPerson['idType'],
-                                    },
-                                  }))
-                                }
-                                className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                              >
-                                <option value="PASSPORT">Passport</option>
-                                <option value="NRIC">NRIC</option>
-                                <option value="FIN">FIN</option>
-                                <option value="IC">IC</option>
-                              </select>
-                              <input
-                                value={draft.newPerson.idNo}
-                                onChange={(e) =>
-                                  setDraft((v) => ({
-                                    ...v,
-                                    newPerson: { ...v.newPerson, idNo: e.target.value },
-                                  }))
-                                }
-                                className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                              />
-                            </div>
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Date of birth</div>
-                            <input
-                              type="date"
-                              value={draft.newPersonLockedFromLookup ? maskDob(draft.newPerson.dob) : draft.newPerson.dob}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, dob: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Email</div>
-                            <input
-                              value={draft.newPersonLockedFromLookup ? maskEmail(draft.newPerson.email) : draft.newPerson.email}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, email: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Phone</div>
-                            <input
-                              value={draft.newPersonLockedFromLookup ? maskPhoneLoose(draft.newPerson.phone) : draft.newPerson.phone}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, phone: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Nationality</div>
-                            <input
-                              value={draft.newPersonLockedFromLookup ? maskNationality(draft.newPerson.nationality) : draft.newPerson.nationality}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, nationality: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm sm:col-span-2">
-                            <div className="text-black/70">Address</div>
-                            <textarea
-                              value={draft.newPersonLockedFromLookup ? maskAddress(draft.newPerson.address) : draft.newPerson.address}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newPerson: { ...v.newPerson, address: e.target.value },
-                                }))
-                              }
-                              rows={2}
-                              disabled={draft.newPersonLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="text-sm">
-                            <div className="text-black/70">Company name</div>
-                            <input
-                              value={draft.newCompany.companyName}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, companyName: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newCompanyLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Company registration no.</div>
-                            <input
-                              value={draft.newCompany.registrationNo}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, registrationNo: e.target.value },
-                                }))
-                              }
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Country of business registration</div>
-                            <input
-                              value={draft.newCompany.registrationCountry}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, registrationCountry: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newCompanyLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Email</div>
-                            <input
-                              value={draft.newCompanyLockedFromLookup ? maskEmail(draft.newCompany.email) : draft.newCompany.email}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, email: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newCompanyLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm">
-                            <div className="text-black/70">Phone</div>
-                            <input
-                              value={draft.newCompanyLockedFromLookup ? maskPhoneLoose(draft.newCompany.phone) : draft.newCompany.phone}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, phone: e.target.value },
-                                }))
-                              }
-                              disabled={draft.newCompanyLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-sm sm:col-span-2">
-                            <div className="text-black/70">Address</div>
-                            <textarea
-                              value={draft.newCompanyLockedFromLookup ? maskAddress(draft.newCompany.address) : draft.newCompany.address}
-                              onChange={(e) =>
-                                setDraft((v) => ({
-                                  ...v,
-                                  newCompany: { ...v.newCompany, address: e.target.value },
-                                }))
-                              }
-                              rows={2}
-                              disabled={draft.newCompanyLockedFromLookup}
-                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                            />
-                          </label>
-
-
-                          {!draft.newCompany.clientId.trim() ? (
-                            <>
-                              <label className="text-sm">
-                                <div className="text-black/70">Corporate representative name</div>
-                                <input
-                                  value={draft.newCompany.corporateRepresentativeName}
-                                  onChange={(e) =>
-                                    setDraft((v) => ({
-                                      ...v,
-                                      newCompany: { ...v.newCompany, corporateRepresentativeName: e.target.value },
-                                    }))
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                                />
-                              </label>
-                              <label className="text-sm">
-                                <div className="text-black/70">Corporate representative email</div>
-                                <input
-                                  value={draft.newCompany.corporateRepresentativeEmail}
-                                  onChange={(e) =>
-                                    setDraft((v) => ({
-                                      ...v,
-                                      newCompany: { ...v.newCompany, corporateRepresentativeEmail: e.target.value },
-                                    }))
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                                />
-                              </label>
-                              <label className="text-sm">
-                                <div className="text-black/70">Director signer name</div>
-                                <input
-                                  value={draft.newCompany.directorSignerName}
-                                  onChange={(e) =>
-                                    setDraft((v) => ({
-                                      ...v,
-                                      newCompany: { ...v.newCompany, directorSignerName: e.target.value },
-                                    }))
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                                />
-                              </label>
-                              <label className="text-sm">
-                                <div className="text-black/70">Director signer email</div>
-                                <input
-                                  value={draft.newCompany.directorSignerEmail}
-                                  onChange={(e) =>
-                                    setDraft((v) => ({
-                                      ...v,
-                                      newCompany: { ...v.newCompany, directorSignerEmail: e.target.value },
-                                    }))
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                                />
-                              </label>
-                            </>
-                          ) : null}
-                        </div>
-                      )}
+                          </div>
+                        </label>
+                        <label className="text-sm">
+                          <div className="text-black/70">Share class</div>
+                          <select
+                            value={d.shareClass}
+                            onChange={(e) => patchDraft(d.id, { shareClass: e.target.value as ShareTransferDraft['shareClass'] })}
+                            className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          >
+                            {SHARE_CLASS_OPTIONS.map((x) => (
+                              <option key={x} value={x}>
+                                {x === 'ORDINARY SHARE' ? 'Ordinary share' : 'Preference share'}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
                     </div>
-                  ) : null}
+
+                    <div className="rounded-lg bg-white border border-black/5 p-4">
+                      <div className="text-sm font-medium">Transferee</div>
+                      <div className="mt-2">
+                        <select
+                          value={d.transfereeMode === 'NEW' ? '__NEW__' : d.transfereePartyId}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '__NEW__') {
+                              patchDraft(d.id, { transfereeMode: 'NEW', transfereePartyId: '' });
+                            } else {
+                              patchDraft(d.id, { transfereeMode: 'EXISTING', transfereePartyId: v });
+                            }
+                          }}
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                          disabled={loadingShareholders}
+                        >
+                          <option value="">Select...</option>
+                          {shareholders
+                            .filter((s) => s.partyId !== d.transferorPartyId)
+                            .map((s) => (
+                              <option key={s.partyId} value={s.partyId}>
+                                {s.label}
+                              </option>
+                            ))}
+                          <option value="__NEW__">New Shareholder</option>
+                        </select>
+                        {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
+                      </div>
+
+                      {d.transfereeMode === 'NEW' ? (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3 text-sm text-black/80">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`newShareholderKind_${d.id}`}
+                                checked={d.newShareholderKind === 'PERSON'}
+                                onChange={() => patchDraft(d.id, { newShareholderKind: 'PERSON', newPersonLockedFromLookup: false })}
+                              />
+                              Individual
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`newShareholderKind_${d.id}`}
+                                checked={d.newShareholderKind === 'COMPANY'}
+                                onChange={() => patchDraft(d.id, { newShareholderKind: 'COMPANY', newCompanyLockedFromLookup: false })}
+                              />
+                              Corporate
+                            </label>
+                          </div>
+
+                          {d.newShareholderKind === 'PERSON' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <label className="text-sm">
+                                <div className="text-black/70">Full name</div>
+                                <input
+                                  value={d.newPersonLockedFromLookup ? maskName(d.newPerson.fullName) : d.newPerson.fullName}
+                                  onChange={(e) => patchDraftPerson(d.id, { fullName: e.target.value })}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">ID No.</div>
+                                <div className="mt-1 grid grid-cols-12 gap-2">
+                                  <select
+                                    value={d.newPerson.idType}
+                                    onChange={(e) => patchDraftPerson(d.id, { idType: e.target.value as NewShareholderPerson['idType'] })}
+                                    className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                                  >
+                                    <option value="PASSPORT">Passport</option>
+                                    <option value="NRIC">NRIC</option>
+                                    <option value="FIN">FIN</option>
+                                    <option value="IC">IC</option>
+                                  </select>
+                                  <input
+                                    value={d.newPerson.idNo}
+                                    onChange={(e) => patchDraftPerson(d.id, { idNo: e.target.value })}
+                                    className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                  />
+                                </div>
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Date of birth</div>
+                                <input
+                                  type="date"
+                                  value={d.newPersonLockedFromLookup ? maskDob(d.newPerson.dob) : d.newPerson.dob}
+                                  onChange={(e) => patchDraftPerson(d.id, { dob: e.target.value })}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Email</div>
+                                <input
+                                  value={d.newPersonLockedFromLookup ? maskEmail(d.newPerson.email) : d.newPerson.email}
+                                  onChange={(e) => patchDraftPerson(d.id, { email: e.target.value })}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Phone</div>
+                                <input
+                                  value={d.newPersonLockedFromLookup ? maskPhoneLoose(d.newPerson.phone) : d.newPerson.phone}
+                                  onChange={(e) => patchDraftPerson(d.id, { phone: e.target.value })}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Nationality</div>
+                                <input
+                                  value={d.newPersonLockedFromLookup ? maskNationality(d.newPerson.nationality) : d.newPerson.nationality}
+                                  onChange={(e) => patchDraftPerson(d.id, { nationality: e.target.value })}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm sm:col-span-2">
+                                <div className="text-black/70">Address</div>
+                                <textarea
+                                  value={d.newPersonLockedFromLookup ? maskAddress(d.newPerson.address) : d.newPerson.address}
+                                  onChange={(e) => patchDraftPerson(d.id, { address: e.target.value })}
+                                  rows={2}
+                                  disabled={d.newPersonLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <label className="text-sm">
+                                <div className="text-black/70">Company name</div>
+                                <input
+                                  value={d.newCompany.companyName}
+                                  onChange={(e) => patchDraftCompany(d.id, { companyName: e.target.value })}
+                                  disabled={d.newCompanyLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Company registration no.</div>
+                                <input
+                                  value={d.newCompany.registrationNo}
+                                  onChange={(e) => patchDraftCompany(d.id, { registrationNo: e.target.value })}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Country of business registration</div>
+                                <input
+                                  value={d.newCompany.registrationCountry}
+                                  onChange={(e) => patchDraftCompany(d.id, { registrationCountry: e.target.value })}
+                                  disabled={d.newCompanyLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Email</div>
+                                <input
+                                  value={d.newCompanyLockedFromLookup ? maskEmail(d.newCompany.email) : d.newCompany.email}
+                                  onChange={(e) => patchDraftCompany(d.id, { email: e.target.value })}
+                                  disabled={d.newCompanyLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm">
+                                <div className="text-black/70">Phone</div>
+                                <input
+                                  value={d.newCompanyLockedFromLookup ? maskPhoneLoose(d.newCompany.phone) : d.newCompany.phone}
+                                  onChange={(e) => patchDraftCompany(d.id, { phone: e.target.value })}
+                                  disabled={d.newCompanyLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="text-sm sm:col-span-2">
+                                <div className="text-black/70">Address</div>
+                                <textarea
+                                  value={d.newCompanyLockedFromLookup ? maskAddress(d.newCompany.address) : d.newCompany.address}
+                                  onChange={(e) => patchDraftCompany(d.id, { address: e.target.value })}
+                                  rows={2}
+                                  disabled={d.newCompanyLockedFromLookup}
+                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                />
+                              </label>
+
+                              {!d.newCompany.clientId.trim() ? (
+                                <>
+                                  <label className="text-sm">
+                                    <div className="text-black/70">Corporate representative name</div>
+                                    <input
+                                      value={d.newCompany.corporateRepresentativeName}
+                                      onChange={(e) => patchDraftCompany(d.id, { corporateRepresentativeName: e.target.value })}
+                                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                    />
+                                  </label>
+                                  <label className="text-sm">
+                                    <div className="text-black/70">Corporate representative email</div>
+                                    <input
+                                      value={d.newCompany.corporateRepresentativeEmail}
+                                      onChange={(e) => patchDraftCompany(d.id, { corporateRepresentativeEmail: e.target.value })}
+                                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                    />
+                                  </label>
+                                  <label className="text-sm">
+                                    <div className="text-black/70">Director signer name</div>
+                                    <input
+                                      value={d.newCompany.directorSignerName}
+                                      onChange={(e) => patchDraftCompany(d.id, { directorSignerName: e.target.value })}
+                                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                    />
+                                  </label>
+                                  <label className="text-sm">
+                                    <div className="text-black/70">Director signer email</div>
+                                    <input
+                                      value={d.newCompany.directorSignerEmail}
+                                      onChange={(e) => patchDraftCompany(d.id, { directorSignerEmail: e.target.value })}
+                                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                                    />
+                                  </label>
+                                </>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
@@ -936,7 +873,7 @@ export default function ShareTransfersClient(props: {
             <div className="mt-4 flex items-center justify-end">
               <button
                 disabled={saving}
-                onClick={() => void create()}
+                onClick={() => void createAll()}
                 className="rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {saving ? 'Creating...' : 'Create'}
