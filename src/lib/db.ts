@@ -9818,6 +9818,11 @@ export async function createRorcDeclarationRequest(input: {
   if (removeRorcRoleIds.some((id) => !activeRoleIds.has(id))) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const removed = activeControllers.filter((x) => removeRorcRoleIds.includes(x.roleId)).map((x) => ({ fullName: x.fullName, email: x.email }));
 
+  if (controllerType === 'PERSON' || controllerType === 'COMPANY') {
+    removeRorcRoleIds.length = 0;
+    removeRorcRoleIds.push(...activeControllers.map((x) => x.roleId));
+  }
+
   const now = nowIso();
   const id = newId('rrc');
 
@@ -9976,6 +9981,14 @@ export async function decideRorcDeclarationRequest(input: {
 
   if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
+  for (let i = 0; i < db.clientPartyRoles.length; i++) {
+    const role = db.clientPartyRoles[i];
+    if (role.clientId !== r.clientId) continue;
+    if (role.role !== 'RORC') continue;
+    if (role.toDate) continue;
+    db.clientPartyRoles[i] = { ...role, toDate: r.effectiveDate, updatedAt: now };
+  }
+
   if (r.controllerType === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
     const fullName = r.controllerPerson.fullName.trim();
     const email = typeof r.controllerPerson.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
@@ -10081,12 +10094,7 @@ export async function decideRorcDeclarationRequest(input: {
     db.clientPartyRoles.unshift(role);
   }
 
-  for (const roleId of r.removeRorcRoleIds) {
-    const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'RORC');
-    if (roleIdx >= 0 && !db.clientPartyRoles[roleIdx].toDate) {
-      db.clientPartyRoles[roleIdx] = { ...db.clientPartyRoles[roleIdx], toDate: r.effectiveDate, updatedAt: now };
-    }
-  }
+  // overwrite previous controllers; explicit removals no longer needed
 
   for (const c of r.addControllers) {
     const fullName = c.fullName.trim();

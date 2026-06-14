@@ -111,7 +111,25 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
   ];
 
   const addNames = r.addControllers.map((d) => d.fullName).filter(Boolean).join(', ') || '-';
-  const removeIds = r.removeRorcRoleIds.length ? r.removeRorcRoleIds.join(', ') : '-';
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
+  const oldControllerNames = r.removeRorcRoleIds
+    .map((roleId) => {
+      const role = db.clientPartyRoles.find((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'RORC') ?? null;
+      if (!role) return null;
+      const party = partyById.get(role.partyId) ?? null;
+      if (!party) return null;
+      if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
+      if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
+      if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
+      return null;
+    })
+    .filter((x): x is string => !!x)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const oldNames = oldControllerNames.length ? oldControllerNames.join(', ') : '-';
 
   const auditLogs = (db.auditLogs ?? [])
     .filter((l) => l.entityType === 'rorc_declaration_request' && l.entityId === r.id)
@@ -130,13 +148,13 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       left={
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />
-          <SectionCard title="Requested changes" subtitle="What will be added or removed.">
+          <SectionCard title="Requested changes" subtitle="New controller and previous controller(s).">
             {r.controllerType ? (
               <div className="space-y-3 text-sm">
                 {r.controllerType === 'PERSON' ? (
                   <>
                     <div>
-                      <div className="text-black/50">Personal controller</div>
+                      <div className="text-black/50">New controller (personal)</div>
                       <div className="mt-1 text-black/80">{r.controllerPerson?.fullName ?? '-'}</div>
                     </div>
                     <div>
@@ -145,16 +163,24 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
                         {(r.controllerPerson?.useCcEmailInstead ? r.controllerPerson?.ccEmailAddress : r.controllerPerson?.email) ?? '-'}
                       </div>
                     </div>
+                    <div>
+                      <div className="text-black/50">Old controller(s)</div>
+                      <div className="mt-1 text-black/80">{oldNames}</div>
+                    </div>
                   </>
                 ) : (
                   <>
                     <div>
-                      <div className="text-black/50">Company controller</div>
+                      <div className="text-black/50">New controller (company)</div>
                       <div className="mt-1 text-black/80">{r.controllerCompany?.companyName ?? '-'}</div>
                     </div>
                     <div>
                       <div className="text-black/50">Register number</div>
                       <div className="mt-1 text-black/80">{r.controllerCompany?.registerNumber ?? '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-black/50">Old controller(s)</div>
+                      <div className="mt-1 text-black/80">{oldNames}</div>
                     </div>
                   </>
                 )}
@@ -162,12 +188,12 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
             ) : (
               <div className="space-y-3 text-sm">
                 <div>
-                  <div className="text-black/50">Add controllers</div>
+                  <div className="text-black/50">New controller(s)</div>
                   <div className="mt-1 text-black/80">{addNames}</div>
                 </div>
                 <div>
-                  <div className="text-black/50">Remove controller role IDs</div>
-                  <div className="mt-1 font-mono text-xs break-all text-black/70">{removeIds}</div>
+                  <div className="text-black/50">Old controller(s)</div>
+                  <div className="mt-1 text-black/80">{oldNames}</div>
                 </div>
               </div>
             )}

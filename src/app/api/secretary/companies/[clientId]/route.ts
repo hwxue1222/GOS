@@ -114,13 +114,26 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
 
   const byRole = (role: string) => rows.filter((x) => x.role.role === role);
 
+  const rorcRows = byRole('RORC');
+  const latestRorcRows = (() => {
+    if (!rorcRows.length) return rorcRows;
+    const keyOf = (r: any) => {
+      const fd = String(r?.role?.fromDate ?? '').trim();
+      return fd || String(r?.role?.createdAt ?? '').slice(0, 10);
+    };
+    const keys = rorcRows.map(keyOf).filter(Boolean);
+    if (!keys.length) return rorcRows;
+    const maxKey = keys.slice().sort().at(-1) as string;
+    return rorcRows.filter((r) => keyOf(r) === maxKey);
+  })();
+
   return NextResponse.json({
     ok: true,
     client,
     roles: {
       directors: byRole('DIRECTOR'),
       shareholders: byRole('SHAREHOLDER'),
-      rorc: byRole('RORC'),
+      rorc: latestRorcRows,
       secretaries: byRole('SECRETARY'),
     },
   });
