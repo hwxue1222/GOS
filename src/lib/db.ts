@@ -9805,6 +9805,11 @@ export async function createRorcDeclarationRequest(input: {
         if (!c || c.deletedAt) return null;
         return { roleId: r.id, fullName: c.name };
       }
+      if (party.type === 'COMPANY' && party.externalCompanyId) {
+        const c = (db.externalCompanies ?? []).find((x) => x.id === party.externalCompanyId) ?? null;
+        if (!c) return null;
+        return { roleId: r.id, fullName: c.name };
+      }
       return null;
     })
     .filter(Boolean) as Array<{ roleId: string; fullName: string; email?: string }>;
@@ -9992,7 +9997,78 @@ export async function decideRorcDeclarationRequest(input: {
 
   if (r.controllerType === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
     const companyName = r.controllerCompany.companyName.trim();
-    const party: Party = { id: newId('pty'), type: 'COMPANY', displayName: companyName, createdAt: now, updatedAt: now };
+    const regNo = String(r.controllerCompany.registerNumber ?? '').trim();
+    const regKey = String(regNo ?? '')
+      .trim()
+      .replace(/\s+/g, '')
+      .toLowerCase();
+    const linkedClient =
+      regKey
+        ? db.clients.find((c) => String(c.companyRegistrationNo ?? '').trim().replace(/\s+/g, '').toLowerCase() === regKey && !c.deletedAt) ?? null
+        : null;
+
+    const party = (() => {
+      if (linkedClient) {
+        const existingParty = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === linkedClient.id) ?? null;
+        if (existingParty) return existingParty;
+        const next: Party = {
+          id: newId('pty'),
+          type: 'COMPANY',
+          displayName: linkedClient.name,
+          clientId: linkedClient.id,
+          createdAt: now,
+          updatedAt: now,
+        };
+        db.parties.unshift(next);
+        return next;
+      }
+
+      const extKey = regKey;
+      const existingExt =
+        extKey ? db.externalCompanies.find((c) => String(c.registrationNo ?? '').trim().replace(/\s+/g, '').toLowerCase() === extKey) ?? null : null;
+      const ext = existingExt
+        ? {
+            ...existingExt,
+            name: companyName || existingExt.name,
+            jurisdiction: String(r.controllerCompany?.countryOfIncorporation ?? '').trim() || existingExt.jurisdiction,
+            address: String(r.controllerCompany?.companyAddress ?? '').trim() || existingExt.address,
+            updatedAt: now,
+          }
+        : {
+            id: newId('exc'),
+            name: companyName,
+            registrationNo: regNo || undefined,
+            jurisdiction: String(r.controllerCompany?.countryOfIncorporation ?? '').trim() || undefined,
+            address: String(r.controllerCompany?.companyAddress ?? '').trim() || undefined,
+            createdAt: now,
+            updatedAt: now,
+          };
+      if (existingExt) {
+        const i = db.externalCompanies.findIndex((c) => c.id === existingExt.id);
+        if (i >= 0) db.externalCompanies[i] = ext;
+      } else {
+        db.externalCompanies.unshift(ext);
+      }
+
+      const existingParty = db.parties.find((p) => p.type === 'COMPANY' && p.externalCompanyId === ext.id) ?? null;
+      if (existingParty) {
+        const i = db.parties.findIndex((p) => p.id === existingParty.id);
+        const updated: Party = { ...existingParty, displayName: ext.name, updatedAt: now };
+        if (i >= 0) db.parties[i] = updated;
+        return updated;
+      }
+      const next: Party = {
+        id: newId('pty'),
+        type: 'COMPANY',
+        displayName: ext.name,
+        externalCompanyId: ext.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.parties.unshift(next);
+      return next;
+    })();
+
     const role: ClientPartyRole = {
       id: newId('cpr'),
       clientId: r.clientId,
@@ -10002,7 +10078,6 @@ export async function decideRorcDeclarationRequest(input: {
       createdAt: now,
       updatedAt: now,
     };
-    db.parties.unshift(party);
     db.clientPartyRoles.unshift(role);
   }
 

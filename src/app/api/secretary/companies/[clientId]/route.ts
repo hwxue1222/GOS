@@ -54,6 +54,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
   const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
 
   const rows = db.clientPartyRoles
@@ -84,6 +85,25 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
               countryOfIncorporation: c.countryOfIncorporation,
               address: c.address,
               registeredOfficeAddress: c.registeredOfficeAddress,
+            },
+          },
+        };
+      }
+      if (party.type === 'COMPANY' && party.externalCompanyId) {
+        const c = externalCompanyById.get(party.externalCompanyId) ?? null;
+        if (!c) return null;
+        return {
+          role: r,
+          entity: {
+            type: 'COMPANY',
+            company: {
+              id: c.id,
+              code: 'EXTERNAL',
+              name: c.name,
+              companyRegistrationNo: c.registrationNo,
+              countryOfIncorporation: c.jurisdiction,
+              address: c.address,
+              registeredOfficeAddress: c.address,
             },
           },
         };
