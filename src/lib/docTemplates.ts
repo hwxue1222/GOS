@@ -2171,7 +2171,7 @@ export function renderRorcControllerDeclarationHtml(input: {
 
     <div class="confirm">
       <div>我确认以上信息真实和完整。</div>
-      <div style="margin-top: 6px;">I hereby confirm that I am a Registrable Person in relation to the Company and certify the information contained in this self-certification questionnaire to be true and complete</div>
+      <div style="margin-top: 6px;">I hereby confirm that the above mentioned person is registrable controller of the Company and certify the information contained in this self-certification questionnaire to be true and complete.</div>
     </div>
 
     <div class="sig">
