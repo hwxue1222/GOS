@@ -105,7 +105,7 @@ export default async function ShareTransferApplicationDetailPage({
         .filter((r) => r.packetId === p.id)
         .map((r) => (r.email ?? '').trim().toLowerCase())
         .filter(Boolean);
-      const signerCount = new Set(signerEmails).size;
+      const signerCount = p.kind === 'STA' ? Math.max(2, new Set(signerEmails).size) : new Set(signerEmails).size;
       return { documentId: doc.id, title: doc.title, signerCount };
     })
     .filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
