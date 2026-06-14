@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
-import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOptions';
+import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
 
 type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC' | 'OTHER';
 
@@ -16,6 +16,10 @@ const ID_TYPE_LABEL_BY_VALUE: Record<string, string> = {
   IC: 'ic no',
   OTHER: 'id no',
 };
+
+function isSingaporeCompanyRegistrationNo(regNo: string) {
+  return /^\d{9}[A-Za-z]$/.test(String(regNo ?? '').trim());
+}
 
 type SavedDraft = {
   person?: {
@@ -50,8 +54,6 @@ type SavedDraft = {
     ccEmailAddress?: string;
   };
 };
-
-const countryOptions = COUNTRY_OF_INCORPORATION_OPTIONS;
 
 function maskKeepStartEnd(raw: string, startKeep: number, endKeep: number) {
   const s = String(raw ?? '').trim();
@@ -213,24 +215,41 @@ export default function RorcClient() {
       if (!res?.ok || !j || (j as any).ok !== true) return;
       const found = (j as any).person ?? null;
       if (!found) return;
-      setMatchedPerson({
-        dateOfBirth: String(found.dob ?? ''),
-        email: String(found.email ?? ''),
-        nationality: String(found.nationality ?? ''),
-        phone: String(found.phone ?? ''),
-        address: String(found.address ?? ''),
-      });
+      const match = {
+        dateOfBirth: String(found.dob ?? '').trim(),
+        email: String(found.email ?? '').trim(),
+        nationality: String(found.nationality ?? '').trim(),
+        phone: String(found.phone ?? '').trim(),
+        address: String(found.address ?? '').trim(),
+      };
+      const canLock = !!(match.dateOfBirth && match.email && match.nationality && match.phone && match.address);
+      if (canLock) {
+        setMatchedPerson(match);
+        setPerson((v) => ({
+          ...v,
+          fullName: String(found.fullName ?? ''),
+          idNo: String(found.idNo ?? v.idNo ?? ''),
+          dateOfBirth: '',
+          email: '',
+          nationality: '',
+          phone: '',
+          address: '',
+        }));
+        setPersonLockedFromLookup(true);
+        return;
+      }
+      setMatchedPerson(null);
       setPerson((v) => ({
         ...v,
         fullName: String(found.fullName ?? ''),
         idNo: String(found.idNo ?? v.idNo ?? ''),
-        dateOfBirth: '',
-        email: '',
-        nationality: '',
-        phone: '',
-        address: '',
+        dateOfBirth: match.dateOfBirth || v.dateOfBirth,
+        email: match.email || v.email,
+        nationality: match.nationality || v.nationality,
+        phone: match.phone || v.phone,
+        address: match.address || v.address,
       }));
-      setPersonLockedFromLookup(true);
+      setPersonLockedFromLookup(false);
     }, 250);
     return () => {
       window.clearTimeout(t);
@@ -265,18 +284,31 @@ export default function RorcClient() {
       if (!res?.ok || !j || (j as any).ok !== true) return;
       const found = (j as any).company ?? null;
       if (!found) return;
-      setMatchedCompany({
-        countryOfIncorporation: String(found.countryOfIncorporation ?? ''),
-        companyAddress: String(found.registeredOfficeAddress ?? found.address ?? ''),
-      });
+      const inferredCountry =
+        String(found.countryOfIncorporation ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
+      const inferredAddress = String(found.registeredOfficeAddress ?? found.address ?? '').trim();
+      const canLock = !!(inferredCountry && inferredAddress);
+      if (canLock) {
+        setMatchedCompany({ countryOfIncorporation: inferredCountry, companyAddress: inferredAddress });
+        setCompany((v) => ({
+          ...v,
+          companyName: String(found.name ?? ''),
+          registerNumber: String(found.companyRegistrationNo ?? v.registerNumber ?? ''),
+          countryOfIncorporation: '',
+          companyAddress: '',
+        }));
+        setCompanyLockedFromLookup(true);
+        return;
+      }
+      setMatchedCompany(null);
       setCompany((v) => ({
         ...v,
         companyName: String(found.name ?? ''),
         registerNumber: String(found.companyRegistrationNo ?? v.registerNumber ?? ''),
-        countryOfIncorporation: '',
-        companyAddress: '',
+        countryOfIncorporation: inferredCountry || v.countryOfIncorporation,
+        companyAddress: inferredAddress || v.companyAddress,
       }));
-      setCompanyLockedFromLookup(true);
+      setCompanyLockedFromLookup(false);
     }, 250);
     return () => {
       window.clearTimeout(t);
@@ -597,21 +629,6 @@ export default function RorcClient() {
                 </label>
               ) : null}
 
-              {!useSavedPerson && personLockedFromLookup ? (
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="checkbox"
-                    checked={personLockedFromLookup}
-                    onChange={(e) => {
-                      const next = e.target.checked;
-                      setPersonLockedFromLookup(next);
-                      if (!next) setMatchedPerson(null);
-                    }}
-                  />
-                  Matched existing member by ID (lock fields)
-                </label>
-              ) : null}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
@@ -672,80 +689,7 @@ export default function RorcClient() {
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-sm">
-                  <div className="text-black">
-                    <span className="text-red-500">*</span> Date Of Birth
-                  </div>
-                  {useSavedPerson && saved.person ? (
-                    <input
-                      value={maskDateYmd(String(saved.person.dateOfBirth ?? ''))}
-                      disabled
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                    />
-                  ) : (
-                    <input
-                      type="date"
-                      value={person.dateOfBirth}
-                      onChange={(e) => {
-                        if (personLockedFromLookup) return;
-                        setPerson((v) => ({ ...v, dateOfBirth: e.target.value }));
-                      }}
-                      disabled={personLockedFromLookup}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                    />
-                  )}
-                </label>
-                <label className="text-sm">
-                  <div className="text-black">
-                    <span className="text-red-500">*</span> Email
-                  </div>
-                  <input
-                    value={useSavedPerson && saved.person ? maskEmail(String(saved.person.email ?? '')) : person.email}
-                    onChange={(e) => {
-                      if (useSavedPerson || personLockedFromLookup) return;
-                      setPerson((v) => ({ ...v, email: e.target.value }));
-                    }}
-                    disabled={useSavedPerson || personLockedFromLookup}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  />
-                </label>
-              </div>
-
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> Nationality
-                </div>
-                <input
-                  value={
-                    useSavedPerson && saved.person
-                      ? maskKeepStartEnd(String(saved.person.nationality ?? ''), 1, 0)
-                      : person.nationality
-                  }
-                    onChange={(e) => {
-                      if (useSavedPerson || personLockedFromLookup) return;
-                      setPerson((v) => ({ ...v, nationality: e.target.value }));
-                    }}
-                    disabled={useSavedPerson || personLockedFromLookup}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-sm">
-                  <div className="text-black">
-                    <span className="text-red-500">*</span> Phone
-                  </div>
-                  <input
-                    value={useSavedPerson && saved.person ? maskPhone(String(saved.person.phone ?? '')) : person.phone}
-                    onChange={(e) => {
-                      if (useSavedPerson || personLockedFromLookup) return;
-                      setPerson((v) => ({ ...v, phone: e.target.value }));
-                    }}
-                    disabled={useSavedPerson || personLockedFromLookup}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  />
-                </label>
+              {!useSavedPerson && personLockedFromLookup && matchedPerson ? (
                 <label className="text-sm">
                   <div className="text-black">
                     <span className="text-red-500">*</span> Declared On
@@ -757,27 +701,116 @@ export default function RorcClient() {
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Date Of Birth
+                      </div>
+                      {useSavedPerson && saved.person ? (
+                        <input
+                          value={maskDateYmd(String(saved.person.dateOfBirth ?? ''))}
+                          disabled
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                        />
+                      ) : (
+                        <input
+                          type="date"
+                          value={person.dateOfBirth}
+                          onChange={(e) => {
+                            if (personLockedFromLookup) return;
+                            setPerson((v) => ({ ...v, dateOfBirth: e.target.value }));
+                          }}
+                          disabled={personLockedFromLookup}
+                          className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        />
+                      )}
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Email
+                      </div>
+                      <input
+                        value={useSavedPerson && saved.person ? maskEmail(String(saved.person.email ?? '')) : person.email}
+                        onChange={(e) => {
+                          if (useSavedPerson || personLockedFromLookup) return;
+                          setPerson((v) => ({ ...v, email: e.target.value }));
+                        }}
+                        disabled={useSavedPerson || personLockedFromLookup}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                      />
+                    </label>
+                  </div>
 
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> Address
-                </div>
-                <textarea
-                  value={
-                    useSavedPerson && saved.person
-                      ? maskKeepStartEnd(String(saved.person.address ?? ''), 6, 0)
-                      : person.address
-                  }
-                  onChange={(e) => {
-                    if (useSavedPerson || personLockedFromLookup) return;
-                    setPerson((v) => ({ ...v, address: e.target.value }));
-                  }}
-                  rows={3}
-                  disabled={useSavedPerson || personLockedFromLookup}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                />
-              </label>
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Nationality
+                    </div>
+                    <input
+                      value={
+                        useSavedPerson && saved.person
+                          ? maskKeepStartEnd(String(saved.person.nationality ?? ''), 1, 0)
+                          : person.nationality
+                      }
+                      onChange={(e) => {
+                        if (useSavedPerson || personLockedFromLookup) return;
+                        setPerson((v) => ({ ...v, nationality: e.target.value }));
+                      }}
+                      disabled={useSavedPerson || personLockedFromLookup}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Phone
+                      </div>
+                      <input
+                        value={useSavedPerson && saved.person ? maskPhone(String(saved.person.phone ?? '')) : person.phone}
+                        onChange={(e) => {
+                          if (useSavedPerson || personLockedFromLookup) return;
+                          setPerson((v) => ({ ...v, phone: e.target.value }));
+                        }}
+                        disabled={useSavedPerson || personLockedFromLookup}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                      />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Declared On
+                      </div>
+                      <input
+                        type="date"
+                        value={effectiveDate}
+                        onChange={(e) => setEffectiveDate(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Address
+                    </div>
+                    <textarea
+                      value={
+                        useSavedPerson && saved.person
+                          ? maskKeepStartEnd(String(saved.person.address ?? ''), 6, 0)
+                          : person.address
+                      }
+                      onChange={(e) => {
+                        if (useSavedPerson || personLockedFromLookup) return;
+                        setPerson((v) => ({ ...v, address: e.target.value }));
+                      }}
+                      rows={3}
+                      disabled={useSavedPerson || personLockedFromLookup}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    />
+                  </label>
+                </>
+              )}
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
@@ -879,21 +912,6 @@ export default function RorcClient() {
                 </label>
               ) : null}
 
-              {!useSavedCompany && companyLockedFromLookup ? (
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="checkbox"
-                    checked={companyLockedFromLookup}
-                    onChange={(e) => {
-                      const next = e.target.checked;
-                      setCompanyLockedFromLookup(next);
-                      if (!next) setMatchedCompany(null);
-                    }}
-                  />
-                  Matched existing company by registration no (lock fields)
-                </label>
-              ) : null}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
@@ -976,33 +994,7 @@ export default function RorcClient() {
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-sm">
-                  <div className="text-black">
-                    <span className="text-red-500">*</span> Country of incorporation
-                  </div>
-                  <select
-                    value={useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '') : company.countryOfIncorporation}
-                    onChange={(e) => {
-                      if (useSavedCompany || companyLockedFromLookup) return;
-                      setCompany((v) => ({ ...v, countryOfIncorporation: e.target.value }));
-                    }}
-                    disabled={useSavedCompany || companyLockedFromLookup}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  >
-                    <option value="">Select...</option>
-                    {(() => {
-                      const current = useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '').trim() : company.countryOfIncorporation.trim();
-                      if (!current) return null;
-                      return countryOptions.includes(current as any) ? null : <option value={current}>{current}</option>;
-                    })()}
-                    {countryOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {!useSavedCompany && companyLockedFromLookup && matchedCompany ? (
                 <label className="text-sm">
                   <div className="text-black">
                     <span className="text-red-500">*</span> Date On Which The Company Becomes Controller
@@ -1014,7 +1006,35 @@ export default function RorcClient() {
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Country of incorporation
+                    </div>
+                    <CountryOfIncorporationSelect
+                      value={useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '') : company.countryOfIncorporation}
+                      onChange={(v) => {
+                        if (useSavedCompany || companyLockedFromLookup) return;
+                        setCompany((x) => ({ ...x, countryOfIncorporation: v }));
+                      }}
+                      disabled={useSavedCompany || companyLockedFromLookup}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Date On Which The Company Becomes Controller
+                    </div>
+                    <input
+                      type="date"
+                      value={effectiveDate}
+                      onChange={(e) => setEffectiveDate(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+              )}
 
               <label className="text-sm">
                 <div className="text-black/70">The Register Of Companies</div>
@@ -1034,25 +1054,27 @@ export default function RorcClient() {
                 />
               </label>
 
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> RORC Controller Company Address
-                </div>
-                <textarea
-                  value={
-                    useSavedCompany && saved.company
-                      ? maskKeepStartEnd(String(saved.company.companyAddress ?? ''), 6, 0)
-                      : company.companyAddress
-                  }
-                  onChange={(e) => {
-                    if (useSavedCompany || companyLockedFromLookup) return;
-                    setCompany((v) => ({ ...v, companyAddress: e.target.value }));
-                  }}
-                  rows={3}
-                  disabled={useSavedCompany || companyLockedFromLookup}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                />
-              </label>
+              {!useSavedCompany && companyLockedFromLookup && matchedCompany ? null : (
+                <label className="text-sm">
+                  <div className="text-black">
+                    <span className="text-red-500">*</span> RORC Controller Company Address
+                  </div>
+                  <textarea
+                    value={
+                      useSavedCompany && saved.company
+                        ? maskKeepStartEnd(String(saved.company.companyAddress ?? ''), 6, 0)
+                        : company.companyAddress
+                    }
+                    onChange={(e) => {
+                      if (useSavedCompany || companyLockedFromLookup) return;
+                      setCompany((v) => ({ ...v, companyAddress: e.target.value }));
+                    }}
+                    rows={3}
+                    disabled={useSavedCompany || companyLockedFromLookup}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+              )}
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
