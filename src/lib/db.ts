@@ -9822,6 +9822,18 @@ export async function createRorcDeclarationRequest(input: {
   if (removeRorcRoleIds.some((id) => !activeRoleIds.has(id))) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const removed = activeControllers.filter((x) => removeRorcRoleIds.includes(x.roleId)).map((x) => ({ fullName: x.fullName, email: x.email }));
 
+  const newControllerName = (() => {
+    if (controllerType === 'PERSON') return String(input.controllerPerson?.fullName ?? '').trim();
+    if (controllerType === 'COMPANY') {
+      const n = String(input.controllerCompany?.companyName ?? '').trim();
+      const reg = String(input.controllerCompany?.registerNumber ?? '').trim();
+      return reg ? `${n} (${reg})` : n;
+    }
+    const names = addControllers.map((x) => x.fullName).filter(Boolean);
+    return names.join(', ');
+  })();
+  const oldControllerNames = activeControllers.map((x) => x.fullName).filter(Boolean);
+
   if (controllerType === 'PERSON' || controllerType === 'COMPANY') {
     removeRorcRoleIds.length = 0;
     removeRorcRoleIds.push(...activeControllers.map((x) => x.roleId));
@@ -9964,6 +9976,8 @@ export async function createRorcDeclarationRequest(input: {
     controllerType,
     controllerPerson: input.controllerPerson,
     controllerCompany: input.controllerCompany,
+    newControllerName: newControllerName || undefined,
+    oldControllerNames: oldControllerNames.length ? oldControllerNames : undefined,
     message: typeof input.message === 'string' ? input.message.trim() || undefined : undefined,
     removeRorcRoleIds,
     addControllers,

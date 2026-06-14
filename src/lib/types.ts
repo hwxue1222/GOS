@@ -502,6 +502,8 @@ export type RorcDeclarationRequest = {
     ccEmailAddress?: string;
     useCcEmailInstead?: boolean;
   };
+  newControllerName?: string;
+  oldControllerNames?: string[];
   message?: string;
   removeRorcRoleIds: string[];
   addControllers: Array<{ fullName: string; email?: string }>;

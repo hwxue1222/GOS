@@ -151,7 +151,30 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     .filter((x): x is string => !!x)
     .map((x) => x.trim())
     .filter(Boolean);
-  const oldNames = oldControllerNames.length ? oldControllerNames.join(', ') : '-';
+  const activeOldNamesFallback = (() => {
+    const list = db.clientPartyRoles
+      .filter((x) => x.clientId === r.clientId && x.role === 'RORC' && !x.toDate)
+      .map((x) => {
+        const party = partyById.get(x.partyId) ?? null;
+        if (!party) return null;
+        if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
+        if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
+        if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
+        return null;
+      })
+      .filter((x): x is string => !!x)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    return list.length ? list.join(', ') : '';
+  })();
+  const oldNames =
+    (Array.isArray((r as any).oldControllerNames) && (r as any).oldControllerNames.length
+      ? (r as any).oldControllerNames
+      : oldControllerNames
+    )
+      .map((x: any) => String(x ?? '').trim())
+      .filter(Boolean)
+      .join(', ') || activeOldNamesFallback || '-';
 
   const docHtml = ctx.documents[0]?.html ?? '';
   const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
@@ -161,6 +184,8 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     docNewPersonName || (docNewCompanyName ? (docNewCompanyReg ? `${docNewCompanyName} (${docNewCompanyReg})` : docNewCompanyName) : '');
 
   const newControllerLabel = (() => {
+    const stored = String((r as any).newControllerName ?? '').trim();
+    if (stored) return stored;
     if (r.controllerPerson?.fullName?.trim()) return r.controllerPerson.fullName.trim();
     if (r.controllerCompany?.companyName?.trim()) {
       const n = r.controllerCompany.companyName.trim();
