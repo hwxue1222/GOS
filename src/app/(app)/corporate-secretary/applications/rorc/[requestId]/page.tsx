@@ -167,6 +167,27 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       .filter(Boolean);
     return list.length ? list.join(', ') : '';
   })();
+
+  const oldNamesFromThisDecision = (() => {
+    const decidedAt = String(r.decidedAt ?? '').trim();
+    if (!decidedAt) return '';
+    const list = db.clientPartyRoles
+      .filter((x) => x.clientId === r.clientId && x.role === 'RORC')
+      .filter((x) => String(x.toDate ?? '').trim() === String(r.effectiveDate ?? '').trim())
+      .filter((x) => String(x.updatedAt ?? '').trim() === decidedAt)
+      .map((x) => {
+        const party = partyById.get(x.partyId) ?? null;
+        if (!party) return null;
+        if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
+        if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
+        if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
+        return null;
+      })
+      .filter((x): x is string => !!x)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    return list.length ? list.join(', ') : '';
+  })();
   const oldNames =
     (Array.isArray((r as any).oldControllerNames) && (r as any).oldControllerNames.length
       ? (r as any).oldControllerNames
@@ -174,7 +195,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     )
       .map((x: any) => String(x ?? '').trim())
       .filter(Boolean)
-      .join(', ') || activeOldNamesFallback || '-';
+      .join(', ') || oldNamesFromThisDecision || activeOldNamesFallback || '-';
 
   const docHtml = ctx.documents[0]?.html ?? '';
   const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
