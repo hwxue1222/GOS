@@ -73,8 +73,22 @@ export default function RorcClient() {
       id: string;
       kind: 'PERSON' | 'COMPANY';
       label: string;
-      person?: { fullName: string; email?: string };
-      company?: { name: string; registrationNo?: string };
+      person?: {
+        fullName: string;
+        email?: string;
+        phone?: string;
+        idType?: IdType;
+        idNo?: string;
+        nationality?: string;
+        dob?: string;
+        address?: string;
+      };
+      company?: {
+        name: string;
+        registrationNo?: string;
+        countryOfIncorporation?: string;
+        address?: string;
+      };
     }>
   >([]);
 
@@ -99,20 +113,36 @@ export default function RorcClient() {
           id: string;
           kind: 'PERSON' | 'COMPANY';
           label: string;
-          person?: { fullName: string; email?: string };
-          company?: { name: string; registrationNo?: string };
+          person?: {
+            fullName: string;
+            email?: string;
+            phone?: string;
+            idType?: IdType;
+            idNo?: string;
+            nationality?: string;
+            dob?: string;
+            address?: string;
+          };
+          company?: { name: string; registrationNo?: string; countryOfIncorporation?: string; address?: string };
         }> = [];
 
         for (const d of directors) {
           const rid = String(d?.role?.id ?? '').trim();
-          const name = String(d?.entity?.person?.fullName ?? '').trim();
+          const p = d?.entity?.person ?? null;
+          const name = String(p?.fullName ?? '').trim();
           if (!rid || !name) continue;
-          const email = String(d?.entity?.person?.email ?? '').trim() || undefined;
+          const email = String(p?.email ?? '').trim() || undefined;
+          const phone = String(p?.phone ?? '').trim() || undefined;
+          const idType = (String(p?.idType ?? '').trim() as IdType) || undefined;
+          const idNo = String(p?.idNo ?? '').trim() || undefined;
+          const nationality = String(p?.nationality ?? '').trim() || undefined;
+          const dob = String(p?.dob ?? '').trim() || undefined;
+          const address = String(p?.address ?? '').trim() || undefined;
           next.push({
             id: `DIRECTOR:${rid}`,
             kind: 'PERSON',
             label: `${name} (Director)`,
-            person: { fullName: name, email },
+            person: { fullName: name, email, phone, idType, idNo, nationality, dob, address },
           });
         }
 
@@ -123,24 +153,34 @@ export default function RorcClient() {
           const suffix = ` (Shareholder${typeof shares === 'number' ? `, ${shares.toLocaleString()} shares` : ''})`;
           const entityType = String(s?.entity?.type ?? '').trim().toUpperCase();
           if (entityType === 'PERSON') {
-            const name = String(s?.entity?.person?.fullName ?? '').trim();
+            const p = s?.entity?.person ?? null;
+            const name = String(p?.fullName ?? '').trim();
             if (!name) continue;
-            const email = String(s?.entity?.person?.email ?? '').trim() || undefined;
+            const email = String(p?.email ?? '').trim() || undefined;
+            const phone = String(p?.phone ?? '').trim() || undefined;
+            const idType = (String(p?.idType ?? '').trim() as IdType) || undefined;
+            const idNo = String(p?.idNo ?? '').trim() || undefined;
+            const nationality = String(p?.nationality ?? '').trim() || undefined;
+            const dob = String(p?.dob ?? '').trim() || undefined;
+            const address = String(p?.address ?? '').trim() || undefined;
             next.push({
               id: `SHAREHOLDER_PERSON:${rid}`,
               kind: 'PERSON',
               label: `${name}${suffix}`,
-              person: { fullName: name, email },
+              person: { fullName: name, email, phone, idType, idNo, nationality, dob, address },
             });
           } else if (entityType === 'COMPANY') {
-            const name = String(s?.entity?.company?.name ?? '').trim();
+            const c = s?.entity?.company ?? null;
+            const name = String(c?.name ?? '').trim();
             if (!name) continue;
-            const reg = String(s?.entity?.company?.companyRegistrationNo ?? '').trim() || undefined;
+            const reg = String(c?.companyRegistrationNo ?? '').trim() || undefined;
+            const countryOfIncorporation = String(c?.countryOfIncorporation ?? '').trim() || undefined;
+            const addr = String(c?.registeredOfficeAddress ?? c?.address ?? '').trim() || undefined;
             next.push({
               id: `SHAREHOLDER_COMPANY:${rid}`,
               kind: 'COMPANY',
               label: `${name}${suffix}`,
-              company: { name, registrationNo: reg },
+              company: { name, registrationNo: reg, countryOfIncorporation, address: addr },
             });
           }
         }
@@ -525,24 +565,76 @@ export default function RorcClient() {
                   type="button"
                   onClick={() => {
                     const picked = candidates.find((c) => c.id === candidateId) ?? null;
-                    if (picked?.kind === 'PERSON' && picked.person) {
+                    if (!picked) {
+                      setMode('PERSON');
+                      setPersonLockedFromLookup(false);
+                      setCompanyLockedFromLookup(false);
+                      setMatchedPerson(null);
+                      setMatchedCompany(null);
+                      setPerson((v) => ({
+                        ...v,
+                        fullName: '',
+                        idType: 'PASSPORT',
+                        idNo: '',
+                        dateOfBirth: '',
+                        email: '',
+                        nationality: '',
+                        phone: '',
+                        address: '',
+                        ccEnabled: false,
+                        ccName: '',
+                        ccTitle: '',
+                        ccPhone: '',
+                        ccEmailAddress: '',
+                      }));
+                      setCompany((v) => ({
+                        ...v,
+                        companyName: '',
+                        registerNumber: '',
+                        countryOfIncorporation: '',
+                        legalForm: '',
+                        governedByLawAndJurisdiction: '',
+                        registerOfCompanies: '',
+                        companyAddress: '',
+                        ccEnabled: false,
+                        ccName: '',
+                        ccTitle: '',
+                        ccPhone: '',
+                        ccEmailAddress: '',
+                      }));
+                      setStep('FORM');
+                      return;
+                    }
+
+                    if (picked.kind === 'PERSON' && picked.person) {
                       setMode('PERSON');
                       setPersonLockedFromLookup(false);
                       setMatchedPerson(null);
                       setPerson((v) => ({
                         ...v,
-                        fullName: v.fullName.trim() ? v.fullName : picked.person!.fullName,
-                        email: v.email.trim() ? v.email : String(picked.person!.email ?? '').trim(),
+                        fullName: picked.person!.fullName,
+                        idType: (picked.person!.idType as IdType) || v.idType,
+                        idNo: String(picked.person!.idNo ?? '').trim(),
+                        dateOfBirth: String(picked.person!.dob ?? '').trim(),
+                        email: String(picked.person!.email ?? '').trim(),
+                        nationality: String(picked.person!.nationality ?? '').trim(),
+                        phone: String(picked.person!.phone ?? '').trim(),
+                        address: String(picked.person!.address ?? '').trim(),
                       }));
                     }
-                    if (picked?.kind === 'COMPANY' && picked.company) {
+                    if (picked.kind === 'COMPANY' && picked.company) {
                       setMode('COMPANY');
                       setCompanyLockedFromLookup(false);
                       setMatchedCompany(null);
                       setCompany((v) => ({
                         ...v,
-                        companyName: v.companyName.trim() ? v.companyName : picked.company!.name,
-                        registerNumber: v.registerNumber.trim() ? v.registerNumber : String(picked.company!.registrationNo ?? '').trim(),
+                        companyName: picked.company!.name,
+                        registerNumber: String(picked.company!.registrationNo ?? '').trim(),
+                        countryOfIncorporation: String(picked.company!.countryOfIncorporation ?? '').trim(),
+                        companyAddress: String(picked.company!.address ?? '').trim(),
+                        legalForm: '',
+                        governedByLawAndJurisdiction: '',
+                        registerOfCompanies: '',
                       }));
                     }
                     setStep('FORM');
