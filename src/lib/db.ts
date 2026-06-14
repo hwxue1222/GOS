@@ -10242,14 +10242,14 @@ export async function createAnnualGeneralMeetingRequest(input: {
     companyRegistrationNo: client.companyRegistrationNo,
     dateYmd: now.slice(0, 10),
     companyCategory,
-    signers: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email ?? undefined })),
+    signers: [{ fullName: chairmanSigner.fullName, email: chairmanSigner.email }],
   });
   await createDocAndPacket({
     kind: 'AGM_DIR_STMT',
     documentType: 'AGM_DIR_STMT',
     title: `AGM Director Statement - ${client.name}`,
     html: dirStmtHtml,
-    signerEmails,
+    signerEmails: [String(chairmanSigner.email).trim().toLowerCase()],
   });
 
   const request: AnnualGeneralMeetingRequest = {

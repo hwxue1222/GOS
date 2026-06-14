@@ -31,6 +31,510 @@ function formatSsic(codeRaw: string) {
   return `${desc}(${code})`;
 }
 
+function replaceAllLiteral(input: string, from: string, to: string) {
+  if (!from) return input;
+  return input.split(from).join(to);
+}
+
+function injectHiddenSignerPlaceholders(html: string, emails: string[]) {
+  const normalized = emails
+    .map((e) => String(e ?? '').trim().toLowerCase())
+    .filter(Boolean);
+  if (!normalized.length) return html;
+  const block = `<div style="display:none">${normalized
+    .map((e) => `<span data-signer="${esc(e)}"></span>`)
+    .join('')}</div>`;
+  return html.includes('</body>') ? html.replace('</body>', `${block}</body>`) : `${html}${block}`;
+}
+
+function replaceAgmSme(
+  html: string,
+  input: Partial<{
+    companyName: string;
+    companyRegistrationNo: string;
+    meetingVenue: string;
+    meetingDateDmy: string;
+    meetingTime: string;
+    fiscalYearEndYmd: string;
+    signerName: string;
+    chairmanName: string;
+    registrableControllerName: string;
+    datedDmy: string;
+  }>,
+) {
+  let out = html;
+
+  const companyNameEsc = input.companyName ? esc(String(input.companyName)) : '';
+  if (companyNameEsc) {
+    out = replaceAllLiteral(out, 'JUNDO\nPTE LTD', companyNameEsc);
+    out = replaceAllLiteral(out, 'JUNDO\r\nPTE LTD', companyNameEsc);
+    out = replaceAllLiteral(out, 'JUNDO PTE LTD', companyNameEsc);
+  }
+
+  const regNoEsc = input.companyRegistrationNo ? esc(String(input.companyRegistrationNo)) : '';
+  if (regNoEsc) out = replaceAllLiteral(out, '202244987D', regNoEsc);
+
+  const venueRaw = String(input.meetingVenue ?? '').trim();
+  const venueEsc = venueRaw ? esc(venueRaw) : '';
+  if (venueEsc) {
+    out = replaceAllLiteral(out, '_testing', `_${venueEsc}`);
+    out = replaceAllLiteral(out, 'testing', venueEsc);
+  }
+
+  const meetingDateEsc = input.meetingDateDmy ? esc(String(input.meetingDateDmy)) : '';
+  if (meetingDateEsc) out = replaceAllLiteral(out, '14/06/2026', meetingDateEsc);
+
+  const meetingTimeEsc = input.meetingTime ? esc(String(input.meetingTime)) : '';
+  if (meetingTimeEsc) out = replaceAllLiteral(out, '10:00', meetingTimeEsc);
+
+  const fyeEsc = input.fiscalYearEndYmd ? esc(String(input.fiscalYearEndYmd)) : '';
+  if (fyeEsc) out = replaceAllLiteral(out, '2026-11-30', fyeEsc);
+
+  const signerNameEsc = input.signerName ? esc(String(input.signerName)) : '';
+  if (signerNameEsc) {
+    out = replaceAllLiteral(out, 'Xue\nHongwei', signerNameEsc);
+    out = replaceAllLiteral(out, 'Xue Hongwei', signerNameEsc);
+  }
+
+  const chairmanNameEsc = input.chairmanName ? esc(String(input.chairmanName)) : '';
+  if (chairmanNameEsc) {
+    out = replaceAllLiteral(out, 'Xue\nHongwei', chairmanNameEsc);
+    out = replaceAllLiteral(out, 'Xue Hongwei', chairmanNameEsc);
+  }
+
+  const rcEsc = input.registrableControllerName ? esc(String(input.registrableControllerName)) : '';
+  if (rcEsc) {
+    out = replaceAllLiteral(out, 'Lu\nQianying', rcEsc);
+    out = replaceAllLiteral(out, 'Lu Qianying', rcEsc);
+  }
+
+  const datedEsc = input.datedDmy ? esc(String(input.datedDmy)) : '';
+  if (datedEsc) out = replaceAllLiteral(out, '30/05/2026', datedEsc);
+
+  return out;
+}
+
+const AGM_NOTICE_SME_HTML = `<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title>Word Document</title>
+	<meta name="generator" content="LibreOffice 26.2.3.2 (MacOSX)"/>
+	<meta name="created" content="2026-06-14T06:57:00"/>
+	<meta name="changedby" content="Hongwei Xue"/>
+	<meta name="changed" content="2026-06-14T06:58:00"/>
+	<meta name="AppVersion" content="16.0000"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin-left: 1.25in; margin-right: 1.25in; margin-top: 1in; margin-bottom: 1in }
+		p { direction: ltr; widows: 0; orphans: 0; margin-bottom: 0.1in; text-align: justify; line-height: 115%; background: transparent }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
+PTE LTD</b></font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Co.
+Reg. No.: </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">202244987D</font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">(Incorporated
+in the Republic of Singapore)</font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>NOTICE
+OF ANNUAL GENERAL MEETING</b></font></font></p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">NOTICE
+IS HEREBY GIVEN THAT the Annual General Meeting of the Company will
+be held at _</font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_testing</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_</u></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">
+ on </font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>
+</u></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>14/06/2026
+</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>10:00
+</u></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">.
+for the following business and that any of the Directors be
+authorized to send notice of the said Meeting:-</font></font></p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u><b>ORDINARY
+BUSINESS</b></u></font></font></p>
+<ol>
+	<li><p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+	<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">To
+	confirm the Minute of the Annual General Meeting held;</font></font></p></li>
+	<li><p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+	<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">To
+	approve unaudited financial statements for the year ended
+	</font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>2026-11-30</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">;</font></font></p></li>
+	<li><p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+	<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">To
+	declare the Registrable Controller.</font></font></p></li>
+</ol>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff"><a name="_gjdgxs"></a>
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">On
+behalf of the Board of Directors</font></font></p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_______________</u></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Xue
+Hongwei</font></font></p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Dated:
+</font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">30/05/2026</font></font></font></p>
+<p style="margin-bottom: 0in; line-height: 100%"><br/>
+
+</p>
+</body>
+</html>`;
+
+const AGM_MINUTES_SME_HTML = `<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title></title>
+	<meta name="generator" content="LibreOffice 26.2.3.2 (MacOSX)"/>
+	<meta name="author" content="Data"/>
+	<meta name="created" content="2026-06-14T07:01:00"/>
+	<meta name="changedby" content="Hongwei Xue"/>
+	<meta name="changed" content="2026-06-14T07:01:00"/>
+	<meta name="AppVersion" content="16.0000"/>
+	<meta name="KSOProductBuildVer" content="1033-5.6.0.8082"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin-left: 1.25in; margin-right: 1.25in; margin-top: 1in; margin-bottom: 1in }
+		p { direction: ltr; widows: 0; text-align: justify; line-height: 115%; margin-bottom: 0.1in; orphans: 0; font-size: 10pt; background: transparent }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
+PTE LTD</b></font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Co.
+Reg. No.: </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">202244987D</font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">(Incorporated
+in the Republic of Singapore)</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>MINUTES
+OF ANNUAL GENERAL MEETING</b></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Minutes
+of the Annual General Meeting of the Company held at </font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_</u></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>testing</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>__</u></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">on
+</font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>
+ </u></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>14/06/2026
+</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>10:00</u></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">PRESENT:</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u><b>_____________</b></u></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Xue
+Hongwei</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="margin-bottom: 0in; line-height: 100%"><br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff; page-break-before: always">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Chairman	:
+</font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u><b>Xue
+Hongwei</b></u></font></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">
+</font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">was
+in the chair.</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Notice
+of Meeting	: The notice was taken as read.</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Resolved:</font></font></p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff"><a name="_gjdgxs"></a>
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Financial
+statements: That the unaudited financial statements for the year
+ended </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>2026-11-30</u></font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">
+be and they are hereby adopted.</font></font></p>
+<p style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Registrable
+Controller: That </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>Lu
+Qianying</u></font></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">
+</font></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">is
+identified as Registrable Individual Controller.</font></font></p>
+<p style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">General	:
+The Secretary is hereby instructed to file the Annual Return to the
+Accounting and Corporate Regulatory Authority in accordance to the
+Companies Act. Cap. 50.</font></font></p>
+<p style="margin-bottom: 0in; orphans: 2; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Termination	:
+There being no other business, the meeting was terminated with a vote
+of thanks to the Chair.</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Certified
+as a True Record of Minutes</font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_________________</u></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Name:
+ </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Xue
+Hongwei</font></font></font></p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<br/>
+
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Dated:
+</font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">14/06/2026
+</font></font></font>
+</p>
+<p align="left" style="orphans: 2; margin-bottom: 0in; line-height: 100%; widows: 2">
+<br/>
+
+</p>
+</body>
+</html>`;
+
+const AGM_DIR_STMT_SME_HTML = `<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title>Word Document</title>
+	<meta name="generator" content="LibreOffice 26.2.3.2 (MacOSX)"/>
+	<meta name="created" content="2026-06-14T06:55:00"/>
+	<meta name="changedby" content="Hongwei Xue"/>
+	<meta name="changed" content="2026-06-14T06:56:00"/>
+	<meta name="AppVersion" content="16.0000"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin-left: 1.25in; margin-right: 1.25in; margin-top: 1in; margin-bottom: 1in }
+		p { direction: ltr; widows: 0; orphans: 0; margin-bottom: 0.1in; text-align: justify; line-height: 115%; background: transparent }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
+PTE LTD</b></font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Co.
+Reg. No.: </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">202244987D</font></font></font></p>
+<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">(Incorporated
+in the Republic of Singapore)</font></font></p>
+<p style="margin-bottom: 0in; line-height: 100%"><br/>
+
+</p>
+<p align="center" style="margin-bottom: 0in; line-height: 100%"><font face="Verdana, sans-serif"><font size="2" style="font-size: 10pt"><b>STATEMENT
+BY AN EXEMPT PRIVATE COMPANY </b></font></font>
+</p>
+<p align="center" style="margin-bottom: 0in; line-height: 100%"><font face="Verdana, sans-serif"><font size="2" style="font-size: 10pt"><b>EXEMPTED
+FROM AUDIT</b></font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 10pt">
+</font></font><font face="Verdana, sans-serif"><font size="2" style="font-size: 10pt"><b>REQUIREMENTS
+</b></font></font>
+</p>
+<p align="left" style="margin-bottom: 0.15in; border: none; padding: 0in; line-height: 109%">
+<br/>
+<br/>
+
+</p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0.15in; line-height: 109%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>Name
+of Company : </b></font></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
+PTE LTD</b></font></font></font></p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0.15in; line-height: 109%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Unique
+Entity Number (UEN) : </font></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>202244987D</b></font></font></font></p>
+<p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">I,
+the director of the abovementioned company, hereby declare that/on
+behalf of the Board of Directors that -</font></font></font></p>
+<ol type="a">
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">for
+	the entire financial year concerned, the company had been an exempt
+	private company at all relevant times as defined under Section 4(1)
+	of the Companies Act by virtue of its being a private company of
+	which no beneficial interest in shares is held, directly or
+	indirectly, by any corporation and having not more than 20 members;</font></font></font></p></li>
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">an
+	unaudited profit and loss account and balance sheet made up to the
+	date stated in the annual return which comply with the requirements
+	of the Companies Act have been presented before the company in the
+	annual general meeting on the date stated in this annual return;</font></font></font></p></li>
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">as
+	at the date that the profit and loss account for the financial year
+	has been made up, the company appeared to be able to meet its
+	liabilities as and when they fall due;</font></font></font></p></li>
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">as
+	at the end of the financial year, the company is exempt from audit
+	requirements as its revenue in the year does not exceed the
+	prescribed amount namely S$10 million since the date of
+	incorporation;</font></font></font></p></li>
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.18in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">no
+	notice has been received from any member under Section 205B(6)
+	requiring the company to obtain an audit of its accounts in relation
+	to the year; and</font></font></font></p></li>
+	<li><p style="border: none; padding: 0in; margin-bottom: 0.16in; line-height: 109%">
+	<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">the
+	accounting and other records required to be kept by the company in
+	accordance with Section 199 of the Companies Act have been so kept.</font></font></font></p></li>
+</ol>
+<p align="left" style="margin-bottom: 0in; border: none; padding: 0in; line-height: 109%">
+<br/>
+
+</p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0in; line-height: 109%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Directors</font></font></font></p>
+<p align="left" style="margin-bottom: 0in; border: none; padding: 0in; line-height: 109%">
+<br/>
+
+</p>
+<p align="left" style="margin-bottom: 0in; border: none; padding: 0in; line-height: 109%">
+<br/>
+
+</p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0in; line-height: 100%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><u>_______________</u></font></font></font></p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0in; line-height: 100%">
+<font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Xue
+Hongwei                  </font></font></font>
+</p>
+<p style="margin-bottom: 0in; line-height: 100%">                    
+                                                  
+</p>
+<p align="left" style="border: none; padding: 0in; margin-bottom: 0in; line-height: 109%">
+<font color="#000000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Dated:
+</font></font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">30/05/2026</font></font></font></p>
+</body>
+</html>`;
+
 function signatureBlocksByEmail(input: {
   signers: Array<{ fullName: string; email?: string }>;
   label?: string;
@@ -1694,13 +2198,40 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
   registrableControllerNames?: string[];
   signer: { fullName: string; email?: string };
 }) {
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  if (companyCategory === 'SME') {
+    const companyNameRaw = String(input.companyName ?? '').trim();
+    const regNoRaw = String(input.companyRegistrationNo ?? '').trim();
+    const meetingVenueRaw = String(input.meetingVenue ?? '').trim();
+    const chairmanRaw = String(input.chairmanName ?? '').trim();
+    const meetingDateDmy = toDdMmYyyy(input.meetingDateYmd);
+    const meetingTimeRaw = String(input.meetingTime ?? '').trim();
+    const fyeRaw = String(input.fiscalYearEndYmd ?? '').trim();
+    const rcNames = (input.registrableControllerNames ?? []).map((x) => String(x ?? '').trim()).filter(Boolean);
+    const rc = rcNames.length ? rcNames.join(', ') : '';
+
+    let html = AGM_MINUTES_SME_HTML;
+    html = replaceAgmSme(html, {
+      companyName: companyNameRaw,
+      companyRegistrationNo: regNoRaw,
+      meetingVenue: meetingVenueRaw,
+      meetingDateDmy,
+      meetingTime: meetingTimeRaw,
+      fiscalYearEndYmd: fyeRaw,
+      chairmanName: chairmanRaw,
+      registrableControllerName: rc,
+      datedDmy: meetingDateDmy,
+    });
+    html = injectHiddenSignerPlaceholders(html, [input.signer?.email].filter(Boolean) as string[]);
+    return html;
+  }
+
   const companyName = esc(input.companyName);
   const regNo = String(input.companyRegistrationNo ?? '').trim();
   const meetingDateDmy = esc(toDdMmYyyy(input.meetingDateYmd));
   const meetingTime = String(input.meetingTime ?? '').trim();
   const meetingVenue = esc(input.meetingVenue);
   const chairmanName = esc(input.chairmanName);
-  const companyCategory = String(input.companyCategory ?? '').trim();
   const fiscalYearEndYmd = String(input.fiscalYearEndYmd ?? '').trim();
   const registrableControllers = (input.registrableControllerNames ?? []).map((x) => String(x ?? '').trim()).filter(Boolean);
   const sig = signatureLineBlocks({ signers: [input.signer] });
@@ -1786,13 +2317,38 @@ export function renderAnnualGeneralMeetingNoticeHtml(input: {
   fiscalYearEndYmd?: string;
   signer: { fullName: string; email?: string };
 }) {
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  if (companyCategory === 'SME') {
+    const companyNameRaw = String(input.companyName ?? '').trim();
+    const regNoRaw = String(input.companyRegistrationNo ?? '').trim();
+    const meetingVenueRaw = String(input.meetingVenue ?? '').trim();
+    const meetingDateDmy = toDdMmYyyy(input.meetingDateYmd);
+    const meetingTimeRaw = String(input.meetingTime ?? '').trim();
+    const fyeRaw = String(input.fiscalYearEndYmd ?? '').trim();
+    const signerNameRaw = String(input.signer?.fullName ?? '').trim();
+    const datedDmy = toDdMmYyyy(input.noticeDateYmd);
+
+    let html = AGM_NOTICE_SME_HTML;
+    html = replaceAgmSme(html, {
+      companyName: companyNameRaw,
+      companyRegistrationNo: regNoRaw,
+      meetingVenue: meetingVenueRaw,
+      meetingDateDmy,
+      meetingTime: meetingTimeRaw,
+      fiscalYearEndYmd: fyeRaw,
+      signerName: signerNameRaw,
+      datedDmy,
+    });
+    html = injectHiddenSignerPlaceholders(html, [input.signer?.email].filter(Boolean) as string[]);
+    return html;
+  }
+
   const companyName = esc(input.companyName);
   const regNo = String(input.companyRegistrationNo ?? '').trim();
   const meetingDateDmy = esc(toDdMmYyyy(input.meetingDateYmd));
   const meetingTime = String(input.meetingTime ?? '').trim();
   const meetingVenue = esc(input.meetingVenue);
   const dated = esc(toDdMmYyyy(input.noticeDateYmd));
-  const companyCategory = String(input.companyCategory ?? '').trim();
   const fiscalYearEndYmd = String(input.fiscalYearEndYmd ?? '').trim();
   const sig = signatureLineBlocks({ signers: [input.signer] });
 
@@ -1868,10 +2424,30 @@ export function renderAnnualGeneralMeetingDirectorStatementHtml(input: {
   companyCategory?: 'DORMANT' | 'SME' | 'AUDITED' | string;
   signers: Array<{ fullName: string; email?: string }>;
 }) {
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  if (companyCategory === 'SME') {
+    const companyNameRaw = String(input.companyName ?? '').trim();
+    const regNoRaw = String(input.companyRegistrationNo ?? '').trim();
+    const signerNameRaw = String(input.signers?.[0]?.fullName ?? '').trim();
+    const datedDmy = toDdMmYyyy(input.dateYmd);
+
+    let html = AGM_DIR_STMT_SME_HTML;
+    html = replaceAgmSme(html, {
+      companyName: companyNameRaw,
+      companyRegistrationNo: regNoRaw,
+      signerName: signerNameRaw,
+      datedDmy,
+    });
+    html = injectHiddenSignerPlaceholders(
+      html,
+      (input.signers ?? []).map((s) => s.email).filter(Boolean) as string[],
+    );
+    return html;
+  }
+
   const companyName = esc(input.companyName);
   const regNo = esc(String(input.companyRegistrationNo ?? '').trim());
   const dated = esc(toDdMmYyyy(input.dateYmd));
-  const companyCategory = String(input.companyCategory ?? '').trim();
   const sig = signatureLineBlocks({ signers: input.signers });
 
   const statement =
