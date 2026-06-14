@@ -247,6 +247,23 @@ export default function RorcClient() {
     };
   }, [company.registerNumber, companyLockedFromLookup, mode]);
 
+  useEffect(() => {
+    if (mode !== 'COMPANY') return;
+
+    const inferredCountry = String(
+      (companyLockedFromLookup && matchedCompany ? matchedCompany.countryOfIncorporation : company.countryOfIncorporation) ?? '',
+    ).trim();
+    const isSg = inferredCountry === 'Singapore' || isSingaporeCompanyRegistrationNo(company.registerNumber);
+    if (!isSg) return;
+
+    setCompany((v) => {
+      const next = { ...v };
+      if (!String(next.legalForm ?? '').trim()) next.legalForm = 'private company limited by shares';
+      if (!String(next.governedByLawAndJurisdiction ?? '').trim()) next.governedByLawAndJurisdiction = 'the Companies Act Singapore';
+      return next;
+    });
+  }, [company.countryOfIncorporation, company.registerNumber, companyLockedFromLookup, matchedCompany, mode]);
+
   async function onSubmit() {
     setSubmitError(null);
     if (!companyId || !client) {
