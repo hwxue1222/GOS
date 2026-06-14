@@ -31,35 +31,6 @@ async function canClientAccessRequest(user: { email: string }, clientId: string)
   return false;
 }
 
-function decodeHtmlEntities(s: string) {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function stripTags(s: string) {
-  return decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
-}
-
-function extractDocValue(html: string, keyIncludes: string) {
-  const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
-  const m = html.match(re);
-  return m ? stripTags(m[1] ?? '') : '';
-}
-
-function deriveControllerNameFromHtml(html: string) {
-  const personName = extractDocValue(html, 'full name');
-  if (personName) return personName;
-  const companyName = extractDocValue(html, 'Name');
-  if (!companyName) return '';
-  const reg = extractDocValue(html, 'Entity Number') || extractDocValue(html, 'identification number');
-  return reg ? `${companyName} (${reg})` : companyName;
-}
-
 export default async function RorcApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -160,73 +131,6 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     .filter((x): x is string => !!x)
     .map((x) => x.trim())
     .filter(Boolean);
-  const activeOldNamesFallback = (() => {
-    const list = db.clientPartyRoles
-      .filter((x) => x.clientId === r.clientId && x.role === 'RORC' && !x.toDate)
-      .map((x) => {
-        const party = partyById.get(x.partyId) ?? null;
-        if (!party) return null;
-        if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
-        if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
-        if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
-        return null;
-      })
-      .filter((x): x is string => !!x)
-      .map((x) => x.trim())
-      .filter(Boolean);
-    return list.length ? list.join(', ') : '';
-  })();
-
-  const oldNamesFromPreviousRequest = (() => {
-    const list = (db as any).rorcDeclarationRequests as Array<any> | undefined;
-    if (!Array.isArray(list)) return '';
-    const cutoff = String(r.submittedAt ?? r.createdAt ?? '').trim();
-    const prev = list
-      .filter((x) => x && x.clientId === r.clientId && x.id !== r.id)
-      .filter((x) => x.status === 'COMPLETE')
-      .filter((x) => String(x.decidedAt ?? x.updatedAt ?? x.createdAt ?? '') < cutoff)
-      .slice()
-      .sort((a, b) => String(b.decidedAt ?? b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.decidedAt ?? a.updatedAt ?? a.createdAt ?? '')))[0];
-    if (!prev) return '';
-    const stored = String(prev.newControllerName ?? '').trim();
-    if (stored) return stored;
-    if (prev.controllerPerson?.fullName?.trim()) return String(prev.controllerPerson.fullName).trim();
-    if (prev.controllerCompany?.companyName?.trim()) {
-      const n = String(prev.controllerCompany.companyName).trim();
-      const reg = String(prev.controllerCompany.registerNumber ?? '').trim();
-      return reg ? `${n} (${reg})` : n;
-    }
-    const add = Array.isArray(prev.addControllers) ? prev.addControllers : [];
-    const names = add.map((x: any) => String(x?.fullName ?? '').trim()).filter(Boolean);
-    if (names.length) return names.join(', ');
-
-    const packetIds = Array.isArray(prev.packetIds) && prev.packetIds.length ? prev.packetIds : [prev.packetId];
-    const packets = (db.signaturePackets ?? []).filter((p: any) => packetIds.includes(p.id));
-    const docById = new Map((db.documents ?? []).map((d: any) => [d.id, d]));
-    const html = packets.map((p: any) => docById.get(p.documentId)?.html ?? '').find((h: any) => !!String(h ?? '').trim()) ?? '';
-    return html ? deriveControllerNameFromHtml(html) : '';
-  })();
-
-  const oldNamesFromThisDecision = (() => {
-    const decidedAt = String(r.decidedAt ?? '').trim();
-    if (!decidedAt) return '';
-    const list = db.clientPartyRoles
-      .filter((x) => x.clientId === r.clientId && x.role === 'RORC')
-      .filter((x) => String(x.toDate ?? '').trim() === String(r.effectiveDate ?? '').trim())
-      .filter((x) => String(x.updatedAt ?? '').trim() === decidedAt)
-      .map((x) => {
-        const party = partyById.get(x.partyId) ?? null;
-        if (!party) return null;
-        if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
-        if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
-        if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
-        return null;
-      })
-      .filter((x): x is string => !!x)
-      .map((x) => x.trim())
-      .filter(Boolean);
-    return list.length ? list.join(', ') : '';
-  })();
   const oldNames =
     (Array.isArray((r as any).oldControllerNames) && (r as any).oldControllerNames.length
       ? (r as any).oldControllerNames
@@ -234,16 +138,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     )
       .map((x: any) => String(x ?? '').trim())
       .filter(Boolean)
-      .join(', ') || oldNamesFromThisDecision || activeOldNamesFallback || oldNamesFromPreviousRequest || '-';
-
-  const docHtml = ctx.documents[0]?.html ?? '';
-  const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
-  const docNewCompanyName = docHtml ? extractDocValue(docHtml, 'Name公司名字') : '';
-  const docNewCompanyReg = docHtml
-    ? extractDocValue(docHtml, 'Unique Entity Number') || extractDocValue(docHtml, 'identification number 公司注册号')
-    : '';
-  const docNewControllerFallback =
-    docNewPersonName || (docNewCompanyName ? (docNewCompanyReg ? `${docNewCompanyName} (${docNewCompanyReg})` : docNewCompanyName) : '');
+      .join(', ') || '-';
 
   const newControllerLabel = (() => {
     const stored = String((r as any).newControllerName ?? '').trim();
@@ -255,7 +150,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       return reg ? `${n} (${reg})` : n;
     }
     if (addNames && addNames !== '-') return addNames;
-    return docNewControllerFallback || '-';
+    return '-';
   })();
 
   const auditLogs = (db.auditLogs ?? [])

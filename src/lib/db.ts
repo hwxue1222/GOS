@@ -10013,23 +10013,6 @@ export async function decideRorcDeclarationRequest(input: {
   const packets = db.signaturePackets.filter((p) => packetIds.includes(p.id));
   if (!packets.length) return { ok: false as const, error: 'NOT_FOUND' as const };
 
-  const docById = new Map(db.documents.map((d) => [d.id, d]));
-  const firstDocHtml = packets.map((p) => docById.get(p.documentId)?.html ?? '').find((h) => !!String(h ?? '').trim()) ?? '';
-  const decodeHtmlEntities = (s: string) =>
-    s
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-  const stripTags = (s: string) => decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
-  const extractDocValue = (html: string, keyIncludes: string) => {
-    const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
-    const m = html.match(re);
-    return m ? stripTags(m[1] ?? '') : '';
-  };
-
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
 
@@ -10054,23 +10037,74 @@ export async function decideRorcDeclarationRequest(input: {
     if (t === 'PERSON' || t === 'COMPANY') return t;
     if (r.controllerPerson?.fullName?.trim()) return 'PERSON';
     if (r.controllerCompany?.companyName?.trim()) return 'COMPANY';
-    if (firstDocHtml) {
-      const personName = extractDocValue(firstDocHtml, 'full name');
-      if (personName) return 'PERSON';
-      const companyName = extractDocValue(firstDocHtml, 'Name公司名字');
-      if (companyName) return 'COMPANY';
-    }
     return '';
   })();
 
-  if (!controllerKind && !r.addControllers?.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  if (!controllerKind && !(r.addControllers ?? []).length) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
-  for (let i = 0; i < db.clientPartyRoles.length; i++) {
-    const role = db.clientPartyRoles[i];
-    if (role.clientId !== r.clientId) continue;
-    if (role.role !== 'RORC') continue;
-    if (role.toDate) continue;
-    db.clientPartyRoles[i] = { ...role, toDate: r.effectiveDate, updatedAt: now };
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
+
+  const oldNamesFromRoleIds = (roleIds: string[]) => {
+    const out: string[] = [];
+    for (const roleId of roleIds) {
+      const role = db.clientPartyRoles.find((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'RORC') ?? null;
+      if (!role) continue;
+      const party = partyById.get(role.partyId) ?? null;
+      if (!party) continue;
+      if (party.type === 'PERSON' && party.personId) {
+        const person = personById.get(party.personId) ?? null;
+        if (person?.fullName?.trim()) out.push(person.fullName.trim());
+        continue;
+      }
+      if (party.type === 'COMPANY' && party.clientId) {
+        const c = clientById.get(party.clientId) ?? null;
+        if (c?.name?.trim()) out.push(c.name.trim());
+        continue;
+      }
+      if (party.type === 'COMPANY' && party.externalCompanyId) {
+        const c = externalCompanyById.get(party.externalCompanyId) ?? null;
+        if (c?.name?.trim()) out.push(c.name.trim());
+        continue;
+      }
+    }
+    return out;
+  };
+
+  const oldRoleIds = Array.isArray((r as any).removeRorcRoleIds) ? (r as any).removeRorcRoleIds.map((x: any) => String(x).trim()).filter(Boolean) : [];
+  const oldNamesComputed = oldRoleIds.length ? oldNamesFromRoleIds(oldRoleIds) : [];
+  const newControllerNameComputed = (() => {
+    const stored = String((r as any).newControllerName ?? '').trim();
+    if (stored) return stored;
+    if (controllerKind === 'PERSON') return String(r.controllerPerson?.fullName ?? '').trim();
+    if (controllerKind === 'COMPANY') {
+      const n = String(r.controllerCompany?.companyName ?? '').trim();
+      const reg = String(r.controllerCompany?.registerNumber ?? '').trim();
+      return reg ? `${n} (${reg})` : n;
+    }
+    const names = (r.addControllers ?? []).map((x) => String(x.fullName ?? '').trim()).filter(Boolean);
+    return names.join(', ');
+  })();
+
+  if (oldRoleIds.length) {
+    for (let i = 0; i < db.clientPartyRoles.length; i++) {
+      const role = db.clientPartyRoles[i];
+      if (role.clientId !== r.clientId) continue;
+      if (role.role !== 'RORC') continue;
+      if (role.toDate) continue;
+      if (!oldRoleIds.includes(role.id)) continue;
+      db.clientPartyRoles[i] = { ...role, toDate: r.effectiveDate, updatedAt: now };
+    }
+  } else {
+    for (let i = 0; i < db.clientPartyRoles.length; i++) {
+      const role = db.clientPartyRoles[i];
+      if (role.clientId !== r.clientId) continue;
+      if (role.role !== 'RORC') continue;
+      if (role.toDate) continue;
+      db.clientPartyRoles[i] = { ...role, toDate: r.effectiveDate, updatedAt: now };
+    }
   }
 
   if (controllerKind === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
@@ -10090,26 +10124,6 @@ export async function decideRorcDeclarationRequest(input: {
     db.persons.unshift(person);
     db.parties.unshift(party);
     db.clientPartyRoles.unshift(role);
-  }
-
-  if (controllerKind === 'PERSON' && !r.controllerPerson?.fullName?.trim() && firstDocHtml) {
-    const fullName = extractDocValue(firstDocHtml, 'full name');
-    if (fullName) {
-      const person: Person = { id: newId('per'), fullName, createdAt: now, updatedAt: now };
-      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
-      const role: ClientPartyRole = {
-        id: newId('cpr'),
-        clientId: r.clientId,
-        partyId: party.id,
-        role: 'RORC',
-        fromDate: r.effectiveDate,
-        createdAt: now,
-        updatedAt: now,
-      };
-      db.persons.unshift(person);
-      db.parties.unshift(party);
-      db.clientPartyRoles.unshift(role);
-    }
   }
 
   if (controllerKind === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
@@ -10197,87 +10211,6 @@ export async function decideRorcDeclarationRequest(input: {
     };
     db.clientPartyRoles.unshift(role);
   }
-
-  if (controllerKind === 'COMPANY' && !r.controllerCompany?.companyName?.trim() && firstDocHtml) {
-    const companyName = extractDocValue(firstDocHtml, 'Name公司名字');
-    const regNo =
-      extractDocValue(firstDocHtml, 'Unique Entity Number') || extractDocValue(firstDocHtml, 'identification number 公司注册号');
-    if (companyName) {
-      const regKey = String(regNo ?? '')
-        .trim()
-        .replace(/\s+/g, '')
-        .toLowerCase();
-      const linkedClient =
-        regKey
-          ? db.clients.find((c) => String(c.companyRegistrationNo ?? '').trim().replace(/\s+/g, '').toLowerCase() === regKey && !c.deletedAt) ?? null
-          : null;
-      const party = (() => {
-        if (linkedClient) {
-          const existingParty = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === linkedClient.id) ?? null;
-          if (existingParty) return existingParty;
-          const next: Party = {
-            id: newId('pty'),
-            type: 'COMPANY',
-            displayName: linkedClient.name,
-            clientId: linkedClient.id,
-            createdAt: now,
-            updatedAt: now,
-          };
-          db.parties.unshift(next);
-          return next;
-        }
-
-        const extKey = regKey;
-        const existingExt =
-          extKey ? db.externalCompanies.find((c) => String(c.registrationNo ?? '').trim().replace(/\s+/g, '').toLowerCase() === extKey) ?? null : null;
-        const ext: ExternalCompany = existingExt
-          ? { ...existingExt, name: companyName.trim() || existingExt.name, updatedAt: now }
-          : {
-              id: newId('exc'),
-              name: companyName.trim(),
-              registrationNo: regNo?.trim() || undefined,
-              createdAt: now,
-              updatedAt: now,
-            };
-        if (existingExt) {
-          const i = db.externalCompanies.findIndex((c) => c.id === existingExt.id);
-          if (i >= 0) db.externalCompanies[i] = ext;
-        } else {
-          db.externalCompanies.unshift(ext);
-        }
-
-        const existingParty = db.parties.find((p) => p.type === 'COMPANY' && p.externalCompanyId === ext.id) ?? null;
-        if (existingParty) {
-          const i = db.parties.findIndex((p) => p.id === existingParty.id);
-          const updated: Party = { ...existingParty, displayName: ext.name, updatedAt: now };
-          if (i >= 0) db.parties[i] = updated;
-          return updated;
-        }
-        const next: Party = {
-          id: newId('pty'),
-          type: 'COMPANY',
-          displayName: ext.name,
-          externalCompanyId: ext.id,
-          createdAt: now,
-          updatedAt: now,
-        };
-        db.parties.unshift(next);
-        return next;
-      })();
-
-      const role: ClientPartyRole = {
-        id: newId('cpr'),
-        clientId: r.clientId,
-        partyId: party.id,
-        role: 'RORC',
-        fromDate: r.effectiveDate,
-        createdAt: now,
-        updatedAt: now,
-      };
-      db.clientPartyRoles.unshift(role);
-    }
-  }
-
   // overwrite previous controllers; explicit removals no longer needed
 
   for (const c of r.addControllers) {
@@ -10300,7 +10233,21 @@ export async function decideRorcDeclarationRequest(input: {
     db.clientPartyRoles.unshift(role);
   }
 
-  list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
+  list[idx] = {
+    ...r,
+    status: 'COMPLETE',
+    decidedAt: now,
+    decidedByUserId: input.decidedByUserId,
+    decisionNote: note,
+    updatedAt: now,
+    newControllerName: String((r as any).newControllerName ?? '').trim() ? (r as any).newControllerName : (newControllerNameComputed || undefined),
+    oldControllerNames:
+      Array.isArray((r as any).oldControllerNames) && (r as any).oldControllerNames.length
+        ? (r as any).oldControllerNames
+        : oldNamesComputed.length
+          ? oldNamesComputed
+          : undefined,
+  };
   (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
   await writeDb(db);
   return { ok: true as const, request: list[idx] };

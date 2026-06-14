@@ -57,21 +57,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
   const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
 
-  const decodeHtmlEntities = (s: string) =>
-    s
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-  const stripTags = (s: string) => decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
-  const extractDocValue = (html: string, keyIncludes: string) => {
-    const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
-    const m = html.match(re);
-    return m ? stripTags(m[1] ?? '') : '';
-  };
-
   const rows = db.clientPartyRoles
     .filter((r) => r.clientId === clientId)
     .filter((r) => isActiveRole(r))
@@ -130,75 +115,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const byRole = (role: string) => rows.filter((x) => x.role.role === role);
 
   const rorcRows = byRole('RORC');
-  const latestRorcRows = (() => {
+  const rorcLatest = (() => {
     if (!rorcRows.length) return rorcRows;
-    const keyOf = (r: any) => {
-      const fd = String(r?.role?.fromDate ?? '').trim();
-      return fd || String(r?.role?.createdAt ?? '').slice(0, 10);
-    };
-    const keys = rorcRows.map(keyOf).filter(Boolean);
+    const keys = rorcRows.map((x: any) => String(x?.role?.fromDate ?? '').trim()).filter(Boolean);
     if (!keys.length) return rorcRows;
     const maxKey = keys.slice().sort().at(-1) as string;
-    return rorcRows.filter((r) => keyOf(r) === maxKey);
-  })();
-
-  const derivedRorcRows = (() => {
-    if (latestRorcRows.length) return latestRorcRows;
-    const list = (db as any).rorcDeclarationRequests as Array<any> | undefined;
-    const rorcReq =
-      Array.isArray(list)
-        ? list
-            .filter((x) => x?.clientId === clientId && x?.status === 'COMPLETE')
-            .slice()
-            .sort((a, b) => String(b?.decidedAt ?? b?.updatedAt ?? b?.createdAt ?? '').localeCompare(String(a?.decidedAt ?? a?.updatedAt ?? a?.createdAt ?? '')))[0]
-        : null;
-    if (!rorcReq) return [] as any[];
-    const p = rorcReq.controllerPerson;
-    const c = rorcReq.controllerCompany;
-    if (p?.fullName?.trim()) {
-      return [
-        {
-          role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
-          entity: { type: 'PERSON', person: { fullName: String(p.fullName).trim(), hasLogin: false } },
-        },
-      ];
-    }
-    if (c?.companyName?.trim()) {
-      return [
-        {
-          role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
-          entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: String(c.companyName).trim() } },
-        },
-      ];
-    }
-    const packetIds = Array.isArray(rorcReq.packetIds) && rorcReq.packetIds.length ? rorcReq.packetIds : [rorcReq.packetId];
-    const packets = (db.signaturePackets ?? []).filter((p: any) => packetIds.includes(p.id));
-    const docById = new Map((db.documents ?? []).map((d: any) => [d.id, d]));
-    const html = packets.map((p: any) => docById.get(p.documentId)?.html ?? '').find((h: any) => !!String(h ?? '').trim()) ?? '';
-    if (html) {
-      const personName = extractDocValue(html, 'full name');
-      if (personName) {
-        return [
-          {
-            role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
-            entity: { type: 'PERSON', person: { fullName: personName, hasLogin: false } },
-          },
-        ];
-      }
-      const companyName = extractDocValue(html, 'Name公司名字');
-      if (companyName) {
-        return [
-          {
-            role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
-            entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: companyName } },
-          },
-        ];
-      }
-    }
-    const add = Array.isArray(rorcReq.addControllers) ? rorcReq.addControllers : [];
-    const names = add.map((x: any) => String(x?.fullName ?? '').trim()).filter(Boolean);
-    if (!names.length) return [] as any[];
-    return names.map((n: string, i: number) => ({ role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}_${i}` }, entity: { type: 'PERSON', person: { fullName: n, hasLogin: false } } }));
+    return rorcRows.filter((x: any) => String(x?.role?.fromDate ?? '').trim() === maxKey);
   })();
 
   return NextResponse.json({
@@ -207,7 +129,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
     roles: {
       directors: byRole('DIRECTOR'),
       shareholders: byRole('SHAREHOLDER'),
-      rorc: derivedRorcRows,
+      rorc: rorcLatest,
       secretaries: byRole('SECRETARY'),
     },
   });
