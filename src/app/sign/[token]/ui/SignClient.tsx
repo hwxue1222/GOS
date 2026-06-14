@@ -17,6 +17,7 @@ export default function SignClient(props: {
   initialRepresentativeName: string;
   initialRepresentativeEmail: string;
   initialSignerFullName: string;
+  initialSignerTitle: string;
   initialSignerIdType: string;
   initialSignerIdNo: string;
   initialSignerPhone: string;
@@ -36,6 +37,7 @@ export default function SignClient(props: {
     initialRepresentativeName,
     initialRepresentativeEmail,
     initialSignerFullName,
+    initialSignerTitle,
     initialSignerIdType,
     initialSignerIdNo,
     initialSignerPhone,
@@ -50,6 +52,7 @@ export default function SignClient(props: {
   const [info, setInfo] = useState<string | null>(null);
 
   const [signerFullName, setSignerFullName] = useState(initialSignerFullName);
+  const [signerTitle, setSignerTitle] = useState(initialSignerTitle);
   const [signerIdType, setSignerIdType] = useState(initialSignerIdType || 'NRIC');
   const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
@@ -87,7 +90,7 @@ export default function SignClient(props: {
       }
     }
     if (requiresSignerProfile) {
-      if (!signerFullName.trim() || !signerIdNo.trim() || !signerPhone.trim()) {
+      if (!signerFullName.trim() || !signerTitle.trim() || !signerIdNo.trim() || !signerPhone.trim()) {
         setError('SIGNER_PROFILE_REQUIRED');
         return;
       }
@@ -102,6 +105,7 @@ export default function SignClient(props: {
           rdrRepresentativeName: repName.trim() || undefined,
           rdrRepresentativeEmail: repEmail.trim() || undefined,
           signerFullName: signerFullName.trim() || undefined,
+          signerTitle: signerTitle.trim() || undefined,
           signerIdType: signerIdType || undefined,
           signerIdNo: signerIdNo.trim() || undefined,
           signerPhone: signerPhone.trim() || undefined,
@@ -169,6 +173,15 @@ export default function SignClient(props: {
                     disabled={signing}
                     value={signerFullName}
                     onChange={(e) => setSignerFullName(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">Position</div>
+                  <input
+                    disabled={signing}
+                    value={signerTitle}
+                    onChange={(e) => setSignerTitle(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>

@@ -68,11 +68,16 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
   const db = await readDb();
 
   const company = db.clients.find((c) => c.id === r.clientId && !c.deletedAt) ?? null;
+  const packetById = new Map(ctx.packets.map((p) => [p.id, p]));
+  const docById = new Map(ctx.documents.map((d) => [d.id, d]));
+
   const signatureRows = ctx.signatures
     .map((s) => {
+      const packet = packetById.get(s.packetId) ?? null;
+      const doc = packet ? docById.get(packet.documentId) ?? null : null;
       const meta = getSignerIdentityForClient(db, r.clientId, s.email);
       return {
-        documentTitle: ctx.document.title,
+        documentTitle: doc?.title ?? s.packetId,
         signerName: meta.fullName,
         signerRole: meta.role,
         email: s.email,
@@ -80,8 +85,20 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
         signedAt: s.signedAt,
       };
     })
-    .sort((a, b) => a.email.localeCompare(b.email));
-  const documents = [{ documentId: ctx.document.id, title: ctx.document.title, signerCount: ctx.signatures.length }];
+    .sort((a, b) => (a.documentTitle !== b.documentTitle ? a.documentTitle.localeCompare(b.documentTitle) : a.email.localeCompare(b.email)));
+
+  const documents = ctx.packets
+    .map((p) => {
+      const doc = docById.get(p.documentId) ?? null;
+      if (!doc) return null;
+      const signerEmails = ctx.signatures
+        .filter((s) => s.packetId === p.id)
+        .map((s) => (s.email ?? '').trim().toLowerCase())
+        .filter(Boolean);
+      const signerCount = new Set(signerEmails).size;
+      return { documentId: doc.id, title: doc.title, signerCount };
+    })
+    .filter(Boolean) as Array<{ documentId: string; title: string; signerCount: number }>;
 
   const summaryRows = [
     { label: 'Company', value: company?.name ?? r.clientId },

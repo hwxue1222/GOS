@@ -317,6 +317,7 @@ export type SignatureRequest = {
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
+  signerTitle?: string;
   signerIdType?: PersonIdType;
   signerIdNo?: string;
   signerPhone?: string;
@@ -468,6 +469,9 @@ export type RorcDeclarationRequest = {
     nationality?: string;
     phone?: string;
     address?: string;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
     ccEmailAddress?: string;
     useCcEmailInstead?: boolean;
   };
@@ -478,6 +482,9 @@ export type RorcDeclarationRequest = {
     governedByLawAndJurisdiction?: string;
     registerOfCompanies?: string;
     companyAddress?: string;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
     ccEmailAddress?: string;
     useCcEmailInstead?: boolean;
   };
@@ -486,6 +493,7 @@ export type RorcDeclarationRequest = {
   addControllers: Array<{ fullName: string; email?: string }>;
   createdByUserId: string;
   packetId: string;
+  packetIds?: string[];
   createdAt: string;
   updatedAt?: string;
   submittedAt?: string;

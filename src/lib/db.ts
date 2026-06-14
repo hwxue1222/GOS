@@ -7034,6 +7034,10 @@ async function finalizeRorcDeclarationIfReady(db: Db, packet: SignaturePacket) {
   if (packet.relatedType !== 'RORC_DECLARATION') return;
   if (packet.status !== 'SIGNED') return;
 
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'RORC_DECLARATION' && p.relatedId === packet.relatedId);
+  if (!packets.length) return;
+  if (!packets.every((p) => p.status === 'SIGNED')) return;
+
   const list = Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
     ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
     : [];
@@ -7070,6 +7074,7 @@ export async function signByToken(input: {
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
+  signerTitle?: string;
   signerIdType?: string;
   signerIdNo?: string;
   signerPhone?: string;
@@ -7134,14 +7139,16 @@ export async function signByToken(input: {
     const knownPerson = db.persons.find((p) => (p.email ?? '').trim().toLowerCase() === req.email.trim().toLowerCase()) ?? null;
     if (!knownPerson) {
       const fullName = String(input.signerFullName ?? '').trim();
+      const title = String(input.signerTitle ?? '').trim();
       const idType = String(input.signerIdType ?? '').trim().toUpperCase();
       const idNo = String(input.signerIdNo ?? '').trim();
       const phone = String(input.signerPhone ?? '').trim();
-      if (!fullName || !idNo || !phone) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
+      if (!fullName || !title || !idNo || !phone) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
       if (idType !== 'NRIC' && idType !== 'FIN' && idType !== 'PASSPORT' && idType !== 'IC' && idType !== 'OTHER') {
         return { ok: false as const, error: 'INVALID_INPUT' as const };
       }
       nextReq.signerFullName = fullName;
+      nextReq.signerTitle = title;
       nextReq.signerIdType = idType as any;
       nextReq.signerIdNo = idNo;
       nextReq.signerPhone = phone;
@@ -9547,14 +9554,19 @@ export async function getRorcDeclarationRequestContext(requestId: string) {
   const db = await readDb();
   const request = getRorcDeclarationRequestList(db).find((r) => r.id === requestId) ?? null;
   if (!request) return null;
-  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
-  if (!packet) return null;
-  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
-  if (!document) return null;
+
+  const packetIds = Array.isArray((request as any).packetIds) && (request as any).packetIds.length ? ((request as any).packetIds as string[]) : [request.packetId];
+  const packets = db.signaturePackets.filter((p) => packetIds.includes(p.id));
+  if (!packets.length) return null;
+  const documents = packets
+    .map((p) => db.documents.find((d) => d.id === p.documentId) ?? null)
+    .filter(Boolean) as Document[];
+  if (!documents.length) return null;
   const signatures = db.signatureRequests
-    .filter((r) => r.packetId === packet.id)
-    .sort((a, b) => a.email.localeCompare(b.email));
-  return { request, packet, document, signatures };
+    .filter((r) => packetIds.includes(r.packetId))
+    .slice()
+    .sort((a, b) => a.packetId !== b.packetId ? a.packetId.localeCompare(b.packetId) : a.email.localeCompare(b.email));
+  return { request, packets, documents, signatures };
 }
 
 export async function createRorcDeclarationRequest(input: {
@@ -9574,6 +9586,9 @@ export async function createRorcDeclarationRequest(input: {
     nationality?: string;
     phone?: string;
     address?: string;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
     ccEmailAddress?: string;
     useCcEmailInstead?: boolean;
   };
@@ -9584,6 +9599,9 @@ export async function createRorcDeclarationRequest(input: {
     governedByLawAndJurisdiction?: string;
     registerOfCompanies?: string;
     companyAddress?: string;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
     ccEmailAddress?: string;
     useCcEmailInstead?: boolean;
   };
@@ -9620,6 +9638,11 @@ export async function createRorcDeclarationRequest(input: {
     if (!String(p.nationality ?? '').trim() || !String(p.phone ?? '').trim() || !String(p.address ?? '').trim()) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
+    if (String(p.ccEmailAddress ?? '').trim()) {
+      if (!String(p.ccName ?? '').trim() || !String(p.ccTitle ?? '').trim() || !String(p.ccPhone ?? '').trim()) {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
+    }
   } else if (controllerType === 'COMPANY') {
     const c = input.controllerCompany;
     if (!c?.companyName?.trim() || !String(c.registerNumber ?? '').trim() || !String(c.legalForm ?? '').trim()) {
@@ -9630,6 +9653,11 @@ export async function createRorcDeclarationRequest(input: {
     }
     if (c.useCcEmailInstead && !String(c.ccEmailAddress ?? '').trim()) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (String(c.ccEmailAddress ?? '').trim()) {
+      if (!String(c.ccName ?? '').trim() || !String(c.ccTitle ?? '').trim() || !String(c.ccPhone ?? '').trim()) {
+        return { ok: false as const, error: 'INVALID_INPUT' as const };
+      }
     }
   } else {
     if (!removeRorcRoleIds.length && !addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -9653,6 +9681,25 @@ export async function createRorcDeclarationRequest(input: {
         ? String(input.controllerCompany?.ccEmailAddress ?? '').trim()
         : '';
   const ccEmail = ccEmailRaw ? ccEmailRaw.toLowerCase() : '';
+
+  const ccNameRaw =
+    controllerType === 'PERSON'
+      ? String(input.controllerPerson?.ccName ?? '').trim()
+      : controllerType === 'COMPANY'
+        ? String(input.controllerCompany?.ccName ?? '').trim()
+        : '';
+  const ccTitleRaw =
+    controllerType === 'PERSON'
+      ? String(input.controllerPerson?.ccTitle ?? '').trim()
+      : controllerType === 'COMPANY'
+        ? String(input.controllerCompany?.ccTitle ?? '').trim()
+        : '';
+  const ccPhoneRaw =
+    controllerType === 'PERSON'
+      ? String(input.controllerPerson?.ccPhone ?? '').trim()
+      : controllerType === 'COMPANY'
+        ? String(input.controllerCompany?.ccPhone ?? '').trim()
+        : '';
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
@@ -9684,72 +9731,97 @@ export async function createRorcDeclarationRequest(input: {
   const now = nowIso();
   const id = newId('rrc');
 
-  const templates = await import('@/lib/docTemplates');
-  const html =
-    controllerType === 'PERSON' || controllerType === 'COMPANY'
-      ? templates.renderRorcControllerDeclarationHtml({
-          companyName: client.name,
-          companyRegistrationNo: client.companyRegistrationNo,
-          controllerType,
-          effectiveDate,
-          signedDateYmd: now.slice(0, 10),
-          controllerPerson: input.controllerPerson,
-          controllerCompany: input.controllerCompany,
-        })
-      : templates.renderRorcDeclarationHtml({
-          companyName: client.name,
-          effectiveDate,
-          message: input.message,
-          addControllers,
-          removeControllers: removed,
-        });
-
-  const doc: Document = {
-    id: newId('doc'),
-    type: 'RORC_DECL',
-    title: `RORC Declaration - ${client.name}`,
-    html,
-    sha256: sha256Hex(html),
-    createdAt: now,
-  };
-  db.documents.unshift(doc);
-
-  const packet: SignaturePacket = {
-    id: newId('spk'),
-    kind: 'RORC_DECL',
-    relatedType: 'RORC_DECLARATION',
-    relatedId: id,
-    documentId: doc.id,
-    status: 'SIGNING',
-    createdAt: now,
-    updatedAt: now,
-  };
-  db.signaturePackets.unshift(packet);
-
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signerPairs: Array<{ email: string; role: string }> = [
-    ...signerEmails.map((e) => ({ email: e, role: 'Director' })),
-    ...(ccEmail ? [{ email: ccEmail, role: 'CC Signatory' }] : []),
-  ];
+  const templates = await import('@/lib/docTemplates');
+
+  const signerPairs: Array<{ email: string; role: string; signatoryName?: string; signatoryTitle?: string; signatoryPhone?: string }> = [
+    ...directors.map((d) => ({
+      email: (d.person.email ?? '').trim().toLowerCase(),
+      role: 'Director',
+      signatoryName: d.person.fullName,
+    })),
+    ...(ccEmail
+      ? [
+          {
+            email: ccEmail,
+            role: ccTitleRaw ? `CC (${ccTitleRaw})` : 'CC',
+            signatoryName: ccNameRaw || undefined,
+            signatoryTitle: ccTitleRaw || undefined,
+            signatoryPhone: ccPhoneRaw || undefined,
+          },
+        ]
+      : []),
+  ].filter((x) => !!x.email);
+
   const uniqueSignerPairs = Array.from(
-    new Map(signerPairs.map((p) => [p.email.trim().toLowerCase(), { email: p.email.trim().toLowerCase(), role: p.role }])).values(),
+    new Map(signerPairs.map((p) => [p.email.trim().toLowerCase(), { ...p, email: p.email.trim().toLowerCase() }])).values(),
   );
 
+  if (!uniqueSignerPairs.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
   const signLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
-  for (const p of uniqueSignerPairs) {
+  const packetIds: string[] = [];
+  for (const signer of uniqueSignerPairs) {
+    const html =
+      controllerType === 'PERSON' || controllerType === 'COMPANY'
+        ? templates.renderRorcControllerDeclarationHtml({
+            companyName: client.name,
+            companyRegistrationNo: client.companyRegistrationNo,
+            controllerType,
+            effectiveDate,
+            signedDateYmd: now.slice(0, 10),
+            signatoryName: signer.signatoryName,
+            signatoryTitle: signer.signatoryTitle,
+            controllerPerson: input.controllerPerson,
+            controllerCompany: input.controllerCompany,
+          })
+        : templates.renderRorcDeclarationHtml({
+            companyName: client.name,
+            effectiveDate,
+            message: input.message,
+            addControllers,
+            removeControllers: removed,
+          });
+
+    const doc: Document = {
+      id: newId('doc'),
+      type: 'RORC_DECL',
+      title: `RORC Declaration - ${client.name} - ${signer.email}`,
+      html,
+      sha256: sha256Hex(html),
+      createdAt: now,
+    };
+    db.documents.unshift(doc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'RORC_DECL',
+      relatedType: 'RORC_DECLARATION',
+      relatedId: id,
+      documentId: doc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(packet);
+    packetIds.push(packet.id);
+
     const token = newToken();
     const req: SignatureRequest = {
       id: newId('sgr'),
       packetId: packet.id,
-      email: p.email,
+      email: signer.email,
       tokenHash: sha256Hex(token),
       expiresAt,
       status: 'PENDING',
+      signerFullName: signer.signatoryName,
+      signerTitle: signer.signatoryTitle,
+      signerPhone: signer.signatoryPhone,
       createdAt: now,
       updatedAt: now,
     };
     db.signatureRequests.unshift(req);
-    signLinks.push({ email: p.email, url: `/sign/${token}`, signerRole: p.role, documentTitle: doc.title });
+    signLinks.push({ email: signer.email, url: `/sign/${token}`, signerRole: signer.role, documentTitle: doc.title });
   }
 
   const request: RorcDeclarationRequest = {
@@ -9764,7 +9836,8 @@ export async function createRorcDeclarationRequest(input: {
     removeRorcRoleIds,
     addControllers,
     createdByUserId: input.createdByUserId,
-    packetId: packet.id,
+    packetId: packetIds[0],
+    packetIds,
     createdAt: now,
     updatedAt: now,
     submittedAt: now,
@@ -9790,8 +9863,9 @@ export async function decideRorcDeclarationRequest(input: {
 
   const r = list[idx];
   if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
-  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
-  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const packetIds = Array.isArray((r as any).packetIds) && (r as any).packetIds.length ? ((r as any).packetIds as string[]) : [r.packetId];
+  const packets = db.signaturePackets.filter((p) => packetIds.includes(p.id));
+  if (!packets.length) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
@@ -9811,7 +9885,7 @@ export async function decideRorcDeclarationRequest(input: {
   }
 
   if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (!packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
 
   if (r.controllerType === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
     const fullName = r.controllerPerson.fullName.trim();

@@ -26,6 +26,9 @@ export default function RorcClient() {
     nationality: '',
     phone: '',
     address: '',
+    ccName: '',
+    ccTitle: '',
+    ccPhone: '',
     ccEmailAddress: '',
     useCcEmailInstead: false,
   });
@@ -37,6 +40,9 @@ export default function RorcClient() {
     governedByLawAndJurisdiction: '',
     registerOfCompanies: '',
     companyAddress: '',
+    ccName: '',
+    ccTitle: '',
+    ccPhone: '',
     ccEmailAddress: '',
     useCcEmailInstead: false,
   });
@@ -75,6 +81,9 @@ export default function RorcClient() {
         nationality: person.nationality.trim(),
         phone: person.phone.trim(),
         address: person.address.trim(),
+        ccName: person.ccName.trim(),
+        ccTitle: person.ccTitle.trim(),
+        ccPhone: person.ccPhone.trim(),
         ccEmailAddress: person.ccEmailAddress.trim(),
       };
 
@@ -88,6 +97,11 @@ export default function RorcClient() {
         if (!p.ccEmailAddress) return void setSubmitError('Cc Email Address is required.');
       } else {
         if (!p.email) return void setSubmitError('Email is required.');
+      }
+      if (p.ccEmailAddress) {
+        if (!p.ccName) return void setSubmitError('CC name is required.');
+        if (!p.ccTitle) return void setSubmitError('CC position is required.');
+        if (!p.ccPhone) return void setSubmitError('CC phone is required.');
       }
 
       setSubmitting(true);
@@ -107,6 +121,9 @@ export default function RorcClient() {
               nationality: p.nationality,
               phone: p.phone,
               address: p.address,
+              ccName: p.ccName || undefined,
+              ccTitle: p.ccTitle || undefined,
+              ccPhone: p.ccPhone || undefined,
               ccEmailAddress: p.ccEmailAddress || undefined,
               useCcEmailInstead: p.useCcEmailInstead,
             },
@@ -132,6 +149,9 @@ export default function RorcClient() {
       governedByLawAndJurisdiction: company.governedByLawAndJurisdiction.trim(),
       registerOfCompanies: company.registerOfCompanies.trim(),
       companyAddress: company.companyAddress.trim(),
+      ccName: company.ccName.trim(),
+      ccTitle: company.ccTitle.trim(),
+      ccPhone: company.ccPhone.trim(),
       ccEmailAddress: company.ccEmailAddress.trim(),
     };
 
@@ -141,6 +161,11 @@ export default function RorcClient() {
     if (!c.governedByLawAndJurisdiction) return void setSubmitError('The Law By Which It Is Governed And In Which Jurisdiction is required.');
     if (!c.companyAddress) return void setSubmitError('RORC Controller Company Address is required.');
     if (c.useCcEmailInstead && !c.ccEmailAddress) return void setSubmitError('Cc Email Address is required.');
+    if (c.ccEmailAddress) {
+      if (!c.ccName) return void setSubmitError('CC name is required.');
+      if (!c.ccTitle) return void setSubmitError('CC position is required.');
+      if (!c.ccPhone) return void setSubmitError('CC phone is required.');
+    }
 
     setSubmitting(true);
     try {
@@ -157,6 +182,9 @@ export default function RorcClient() {
             governedByLawAndJurisdiction: c.governedByLawAndJurisdiction,
             registerOfCompanies: c.registerOfCompanies || undefined,
             companyAddress: c.companyAddress,
+            ccName: c.ccName || undefined,
+            ccTitle: c.ccTitle || undefined,
+            ccPhone: c.ccPhone || undefined,
             ccEmailAddress: c.ccEmailAddress || undefined,
             useCcEmailInstead: c.useCcEmailInstead,
           },
@@ -303,14 +331,40 @@ export default function RorcClient() {
                 />
               </label>
 
-              <label className="text-sm">
-                <div className="text-black/70">Cc Email Address</div>
-                <input
-                  value={person.ccEmailAddress}
-                  onChange={(e) => setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                />
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="text-sm">
+                  <div className="text-black/70">CC Name</div>
+                  <input
+                    value={person.ccName}
+                    onChange={(e) => setPerson((v) => ({ ...v, ccName: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Position</div>
+                  <input
+                    value={person.ccTitle}
+                    onChange={(e) => setPerson((v) => ({ ...v, ccTitle: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Phone</div>
+                  <input
+                    value={person.ccPhone}
+                    onChange={(e) => setPerson((v) => ({ ...v, ccPhone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Email Address</div>
+                  <input
+                    value={person.ccEmailAddress}
+                    onChange={(e) => setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+              </div>
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
@@ -403,14 +457,40 @@ export default function RorcClient() {
                 />
               </label>
 
-              <label className="text-sm">
-                <div className="text-black/70">Cc Email Address</div>
-                <input
-                  value={company.ccEmailAddress}
-                  onChange={(e) => setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                />
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="text-sm">
+                  <div className="text-black/70">CC Name</div>
+                  <input
+                    value={company.ccName}
+                    onChange={(e) => setCompany((v) => ({ ...v, ccName: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Position</div>
+                  <input
+                    value={company.ccTitle}
+                    onChange={(e) => setCompany((v) => ({ ...v, ccTitle: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Phone</div>
+                  <input
+                    value={company.ccPhone}
+                    onChange={(e) => setCompany((v) => ({ ...v, ccPhone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <div className="text-black/70">CC Email Address</div>
+                  <input
+                    value={company.ccEmailAddress}
+                    onChange={(e) => setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  />
+                </label>
+              </div>
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input

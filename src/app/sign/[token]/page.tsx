@@ -36,6 +36,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
       initialRepresentativeName={ctx.rdr?.representativeName ?? ''}
       initialRepresentativeEmail={ctx.rdr?.representativeEmail ?? ''}
       initialSignerFullName={ctx.request.signerFullName ?? ''}
+      initialSignerTitle={ctx.request.signerTitle ?? ''}
       initialSignerIdType={(ctx.request.signerIdType as string) ?? ''}
       initialSignerIdNo={ctx.request.signerIdNo ?? ''}
       initialSignerPhone={ctx.request.signerPhone ?? ''}

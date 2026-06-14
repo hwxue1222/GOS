@@ -1569,6 +1569,8 @@ export function renderRorcControllerDeclarationHtml(input: {
   controllerType: 'PERSON' | 'COMPANY';
   effectiveDate: string;
   signedDateYmd?: string;
+  signatoryName?: string;
+  signatoryTitle?: string;
   controllerPerson?: {
     fullName: string;
     idType?: string;
@@ -1601,6 +1603,8 @@ export function renderRorcControllerDeclarationHtml(input: {
   const t = input.controllerType;
   const p = input.controllerPerson;
   const c = input.controllerCompany;
+  const signatoryName = esc(String(input.signatoryName ?? '').trim() || (t === 'PERSON' ? p?.fullName ?? '' : c?.companyName ?? ''));
+  const signatoryTitle = esc(String(input.signatoryTitle ?? '').trim());
 
   const tableRow = (k: string, v?: string | null) => {
     const s = String(v ?? '').trim();
@@ -1674,7 +1678,8 @@ export function renderRorcControllerDeclarationHtml(input: {
     <div class="sig">
       <div style="font-weight:700;">签名Signatory</div>
       <div class="line">_______________</div>
-      <div style="margin-top: 10px;">姓名Name: ${esc(t === 'PERSON' ? p?.fullName ?? '' : c?.companyName ?? '')}</div>
+      <div style="margin-top: 10px;">姓名Name: ${signatoryName}</div>
+      ${signatoryTitle ? `<div style="margin-top: 6px;">职位Position: ${signatoryTitle}</div>` : ''}
       <div style="margin-top: 10px;">时间Date：${signedDate}</div>
     </div>
   </body>
