@@ -31,7 +31,6 @@ export default function RorcClient() {
     ccTitle: '',
     ccPhone: '',
     ccEmailAddress: '',
-    useCcEmailInstead: false,
   });
 
   const [company, setCompany] = useState({
@@ -46,7 +45,6 @@ export default function RorcClient() {
     ccTitle: '',
     ccPhone: '',
     ccEmailAddress: '',
-    useCcEmailInstead: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -96,17 +94,12 @@ export default function RorcClient() {
       if (!p.nationality) return void setSubmitError('Nationality is required.');
       if (!p.phone) return void setSubmitError('Phone is required.');
       if (!p.address) return void setSubmitError('Address is required.');
+      if (!p.email) return void setSubmitError('Email is required.');
       if (p.ccEnabled) {
         if (!p.ccName) return void setSubmitError('CC name is required.');
         if (!p.ccTitle) return void setSubmitError('CC position is required.');
         if (!p.ccPhone) return void setSubmitError('CC phone is required.');
         if (!p.ccEmailAddress) return void setSubmitError('CC email address is required.');
-      }
-      if (p.useCcEmailInstead) {
-        if (!p.ccEnabled) return void setSubmitError('CC management to declare is required when using CC email.');
-        if (!p.ccEmailAddress) return void setSubmitError('CC email address is required.');
-      } else {
-        if (!p.email) return void setSubmitError('Email is required.');
       }
 
       setSubmitting(true);
@@ -130,7 +123,7 @@ export default function RorcClient() {
               ccTitle: p.ccEnabled ? p.ccTitle || undefined : undefined,
               ccPhone: p.ccEnabled ? p.ccPhone || undefined : undefined,
               ccEmailAddress: p.ccEnabled ? p.ccEmailAddress || undefined : undefined,
-              useCcEmailInstead: p.useCcEmailInstead,
+              useCcEmailInstead: false,
             },
           }),
         }).catch(() => null);
@@ -192,7 +185,7 @@ export default function RorcClient() {
             ccTitle: c.ccEnabled ? c.ccTitle || undefined : undefined,
             ccPhone: c.ccEnabled ? c.ccPhone || undefined : undefined,
             ccEmailAddress: c.ccEnabled ? c.ccEmailAddress || undefined : undefined,
-            useCcEmailInstead: c.useCcEmailInstead,
+            useCcEmailInstead: false,
           },
         }),
       }).catch(() => null);
@@ -284,8 +277,7 @@ export default function RorcClient() {
                   <input
                     value={person.email}
                     onChange={(e) => setPerson((v) => ({ ...v, email: e.target.value }))}
-                    disabled={person.useCcEmailInstead}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
               </div>
@@ -353,7 +345,6 @@ export default function RorcClient() {
                             ccTitle: '',
                             ccPhone: '',
                             ccEmailAddress: '',
-                            useCcEmailInstead: false,
                           }),
                     }));
                   }}
@@ -398,16 +389,6 @@ export default function RorcClient() {
                 </div>
               ) : null}
 
-              {person.ccEnabled ? (
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="checkbox"
-                    checked={person.useCcEmailInstead}
-                    onChange={(e) => setPerson((v) => ({ ...v, useCcEmailInstead: e.target.checked }))}
-                  />
-                  To use cc email address instead of origin email address
-                </label>
-              ) : null}
             </>
           ) : (
             <>

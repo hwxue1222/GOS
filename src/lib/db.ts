@@ -9628,7 +9628,7 @@ export async function createRorcDeclarationRequest(input: {
     if (!p?.fullName?.trim() || !String(p.idType ?? '').trim() || !String(p.idNo ?? '').trim()) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
-    if (!String(p.dateOfBirth ?? '').trim() || !(p.useCcEmailInstead ? String(p.ccEmailAddress ?? '').trim() : String(p.email ?? '').trim())) {
+    if (!String(p.dateOfBirth ?? '').trim() || !String(p.email ?? '').trim()) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
     if (!String(p.nationality ?? '').trim() || !String(p.phone ?? '').trim() || !String(p.address ?? '').trim()) {
