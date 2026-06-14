@@ -10132,6 +10132,14 @@ export async function decideRorcDeclarationRequest(input: {
 
   if (!controllerKind && !(r.addControllers ?? []).length) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
+  const hasValidNewController = (() => {
+    if (controllerKind === 'PERSON') return !!r.controllerPerson?.fullName?.trim();
+    if (controllerKind === 'COMPANY') return !!r.controllerCompany?.companyName?.trim();
+    return (r.addControllers ?? []).some((x) => String(x?.fullName ?? '').trim());
+  })();
+
+  if (!hasValidNewController) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
