@@ -9,6 +9,14 @@ import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOp
 
 type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC' | 'OTHER';
 
+const ID_TYPE_LABEL_BY_VALUE: Record<string, string> = {
+  PASSPORT: 'passport no',
+  NRIC: 'nric no',
+  FIN: 'fin no',
+  IC: 'ic no',
+  OTHER: 'id no',
+};
+
 type SavedDraft = {
   person?: {
     effectiveDate?: string;
@@ -103,78 +111,15 @@ function writeSavedDraft(key: string, value: SavedDraft) {
 
 export default function RorcClient() {
   const router = useRouter();
-  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const { companyId, client, loading, error, closeHref } = useCompanyContext();
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const [mode, setMode] = useState<'PERSON' | 'COMPANY'>('PERSON');
   const [effectiveDate, setEffectiveDate] = useState(todayYmd);
 
-  const [existingPersonId, setExistingPersonId] = useState('');
-  const [existingCompanyId, setExistingCompanyId] = useState('');
-
-  const existingPeople = useMemo(() => {
-    const list = [] as Array<{ id: string; fullName: string; email?: string; phone?: string; idType?: string; idNo?: string; dob?: string; nationality?: string; address?: string; tags: string[] }>;
-    const seen = new Set<string>();
-    const push = (p: any, tag: string) => {
-      const id = String(p?.id ?? '').trim();
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      list.push({
-        id,
-        fullName: String(p?.fullName ?? ''),
-        email: p?.email,
-        phone: p?.phone,
-        idType: p?.idType,
-        idNo: p?.idNo,
-        dob: p?.dob,
-        nationality: p?.nationality,
-        address: p?.address,
-        tags: [tag],
-      });
-    };
-    (roles?.directors ?? []).forEach((r) => push((r as any).entity?.person, 'DIRECTOR'));
-    (roles?.secretaries ?? []).forEach((r) => push((r as any).entity?.person, 'SECRETARY'));
-    (roles?.shareholders ?? []).forEach((r: any) => {
-      if (r?.entity?.type === 'PERSON') push(r.entity.person, 'SHAREHOLDER');
-    });
-    (roles?.rorc ?? []).forEach((r: any) => {
-      if (r?.entity?.type === 'PERSON') push(r.entity.person, 'RORC');
-    });
-    list.sort((a, b) => a.fullName.localeCompare(b.fullName));
-    return list;
-  }, [roles?.directors, roles?.rorc, roles?.secretaries, roles?.shareholders]);
-
-  const existingCompanies = useMemo(() => {
-    const list = [] as Array<{
-      id: string;
-      name: string;
-      code: string;
-      companyRegistrationNo?: string;
-      countryOfIncorporation?: string;
-      address?: string;
-      registeredOfficeAddress?: string;
-    }>;
-    const seen = new Set<string>();
-    (roles?.shareholders ?? []).forEach((r: any) => {
-      if (r?.entity?.type !== 'COMPANY') return;
-      const c = r.entity.company;
-      const id = String(c?.id ?? '').trim();
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      list.push({
-        id,
-        name: String(c?.name ?? ''),
-        code: String(c?.code ?? ''),
-        companyRegistrationNo: c?.companyRegistrationNo,
-        countryOfIncorporation: c?.countryOfIncorporation,
-        address: c?.address,
-        registeredOfficeAddress: c?.registeredOfficeAddress,
-      });
-    });
-    list.sort((a, b) => a.name.localeCompare(b.name));
-    return list;
-  }, [roles?.shareholders]);
+  const [personLockedFromLookup, setPersonLockedFromLookup] = useState(false);
+  const [companyLockedFromLookup, setCompanyLockedFromLookup] = useState(false);
 
   const savedKey = companyId ? `gos.rorc.saved.${companyId}` : '';
   const [saved, setSaved] = useState<SavedDraft>({});
@@ -236,6 +181,88 @@ export default function RorcClient() {
     if (person.idType === 'IC') return 'IC';
     return 'Passport';
   }, [mode, person.idType]);
+
+  useEffect(() => {
+    if (mode !== 'PERSON') return;
+    if (useSavedPerson) return;
+    if (personLockedFromLookup) return;
+    const idNo = person.idNo.trim();
+    if (!idNo) return;
+    const label = ID_TYPE_LABEL_BY_VALUE[person.idType] ?? '';
+    const ac = new AbortController();
+    const t = window.setTimeout(async () => {
+      const url = `/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(label)}`;
+      const res = await fetch(url, { cache: 'no-store', signal: ac.signal }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as
+        | { ok: true; person: null }
+        | {
+            ok: true;
+            person: { fullName: string; email?: string; phone?: string; nationality?: string; dob?: string; address?: string; idNo?: string };
+          }
+        | { ok: false; error?: string }
+        | null;
+      if (!res?.ok || !j || (j as any).ok !== true) return;
+      const found = (j as any).person ?? null;
+      if (!found) return;
+      setPerson((v) => ({
+        ...v,
+        fullName: String(found.fullName ?? ''),
+        idNo: String(found.idNo ?? v.idNo ?? ''),
+        dateOfBirth: String(found.dob ?? ''),
+        email: String(found.email ?? ''),
+        nationality: String(found.nationality ?? ''),
+        phone: String(found.phone ?? ''),
+        address: String(found.address ?? ''),
+      }));
+      setPersonLockedFromLookup(true);
+    }, 250);
+    return () => {
+      window.clearTimeout(t);
+      ac.abort();
+    };
+  }, [mode, person.idNo, person.idType, personLockedFromLookup, useSavedPerson]);
+
+  useEffect(() => {
+    if (mode !== 'COMPANY') return;
+    if (useSavedCompany) return;
+    if (companyLockedFromLookup) return;
+    const regNo = company.registerNumber.trim();
+    if (!regNo) return;
+    const ac = new AbortController();
+    const t = window.setTimeout(async () => {
+      const url = `/api/portal/company-lookup?registrationNo=${encodeURIComponent(regNo)}`;
+      const res = await fetch(url, { cache: 'no-store', signal: ac.signal }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as
+        | { ok: true; company: null }
+        | {
+            ok: true;
+            company: {
+              name: string;
+              companyRegistrationNo?: string;
+              countryOfIncorporation?: string;
+              address?: string;
+              registeredOfficeAddress?: string;
+            };
+          }
+        | { ok: false; error?: string }
+        | null;
+      if (!res?.ok || !j || (j as any).ok !== true) return;
+      const found = (j as any).company ?? null;
+      if (!found) return;
+      setCompany((v) => ({
+        ...v,
+        companyName: String(found.name ?? ''),
+        registerNumber: String(found.companyRegistrationNo ?? v.registerNumber ?? ''),
+        countryOfIncorporation: String(found.countryOfIncorporation ?? ''),
+        companyAddress: String(found.registeredOfficeAddress ?? found.address ?? ''),
+      }));
+      setCompanyLockedFromLookup(true);
+    }, 250);
+    return () => {
+      window.clearTimeout(t);
+      ac.abort();
+    };
+  }, [company.registerNumber, companyLockedFromLookup, mode, useSavedCompany]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -550,43 +577,14 @@ export default function RorcClient() {
                 </label>
               ) : null}
 
-              {!useSavedPerson && existingPeople.length ? (
-                <label className="text-sm">
-                  <div className="text-black/70">Use existing member</div>
-                  <select
-                    value={existingPersonId}
-                    onChange={(e) => {
-                      const nextId = e.target.value;
-                      setExistingPersonId(nextId);
-                      if (!nextId) return;
-                      const p = existingPeople.find((x) => x.id === nextId) ?? null;
-                      if (!p) return;
-                      const idType = String(p.idType ?? '').trim().toUpperCase();
-                      const mappedIdType =
-                        idType === 'NRIC' || idType === 'FIN' || idType === 'PASSPORT' || idType === 'IC' || idType === 'OTHER'
-                          ? (idType as IdType)
-                          : 'PASSPORT';
-                      setPerson((v) => ({
-                        ...v,
-                        fullName: String(p.fullName ?? ''),
-                        idType: mappedIdType,
-                        idNo: String(p.idNo ?? ''),
-                        dateOfBirth: String(p.dob ?? ''),
-                        email: String(p.email ?? ''),
-                        nationality: String(p.nationality ?? ''),
-                        phone: String(p.phone ?? ''),
-                        address: String(p.address ?? ''),
-                      }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="">Select...</option>
-                    {existingPeople.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.fullName}
-                      </option>
-                    ))}
-                  </select>
+              {!useSavedPerson && personLockedFromLookup ? (
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="checkbox"
+                    checked={personLockedFromLookup}
+                    onChange={(e) => setPersonLockedFromLookup(e.target.checked)}
+                  />
+                  Matched existing member by ID (lock fields)
                 </label>
               ) : null}
 
@@ -602,10 +600,10 @@ export default function RorcClient() {
                         : person.fullName
                     }
                     onChange={(e) => {
-                      if (useSavedPerson) return;
+                      if (useSavedPerson || personLockedFromLookup) return;
                       setPerson((v) => ({ ...v, fullName: e.target.value }));
                     }}
-                    disabled={useSavedPerson}
+                    disabled={useSavedPerson || personLockedFromLookup}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
@@ -618,6 +616,7 @@ export default function RorcClient() {
                       value={(useSavedPerson && saved.person?.idType ? saved.person.idType : person.idType) as IdType}
                       onChange={(e) => {
                         if (useSavedPerson) return;
+                        setPersonLockedFromLookup(false);
                         setPerson((v) => ({ ...v, idType: e.target.value as IdType }));
                       }}
                       disabled={useSavedPerson}
@@ -637,6 +636,7 @@ export default function RorcClient() {
                       }
                       onChange={(e) => {
                         if (useSavedPerson) return;
+                        setPersonLockedFromLookup(false);
                         setPerson((v) => ({ ...v, idNo: e.target.value }));
                       }}
                       disabled={useSavedPerson}
@@ -661,7 +661,11 @@ export default function RorcClient() {
                     <input
                       type="date"
                       value={person.dateOfBirth}
-                      onChange={(e) => setPerson((v) => ({ ...v, dateOfBirth: e.target.value }))}
+                      onChange={(e) => {
+                        if (personLockedFromLookup) return;
+                        setPerson((v) => ({ ...v, dateOfBirth: e.target.value }));
+                      }}
+                      disabled={personLockedFromLookup}
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                     />
                   )}
@@ -673,10 +677,10 @@ export default function RorcClient() {
                   <input
                     value={useSavedPerson && saved.person ? maskEmail(String(saved.person.email ?? '')) : person.email}
                     onChange={(e) => {
-                      if (useSavedPerson) return;
+                      if (useSavedPerson || personLockedFromLookup) return;
                       setPerson((v) => ({ ...v, email: e.target.value }));
                     }}
-                    disabled={useSavedPerson}
+                    disabled={useSavedPerson || personLockedFromLookup}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
@@ -692,11 +696,11 @@ export default function RorcClient() {
                       ? maskKeepStartEnd(String(saved.person.nationality ?? ''), 1, 0)
                       : person.nationality
                   }
-                  onChange={(e) => {
-                    if (useSavedPerson) return;
-                    setPerson((v) => ({ ...v, nationality: e.target.value }));
-                  }}
-                  disabled={useSavedPerson}
+                    onChange={(e) => {
+                      if (useSavedPerson || personLockedFromLookup) return;
+                      setPerson((v) => ({ ...v, nationality: e.target.value }));
+                    }}
+                    disabled={useSavedPerson || personLockedFromLookup}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
@@ -709,10 +713,10 @@ export default function RorcClient() {
                   <input
                     value={useSavedPerson && saved.person ? maskPhone(String(saved.person.phone ?? '')) : person.phone}
                     onChange={(e) => {
-                      if (useSavedPerson) return;
+                      if (useSavedPerson || personLockedFromLookup) return;
                       setPerson((v) => ({ ...v, phone: e.target.value }));
                     }}
-                    disabled={useSavedPerson}
+                    disabled={useSavedPerson || personLockedFromLookup}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
@@ -740,11 +744,11 @@ export default function RorcClient() {
                       : person.address
                   }
                   onChange={(e) => {
-                    if (useSavedPerson) return;
+                    if (useSavedPerson || personLockedFromLookup) return;
                     setPerson((v) => ({ ...v, address: e.target.value }));
                   }}
                   rows={3}
-                  disabled={useSavedPerson}
+                  disabled={useSavedPerson || personLockedFromLookup}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
@@ -849,34 +853,14 @@ export default function RorcClient() {
                 </label>
               ) : null}
 
-              {!useSavedCompany && existingCompanies.length ? (
-                <label className="text-sm">
-                  <div className="text-black/70">Use existing company</div>
-                  <select
-                    value={existingCompanyId}
-                    onChange={(e) => {
-                      const nextId = e.target.value;
-                      setExistingCompanyId(nextId);
-                      if (!nextId) return;
-                      const c = existingCompanies.find((x) => x.id === nextId) ?? null;
-                      if (!c) return;
-                      setCompany((v) => ({
-                        ...v,
-                        companyName: c.name,
-                        registerNumber: String(c.companyRegistrationNo ?? ''),
-                        countryOfIncorporation: String(c.countryOfIncorporation ?? ''),
-                        companyAddress: String(c.registeredOfficeAddress ?? c.address ?? ''),
-                      }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="">Select...</option>
-                    {existingCompanies.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+              {!useSavedCompany && companyLockedFromLookup ? (
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="checkbox"
+                    checked={companyLockedFromLookup}
+                    onChange={(e) => setCompanyLockedFromLookup(e.target.checked)}
+                  />
+                  Matched existing company by registration no (lock fields)
                 </label>
               ) : null}
 
@@ -892,10 +876,10 @@ export default function RorcClient() {
                         : company.companyName
                     }
                     onChange={(e) => {
-                      if (useSavedCompany) return;
+                      if (useSavedCompany || companyLockedFromLookup) return;
                       setCompany((v) => ({ ...v, companyName: e.target.value }));
                     }}
-                    disabled={useSavedCompany}
+                    disabled={useSavedCompany || companyLockedFromLookup}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
@@ -911,6 +895,7 @@ export default function RorcClient() {
                     }
                     onChange={(e) => {
                       if (useSavedCompany) return;
+                      setCompanyLockedFromLookup(false);
                       setCompany((v) => ({ ...v, registerNumber: e.target.value }));
                     }}
                     disabled={useSavedCompany}
@@ -968,10 +953,10 @@ export default function RorcClient() {
                   <select
                     value={useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '') : company.countryOfIncorporation}
                     onChange={(e) => {
-                      if (useSavedCompany) return;
+                      if (useSavedCompany || companyLockedFromLookup) return;
                       setCompany((v) => ({ ...v, countryOfIncorporation: e.target.value }));
                     }}
-                    disabled={useSavedCompany}
+                    disabled={useSavedCompany || companyLockedFromLookup}
                     className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   >
                     <option value="">Select...</option>
@@ -1029,11 +1014,11 @@ export default function RorcClient() {
                       : company.companyAddress
                   }
                   onChange={(e) => {
-                    if (useSavedCompany) return;
+                    if (useSavedCompany || companyLockedFromLookup) return;
                     setCompany((v) => ({ ...v, companyAddress: e.target.value }));
                   }}
                   rows={3}
-                  disabled={useSavedCompany}
+                  disabled={useSavedCompany || companyLockedFromLookup}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
