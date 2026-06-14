@@ -2107,7 +2107,7 @@ export function renderRorcControllerDeclarationHtml(input: {
 
   const tableRow = (k: string, v?: string | null) => {
     const s = String(v ?? '').trim();
-    return `<tr><td class="k">${esc(k)}</td><td class="v">${s ? esc(s) : ''}</td></tr>`;
+    return `<tr><td class="k">${esc(k)}</td><td class="v">${s ? esc(s) : 'NA'}</td></tr>`;
   };
 
   return `
