@@ -9833,7 +9833,40 @@ export async function createRorcDeclarationRequest(input: {
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
   const templates = await import('@/lib/docTemplates');
 
+  const controllerSignEmail = (() => {
+    if (controllerType === 'PERSON') {
+      const p = input.controllerPerson;
+      const primary = String(p?.email ?? '').trim();
+      const cc = String(p?.ccEmailAddress ?? '').trim();
+      const useCc = !!p?.useCcEmailInstead;
+      return (useCc ? cc : primary) || primary || cc;
+    }
+    if (controllerType === 'COMPANY') {
+      const c = input.controllerCompany;
+      const cc = String(c?.ccEmailAddress ?? '').trim();
+      const useCc = !!c?.useCcEmailInstead;
+      return useCc ? cc : '';
+    }
+    return '';
+  })();
+
+  const controllerSignatoryName =
+    controllerType === 'PERSON'
+      ? String(input.controllerPerson?.fullName ?? '').trim()
+      : controllerType === 'COMPANY'
+        ? String(input.controllerCompany?.companyName ?? '').trim()
+        : '';
+
   const signerPairs: Array<{ email: string; role: string; signatoryName?: string; signatoryTitle?: string; signatoryPhone?: string }> = [
+    ...(controllerSignEmail
+      ? [
+          {
+            email: controllerSignEmail.trim().toLowerCase(),
+            role: controllerType ? `Controller (${controllerType})` : 'Controller',
+            signatoryName: controllerSignatoryName || undefined,
+          },
+        ]
+      : []),
     ...directors.map((d) => ({
       email: (d.person.email ?? '').trim().toLowerCase(),
       role: 'Director',
