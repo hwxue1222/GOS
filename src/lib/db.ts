@@ -8787,7 +8787,7 @@ export async function createCompanyUpdateRequest(input: {
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
 
     const nextPrimary = primaryIn === null ? '' : typeof primaryIn === 'string' ? primaryIn.trim() : '';
-    let finalPrimary = (hasPrimary ? nextPrimary : '') || originalPrimary;
+    let finalPrimary = hasPrimary ? nextPrimary : originalPrimary;
 
     let finalSecondary = (() => {
       if (!hasSecondary) return originalSecondary;

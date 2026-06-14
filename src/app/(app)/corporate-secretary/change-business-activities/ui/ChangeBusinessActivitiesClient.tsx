@@ -13,7 +13,9 @@ export default function ChangeBusinessActivitiesClient() {
 
   const [primary, setPrimary] = useState<string | undefined>(undefined);
   const [secondary, setSecondary] = useState<string | undefined>(undefined);
+  const [changePrimary, setChangePrimary] = useState(false);
   const [removePrimary, setRemovePrimary] = useState(false);
+  const [changeSecondary, setChangeSecondary] = useState(false);
   const [removeSecondary, setRemoveSecondary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -53,7 +55,9 @@ export default function ChangeBusinessActivitiesClient() {
     const s = String(client.ssicSecondaryCode ?? '').trim();
     setPrimary(p || undefined);
     setSecondary(s || undefined);
+    setChangePrimary(false);
     setRemovePrimary(false);
+    setChangeSecondary(false);
     setRemoveSecondary(false);
   }, [client?.id]);
 
@@ -69,7 +73,13 @@ export default function ChangeBusinessActivitiesClient() {
       setSubmitError('Cannot remove both Activity 1 and Activity 2.');
       return;
     }
-    if (!removePrimary && !ssicPrimaryCode) {
+    if (!removePrimary && !changePrimary) {
+      if (!String(client.ssicPrimaryCode ?? '').trim()) {
+        setSubmitError('Please select New Activity 1 or remove it explicitly.');
+        return;
+      }
+    }
+    if (!removePrimary && changePrimary && !ssicPrimaryCode) {
       setSubmitError('Please select New Activity 1 or remove it explicitly.');
       return;
     }
@@ -85,11 +95,11 @@ export default function ChangeBusinessActivitiesClient() {
     const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
 
-    if (!removePrimary && ssicPrimaryCode && ssicPrimaryCode !== originalPrimary && originalSecondary && ssicPrimaryCode === originalSecondary) {
+    if (changePrimary && !removePrimary && ssicPrimaryCode && ssicPrimaryCode !== originalPrimary && originalSecondary && ssicPrimaryCode === originalSecondary) {
       setSubmitError('New Activity 1 cannot be same as existing Activity 2.');
       return;
     }
-    if (!removeSecondary && ssicSecondaryCode && ssicSecondaryCode !== originalSecondary && originalPrimary && ssicSecondaryCode === originalPrimary) {
+    if (changeSecondary && !removeSecondary && ssicSecondaryCode && ssicSecondaryCode !== originalSecondary && originalPrimary && ssicSecondaryCode === originalPrimary) {
       setSubmitError('New Activity 2 cannot be same as existing Activity 1.');
       return;
     }
@@ -102,15 +112,19 @@ export default function ChangeBusinessActivitiesClient() {
     }
     setSubmitting(true);
     try {
+      const payload: Record<string, unknown> = {};
+      if (removePrimary) payload.ssicPrimaryCode = null;
+      else if (changePrimary) payload.ssicPrimaryCode = ssicPrimaryCode || undefined;
+
+      if (removeSecondary) payload.ssicSecondaryCode = null;
+      else if (changeSecondary) payload.ssicSecondaryCode = ssicSecondaryCode || undefined;
+
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           type: 'CHANGE_BUSINESS_ACTIVITIES',
-          payload: {
-            ssicPrimaryCode: removePrimary ? null : ssicPrimaryCode || undefined,
-            ssicSecondaryCode: removeSecondary ? null : ssicSecondaryCode || undefined,
-          },
+          payload,
         }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
@@ -160,9 +174,23 @@ export default function ChangeBusinessActivitiesClient() {
                     setRemovePrimary(checked);
                     if (checked) setPrimary(undefined);
                     else setPrimary(String(client.ssicPrimaryCode ?? '').trim() || undefined);
+                    if (checked) setChangePrimary(false);
                   }}
                 />
                 Remove Activity 1
+              </label>
+              <label className="mt-2 ml-4 inline-flex items-center gap-2 text-sm text-black/80">
+                <input
+                  type="checkbox"
+                  checked={changePrimary}
+                  disabled={removePrimary}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setChangePrimary(checked);
+                    if (!checked) setPrimary(String(client.ssicPrimaryCode ?? '').trim() || undefined);
+                  }}
+                />
+                Change
               </label>
               <div className="mt-1">
                 <SsicCombobox
@@ -170,7 +198,7 @@ export default function ChangeBusinessActivitiesClient() {
                   value={primary}
                   onChange={setPrimary}
                   excludeCode={secondary}
-                  disabled={removePrimary}
+                  disabled={removePrimary || !changePrimary}
                 />
               </div>
             </div>
@@ -185,13 +213,27 @@ export default function ChangeBusinessActivitiesClient() {
                     setRemoveSecondary(checked);
                     if (checked) setSecondary(undefined);
                     else setSecondary(String(client.ssicSecondaryCode ?? '').trim() || undefined);
+                    if (checked) setChangeSecondary(false);
                   }}
                 />
                 Remove Activity 2
               </label>
+              <label className="mt-2 ml-4 inline-flex items-center gap-2 text-sm text-black/80">
+                <input
+                  type="checkbox"
+                  checked={changeSecondary}
+                  disabled={removeSecondary}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setChangeSecondary(checked);
+                    if (!checked) setSecondary(String(client.ssicSecondaryCode ?? '').trim() || undefined);
+                  }}
+                />
+                Change
+              </label>
               {!removeSecondary ? (
                 <div className="mt-2">
-                  <SsicCombobox label="" value={secondary} onChange={setSecondary} excludeCode={primary} />
+                  <SsicCombobox label="" value={secondary} onChange={setSecondary} excludeCode={primary} disabled={!changeSecondary} />
                 </div>
               ) : (
                 <div className="mt-2 text-xs text-black/50">Activity 2 will be removed after approval.</div>
