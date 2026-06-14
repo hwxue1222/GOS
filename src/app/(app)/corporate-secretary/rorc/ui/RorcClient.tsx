@@ -65,8 +65,91 @@ export default function RorcClient() {
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
+  const [step, setStep] = useState<'SELECT' | 'FORM'>('SELECT');
+  const [candidateId, setCandidateId] = useState('');
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const [candidates, setCandidates] = useState<
+    Array<{
+      id: string;
+      kind: 'PERSON' | 'COMPANY';
+      label: string;
+      person?: { fullName: string; email?: string };
+      company?: { name: string; registrationNo?: string };
+    }>
+  >([]);
+
   const [mode, setMode] = useState<'PERSON' | 'COMPANY'>('PERSON');
   const [effectiveDate, setEffectiveDate] = useState(todayYmd);
+
+  useEffect(() => {
+    setStep('SELECT');
+    setCandidateId('');
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId) return;
+    setCandidateLoading(true);
+    fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, { cache: 'no-store' })
+      .then((r) => r.json().catch(() => null))
+      .then((j: any) => {
+        const roles = j?.roles ?? null;
+        const directors = Array.isArray(roles?.directors) ? (roles.directors as any[]) : [];
+        const shareholders = Array.isArray(roles?.shareholders) ? (roles.shareholders as any[]) : [];
+        const next: Array<{
+          id: string;
+          kind: 'PERSON' | 'COMPANY';
+          label: string;
+          person?: { fullName: string; email?: string };
+          company?: { name: string; registrationNo?: string };
+        }> = [];
+
+        for (const d of directors) {
+          const rid = String(d?.role?.id ?? '').trim();
+          const name = String(d?.entity?.person?.fullName ?? '').trim();
+          if (!rid || !name) continue;
+          const email = String(d?.entity?.person?.email ?? '').trim() || undefined;
+          next.push({
+            id: `DIRECTOR:${rid}`,
+            kind: 'PERSON',
+            label: `${name} (Director)`,
+            person: { fullName: name, email },
+          });
+        }
+
+        for (const s of shareholders) {
+          const rid = String(s?.role?.id ?? '').trim();
+          if (!rid) continue;
+          const shares = typeof s?.role?.shares === 'number' ? s.role.shares : undefined;
+          const suffix = ` (Shareholder${typeof shares === 'number' ? `, ${shares.toLocaleString()} shares` : ''})`;
+          const entityType = String(s?.entity?.type ?? '').trim().toUpperCase();
+          if (entityType === 'PERSON') {
+            const name = String(s?.entity?.person?.fullName ?? '').trim();
+            if (!name) continue;
+            const email = String(s?.entity?.person?.email ?? '').trim() || undefined;
+            next.push({
+              id: `SHAREHOLDER_PERSON:${rid}`,
+              kind: 'PERSON',
+              label: `${name}${suffix}`,
+              person: { fullName: name, email },
+            });
+          } else if (entityType === 'COMPANY') {
+            const name = String(s?.entity?.company?.name ?? '').trim();
+            if (!name) continue;
+            const reg = String(s?.entity?.company?.companyRegistrationNo ?? '').trim() || undefined;
+            next.push({
+              id: `SHAREHOLDER_COMPANY:${rid}`,
+              kind: 'COMPANY',
+              label: `${name}${suffix}`,
+              company: { name, registrationNo: reg },
+            });
+          }
+        }
+
+        setCandidates(next);
+      })
+      .catch(() => setCandidates([]))
+      .finally(() => setCandidateLoading(false));
+  }, [companyId]);
 
   const [personLockedFromLookup, setPersonLockedFromLookup] = useState(false);
   const [companyLockedFromLookup, setCompanyLockedFromLookup] = useState(false);
@@ -418,19 +501,75 @@ export default function RorcClient() {
 
       {!loading && client ? (
         <div className="space-y-5">
-          <div className="flex items-center justify-center">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <span className={mode === 'PERSON' ? 'text-black font-medium' : 'text-black/50'}>Personal Controller</span>
-              <input
-                type="checkbox"
-                checked={mode === 'COMPANY'}
-                onChange={(e) => setMode(e.target.checked ? 'COMPANY' : 'PERSON')}
-              />
-              <span className={mode === 'COMPANY' ? 'text-black font-medium' : 'text-black/50'}>Company Controller</span>
-            </label>
-          </div>
+          {step === 'SELECT' ? (
+            <div className="space-y-3 rounded-xl border border-black/5 bg-white p-4">
+              <div className="text-sm font-medium text-black/80">Select from directors/shareholders</div>
+              <label className="text-sm">
+                <div className="text-black/70">Candidate</div>
+                <select
+                  value={candidateId}
+                  onChange={(e) => setCandidateId(e.target.value)}
+                  disabled={candidateLoading}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                >
+                  <option value="">No selection (manual entry)</option>
+                  {candidates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const picked = candidates.find((c) => c.id === candidateId) ?? null;
+                    if (picked?.kind === 'PERSON' && picked.person) {
+                      setMode('PERSON');
+                      setPersonLockedFromLookup(false);
+                      setMatchedPerson(null);
+                      setPerson((v) => ({
+                        ...v,
+                        fullName: v.fullName.trim() ? v.fullName : picked.person!.fullName,
+                        email: v.email.trim() ? v.email : String(picked.person!.email ?? '').trim(),
+                      }));
+                    }
+                    if (picked?.kind === 'COMPANY' && picked.company) {
+                      setMode('COMPANY');
+                      setCompanyLockedFromLookup(false);
+                      setMatchedCompany(null);
+                      setCompany((v) => ({
+                        ...v,
+                        companyName: v.companyName.trim() ? v.companyName : picked.company!.name,
+                        registerNumber: v.registerNumber.trim() ? v.registerNumber : String(picked.company!.registrationNo ?? '').trim(),
+                      }));
+                    }
+                    setStep('FORM');
+                  }}
+                  className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          ) : null}
 
-          {mode === 'PERSON' ? (
+          {step === 'FORM' ? (
+            <div className="flex items-center justify-center">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <span className={mode === 'PERSON' ? 'text-black font-medium' : 'text-black/50'}>Personal Controller</span>
+                <input
+                  type="checkbox"
+                  checked={mode === 'COMPANY'}
+                  onChange={(e) => setMode(e.target.checked ? 'COMPANY' : 'PERSON')}
+                />
+                <span className={mode === 'COMPANY' ? 'text-black font-medium' : 'text-black/50'}>Company Controller</span>
+              </label>
+            </div>
+          ) : null}
+
+          {step === 'FORM' && mode === 'PERSON' ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
@@ -704,7 +843,7 @@ export default function RorcClient() {
               ) : null}
 
             </>
-          ) : (
+          ) : step === 'FORM' ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
@@ -957,15 +1096,17 @@ export default function RorcClient() {
                 </div>
               ) : null}
             </>
-          )}
+          ) : null}
 
-          <button
-            disabled={submitting}
-            onClick={() => void onSubmit()}
-            className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
-          >
-            Apply
-          </button>
+          {step === 'FORM' ? (
+            <button
+              disabled={submitting}
+              onClick={() => void onSubmit()}
+              className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
+            >
+              Apply
+            </button>
+          ) : null}
         </div>
       ) : null}
     </ModalShell>
