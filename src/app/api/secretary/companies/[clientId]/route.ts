@@ -110,8 +110,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     name: typeof body?.name === 'string' ? body.name.trim() : undefined,
     code: typeof body?.code === 'string' ? body.code.trim() : undefined,
     companyRegistrationNo: typeof body?.companyRegistrationNo === 'string' ? body.companyRegistrationNo.trim() || undefined : undefined,
-    countryOfBusinessRegistration:
-      typeof body?.countryOfBusinessRegistration === 'string' ? body.countryOfBusinessRegistration.trim() || undefined : undefined,
+    countryOfIncorporation:
+      typeof body?.countryOfIncorporation === 'string'
+        ? body.countryOfIncorporation.trim() || undefined
+        : typeof body?.countryOfBusinessRegistration === 'string'
+          ? body.countryOfBusinessRegistration.trim() || undefined
+          : undefined,
     fye: typeof body?.fye === 'string' ? body.fye.trim() || undefined : undefined,
     contactPerson: typeof body?.contactPerson === 'string' ? body.contactPerson.trim() || undefined : undefined,
     address: typeof body?.address === 'string' ? body.address.trim() || undefined : undefined,

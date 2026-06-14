@@ -67,7 +67,7 @@ type NewShareholderCompany = {
   representativePersonId: string;
   companyName: string;
   registrationNo: string;
-  registrationCountry: string;
+  countryOfIncorporation: string;
   address: string;
   email: string;
   phone: string;
@@ -132,7 +132,7 @@ function makeDraft(): ShareTransferDraft {
       representativePersonId: '',
       companyName: '',
       registrationNo: '',
-      registrationCountry: '',
+      countryOfIncorporation: '',
       address: '',
       email: '',
       phone: '',
@@ -266,8 +266,8 @@ export default function ShareTransfersClient(props: {
       const regNo = String(d.newCompany.registrationNo ?? '').trim();
       if (!regNo) continue;
 
-      if (!d.newCompanyLockedFromLookup && !d.newCompany.registrationCountry.trim() && isSingaporeCompanyRegistrationNo(regNo)) {
-        patchDraftCompany(d.id, { registrationCountry: 'Singapore' });
+      if (!d.newCompanyLockedFromLookup && !d.newCompany.countryOfIncorporation.trim() && isSingaporeCompanyRegistrationNo(regNo)) {
+        patchDraftCompany(d.id, { countryOfIncorporation: 'Singapore' });
       }
 
       if (d.newCompanyLockedFromLookup) continue;
@@ -285,7 +285,7 @@ export default function ShareTransfersClient(props: {
             }
             const addr = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
             const inferredCountry =
-              String(c.countryOfBusinessRegistration ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
+              String(c.countryOfIncorporation ?? '').trim() || (isSingaporeCompanyRegistrationNo(regNo) ? 'Singapore' : '');
             setDrafts((prevDrafts) =>
               prevDrafts.map((x) =>
                 x.id !== d.id
@@ -300,7 +300,7 @@ export default function ShareTransfersClient(props: {
                         address: addr || x.newCompany.address,
                         email: String(c.email ?? x.newCompany.email),
                         phone: String(c.phone ?? x.newCompany.phone),
-                        registrationCountry: inferredCountry || x.newCompany.registrationCountry,
+                        countryOfIncorporation: inferredCountry || x.newCompany.countryOfIncorporation,
                       },
                       newCompanyLockedFromLookup: true,
                     },
@@ -465,7 +465,7 @@ export default function ShareTransfersClient(props: {
         if (c.clientId.trim()) {
           if (!c.representativePersonId.trim()) return `Transfer #${index + 1}: INVALID_CORPORATE_REPRESENTATIVE`;
         } else {
-          if (!c.registrationCountry.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_COUNTRY`;
+          if (!c.countryOfIncorporation.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_COUNTRY`;
           if (!c.corporateRepresentativeName.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_NAME`;
           if (!c.corporateRepresentativeEmail.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_REP_EMAIL`;
           if (!c.directorSignerEmail.trim()) return `Transfer #${index + 1}: INVALID_NEW_COMPANY_SIGNER_EMAIL`;
@@ -538,7 +538,7 @@ export default function ShareTransfersClient(props: {
                         kind: 'NEW_COMPANY',
                         companyName: d.newCompany.companyName,
                         registrationNo: d.newCompany.registrationNo,
-                        registrationCountry: d.newCompany.registrationCountry,
+                        countryOfIncorporation: d.newCompany.countryOfIncorporation,
                         address: d.newCompany.address,
                         email: d.newCompany.email,
                         phone: d.newCompany.phone,
@@ -923,8 +923,8 @@ export default function ShareTransfersClient(props: {
                               <label className="text-sm">
                                 <div className="text-black/70">Country of incorporation</div>
                                 <input
-                                  value={d.newCompany.registrationCountry}
-                                  onChange={(e) => patchDraftCompany(d.id, { registrationCountry: e.target.value })}
+                                  value={d.newCompany.countryOfIncorporation}
+                                  onChange={(e) => patchDraftCompany(d.id, { countryOfIncorporation: e.target.value })}
                                   disabled={d.newCompanyLockedFromLookup}
                                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                                 />

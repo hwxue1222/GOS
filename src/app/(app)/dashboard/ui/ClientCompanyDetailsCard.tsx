@@ -9,7 +9,7 @@ type CompanyDetails = {
   code: string;
   name: string;
   companyRegistrationNo?: string;
-  countryOfBusinessRegistration?: string;
+  countryOfIncorporation?: string;
   incorporationDate?: string;
   fye?: string;
   registeredOfficeAddress?: string;
@@ -177,7 +177,7 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
 
       <div className="mt-4 text-sm">
         <Row label="Company registration no." value={c?.companyRegistrationNo || '-'} />
-        <Row label="Country of incorporation" value={c?.countryOfBusinessRegistration || '-'} />
+        <Row label="Country of incorporation" value={c?.countryOfIncorporation || '-'} />
         <Row label="FYE" value={c?.fye || '-'} />
         <Row label="Entity status" value={c?.entityStatus || '-'} />
         <Row label="Incorporation date" value={formatYmd(c?.incorporationDate)} />

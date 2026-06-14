@@ -173,12 +173,26 @@ function migrateClientCountryOfIncorporationV1(db: Db) {
   let changed = false;
   for (const c of db.clients) {
     if (!c || c.deletedAt) continue;
-    const existing = String((c as any).countryOfBusinessRegistration ?? '').trim();
-    if (existing) continue;
+    const existing = String((c as any).countryOfIncorporation ?? '').trim();
+    if (existing) {
+      if (Object.prototype.hasOwnProperty.call(c as any, 'countryOfBusinessRegistration')) {
+        delete (c as any).countryOfBusinessRegistration;
+        changed = true;
+      }
+      continue;
+    }
+
+    const legacy = String((c as any).countryOfBusinessRegistration ?? '').trim();
+    if (legacy) {
+      (c as any).countryOfIncorporation = legacy;
+      delete (c as any).countryOfBusinessRegistration;
+      changed = true;
+      continue;
+    }
     const regNo = String((c as any).companyRegistrationNo ?? '').trim();
     if (!regNo) continue;
     if (!isSingaporeCompanyRegistrationNo(regNo)) continue;
-    (c as any).countryOfBusinessRegistration = 'Singapore';
+    (c as any).countryOfIncorporation = 'Singapore';
     changed = true;
   }
   db.seed[SEED_KEY_CLIENT_COUNTRY_INCORP_V1] = true;
@@ -843,7 +857,8 @@ function normalizeDb(parsed: Db): Db {
     tags: (c as Client).tags ?? [],
     fka: (c as Client).fka,
     companyRegistrationNo: (c as Client).companyRegistrationNo,
-    countryOfBusinessRegistration: (c as Client).countryOfBusinessRegistration,
+    countryOfIncorporation:
+      (c as any).countryOfIncorporation ?? (c as any).countryOfBusinessRegistration,
     fye: (c as Client).fye,
     contactPerson: (c as Client).contactPerson,
     address: (c as Client).address,
@@ -5617,7 +5632,7 @@ export async function updateClient(
       | 'name'
       | 'fka'
       | 'companyRegistrationNo'
-      | 'countryOfBusinessRegistration'
+      | 'countryOfIncorporation'
       | 'fye'
       | 'contactPerson'
       | 'address'
@@ -7236,7 +7251,7 @@ export async function createShareTransferRequest(input: {
         kind: 'NEW_COMPANY';
         companyName: string;
         registrationNo: string;
-        registrationCountry?: string;
+        countryOfIncorporation?: string;
         address: string;
         email?: string;
         phone?: string;
@@ -7462,7 +7477,7 @@ export async function createShareTransferRequest(input: {
               return ensureExternalCompanyParty({
                 name: input.transferee.companyName,
                 registrationNo: input.transferee.registrationNo,
-                jurisdiction: String((input.transferee as any).registrationCountry ?? '').trim() || undefined,
+                jurisdiction: String((input.transferee as any).countryOfIncorporation ?? (input.transferee as any).registrationCountry ?? '').trim() || undefined,
                 address: input.transferee.address,
                 email: input.transferee.email,
                 phone: input.transferee.phone,
@@ -7681,7 +7696,7 @@ export async function createShareTransferRequest(input: {
   const isNonSingaporeClient = (clientId: string) => {
     const c = db.clients.find((x) => x.id === clientId) ?? null;
     if (!c || c.deletedAt) return false;
-    const country = String((c as Client).countryOfBusinessRegistration ?? '').trim().toLowerCase();
+    const country = String((c as Client).countryOfIncorporation ?? '').trim().toLowerCase();
     if (!country) return false;
     return country !== 'singapore';
   };
@@ -7878,11 +7893,11 @@ export async function createShareTransferRequest(input: {
     if (!foreignDirectorEmails.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
     const byBridgeCorporateSecretaryName = 'Bybridge Consultancy Pte Ltd';
-    const country = String((foreignClient as Client).countryOfBusinessRegistration ?? '').trim();
+    const country = String((foreignClient as Client).countryOfIncorporation ?? '').trim();
     const csHtml = (await import('@/lib/docTemplates')).renderCertificateOfAppointmentOfCorporateSecretaryHtml({
       companyName: foreignClient.name,
       companyRegistrationNo: foreignClient.companyRegistrationNo,
-      countryOfBusinessRegistration: country,
+      countryOfIncorporation: country,
       corporateSecretaryName: byBridgeCorporateSecretaryName,
       corporateRepresentativeName: repName,
       directorNames: foreignDirectors.map((d) => d.fullName),

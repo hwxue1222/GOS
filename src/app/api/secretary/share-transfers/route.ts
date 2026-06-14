@@ -76,7 +76,7 @@ export async function POST(req: Request) {
           corporateRepresentativeEmail?: string;
           directorSignerName?: string;
           directorSignerEmail?: string;
-          registrationCountry?: string;
+          countryOfIncorporation?: string;
         };
       }
     | null;
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
               kind: 'NEW_COMPANY',
               companyName: (body.transferee as any)?.companyName ?? '',
               registrationNo: (body.transferee as any)?.registrationNo ?? '',
-              registrationCountry: (body.transferee as any)?.registrationCountry ?? '',
+              countryOfIncorporation: (body.transferee as any)?.countryOfIncorporation ?? (body.transferee as any)?.registrationCountry ?? '',
               address: (body.transferee as any)?.address ?? '',
               email: (body.transferee as any)?.email ?? '',
               phone: (body.transferee as any)?.phone ?? '',

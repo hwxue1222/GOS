@@ -13,7 +13,7 @@ type CompanyRow = {
     name: string;
     fka?: string;
     companyRegistrationNo?: string;
-    countryOfBusinessRegistration?: string;
+    countryOfIncorporation?: string;
     contactPerson?: string;
     paidUpCapitalCurrency?: string;
     paidUpCapitalAmount?: number;
@@ -151,7 +151,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople }
                   {it.client.fka?.trim() ? <div className="mt-0.5 text-xs text-black/40">FKA: {it.client.fka}</div> : null}
                 </td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
-                <td className="px-4 py-3">{it.client.countryOfBusinessRegistration ?? '-'}</td>
+                <td className="px-4 py-3">{it.client.countryOfIncorporation ?? '-'}</td>
                 <td className="px-4 py-3">{money(it.client.paidUpCapitalCurrency, it.client.paidUpCapitalAmount)}</td>
                 <td className="px-4 py-3">{typeof it.client.totalShares === 'number' ? it.client.totalShares.toLocaleString() : '-'}</td>
                 <td className="px-4 py-3">{it.rorc.length ? it.rorc.join(', ') : '-'}</td>

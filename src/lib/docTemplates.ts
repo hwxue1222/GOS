@@ -981,7 +981,7 @@ export function renderShareTransferDirectorsResolutionHtml(input: {
 export function renderCertificateOfAppointmentOfCorporateSecretaryHtml(input: {
   companyName: string;
   companyRegistrationNo?: string;
-  countryOfBusinessRegistration: string;
+  countryOfIncorporation: string;
   corporateSecretaryName: string;
   corporateRepresentativeName: string;
   directorNames: string[];
@@ -989,7 +989,7 @@ export function renderCertificateOfAppointmentOfCorporateSecretaryHtml(input: {
 }) {
   const companyName = esc(input.companyName);
   const companyRegistrationNo = esc(String(input.companyRegistrationNo ?? '').trim());
-  const country = esc(input.countryOfBusinessRegistration);
+  const country = esc(input.countryOfIncorporation);
   const csName = esc(input.corporateSecretaryName);
   const corpRepName = esc(input.corporateRepresentativeName);
   const directors = input.directorNames.map((x) => String(x ?? '').trim()).filter(Boolean);
