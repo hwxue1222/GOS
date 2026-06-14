@@ -86,7 +86,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                     >
                       Details
                     </Link>
-                    {r.status === 'PENDING_REVIEW' ? (
+                    {r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' ? (
                       <>
                         <button
                           disabled={!!busyId}
@@ -112,8 +112,8 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                       </>
                     ) : (
                       <div className="text-xs text-black/50">
-                        {r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO'
-                          ? 'Waiting for signatures'
+                        {r.status === 'NEED_MORE_INFO'
+                          ? 'Need more info'
                           : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
                             ? 'Decided'
                             : '-'}

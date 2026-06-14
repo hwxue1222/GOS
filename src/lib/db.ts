@@ -8101,8 +8101,7 @@ export async function decideShareTransfer(input: {
   const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
   const allSigned = packets.length > 0 && packets.every((p) => p.status === 'SIGNED');
   if (input.decision === 'APPROVE') {
-    if (st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
-    if (!allSigned) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+    if (st !== 'SIGNING' && st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
     const applyYmd = now.slice(0, 10);
     const transferorRole =
@@ -8144,7 +8143,7 @@ export async function decideShareTransfer(input: {
       db.clientPartyRoles.unshift(role);
     }
   } else {
-    if (st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
+    if (st !== 'SIGNING' && st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
   }
 
   db.shareTransfers[idx] = {
@@ -8554,8 +8553,7 @@ export async function decideDirectorChangeRequest(input: {
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
 
   if (input.decision === 'APPROVE') {
-    if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-    if (!packets.length || !packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+    if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
     for (const roleId of r.removeDirectorRoleIds) {
       const roleIdx = db.clientPartyRoles.findIndex((x) => x.id === roleId && x.clientId === r.clientId && x.role === 'DIRECTOR');
@@ -9509,8 +9507,7 @@ export async function decideCompanyUpdateRequest(input: {
     return { ok: true as const, request: list[idx] };
   }
 
-  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (!packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const clientIdx = db.clients.findIndex((c) => c.id === r.clientId);
   if (clientIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
@@ -9972,8 +9969,7 @@ export async function decideRorcDeclarationRequest(input: {
     return { ok: true as const, request: list[idx] };
   }
 
-  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (!packets.every((p) => p.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   if (r.controllerType === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
     const fullName = r.controllerPerson.fullName.trim();
@@ -10317,8 +10313,7 @@ export async function decideAnnualGeneralMeetingRequest(input: {
     return { ok: true as const, request: list[idx] };
   }
 
-  if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (!packets.every((p) => p?.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const clientIdx = db.clients.findIndex((c) => c.id === r.clientId);
   if (clientIdx >= 0) {
