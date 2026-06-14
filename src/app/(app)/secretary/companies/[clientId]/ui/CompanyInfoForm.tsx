@@ -2,6 +2,7 @@
 
 import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
 import { useI18n } from '@/components/I18nProviderClient';
+import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOptions';
 
 type Client = {
   id: string;
@@ -90,12 +91,22 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
           </label>
           <label className="text-sm">
             <div className="text-black/60">Country of incorporation</div>
-            <input
+            <select
               value={client.countryOfIncorporation ?? ''}
               onChange={(e) => onChange({ countryOfIncorporation: e.target.value || undefined })}
               disabled={!canEdit}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
-            />
+              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/5"
+            >
+              <option value="">Select...</option>
+              {client.countryOfIncorporation && !COUNTRY_OF_INCORPORATION_OPTIONS.includes(client.countryOfIncorporation as any) ? (
+                <option value={client.countryOfIncorporation}>{client.countryOfIncorporation}</option>
+              ) : null}
+              {COUNTRY_OF_INCORPORATION_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="text-sm">
             <div className="text-black/60">FYE</div>

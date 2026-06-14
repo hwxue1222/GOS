@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { formatDateDMY } from '@/lib/date';
 import { maskAddress, maskDob, maskEmail, maskName, maskNationality } from '@/lib/mask';
+import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOptions';
 import { usePersistedState } from '@/lib/usePersistedState';
 
 type ClientLite = { id: string; code: string; name: string };
@@ -922,12 +923,23 @@ export default function ShareTransfersClient(props: {
                               ) : null}
                               <label className="text-sm">
                                 <div className="text-black/70">Country of incorporation</div>
-                                <input
+                                <select
                                   value={d.newCompany.countryOfIncorporation}
                                   onChange={(e) => patchDraftCompany(d.id, { countryOfIncorporation: e.target.value })}
                                   disabled={d.newCompanyLockedFromLookup}
-                                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                                />
+                                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/5"
+                                >
+                                  <option value="">Select...</option>
+                                  {d.newCompany.countryOfIncorporation &&
+                                  !COUNTRY_OF_INCORPORATION_OPTIONS.includes(d.newCompany.countryOfIncorporation as any) ? (
+                                    <option value={d.newCompany.countryOfIncorporation}>{d.newCompany.countryOfIncorporation}</option>
+                                  ) : null}
+                                  {COUNTRY_OF_INCORPORATION_OPTIONS.map((c) => (
+                                    <option key={c} value={c}>
+                                      {c}
+                                    </option>
+                                  ))}
+                                </select>
                               </label>
                               <label className="text-sm">
                                 <div className="text-black/70">Email</div>

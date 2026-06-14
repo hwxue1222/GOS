@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOptions';
 
 type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC';
 
@@ -42,41 +43,7 @@ type SavedDraft = {
   };
 };
 
-const countryOptions = [
-  'Singapore',
-  'Brunei',
-  'Cambodia',
-  'Indonesia',
-  'Laos',
-  'Malaysia',
-  'Myanmar',
-  'Philippines',
-  'Thailand',
-  'Vietnam',
-  'United States',
-  'Canada',
-  'United Kingdom',
-  'Ireland',
-  'Germany',
-  'France',
-  'Italy',
-  'Spain',
-  'Netherlands',
-  'Switzerland',
-  'Sweden',
-  'Norway',
-  'Denmark',
-  'Finland',
-  'Belgium',
-  'Austria',
-  'Portugal',
-  'Australia',
-  'New Zealand',
-  'China',
-  'Chinese/Hong Kong SAR',
-  'Chinese/Macao SAR',
-  'China Taiwan',
-] as const;
+const countryOptions = COUNTRY_OF_INCORPORATION_OPTIONS;
 
 function maskKeepStartEnd(raw: string, startKeep: number, endKeep: number) {
   const s = String(raw ?? '').trim();
@@ -870,6 +837,11 @@ export default function RorcClient() {
                     className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   >
                     <option value="">Select...</option>
+                    {(() => {
+                      const current = useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '').trim() : company.countryOfIncorporation.trim();
+                      if (!current) return null;
+                      return countryOptions.includes(current as any) ? null : <option value={current}>{current}</option>;
+                    })()}
                     {countryOptions.map((c) => (
                       <option key={c} value={c}>
                         {c}
