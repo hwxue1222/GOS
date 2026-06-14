@@ -8226,7 +8226,14 @@ export async function decideShareTransfer(input: {
       db.clientPartyRoles.unshift(role);
     }
   } else {
-    if (st !== 'SIGNING' && st !== 'PENDING_REVIEW' && st !== 'SIGNED') return { ok: false as const, error: 'INVALID_STATE' as const };
+    if (
+      st !== 'SIGNING' &&
+      st !== 'PENDING_REVIEW' &&
+      st !== 'SIGNED' &&
+      st !== 'NEED_MORE_INFO' &&
+      st !== 'BLOCKED_REPRESENTATIVE'
+    )
+      return { ok: false as const, error: 'INVALID_STATE' as const };
   }
 
   db.shareTransfers[idx] = {
