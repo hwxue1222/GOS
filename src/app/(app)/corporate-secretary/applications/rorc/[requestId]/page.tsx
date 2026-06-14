@@ -238,8 +238,10 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
 
   const docHtml = ctx.documents[0]?.html ?? '';
   const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
-  const docNewCompanyName = docHtml ? extractDocValue(docHtml, 'Name') : '';
-  const docNewCompanyReg = docHtml ? extractDocValue(docHtml, 'identification number') || extractDocValue(docHtml, 'Entity Number') : '';
+  const docNewCompanyName = docHtml ? extractDocValue(docHtml, 'Name公司名字') : '';
+  const docNewCompanyReg = docHtml
+    ? extractDocValue(docHtml, 'Unique Entity Number') || extractDocValue(docHtml, 'identification number 公司注册号')
+    : '';
   const docNewControllerFallback =
     docNewPersonName || (docNewCompanyName ? (docNewCompanyReg ? `${docNewCompanyName} (${docNewCompanyReg})` : docNewCompanyName) : '');
 

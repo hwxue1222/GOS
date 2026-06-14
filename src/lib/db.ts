@@ -10057,7 +10057,7 @@ export async function decideRorcDeclarationRequest(input: {
     if (firstDocHtml) {
       const personName = extractDocValue(firstDocHtml, 'full name');
       if (personName) return 'PERSON';
-      const companyName = extractDocValue(firstDocHtml, 'Name');
+      const companyName = extractDocValue(firstDocHtml, 'Name公司名字');
       if (companyName) return 'COMPANY';
     }
     return '';
@@ -10199,8 +10199,9 @@ export async function decideRorcDeclarationRequest(input: {
   }
 
   if (controllerKind === 'COMPANY' && !r.controllerCompany?.companyName?.trim() && firstDocHtml) {
-    const companyName = extractDocValue(firstDocHtml, 'Name');
-    const regNo = extractDocValue(firstDocHtml, 'Entity Number') || extractDocValue(firstDocHtml, 'identification number');
+    const companyName = extractDocValue(firstDocHtml, 'Name公司名字');
+    const regNo =
+      extractDocValue(firstDocHtml, 'Unique Entity Number') || extractDocValue(firstDocHtml, 'identification number 公司注册号');
     if (companyName) {
       const regKey = String(regNo ?? '')
         .trim()

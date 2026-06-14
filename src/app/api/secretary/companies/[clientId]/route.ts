@@ -185,7 +185,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
           },
         ];
       }
-      const companyName = extractDocValue(html, 'Name');
+      const companyName = extractDocValue(html, 'Name公司名字');
       if (companyName) {
         return [
           {
