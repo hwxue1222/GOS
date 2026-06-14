@@ -423,6 +423,7 @@ export default function RorcClient() {
                   <input
                     value={company.legalForm}
                     onChange={(e) => setCompany((v) => ({ ...v, legalForm: e.target.value }))}
+                    placeholder="e.g. Private company limited by shares (Hong Kong)"
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
@@ -433,6 +434,7 @@ export default function RorcClient() {
                   <input
                     value={company.governedByLawAndJurisdiction}
                     onChange={(e) => setCompany((v) => ({ ...v, governedByLawAndJurisdiction: e.target.value }))}
+                    placeholder="e.g. Companies Ordinance (Cap. 622), Hong Kong"
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
@@ -444,6 +446,7 @@ export default function RorcClient() {
                   <input
                     value={company.registerOfCompanies}
                     onChange={(e) => setCompany((v) => ({ ...v, registerOfCompanies: e.target.value }))}
+                    placeholder="e.g. Companies Registry (Hong Kong)"
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
