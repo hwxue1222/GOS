@@ -63,6 +63,8 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<CompanyDetails | null>(null);
 
+  const [expanded, setExpanded] = useState(false);
+
   const [ssicPrimaryDesc, setSsicPrimaryDesc] = useState<string>('');
   const [ssicSecondaryDesc, setSsicSecondaryDesc] = useState<string>('');
 
@@ -103,6 +105,7 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
     let ignore = false;
     setLoading(true);
     setError(null);
+    setExpanded(false);
     fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, { cache: 'no-store' })
       .then((r) => r.json().catch(() => null))
       .then((j: any) => {
@@ -164,6 +167,45 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
   const c = details;
   const heading = c?.name || (companyId ? 'Company' : 'No company');
 
+  const rows = useMemo(() => {
+    return [
+      { label: 'Company registration no.', value: c?.companyRegistrationNo || '-' },
+      { label: 'Country of incorporation', value: c?.countryOfIncorporation || '-' },
+      { label: 'FYE', value: c?.fye || '-' },
+      { label: 'Latest AGM date', value: c?.latestAgmDate || '-' },
+      { label: 'Entity status', value: c?.entityStatus || '-' },
+      { label: 'Incorporation date', value: formatYmd(c?.incorporationDate) },
+      { label: 'Registered office address', value: c ? pickAddress(c) : '-' },
+      { label: 'Paid-up capital', value: c ? formatMoney(c.paidUpCapitalCurrency, c.paidUpCapitalAmount) : '-' },
+      { label: 'Total shares', value: c ? formatNumber(c.totalShares) : '-' },
+      {
+        label: 'SSIC (Primary)',
+        value: c?.ssicPrimaryCode ? (
+          <div>
+            <div>{c.ssicPrimaryCode}</div>
+            {ssicPrimaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicPrimaryDesc}</div> : null}
+          </div>
+        ) : (
+          '-'
+        ),
+      },
+      {
+        label: 'SSIC (Secondary)',
+        value: c?.ssicSecondaryCode ? (
+          <div>
+            <div>{c.ssicSecondaryCode}</div>
+            {ssicSecondaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicSecondaryDesc}</div> : null}
+          </div>
+        ) : (
+          '-'
+        ),
+      },
+    ];
+  }, [c, ssicPrimaryDesc, ssicSecondaryDesc]);
+
+  const collapsedCount = 5;
+  const visibleRows = expanded ? rows : rows.slice(0, collapsedCount);
+
   return (
     <div className="rounded-xl bg-white border border-black/5 p-6">
       <div className="flex items-start justify-between gap-4">
@@ -177,41 +219,21 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
       {loading ? <div className="mt-4 text-xs text-black/50">Loading...</div> : null}
 
       <div className="mt-4 text-sm">
-        <Row label="Company registration no." value={c?.companyRegistrationNo || '-'} />
-        <Row label="Country of incorporation" value={c?.countryOfIncorporation || '-'} />
-        <Row label="FYE" value={c?.fye || '-'} />
-        <Row label="Latest AGM date" value={c?.latestAgmDate || '-'} />
-        <Row label="Entity status" value={c?.entityStatus || '-'} />
-        <Row label="Incorporation date" value={formatYmd(c?.incorporationDate)} />
-        <Row label="Registered office address" value={c ? pickAddress(c) : '-'} />
-        <Row label="Paid-up capital" value={c ? formatMoney(c.paidUpCapitalCurrency, c.paidUpCapitalAmount) : '-'} />
-        <Row label="Total shares" value={c ? formatNumber(c.totalShares) : '-'} />
-        <Row
-          label="SSIC (Primary)"
-          value={
-            c?.ssicPrimaryCode ? (
-              <div>
-                <div>{c.ssicPrimaryCode}</div>
-                {ssicPrimaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicPrimaryDesc}</div> : null}
-              </div>
-            ) : (
-              '-'
-            )
-          }
-        />
-        <Row
-          label="SSIC (Secondary)"
-          value={
-            c?.ssicSecondaryCode ? (
-              <div>
-                <div>{c.ssicSecondaryCode}</div>
-                {ssicSecondaryDesc ? <div className="mt-0.5 text-xs text-black/50">{ssicSecondaryDesc}</div> : null}
-              </div>
-            ) : (
-              '-'
-            )
-          }
-        />
+        {visibleRows.map((r) => (
+          <Row key={r.label} label={r.label} value={r.value} />
+        ))}
+
+        {rows.length > collapsedCount ? (
+          <div className="py-3 border-t border-black/5">
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs text-black/60 hover:text-black"
+            >
+              {expanded ? 'Show less' : 'Show more'}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
