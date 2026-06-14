@@ -62,6 +62,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const body = (await req.json().catch(() => null)) as
     | {
         meetingDate?: string;
+        meetingTime?: string;
         meetingVenue?: string;
         chairman?: string;
         directorSendingNotice?: string;
@@ -72,6 +73,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     | null;
 
   const meetingDate = typeof body?.meetingDate === 'string' ? body.meetingDate.trim() : '';
+  const meetingTime = typeof body?.meetingTime === 'string' ? body.meetingTime.trim() : '';
   const meetingVenue = typeof body?.meetingVenue === 'string' ? body.meetingVenue.trim() : '';
   const chairman = typeof body?.chairman === 'string' ? body.chairman.trim() : '';
   const noticeDirector = typeof body?.directorSendingNotice === 'string' ? body.directorSendingNotice.trim() : '';
@@ -83,6 +85,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     clientId,
     createdByUserId: user.id,
     meetingDate,
+    meetingTime,
     meetingVenue,
     chairman,
     noticeDirector,
@@ -114,7 +117,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         url: `${baseUrl}${l.url}`,
         companyName,
         applicationName: 'Corporate Secretary Service',
-        documentTitle: 'Annual General Meeting (AGM) Minutes',
+        documentTitle: l.documentTitle,
         signerRole: 'Director',
       }),
     ),

@@ -14,6 +14,7 @@ import type {
   Currency,
   Db,
   DirectorChangeRequest,
+  DocumentType,
   Document,
   ExternalCompany,
   AuditLog,
@@ -34,6 +35,7 @@ import type {
   Session,
   ShareTransfer,
   SignaturePacket,
+  SignaturePacketKind,
   SignatureRequest,
   User,
 } from '@/lib/types';
@@ -7102,6 +7104,10 @@ async function finalizeAgmIfReady(db: Db, packet: SignaturePacket) {
   if (packet.relatedType !== 'ANNUAL_GENERAL_MEETING') return;
   if (packet.status !== 'SIGNED') return;
 
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'ANNUAL_GENERAL_MEETING' && p.relatedId === packet.relatedId);
+  if (!packets.length) return;
+  if (!packets.every((p) => p.status === 'SIGNED')) return;
+
   const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
     ? (((db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests ?? []) as AnnualGeneralMeetingRequest[])
     : [];
@@ -10051,20 +10057,29 @@ export async function getAnnualGeneralMeetingRequestContext(requestId: string) {
   const db = await readDb();
   const request = getAnnualGeneralMeetingRequestList(db).find((r) => r.id === requestId) ?? null;
   if (!request) return null;
-  const packet = db.signaturePackets.find((p) => p.id === request.packetId) ?? null;
-  if (!packet) return null;
-  const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
-  if (!document) return null;
-  const signatures = db.signatureRequests
-    .filter((r) => r.packetId === packet.id)
-    .sort((a, b) => a.email.localeCompare(b.email));
-  return { request, packet, document, signatures };
+
+  const packetIds = (request.packetIds ?? []).length ? (request.packetIds ?? []) : [request.packetId];
+  const assets = packetIds
+    .map((packetId) => {
+      const packet = db.signaturePackets.find((p) => p.id === packetId) ?? null;
+      if (!packet) return null;
+      const document = db.documents.find((d) => d.id === packet.documentId) ?? null;
+      if (!document) return null;
+      const signatures = db.signatureRequests
+        .filter((r) => r.packetId === packet.id)
+        .sort((a, b) => a.email.localeCompare(b.email));
+      return { packet, document, signatures };
+    })
+    .filter((x): x is { packet: SignaturePacket; document: Document; signatures: SignatureRequest[] } => x !== null);
+  if (!assets.length) return null;
+  return { request, assets };
 }
 
 export async function createAnnualGeneralMeetingRequest(input: {
   clientId: string;
   createdByUserId: string;
   meetingDate: string;
+  meetingTime?: string;
   meetingVenue: string;
   chairman: string;
   noticeDirector: string;
@@ -10077,6 +10092,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
   if (!client || client.deletedAt) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const meetingDate = input.meetingDate.trim();
+  const meetingTime = typeof input.meetingTime === 'string' ? input.meetingTime.trim() || undefined : undefined;
   const meetingVenue = input.meetingVenue.trim();
   const chairman = input.chairman.trim();
   const noticeDirector = input.noticeDirector.trim();
@@ -10088,6 +10104,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
   }
 
   const directors = await listClientDirectors(input.clientId);
+  const directorsByName = new Map(directors.map((d) => [d.person.fullName.trim(), d.person]));
   const signerEmails = Array.from(
     new Set(
       directors
@@ -10098,64 +10115,149 @@ export async function createAnnualGeneralMeetingRequest(input: {
   );
   if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
+  const noticeSigner = directorsByName.get(noticeDirector) ?? null;
+  if (!noticeSigner?.email?.trim()) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  const chairmanSigner = directorsByName.get(chairman) ?? noticeSigner;
+
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  const registrableControllerNames = db.clientPartyRoles
+    .filter((r) => r.clientId === input.clientId && r.role === 'RORC' && !r.toDate)
+    .map((r) => {
+      const party = partyById.get(r.partyId);
+      if (!party || party.type !== 'PERSON' || !party.personId) return null;
+      const p = personById.get(party.personId);
+      return p?.fullName ?? null;
+    })
+    .filter((x): x is string => !!x)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  const fiscalYearEndYmd = (() => {
+    const year = fiscalYearReport.trim();
+    if (!/^\d{4}$/.test(year)) return '';
+    const fye = String(client.fye ?? '').trim();
+    const m = fye.match(/^(\d{2})\/(\d{2})$/);
+    if (!m) return '';
+    return `${year}-${m[1]}-${m[2]}`;
+  })();
+
   const now = nowIso();
   const id = newId('agm');
 
-  const html = (await import('@/lib/docTemplates')).renderAnnualGeneralMeetingMinutesHtml({
-    companyName: client.name,
-    meetingDate,
-    meetingVenue,
-    chairman,
-    directorSendingNotice: noticeDirector,
-    fiscalYearReport,
-    companyCategory,
-  });
-
-  const doc: Document = {
-    id: newId('doc'),
-    type: 'AGM_MIN',
-    title: `AGM Minutes - ${client.name}`,
-    html,
-    sha256: sha256Hex(html),
-    createdAt: now,
-  };
-  db.documents.unshift(doc);
-
-  const packet: SignaturePacket = {
-    id: newId('spk'),
-    kind: 'AGM_MIN',
-    relatedType: 'ANNUAL_GENERAL_MEETING',
-    relatedId: id,
-    documentId: doc.id,
-    status: 'SIGNING',
-    createdAt: now,
-    updatedAt: now,
-  };
-  db.signaturePackets.unshift(packet);
-
+  const templates = await import('@/lib/docTemplates');
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string }> = [];
-  for (const emailKey of signerEmails) {
-    const token = newToken();
-    const req: SignatureRequest = {
-      id: newId('sgr'),
-      packetId: packet.id,
-      email: emailKey,
-      tokenHash: sha256Hex(token),
-      expiresAt,
-      status: 'PENDING',
+  const signLinks: Array<{ email: string; url: string; documentTitle: string }> = [];
+  const packetIds: string[] = [];
+
+  async function createDocAndPacket(args: {
+    kind: SignaturePacketKind;
+    documentType: DocumentType;
+    title: string;
+    html: string;
+    signerEmails: string[];
+  }) {
+    const doc: Document = {
+      id: newId('doc'),
+      type: args.documentType,
+      title: args.title,
+      html: args.html,
+      sha256: sha256Hex(args.html),
+      createdAt: now,
+    };
+    db.documents.unshift(doc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: args.kind,
+      relatedType: 'ANNUAL_GENERAL_MEETING',
+      relatedId: id,
+      documentId: doc.id,
+      status: 'SIGNING',
       createdAt: now,
       updatedAt: now,
     };
-    db.signatureRequests.unshift(req);
-    signLinks.push({ email: emailKey, url: `/sign/${token}` });
+    db.signaturePackets.unshift(packet);
+    packetIds.push(packet.id);
+
+    for (const emailKey of args.signerEmails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email: emailKey,
+        tokenHash: sha256Hex(token),
+        expiresAt,
+        status: 'PENDING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.signatureRequests.unshift(req);
+      signLinks.push({ email: emailKey, url: `/sign/${token}`, documentTitle: args.title });
+    }
+    return { doc, packet };
   }
+
+  const noticeHtml = templates.renderAnnualGeneralMeetingNoticeHtml({
+    companyName: client.name,
+    companyRegistrationNo: client.companyRegistrationNo,
+    meetingDateYmd: meetingDate,
+    meetingTime,
+    meetingVenue,
+    noticeDateYmd: now.slice(0, 10),
+    companyCategory,
+    fiscalYearEndYmd: fiscalYearEndYmd || undefined,
+    signer: { fullName: noticeSigner.fullName, email: noticeSigner.email },
+  });
+  await createDocAndPacket({
+    kind: 'AGM_NOTICE',
+    documentType: 'AGM_NOTICE',
+    title: `AGM Notice - ${client.name}`,
+    html: noticeHtml,
+    signerEmails: [noticeSigner.email.trim().toLowerCase()],
+  });
+
+  const minutesHtml = templates.renderAnnualGeneralMeetingMinutesHtml({
+    companyName: client.name,
+    companyRegistrationNo: client.companyRegistrationNo,
+    meetingDateYmd: meetingDate,
+    meetingTime,
+    meetingVenue,
+    chairmanName: chairman,
+    companyCategory,
+    fiscalYearEndYmd: fiscalYearEndYmd || undefined,
+    registrableControllerNames,
+    signer: { fullName: chairmanSigner.fullName, email: chairmanSigner.email },
+  });
+  const minutesPacket = await createDocAndPacket({
+    kind: 'AGM_MIN',
+    documentType: 'AGM_MIN',
+    title: `AGM Minutes - ${client.name}`,
+    html: minutesHtml,
+    signerEmails: [String(chairmanSigner.email).trim().toLowerCase()],
+  });
+
+  const dirStmtHtml = templates.renderAnnualGeneralMeetingDirectorStatementHtml({
+    companyName: client.name,
+    companyRegistrationNo: client.companyRegistrationNo,
+    dateYmd: now.slice(0, 10),
+    companyCategory,
+    signers: directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email ?? undefined })),
+  });
+  await createDocAndPacket({
+    kind: 'AGM_DIR_STMT',
+    documentType: 'AGM_DIR_STMT',
+    title: `AGM Director Statement - ${client.name}`,
+    html: dirStmtHtml,
+    signerEmails,
+  });
 
   const request: AnnualGeneralMeetingRequest = {
     id,
     clientId: input.clientId,
     status: 'PENDING_SIGNATURES',
     meetingDate,
+    meetingTime,
     meetingVenue,
     chairman,
     directorSendingNotice: noticeDirector,
@@ -10163,7 +10265,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
     companyCategory,
     useByBridgeRegisteredOfficeAddress,
     createdByUserId: input.createdByUserId,
-    packetId: packet.id,
+    packetId: minutesPacket.packet.id,
+    packetIds,
     createdAt: now,
     updatedAt: now,
     submittedAt: now,
@@ -10189,8 +10292,9 @@ export async function decideAnnualGeneralMeetingRequest(input: {
 
   const r = list[idx];
   if (r.status === 'REJECTED' || r.status === 'COMPLETE') return { ok: false as const, error: 'INVALID_STATE' as const };
-  const packet = db.signaturePackets.find((p) => p.id === r.packetId) ?? null;
-  if (!packet) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const packetIds = (r.packetIds ?? []).length ? (r.packetIds ?? []) : [r.packetId];
+  const packets = packetIds.map((id) => db.signaturePackets.find((p) => p.id === id) ?? null);
+  if (packets.some((p) => !p)) return { ok: false as const, error: 'NOT_FOUND' as const };
 
   const now = nowIso();
   const note = typeof input.note === 'string' ? input.note.trim() || undefined : undefined;
@@ -10210,7 +10314,12 @@ export async function decideAnnualGeneralMeetingRequest(input: {
   }
 
   if (r.status !== 'PENDING_REVIEW') return { ok: false as const, error: 'INVALID_STATE' as const };
-  if (packet.status !== 'SIGNED') return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+  if (!packets.every((p) => p?.status === 'SIGNED')) return { ok: false as const, error: 'SIGNATURES_INCOMPLETE' as const };
+
+  const clientIdx = db.clients.findIndex((c) => c.id === r.clientId);
+  if (clientIdx >= 0) {
+    db.clients[clientIdx] = { ...db.clients[clientIdx], latestAgmDate: r.meetingDate };
+  }
 
   list[idx] = { ...r, status: 'COMPLETE', decidedAt: now, decidedByUserId: input.decidedByUserId, decisionNote: note, updatedAt: now };
   (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;

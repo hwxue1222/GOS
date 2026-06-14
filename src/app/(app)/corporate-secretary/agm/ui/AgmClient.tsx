@@ -11,18 +11,21 @@ export default function AgmClient() {
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
+  const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   const shareholders = roles?.shareholders ?? [];
   const shareholderPersons = shareholders.filter(
     (s): s is { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } } => s.entity.type === 'PERSON',
   );
   const directors = roles?.directors ?? [];
 
-  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingDate, setMeetingDate] = useState(todayYmd);
+  const [meetingTime, setMeetingTime] = useState('10:00');
   const [fiscalYearReport, setFiscalYearReport] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
   const [chairman, setChairman] = useState('');
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
-  const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | ''>('');
+  const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | 'AUDITED' | ''>('');
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -48,11 +51,12 @@ export default function AgmClient() {
       return;
     }
     const md = meetingDate.trim();
+    const mt = meetingTime.trim();
     const mv = meetingVenue.trim();
     const ch = chairman.trim();
     const nd = directorSendingNotice.trim();
     const fy = fiscalYearReport.trim();
-    if (!md || !mv || !ch || !nd || !fy) {
+    if (!md || !mt || !mv || !ch || !nd || !companyCategory || !fy) {
       setSubmitError('Please fill in required fields.');
       return;
     }
@@ -63,6 +67,7 @@ export default function AgmClient() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           meetingDate: md,
+          meetingTime: mt,
           meetingVenue: mv,
           chairman: ch,
           directorSendingNotice: nd,
@@ -148,6 +153,15 @@ export default function AgmClient() {
               />
               Dormant company
             </label>
+            <label className="flex items-center gap-2 text-sm text-black/80">
+              <input
+                type="radio"
+                name="companyCategory"
+                checked={companyCategory === 'AUDITED'}
+                onChange={() => setCompanyCategory('AUDITED')}
+              />
+              Audited company
+            </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -159,6 +173,18 @@ export default function AgmClient() {
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Time Of Meeting
+              </div>
+              <input
+                type="time"
+                value={meetingTime}
+                onChange={(e) => setMeetingTime(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>

@@ -43,6 +43,7 @@ export type Client = {
   companyRegistrationNo?: string;
   countryOfIncorporation?: string;
   fye?: string;
+  latestAgmDate?: string;
   contactPerson?: string;
   address?: string;
   phone?: string;
@@ -240,7 +241,9 @@ export type DocumentType =
   | 'DIR_CHG'
   | 'CO_UPD'
   | 'RORC_DECL'
-  | 'AGM_MIN';
+  | 'AGM_NOTICE'
+  | 'AGM_MIN'
+  | 'AGM_DIR_STMT';
 
 export type Document = {
   id: string;
@@ -251,7 +254,17 @@ export type Document = {
   createdAt: string;
 };
 
-export type SignaturePacketKind = 'RDR' | 'STA' | 'BR' | 'CS_CERT' | 'DIR_CHG' | 'CO_UPD' | 'RORC_DECL' | 'AGM_MIN';
+export type SignaturePacketKind =
+  | 'RDR'
+  | 'STA'
+  | 'BR'
+  | 'CS_CERT'
+  | 'DIR_CHG'
+  | 'CO_UPD'
+  | 'RORC_DECL'
+  | 'AGM_NOTICE'
+  | 'AGM_MIN'
+  | 'AGM_DIR_STMT';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 
@@ -516,6 +529,7 @@ export type AnnualGeneralMeetingRequest = {
   clientId: string;
   status: AnnualGeneralMeetingRequestStatus;
   meetingDate: string;
+  meetingTime?: string;
   meetingVenue: string;
   chairman: string;
   directorSendingNotice?: string;
@@ -525,6 +539,7 @@ export type AnnualGeneralMeetingRequest = {
   agendaSummary?: string;
   createdByUserId: string;
   packetId: string;
+  packetIds?: string[];
   createdAt: string;
   updatedAt?: string;
   submittedAt?: string;

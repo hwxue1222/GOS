@@ -14,6 +14,7 @@ type CompanyRow = {
     fka?: string;
     companyRegistrationNo?: string;
     countryOfIncorporation?: string;
+    latestAgmDate?: string;
     contactPerson?: string;
     paidUpCapitalCurrency?: string;
     paidUpCapitalAmount?: number;
@@ -129,6 +130,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople }
               <th className="px-4 py-3">{t('secretary.companies')}</th>
               <th className="px-4 py-3">{t('secretary.regNo')}</th>
               <th className="px-4 py-3">Country of incorporation</th>
+              <th className="px-4 py-3">Latest AGM date</th>
               <th className="px-4 py-3">{t('secretary.paidUpCapital')}</th>
               <th className="px-4 py-3">{t('secretary.totalShares')}</th>
               <th className="px-4 py-3">{t('secretary.rorcController')}</th>
@@ -152,6 +154,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople }
                 </td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
                 <td className="px-4 py-3">{it.client.countryOfIncorporation ?? '-'}</td>
+                <td className="px-4 py-3">{it.client.latestAgmDate ?? '-'}</td>
                 <td className="px-4 py-3">{money(it.client.paidUpCapitalCurrency, it.client.paidUpCapitalAmount)}</td>
                 <td className="px-4 py-3">{typeof it.client.totalShares === 'number' ? it.client.totalShares.toLocaleString() : '-'}</td>
                 <td className="px-4 py-3">{it.rorc.length ? it.rorc.join(', ') : '-'}</td>

@@ -1684,22 +1684,56 @@ export function renderRorcControllerDeclarationHtml(input: {
 
 export function renderAnnualGeneralMeetingMinutesHtml(input: {
   companyName: string;
-  meetingDate: string;
+  companyRegistrationNo?: string;
+  meetingDateYmd: string;
+  meetingTime?: string;
   meetingVenue: string;
-  chairman: string;
-  directorSendingNotice?: string;
-  fiscalYearReport?: string;
-  companyCategory?: string;
-  agendaSummary?: string;
+  chairmanName: string;
+  companyCategory?: 'DORMANT' | 'SME' | 'AUDITED' | string;
+  fiscalYearEndYmd?: string;
+  registrableControllerNames?: string[];
+  signer: { fullName: string; email?: string };
 }) {
   const companyName = esc(input.companyName);
-  const meetingDate = esc(input.meetingDate);
+  const regNo = String(input.companyRegistrationNo ?? '').trim();
+  const meetingDateDmy = esc(toDdMmYyyy(input.meetingDateYmd));
+  const meetingTime = String(input.meetingTime ?? '').trim();
   const meetingVenue = esc(input.meetingVenue);
-  const chairman = esc(input.chairman);
-  const noticeDirector = esc(String(input.directorSendingNotice ?? '').trim());
-  const fiscalYearReport = esc(String(input.fiscalYearReport ?? '').trim());
-  const companyCategory = esc(String(input.companyCategory ?? '').trim());
-  const agendaSummary = typeof input.agendaSummary === 'string' ? esc(input.agendaSummary) : '';
+  const chairmanName = esc(input.chairmanName);
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  const fiscalYearEndYmd = String(input.fiscalYearEndYmd ?? '').trim();
+  const registrableControllers = (input.registrableControllerNames ?? []).map((x) => String(x ?? '').trim()).filter(Boolean);
+  const sig = signatureLineBlocks({ signers: [input.signer] });
+
+  const rcLine = registrableControllers.length
+    ? `Registrable Controller: That ${registrableControllers.map((n) => `<strong>${esc(n)}</strong>`).join(', ')} ${
+        registrableControllers.length > 1 ? 'are' : 'is'
+      } identified as Registrable ${registrableControllers.length > 1 ? 'Controllers' : 'Individual Controller'}.`
+    : '';
+
+  const fyLine = fiscalYearEndYmd ? `for the year ended <strong>${esc(fiscalYearEndYmd)}</strong>` : '';
+
+  const bodyLines =
+    companyCategory === 'DORMANT'
+      ? [
+          '1. THAT the Minute of the Annual General Meeting held is hereby confirmed;',
+          rcLine ? `2. ${rcLine}` : '',
+          '3. THAT the submission of annual return as dormant company with exemption of preparation of financial statements is hereby approved;',
+          '4. THAT the submission for the application for waiver of income tax return as a dormant company is hereby approved.',
+        ].filter(Boolean)
+      : companyCategory === 'AUDITED'
+        ? [
+            `Financial statements: That the audited financial statements ${fyLine} be and they are hereby adopted.`,
+            rcLine || 'Registrable Controller: That the Registrable Controller is declared.',
+            'General: The Secretary is hereby instructed to file the Annual Return to the Accounting and Corporate Regulatory Authority in accordance to the Companies Act. Cap. 50.',
+            'Termination: There being no other business, the meeting was terminated with a vote of thanks to the Chair.',
+          ]
+        : [
+            `Financial statements: That the unaudited financial statements ${fyLine} be and they are hereby adopted.`,
+            rcLine || 'Registrable Controller: That the Registrable Controller is declared.',
+            'General: The Secretary is hereby instructed to file the Annual Return to the Accounting and Corporate Regulatory Authority in accordance to the Companies Act. Cap. 50.',
+            'Termination: There being no other business, the meeting was terminated with a vote of thanks to the Chair.',
+          ];
 
   return `
 <!doctype html>
@@ -1707,31 +1741,187 @@ export function renderAnnualGeneralMeetingMinutesHtml(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Annual General Meeting Minutes</title>
+    <title>Minutes of Annual General Meeting</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
-      h1 { font-size: 18px; margin: 0 0 16px; }
-      .muted { color: #555; font-size: 12px; }
-      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
-      .sig { margin-top: 18px; padding-top: 18px; border-top: 1px dashed #ddd; }
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.45; padding: 28px; color: #111; font-size: 12px; }
+      .center { text-align: center; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .block { margin-top: 10px; }
+      .sig-row { margin-top: 14px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 4px; }
     </style>
   </head>
   <body>
-    <h1>Annual General Meeting Minutes</h1>
-    <div class="muted">Meeting Date: ${meetingDate}</div>
-    <div class="box" style="margin-top: 12px;">
-      <div><strong>Company</strong>: ${companyName}</div>
-      <div style="margin-top: 10px;"><strong>Chairman</strong>: ${chairman}</div>
-      ${noticeDirector ? `<div style="margin-top: 10px;"><strong>Director sending notice</strong>: ${noticeDirector}</div>` : ''}
-      ${fiscalYearReport ? `<div style="margin-top: 10px;"><strong>Fiscal Financial Year Report</strong>: ${fiscalYearReport}</div>` : ''}
-      ${companyCategory ? `<div style="margin-top: 10px;"><strong>Company Category</strong>: ${companyCategory}</div>` : ''}
-      <div style="margin-top: 10px;"><strong>Venue</strong>: ${meetingVenue}</div>
-      ${agendaSummary ? `<div style="margin-top: 10px;"><strong>Agenda Summary</strong>:</div><div style="margin-top:6px; white-space: pre-wrap;">${agendaSummary}</div>` : ''}
-      <div class="sig">
-        <div>Signed by Directors of the Company:</div>
-        <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
-      </div>
+    <div class="title">${companyName}</div>
+    ${regNo ? `<div>Co. Reg. No.: ${esc(regNo)}</div>` : ''}
+    <div class="block" style="color:#444;">(Incorporated in the Republic of Singapore)</div>
+
+    <div class="block title center">MINUTES OF ANNUAL GENERAL MEETING</div>
+
+    <div class="block">Chairman : <strong>${chairmanName}</strong> was in the chair.</div>
+    <div class="block">Notice of Meeting : The notice was taken as read.</div>
+
+    <div class="block"><u><strong>ORDINARY BUSINESS</strong></u></div>
+    <div class="block"><strong>RESOLVED:</strong></div>
+    <div class="block" style="white-space: pre-wrap;">${bodyLines.map((x) => esc(x)).join('\n\n')}</div>
+
+    <div class="block">Certified as a True Record of Minutes</div>
+    ${sig}
+    <div class="block">Dated: ${meetingDateDmy}${meetingTime ? ` ${esc(meetingTime)}` : ''}</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderAnnualGeneralMeetingNoticeHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  meetingDateYmd: string;
+  meetingTime?: string;
+  meetingVenue: string;
+  noticeDateYmd: string;
+  companyCategory?: 'DORMANT' | 'SME' | 'AUDITED' | string;
+  fiscalYearEndYmd?: string;
+  signer: { fullName: string; email?: string };
+}) {
+  const companyName = esc(input.companyName);
+  const regNo = String(input.companyRegistrationNo ?? '').trim();
+  const meetingDateDmy = esc(toDdMmYyyy(input.meetingDateYmd));
+  const meetingTime = String(input.meetingTime ?? '').trim();
+  const meetingVenue = esc(input.meetingVenue);
+  const dated = esc(toDdMmYyyy(input.noticeDateYmd));
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  const fiscalYearEndYmd = String(input.fiscalYearEndYmd ?? '').trim();
+  const sig = signatureLineBlocks({ signers: [input.signer] });
+
+  const fyLine = fiscalYearEndYmd ? `for the year ended ${esc(fiscalYearEndYmd)}` : '';
+  const businessItems =
+    companyCategory === 'DORMANT'
+      ? [
+          'To confirm the Minute of the Annual General Meeting held;',
+          'To approve the submission of annual return as dormant company with exemption of preparation of financial statements;',
+          'To approve to submit the application for waiver of income tax return as a dormant company.',
+        ]
+      : companyCategory === 'AUDITED'
+        ? [
+            'To confirm the Minute of the Annual General Meeting held;',
+            `To approve audited financial statements ${fyLine};`,
+            'To declare the Registrable Controller.',
+          ]
+        : [
+            'To confirm the Minute of the Annual General Meeting held;',
+            `To approve unaudited financial statements ${fyLine};`,
+            'To declare the Registrable Controller.',
+          ];
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Notice of Annual General Meeting</title>
+    <style>
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.45; padding: 28px; color: #111; font-size: 12px; }
+      .center { text-align: center; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .block { margin-top: 10px; }
+      .sig-row { margin-top: 14px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${companyName}</div>
+    ${regNo ? `<div>Co. Reg. No.: ${esc(regNo)}</div>` : ''}
+    <div class="block" style="color:#444;">(Incorporated in the Republic of Singapore)</div>
+
+    <div class="block title center">NOTICE OF ANNUAL GENERAL MEETING</div>
+
+    <div class="block">
+      NOTICE IS HEREBY GIVEN THAT the Annual General Meeting of the Company will be held at <u>${meetingVenue || '_____________'}</u> on <u>${meetingDateDmy}</u>${
+        meetingTime ? ` <u>${esc(meetingTime)}</u>` : ''
+      }.
+      for the following business and that any of the Directors be authorized to send notice of the said Meeting:-
     </div>
+
+    <div class="block"><u><strong>ORDINARY BUSINESS</strong></u></div>
+    <ol class="block">
+      ${businessItems.map((x) => `<li>${esc(x)}</li>`).join('')}
+    </ol>
+
+    <div class="block">On behalf of the Board of Directors</div>
+    ${sig}
+    <div class="block">Dated: ${dated}</div>
+  </body>
+</html>
+`.trim();
+}
+
+export function renderAnnualGeneralMeetingDirectorStatementHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  dateYmd: string;
+  companyCategory?: 'DORMANT' | 'SME' | 'AUDITED' | string;
+  signers: Array<{ fullName: string; email?: string }>;
+}) {
+  const companyName = esc(input.companyName);
+  const regNo = esc(String(input.companyRegistrationNo ?? '').trim());
+  const dated = esc(toDdMmYyyy(input.dateYmd));
+  const companyCategory = String(input.companyCategory ?? '').trim();
+  const sig = signatureLineBlocks({ signers: input.signers });
+
+  const statement =
+    companyCategory === 'DORMANT'
+      ? `I/We, the under mentioned officer(/s) of the abovementioned company, hereby certify to the best of my/our knowledge and belief that -
+
+(1.1) that the company has been dormant for the period from the time of its formation or since the end of the previous financial year, as the case may be; (1.2) that no notice has been received under section 201A(3) of the Companies Act in relation to the financial year; and; (1.3) the accounting and other records required by the Companies Act to be kept by the company have been kept in accordance with section 199 of the Companies Act.
+
+(2.1) that the company has been dormant for the period from the time of its formation or since the end of the previous financial year, as the case may be; (2.2) that no notice has been received under section 205B(6) of the Companies Act in relation to the financial year; and; (2.3) the accounting and other records required by the Companies Act to be kept by the company have been kept in accordance with section 199 of the Companies Act.
+
+(3.1) that the company qualifies as a small company under section 205C read with the Thirteenth Schedule; (3.2) that no notice has been received under section 205C(2) of the Companies Act in relation to the financial year; and; (3.3) The accounting and other records required by the Companies Act to be kept by the company have been kept in accordance with section 199 of the Companies Act.`
+      : companyCategory === 'AUDITED'
+        ? `I/We, the director(s) of the abovementioned company, hereby declare that the audited financial statements have been presented at the annual general meeting on the date stated in the annual return, and the accounting and other records required to be kept by the company have been so kept in accordance with Section 199 of the Companies Act.`
+        : `I, the director of the abovementioned company, hereby declare that/on behalf of the Board of Directors that -
+
+a) for the entire financial year concerned, the company had been an exempt private company at all relevant times as defined under Section 4(1) of the Companies Act by virtue of its being a private company of which no beneficial interest in shares is held, directly or indirectly, by any corporation and having not more than 20 members;
+
+b) an unaudited profit and loss account and balance sheet made up to the date stated in the annual return which comply with the requirements of the Companies Act have been presented before the company in the annual general meeting on the date stated in this annual return;
+
+c) as at the date that the profit and loss account for the financial year has been made up, the company appeared to be able to meet its liabilities as and when they fall due;
+
+d) as at the end of the financial year, the company is exempt from audit requirements as its revenue in the year does not exceed the prescribed amount namely S$10 million since the date of incorporation;
+
+e) no notice has been received from any member under Section 205B(6) requiring the company to obtain an audit of its accounts in relation to the year; and
+
+f) the accounting and other records required to be kept by the company in accordance with Section 199 of the Companies Act have been so kept.`;
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Director's Statement</title>
+    <style>
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.45; padding: 28px; color: #111; font-size: 12px; }
+      .block { margin-top: 10px; }
+      .sig-row { margin-top: 14px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="block"><strong>Name of Company :</strong> ${companyName}</div>
+    <div class="block">Unique Entity Number (UEN) : <strong>${regNo || '_____________'}</strong></div>
+    <div class="block" style="white-space: pre-wrap;">${esc(statement)}</div>
+    <div class="block">Directors</div>
+    ${sig}
+    <div class="block">Dated: ${dated}</div>
   </body>
 </html>
 `.trim();

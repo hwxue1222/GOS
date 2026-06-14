@@ -12,6 +12,7 @@ type CompanyDetails = {
   countryOfIncorporation?: string;
   incorporationDate?: string;
   fye?: string;
+  latestAgmDate?: string;
   registeredOfficeAddress?: string;
   address?: string;
   email?: string;
@@ -179,6 +180,7 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
         <Row label="Company registration no." value={c?.companyRegistrationNo || '-'} />
         <Row label="Country of incorporation" value={c?.countryOfIncorporation || '-'} />
         <Row label="FYE" value={c?.fye || '-'} />
+        <Row label="Latest AGM date" value={c?.latestAgmDate || '-'} />
         <Row label="Entity status" value={c?.entityStatus || '-'} />
         <Row label="Incorporation date" value={formatYmd(c?.incorporationDate)} />
         <Row label="Registered office address" value={c ? pickAddress(c) : '-'} />

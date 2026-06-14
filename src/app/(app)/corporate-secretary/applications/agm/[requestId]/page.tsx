@@ -68,26 +68,29 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
   const db = await readDb();
 
   const company = db.clients.find((c) => c.id === r.clientId && !c.deletedAt) ?? null;
-  const signatureRows = ctx.signatures
-    .map((s) => {
-      const meta = getSignerIdentityForClient(db, r.clientId, s.email);
-      return {
-        documentTitle: ctx.document.title,
-        signerName: meta.fullName,
-        signerRole: meta.role,
-        email: s.email,
-        status: s.status,
-        signedAt: s.signedAt,
-      };
-    })
-    .sort((a, b) => a.email.localeCompare(b.email));
-  const documents = [{ documentId: ctx.document.id, title: ctx.document.title, signerCount: ctx.signatures.length }];
+  const signatureRows = ctx.assets
+    .flatMap((a) =>
+      a.signatures.map((s) => {
+        const meta = getSignerIdentityForClient(db, r.clientId, s.email);
+        return {
+          documentTitle: a.document.title,
+          signerName: meta.fullName,
+          signerRole: meta.role,
+          email: s.email,
+          status: s.status,
+          signedAt: s.signedAt,
+        };
+      }),
+    )
+    .sort((a, b) => a.documentTitle.localeCompare(b.documentTitle) || a.email.localeCompare(b.email));
+  const documents = ctx.assets.map((a) => ({ documentId: a.document.id, title: a.document.title, signerCount: a.signatures.length }));
 
   const summaryRows = [
     { label: 'Company', value: company?.name ?? r.clientId },
     { label: 'Type', value: 'Annual General Meeting' },
     { label: 'Status', value: r.status },
     { label: 'Meeting date', value: r.meetingDate },
+    ...(r.meetingTime ? [{ label: 'Meeting time', value: r.meetingTime }] : []),
     { label: 'Chairman', value: r.chairman },
     ...(r.directorSendingNotice ? [{ label: 'Director sending notice', value: r.directorSendingNotice }] : []),
     ...(r.fiscalYearReport ? [{ label: 'Fiscal Financial Year Report', value: r.fiscalYearReport }] : []),
