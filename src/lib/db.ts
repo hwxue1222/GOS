@@ -8777,16 +8777,27 @@ export async function createCompanyUpdateRequest(input: {
     const newRegisteredOfficeAddress = String(p.newRegisteredOfficeAddress ?? '').trim();
     if (!newRegisteredOfficeAddress) return { ok: false as const, error: 'INVALID_INPUT' as const };
   } else if (type === 'CHANGE_BUSINESS_ACTIVITIES') {
-    const ssicPrimaryCodeRaw = String(p.ssicPrimaryCode ?? '').trim();
-    const ssicSecondaryCodeRaw = String(p.ssicSecondaryCode ?? '').trim();
-    if (!ssicPrimaryCodeRaw && !ssicSecondaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
-    if (ssicPrimaryCodeRaw && ssicSecondaryCodeRaw && ssicSecondaryCodeRaw === ssicPrimaryCodeRaw) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const hasPrimary = Object.prototype.hasOwnProperty.call(p as any, 'ssicPrimaryCode');
+    const hasSecondary = Object.prototype.hasOwnProperty.call(p as any, 'ssicSecondaryCode');
+
+    const primaryIn = hasPrimary ? (p as any).ssicPrimaryCode : undefined;
+    const secondaryIn = hasSecondary ? (p as any).ssicSecondaryCode : undefined;
 
     const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
-    const finalPrimary = ssicPrimaryCodeRaw || originalPrimary;
-    const finalSecondary = ssicSecondaryCodeRaw || originalSecondary;
+
+    const nextPrimary = typeof primaryIn === 'string' ? primaryIn.trim() : '';
+    const finalPrimary = (hasPrimary ? nextPrimary : '') || originalPrimary;
     if (!finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+    const finalSecondary = (() => {
+      if (!hasSecondary) return originalSecondary;
+      if (secondaryIn === null) return '';
+      const v = typeof secondaryIn === 'string' ? secondaryIn.trim() : '';
+      return v;
+    })();
+
+    if (finalSecondary && finalSecondary === finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
     if (finalPrimary === originalPrimary && finalSecondary === originalSecondary) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     (p as Record<string, unknown>).originalSsicPrimaryCode = originalPrimary;

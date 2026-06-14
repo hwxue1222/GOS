@@ -13,6 +13,7 @@ export default function ChangeBusinessActivitiesClient() {
 
   const [primary, setPrimary] = useState<string | undefined>(undefined);
   const [secondary, setSecondary] = useState<string | undefined>(undefined);
+  const [removeSecondary, setRemoveSecondary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -45,6 +46,15 @@ export default function ChangeBusinessActivitiesClient() {
     };
   }, [client]);
 
+  useEffect(() => {
+    if (!client) return;
+    const p = String(client.ssicPrimaryCode ?? '').trim();
+    const s = String(client.ssicSecondaryCode ?? '').trim();
+    setPrimary(p || undefined);
+    setSecondary(s || undefined);
+    setRemoveSecondary(false);
+  }, [client?.id]);
+
   async function onSubmit() {
     setSubmitError(null);
     if (!companyId || !client) {
@@ -53,8 +63,8 @@ export default function ChangeBusinessActivitiesClient() {
     }
     const ssicPrimaryCode = (primary ?? '').trim();
     const ssicSecondaryCode = (secondary ?? '').trim();
-    if (!ssicPrimaryCode && !ssicSecondaryCode) {
-      setSubmitError('Please select New Activity 1 or New Activity 2.');
+    if (!ssicPrimaryCode) {
+      setSubmitError('Please select New Activity 1.');
       return;
     }
     if (ssicSecondaryCode && ssicSecondaryCode === ssicPrimaryCode) {
@@ -64,8 +74,8 @@ export default function ChangeBusinessActivitiesClient() {
 
     const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
-    const resolvedPrimary = ssicPrimaryCode || originalPrimary;
-    const resolvedSecondary = ssicSecondaryCode || originalSecondary;
+    const resolvedPrimary = ssicPrimaryCode;
+    const resolvedSecondary = removeSecondary ? '' : ssicSecondaryCode;
     if (resolvedPrimary === originalPrimary && resolvedSecondary === originalSecondary) {
       setSubmitError('No changes detected.');
       return;
@@ -79,7 +89,7 @@ export default function ChangeBusinessActivitiesClient() {
           type: 'CHANGE_BUSINESS_ACTIVITIES',
           payload: {
             ssicPrimaryCode: ssicPrimaryCode || undefined,
-            ssicSecondaryCode: ssicSecondaryCode || undefined,
+            ssicSecondaryCode: removeSecondary ? null : ssicSecondaryCode || undefined,
           },
         }),
       }).catch(() => null);
@@ -127,9 +137,26 @@ export default function ChangeBusinessActivitiesClient() {
             </div>
             <div className="sm:col-span-12">
               <div className="text-sm text-black">New Activity 2 :</div>
-              <div className="mt-1">
-                <SsicCombobox label="" value={secondary} onChange={setSecondary} excludeCode={primary} />
-              </div>
+              <label className="mt-2 inline-flex items-center gap-2 text-sm text-black/80">
+                <input
+                  type="checkbox"
+                  checked={removeSecondary}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setRemoveSecondary(checked);
+                    if (checked) setSecondary(undefined);
+                    else setSecondary(String(client.ssicSecondaryCode ?? '').trim() || undefined);
+                  }}
+                />
+                Remove Activity 2
+              </label>
+              {!removeSecondary ? (
+                <div className="mt-2">
+                  <SsicCombobox label="" value={secondary} onChange={setSecondary} excludeCode={primary} />
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-black/50">Activity 2 will be removed after approval.</div>
+              )}
             </div>
           </div>
 
