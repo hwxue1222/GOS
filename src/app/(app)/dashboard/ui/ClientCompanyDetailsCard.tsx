@@ -25,6 +25,15 @@ type CompanyDetails = {
   ssicSecondaryCode?: string;
 };
 
+type CompanyRoles = {
+  directors: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
+  shareholders: Array<
+    | { role: { id: string; shares?: number }; entity: { type: 'PERSON'; person: { fullName: string } } }
+    | { role: { id: string; shares?: number }; entity: { type: 'COMPANY'; company: { name: string } } }
+  >;
+  rorc: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } | { type: 'COMPANY'; company: { name: string } } }>;
+};
+
 function formatYmd(v?: string) {
   const s = String(v ?? '').trim();
   return s ? s.slice(0, 10) : '-';
@@ -62,6 +71,7 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<CompanyDetails | null>(null);
+  const [roles, setRoles] = useState<CompanyRoles | null>(null);
 
   const [expanded, setExpanded] = useState(false);
 
@@ -113,14 +123,17 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
         if (!j?.ok || !j?.client) {
           setError(j?.error ?? 'FAILED_TO_LOAD');
           setDetails(null);
+          setRoles(null);
           return;
         }
         setDetails(j.client as CompanyDetails);
+        setRoles((j.roles ?? null) as CompanyRoles | null);
       })
       .catch(() => {
         if (ignore) return;
         setError('NETWORK');
         setDetails(null);
+        setRoles(null);
       })
       .finally(() => {
         if (ignore) return;
@@ -166,6 +179,33 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
 
   const c = details;
   const heading = c?.name || (companyId ? 'Company' : 'No company');
+
+  const directorsText = useMemo(() => {
+    const list = roles?.directors ?? [];
+    const names = list.map((d) => d.entity.person.fullName).filter(Boolean);
+    return names.length ? names.join(', ') : '-';
+  }, [roles?.directors]);
+
+  const shareholdersText = useMemo(() => {
+    const list = (roles?.shareholders ?? []) as Array<any>;
+    const parts = list
+      .map((s) => {
+        const name = s?.entity?.type === 'PERSON' ? s.entity.person.fullName : s?.entity?.type === 'COMPANY' ? s.entity.company.name : '';
+        const shares = typeof s?.role?.shares === 'number' ? s.role.shares : undefined;
+        if (!name) return '';
+        return typeof shares === 'number' ? `${name} (${shares.toLocaleString()})` : name;
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join(', ') : '-';
+  }, [roles?.shareholders]);
+
+  const rorcText = useMemo(() => {
+    const list = (roles?.rorc ?? []) as Array<any>;
+    const names = list
+      .map((r) => (r?.entity?.type === 'PERSON' ? r.entity.person.fullName : r?.entity?.type === 'COMPANY' ? r.entity.company.name : ''))
+      .filter(Boolean);
+    return names.length ? names.join(', ') : '-';
+  }, [roles?.rorc]);
 
   const rows = useMemo(() => {
     return [
@@ -222,6 +262,10 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
         {visibleRows.map((r) => (
           <Row key={r.label} label={r.label} value={r.value} />
         ))}
+
+        <Row label="Directors" value={directorsText} />
+        <Row label="Shareholders" value={shareholdersText} />
+        <Row label="RORC" value={rorcText} />
 
         {rows.length > collapsedCount ? (
           <div className="py-3 border-t border-black/5">
