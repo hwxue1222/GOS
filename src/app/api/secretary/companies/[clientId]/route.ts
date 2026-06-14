@@ -57,6 +57,21 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
   const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
 
+  const decodeHtmlEntities = (s: string) =>
+    s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  const stripTags = (s: string) => decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
+  const extractDocValue = (html: string, keyIncludes: string) => {
+    const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
+    const m = html.match(re);
+    return m ? stripTags(m[1] ?? '') : '';
+  };
+
   const rows = db.clientPartyRoles
     .filter((r) => r.clientId === clientId)
     .filter((r) => isActiveRole(r))
@@ -155,6 +170,30 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
           entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: String(c.companyName).trim() } },
         },
       ];
+    }
+    const packetIds = Array.isArray(rorcReq.packetIds) && rorcReq.packetIds.length ? rorcReq.packetIds : [rorcReq.packetId];
+    const packets = (db.signaturePackets ?? []).filter((p: any) => packetIds.includes(p.id));
+    const docById = new Map((db.documents ?? []).map((d: any) => [d.id, d]));
+    const html = packets.map((p: any) => docById.get(p.documentId)?.html ?? '').find((h: any) => !!String(h ?? '').trim()) ?? '';
+    if (html) {
+      const personName = extractDocValue(html, 'full name');
+      if (personName) {
+        return [
+          {
+            role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
+            entity: { type: 'PERSON', person: { fullName: personName, hasLogin: false } },
+          },
+        ];
+      }
+      const companyName = extractDocValue(html, 'Name');
+      if (companyName) {
+        return [
+          {
+            role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
+            entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: companyName } },
+          },
+        ];
+      }
     }
     const add = Array.isArray(rorcReq.addControllers) ? rorcReq.addControllers : [];
     const names = add.map((x: any) => String(x?.fullName ?? '').trim()).filter(Boolean);
