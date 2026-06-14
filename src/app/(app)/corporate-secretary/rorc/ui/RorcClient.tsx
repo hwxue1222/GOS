@@ -21,40 +21,6 @@ function isSingaporeCompanyRegistrationNo(regNo: string) {
   return /^\d{9}[A-Za-z]$/.test(String(regNo ?? '').trim());
 }
 
-type SavedDraft = {
-  person?: {
-    effectiveDate?: string;
-    fullName?: string;
-    idType?: IdType;
-    idNo?: string;
-    dateOfBirth?: string;
-    email?: string;
-    nationality?: string;
-    phone?: string;
-    address?: string;
-    ccEnabled?: boolean;
-    ccName?: string;
-    ccTitle?: string;
-    ccPhone?: string;
-    ccEmailAddress?: string;
-  };
-  company?: {
-    effectiveDate?: string;
-    companyName?: string;
-    registerNumber?: string;
-    countryOfIncorporation?: string;
-    legalForm?: string;
-    governedByLawAndJurisdiction?: string;
-    registerOfCompanies?: string;
-    companyAddress?: string;
-    ccEnabled?: boolean;
-    ccName?: string;
-    ccTitle?: string;
-    ccPhone?: string;
-    ccEmailAddress?: string;
-  };
-};
-
 function maskKeepStartEnd(raw: string, startKeep: number, endKeep: number) {
   const s = String(raw ?? '').trim();
   if (!s) return '';
@@ -93,24 +59,6 @@ function maskDateYmd(raw: string) {
   return `**/**/${m[1]}`;
 }
 
-function readSavedDraft(key: string): SavedDraft {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.sessionStorage.getItem(key);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as SavedDraft;
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeSavedDraft(key: string, value: SavedDraft) {
-  try {
-    window.sessionStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-
 export default function RorcClient() {
   const router = useRouter();
   const { companyId, client, loading, error, closeHref } = useCompanyContext();
@@ -132,24 +80,9 @@ export default function RorcClient() {
   }>(null);
   const [matchedCompany, setMatchedCompany] = useState<null | { countryOfIncorporation: string; companyAddress: string }>(null);
 
-  const savedKey = companyId ? `gos.rorc.saved.${companyId}` : '';
-  const [saved, setSaved] = useState<SavedDraft>({});
-  const [useSavedPerson, setUseSavedPerson] = useState(false);
-  const [useSavedCompany, setUseSavedCompany] = useState(false);
-
-  useEffect(() => {
-    if (!savedKey) return;
-    const next = readSavedDraft(savedKey);
-    setSaved(next);
-    setUseSavedPerson(!!next.person);
-    setUseSavedCompany(!!next.company);
-    if (next.person?.effectiveDate) setEffectiveDate(String(next.person.effectiveDate).slice(0, 10));
-  }, [savedKey]);
-
-  useEffect(() => {
-    if (mode === 'PERSON' && saved.person?.effectiveDate) setEffectiveDate(String(saved.person.effectiveDate).slice(0, 10));
-    if (mode === 'COMPANY' && saved.company?.effectiveDate) setEffectiveDate(String(saved.company.effectiveDate).slice(0, 10));
-  }, [mode, saved.company?.effectiveDate, saved.person?.effectiveDate]);
+  const useSavedPerson = false;
+  const useSavedCompany = false;
+  const saved = {} as any;
 
   const [person, setPerson] = useState({
     fullName: '',
@@ -195,7 +128,6 @@ export default function RorcClient() {
 
   useEffect(() => {
     if (mode !== 'PERSON') return;
-    if (useSavedPerson) return;
     if (personLockedFromLookup) return;
     const idNo = person.idNo.trim();
     if (!idNo) return;
@@ -255,11 +187,10 @@ export default function RorcClient() {
       window.clearTimeout(t);
       ac.abort();
     };
-  }, [mode, person.idNo, person.idType, personLockedFromLookup, useSavedPerson]);
+  }, [mode, person.idNo, person.idType, personLockedFromLookup]);
 
   useEffect(() => {
     if (mode !== 'COMPANY') return;
-    if (useSavedCompany) return;
     if (companyLockedFromLookup) return;
     const regNo = company.registerNumber.trim();
     if (!regNo) return;
@@ -314,7 +245,7 @@ export default function RorcClient() {
       window.clearTimeout(t);
       ac.abort();
     };
-  }, [company.registerNumber, companyLockedFromLookup, mode, useSavedCompany]);
+  }, [company.registerNumber, companyLockedFromLookup, mode]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -330,50 +261,6 @@ export default function RorcClient() {
     }
 
     if (mode === 'PERSON') {
-      const savedP = saved.person;
-      if (useSavedPerson && savedP) {
-        setSubmitting(true);
-        try {
-          const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              effectiveDate: eff,
-              controllerType: 'PERSON',
-              controllerPerson: {
-                fullName: String(savedP.fullName ?? ''),
-                idType: savedP.idType,
-                idNo: String(savedP.idNo ?? ''),
-                dateOfBirth: String(savedP.dateOfBirth ?? ''),
-                email: String(savedP.email ?? ''),
-                nationality: String(savedP.nationality ?? ''),
-                phone: String(savedP.phone ?? ''),
-                address: String(savedP.address ?? ''),
-                ccEmailAddress: savedP.ccEnabled ? String(savedP.ccEmailAddress ?? '') || undefined : undefined,
-                ccName: savedP.ccEnabled ? String(savedP.ccName ?? '') || undefined : undefined,
-                ccTitle: savedP.ccEnabled ? String(savedP.ccTitle ?? '') || undefined : undefined,
-                ccPhone: savedP.ccEnabled ? String(savedP.ccPhone ?? '') || undefined : undefined,
-                useCcEmailInstead: false,
-              },
-            }),
-          }).catch(() => null);
-          const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
-          if (!res?.ok || !j?.ok || !j.request?.id) {
-            setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-            return;
-          }
-          setSaved((prev) => {
-            const next: SavedDraft = { ...prev, person: { ...savedP, effectiveDate: eff } };
-            if (savedKey) writeSavedDraft(savedKey, next);
-            return next;
-          });
-          router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
-        } finally {
-          setSubmitting(false);
-        }
-        return;
-      }
-
       const p = {
         ...person,
         fullName: person.fullName.trim(),
@@ -434,73 +321,6 @@ export default function RorcClient() {
           setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
           return;
         }
-
-        setSaved((prev) => {
-          const next: SavedDraft = {
-            ...prev,
-            person: {
-              effectiveDate: eff,
-              fullName: p.fullName,
-              idType: p.idType,
-              idNo: p.idNo,
-              dateOfBirth: p.dateOfBirth,
-              email: p.email,
-              nationality: p.nationality,
-              phone: p.phone,
-              address: p.address,
-              ccEnabled: p.ccEnabled,
-              ccName: p.ccName,
-              ccTitle: p.ccTitle,
-              ccPhone: p.ccPhone,
-              ccEmailAddress: p.ccEmailAddress,
-            },
-          };
-          if (savedKey) writeSavedDraft(savedKey, next);
-          return next;
-        });
-        router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    const savedC = saved.company;
-    if (useSavedCompany && savedC) {
-      setSubmitting(true);
-      try {
-        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            effectiveDate: eff,
-            controllerType: 'COMPANY',
-            controllerCompany: {
-              companyName: String(savedC.companyName ?? ''),
-              registerNumber: String(savedC.registerNumber ?? ''),
-              countryOfIncorporation: String(savedC.countryOfIncorporation ?? ''),
-              legalForm: String(savedC.legalForm ?? ''),
-              governedByLawAndJurisdiction: String(savedC.governedByLawAndJurisdiction ?? ''),
-              registerOfCompanies: String(savedC.registerOfCompanies ?? '') || undefined,
-              companyAddress: String(savedC.companyAddress ?? ''),
-              ccEmailAddress: savedC.ccEnabled ? String(savedC.ccEmailAddress ?? '') || undefined : undefined,
-              ccName: savedC.ccEnabled ? String(savedC.ccName ?? '') || undefined : undefined,
-              ccTitle: savedC.ccEnabled ? String(savedC.ccTitle ?? '') || undefined : undefined,
-              ccPhone: savedC.ccEnabled ? String(savedC.ccPhone ?? '') || undefined : undefined,
-              useCcEmailInstead: false,
-            },
-          }),
-        }).catch(() => null);
-        const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
-        if (!res?.ok || !j?.ok || !j.request?.id) {
-          setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-          return;
-        }
-        setSaved((prev) => {
-          const next: SavedDraft = { ...prev, company: { ...savedC, effectiveDate: eff } };
-          if (savedKey) writeSavedDraft(savedKey, next);
-          return next;
-        });
         router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
       } finally {
         setSubmitting(false);
@@ -566,29 +386,6 @@ export default function RorcClient() {
         setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
-
-      setSaved((prev) => {
-        const next: SavedDraft = {
-          ...prev,
-          company: {
-            effectiveDate: eff,
-            companyName: c.companyName,
-            registerNumber: c.registerNumber,
-            countryOfIncorporation: c.countryOfIncorporation,
-            legalForm: c.legalForm,
-            governedByLawAndJurisdiction: c.governedByLawAndJurisdiction,
-            registerOfCompanies: c.registerOfCompanies,
-            companyAddress: c.companyAddress,
-            ccEnabled: c.ccEnabled,
-            ccName: c.ccName,
-            ccTitle: c.ccTitle,
-            ccPhone: c.ccPhone,
-            ccEmailAddress: c.ccEmailAddress,
-          },
-        };
-        if (savedKey) writeSavedDraft(savedKey, next);
-        return next;
-      });
       router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
     } finally {
       setSubmitting(false);
@@ -618,17 +415,6 @@ export default function RorcClient() {
 
           {mode === 'PERSON' ? (
             <>
-              {saved.person ? (
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="checkbox"
-                    checked={useSavedPerson}
-                    onChange={(e) => setUseSavedPerson(e.target.checked)}
-                  />
-                  Use saved details (masked)
-                </label>
-              ) : null}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
@@ -903,17 +689,6 @@ export default function RorcClient() {
             </>
           ) : (
             <>
-              {saved.company ? (
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="checkbox"
-                    checked={useSavedCompany}
-                    onChange={(e) => setUseSavedCompany(e.target.checked)}
-                  />
-                  Use saved details (masked)
-                </label>
-              ) : null}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
