@@ -174,6 +174,67 @@ export default function ShareTransfersClient(props: {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, newCompany: { ...d.newCompany, ...patch } } : d)));
   };
 
+  const resetDraftCompanyFromRegistrationNo = (id: string, registrationNoRaw: string) => {
+    const registrationNo = String(registrationNoRaw ?? '');
+    const next = registrationNo.trim();
+
+    const prevTimer = companyLookupTimersRef.current[id];
+    if (prevTimer) window.clearTimeout(prevTimer);
+    delete companyLookupTimersRef.current[id];
+
+    setDrafts((prev) =>
+      prev.map((d) => {
+        if (d.id !== id) return d;
+        if (!next) {
+          return {
+            ...d,
+            newCompanyLockedFromLookup: false,
+            newCompany: {
+              ...d.newCompany,
+              clientId: '',
+              representativePersonId: '',
+              companyName: '',
+              registrationNo: '',
+              countryOfIncorporation: '',
+              address: '',
+              email: '',
+              phone: '',
+              corporateRepresentativeName: '',
+              corporateRepresentativeEmail: '',
+              directorSignerName: '',
+              directorSignerEmail: '',
+            },
+          };
+        }
+
+        const hadLookup = d.newCompanyLockedFromLookup || !!d.newCompany.clientId.trim();
+        if (!hadLookup) {
+          return { ...d, newCompany: { ...d.newCompany, registrationNo } };
+        }
+
+        return {
+          ...d,
+          newCompanyLockedFromLookup: false,
+          newCompany: {
+            ...d.newCompany,
+            clientId: '',
+            representativePersonId: '',
+            companyName: '',
+            registrationNo,
+            countryOfIncorporation: '',
+            address: '',
+            email: '',
+            phone: '',
+            corporateRepresentativeName: '',
+            corporateRepresentativeEmail: '',
+            directorSignerName: '',
+            directorSignerEmail: '',
+          },
+        };
+      }),
+    );
+  };
+
   const [shareholders, setShareholders] = useState<ShareholderOption[]>([]);
   const [loadingShareholders, setLoadingShareholders] = useState(false);
 
@@ -291,7 +352,9 @@ export default function ShareTransfersClient(props: {
               prevDrafts.map((x) =>
                 x.id !== d.id
                   ? x
-                  : {
+                  : x.newCompanyLockedFromLookup || String(x.newCompany.registrationNo ?? '').trim() !== regNo
+                    ? x
+                    : {
                       ...x,
                       newCompany: {
                         ...x.newCompany,
@@ -900,7 +963,7 @@ export default function ShareTransfersClient(props: {
                                 <div className="text-black/70">Company registration no.</div>
                                 <input
                                   value={d.newCompany.registrationNo}
-                                  onChange={(e) => patchDraftCompany(d.id, { registrationNo: e.target.value })}
+                                  onChange={(e) => resetDraftCompanyFromRegistrationNo(d.id, e.target.value)}
                                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                                 />
                               </label>
