@@ -350,13 +350,11 @@ export default function ChangeCompanyNameClient() {
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Select</option>
-                {shareholders
-                  .filter((s): s is { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } } => s.entity.type === 'PERSON')
-                  .map((s) => (
-                    <option key={s.role.id} value={s.entity.person.fullName}>
-                      {s.entity.person.fullName}
-                    </option>
-                  ))}
+                {(shareholders.filter((s) => (s as any)?.entity?.type === 'PERSON') as Array<any>).map((s) => (
+                  <option key={s.role.id} value={s.entity.person.fullName}>
+                    {s.entity.person.fullName}
+                  </option>
+                ))}
               </select>
             </label>
 

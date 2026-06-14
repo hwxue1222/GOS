@@ -7,7 +7,7 @@ import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { COUNTRY_OF_INCORPORATION_OPTIONS } from '@/lib/countryOfIncorporationOptions';
 
-type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC';
+type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC' | 'OTHER';
 
 type SavedDraft = {
   person?: {
@@ -103,12 +103,78 @@ function writeSavedDraft(key: string, value: SavedDraft) {
 
 export default function RorcClient() {
   const router = useRouter();
-  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const [mode, setMode] = useState<'PERSON' | 'COMPANY'>('PERSON');
   const [effectiveDate, setEffectiveDate] = useState(todayYmd);
+
+  const [existingPersonId, setExistingPersonId] = useState('');
+  const [existingCompanyId, setExistingCompanyId] = useState('');
+
+  const existingPeople = useMemo(() => {
+    const list = [] as Array<{ id: string; fullName: string; email?: string; phone?: string; idType?: string; idNo?: string; dob?: string; nationality?: string; address?: string; tags: string[] }>;
+    const seen = new Set<string>();
+    const push = (p: any, tag: string) => {
+      const id = String(p?.id ?? '').trim();
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      list.push({
+        id,
+        fullName: String(p?.fullName ?? ''),
+        email: p?.email,
+        phone: p?.phone,
+        idType: p?.idType,
+        idNo: p?.idNo,
+        dob: p?.dob,
+        nationality: p?.nationality,
+        address: p?.address,
+        tags: [tag],
+      });
+    };
+    (roles?.directors ?? []).forEach((r) => push((r as any).entity?.person, 'DIRECTOR'));
+    (roles?.secretaries ?? []).forEach((r) => push((r as any).entity?.person, 'SECRETARY'));
+    (roles?.shareholders ?? []).forEach((r: any) => {
+      if (r?.entity?.type === 'PERSON') push(r.entity.person, 'SHAREHOLDER');
+    });
+    (roles?.rorc ?? []).forEach((r: any) => {
+      if (r?.entity?.type === 'PERSON') push(r.entity.person, 'RORC');
+    });
+    list.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    return list;
+  }, [roles?.directors, roles?.rorc, roles?.secretaries, roles?.shareholders]);
+
+  const existingCompanies = useMemo(() => {
+    const list = [] as Array<{
+      id: string;
+      name: string;
+      code: string;
+      companyRegistrationNo?: string;
+      countryOfIncorporation?: string;
+      address?: string;
+      registeredOfficeAddress?: string;
+    }>;
+    const seen = new Set<string>();
+    (roles?.shareholders ?? []).forEach((r: any) => {
+      if (r?.entity?.type !== 'COMPANY') return;
+      const c = r.entity.company;
+      const id = String(c?.id ?? '').trim();
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      list.push({
+        id,
+        name: String(c?.name ?? ''),
+        code: String(c?.code ?? ''),
+        companyRegistrationNo: c?.companyRegistrationNo,
+        countryOfIncorporation: c?.countryOfIncorporation,
+        address: c?.address,
+        registeredOfficeAddress: c?.registeredOfficeAddress,
+      });
+    });
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [roles?.shareholders]);
 
   const savedKey = companyId ? `gos.rorc.saved.${companyId}` : '';
   const [saved, setSaved] = useState<SavedDraft>({});
@@ -484,6 +550,46 @@ export default function RorcClient() {
                 </label>
               ) : null}
 
+              {!useSavedPerson && existingPeople.length ? (
+                <label className="text-sm">
+                  <div className="text-black/70">Use existing member</div>
+                  <select
+                    value={existingPersonId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setExistingPersonId(nextId);
+                      if (!nextId) return;
+                      const p = existingPeople.find((x) => x.id === nextId) ?? null;
+                      if (!p) return;
+                      const idType = String(p.idType ?? '').trim().toUpperCase();
+                      const mappedIdType =
+                        idType === 'NRIC' || idType === 'FIN' || idType === 'PASSPORT' || idType === 'IC' || idType === 'OTHER'
+                          ? (idType as IdType)
+                          : 'PASSPORT';
+                      setPerson((v) => ({
+                        ...v,
+                        fullName: String(p.fullName ?? ''),
+                        idType: mappedIdType,
+                        idNo: String(p.idNo ?? ''),
+                        dateOfBirth: String(p.dob ?? ''),
+                        email: String(p.email ?? ''),
+                        nationality: String(p.nationality ?? ''),
+                        phone: String(p.phone ?? ''),
+                        address: String(p.address ?? ''),
+                      }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Select...</option>
+                    {existingPeople.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
@@ -521,6 +627,7 @@ export default function RorcClient() {
                       <option value="NRIC">NRIC</option>
                       <option value="FIN">FIN</option>
                       <option value="IC">IC</option>
+                      <option value="OTHER">Other</option>
                     </select>
                     <input
                       value={
@@ -739,6 +846,37 @@ export default function RorcClient() {
                     onChange={(e) => setUseSavedCompany(e.target.checked)}
                   />
                   Use saved details (masked)
+                </label>
+              ) : null}
+
+              {!useSavedCompany && existingCompanies.length ? (
+                <label className="text-sm">
+                  <div className="text-black/70">Use existing company</div>
+                  <select
+                    value={existingCompanyId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setExistingCompanyId(nextId);
+                      if (!nextId) return;
+                      const c = existingCompanies.find((x) => x.id === nextId) ?? null;
+                      if (!c) return;
+                      setCompany((v) => ({
+                        ...v,
+                        companyName: c.name,
+                        registerNumber: String(c.companyRegistrationNo ?? ''),
+                        countryOfIncorporation: String(c.countryOfIncorporation ?? ''),
+                        companyAddress: String(c.registeredOfficeAddress ?? c.address ?? ''),
+                      }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Select...</option>
+                    {existingCompanies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               ) : null}
 

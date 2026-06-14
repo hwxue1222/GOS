@@ -72,7 +72,21 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
       if (party.type === 'COMPANY' && party.clientId) {
         const c = clientById.get(party.clientId);
         if (!c || c.deletedAt) return null;
-        return { role: r, entity: { type: 'COMPANY', company: { id: c.id, code: c.code, name: c.name } } };
+        return {
+          role: r,
+          entity: {
+            type: 'COMPANY',
+            company: {
+              id: c.id,
+              code: c.code,
+              name: c.name,
+              companyRegistrationNo: c.companyRegistrationNo,
+              countryOfIncorporation: c.countryOfIncorporation,
+              address: c.address,
+              registeredOfficeAddress: c.registeredOfficeAddress,
+            },
+          },
+        };
       }
       return null;
     })

@@ -13,14 +13,41 @@ type CompanyApiResponse = {
     ssicSecondaryCode?: string;
   };
   roles: {
-    directors: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
+    directors: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: PersonLite } }>;
     shareholders: Array<
-      | { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }
-      | { role: { id: string }; entity: { type: 'COMPANY'; company: { id: string; code: string; name: string } } }
+      | { role: { id: string }; entity: { type: 'PERSON'; person: PersonLite } }
+      | { role: { id: string }; entity: { type: 'COMPANY'; company: CompanyLite } }
     >;
-    rorc: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } | { type: 'COMPANY'; company: { name: string } } }>;
-    secretaries: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } }>;
+    rorc: Array<
+      {
+        role: { id: string };
+        entity: { type: 'PERSON'; person: PersonLite } | { type: 'COMPANY'; company: { name: string } };
+      }
+    >;
+    secretaries: Array<{ role: { id: string }; entity: { type: 'PERSON'; person: PersonLite } }>;
   };
+};
+
+type PersonLite = {
+  id: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  idType?: string;
+  idNo?: string;
+  nationality?: string;
+  dob?: string;
+  address?: string;
+};
+
+type CompanyLite = {
+  id: string;
+  code: string;
+  name: string;
+  companyRegistrationNo?: string;
+  countryOfIncorporation?: string;
+  address?: string;
+  registeredOfficeAddress?: string;
 };
 
 export function useCompanyContext() {

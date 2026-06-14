@@ -14,9 +14,9 @@ export default function AgmClient() {
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const shareholders = roles?.shareholders ?? [];
-  const shareholderPersons = shareholders.filter(
-    (s): s is { role: { id: string }; entity: { type: 'PERSON'; person: { fullName: string } } } => s.entity.type === 'PERSON',
-  );
+  const shareholderPersons = shareholders.filter((s) => (s as any)?.entity?.type === 'PERSON') as Array<
+    (typeof shareholders)[number] & { entity: { type: 'PERSON'; person: { fullName: string } } }
+  >;
   const directors = roles?.directors ?? [];
 
   const [meetingDate, setMeetingDate] = useState(todayYmd);
