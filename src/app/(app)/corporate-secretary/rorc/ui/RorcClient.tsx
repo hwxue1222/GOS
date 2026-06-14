@@ -1099,13 +1099,25 @@ export default function RorcClient() {
           ) : null}
 
           {step === 'FORM' ? (
-            <button
-              disabled={submitting}
-              onClick={() => void onSubmit()}
-              className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
-            >
-              Apply
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  setStep('SELECT');
+                }}
+                className="w-full rounded-lg border border-black/10 bg-white px-4 py-3 text-sm font-medium text-black/70 hover:bg-black/[0.02] disabled:opacity-60"
+              >
+                Back
+              </button>
+              <button
+                disabled={submitting}
+                onClick={() => void onSubmit()}
+                className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
+              >
+                Apply
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}
