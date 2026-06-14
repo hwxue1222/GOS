@@ -23,6 +23,9 @@
 # local db
 /.gos/
 
+# temp
+/tmp/
+
 # misc
 .DS_Store
 *.pem
