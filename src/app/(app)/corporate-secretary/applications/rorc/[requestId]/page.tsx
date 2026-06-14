@@ -31,6 +31,26 @@ async function canClientAccessRequest(user: { email: string }, clientId: string)
   return false;
 }
 
+function decodeHtmlEntities(s: string) {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripTags(s: string) {
+  return decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
+}
+
+function extractDocValue(html: string, keyIncludes: string) {
+  const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
+  const m = html.match(re);
+  return m ? stripTags(m[1] ?? '') : '';
+}
+
 export default async function RorcApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -133,6 +153,13 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     .filter(Boolean);
   const oldNames = oldControllerNames.length ? oldControllerNames.join(', ') : '-';
 
+  const docHtml = ctx.documents[0]?.html ?? '';
+  const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
+  const docNewCompanyName = docHtml ? extractDocValue(docHtml, 'Name') : '';
+  const docNewCompanyReg = docHtml ? extractDocValue(docHtml, 'identification number') || extractDocValue(docHtml, 'Entity Number') : '';
+  const docNewControllerFallback =
+    docNewPersonName || (docNewCompanyName ? (docNewCompanyReg ? `${docNewCompanyName} (${docNewCompanyReg})` : docNewCompanyName) : '');
+
   const newControllerLabel = (() => {
     if (r.controllerPerson?.fullName?.trim()) return r.controllerPerson.fullName.trim();
     if (r.controllerCompany?.companyName?.trim()) {
@@ -140,7 +167,8 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       const reg = String(r.controllerCompany.registerNumber ?? '').trim();
       return reg ? `${n} (${reg})` : n;
     }
-    return addNames;
+    if (addNames && addNames !== '-') return addNames;
+    return docNewControllerFallback || '-';
   })();
 
   const auditLogs = (db.auditLogs ?? [])
