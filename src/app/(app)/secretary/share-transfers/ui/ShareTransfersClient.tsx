@@ -921,7 +921,7 @@ export default function ShareTransfersClient(props: {
                                 </label>
                               ) : null}
                               <label className="text-sm">
-                                <div className="text-black/70">Country of business registration</div>
+                                <div className="text-black/70">Country of incorporation</div>
                                 <input
                                   value={d.newCompany.registrationCountry}
                                   onChange={(e) => patchDraftCompany(d.id, { registrationCountry: e.target.value })}

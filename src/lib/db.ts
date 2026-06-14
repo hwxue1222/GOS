@@ -5592,6 +5592,7 @@ export async function updateClient(
       | 'name'
       | 'fka'
       | 'companyRegistrationNo'
+      | 'countryOfBusinessRegistration'
       | 'fye'
       | 'contactPerson'
       | 'address'
@@ -5613,6 +5614,17 @@ export async function updateClient(
   const idx = db.clients.findIndex((c) => c.id === clientId);
   if (idx < 0) return null;
   const current = db.clients[idx];
+
+  if (typeof patch.code === 'string') {
+    const nextCode = patch.code.trim();
+    const currentCode = String(current.code ?? '').trim();
+    if (nextCode && nextCode !== currentCode) {
+      const norm = nextCode.toLowerCase();
+      const exists = db.clients.some((c) => c.id !== clientId && !c.deletedAt && String(c.code ?? '').trim().toLowerCase() === norm);
+      if (exists) throw new Error('DUPLICATE_CLIENT_CODE');
+    }
+  }
+
   const next: Client = { ...current, ...patch };
   db.clients[idx] = next;
   await writeDb(db);
@@ -9617,6 +9629,7 @@ export async function createRorcDeclarationRequest(input: {
   controllerCompany?: {
     companyName: string;
     registerNumber?: string;
+    countryOfIncorporation?: string;
     legalForm?: string;
     governedByLawAndJurisdiction?: string;
     registerOfCompanies?: string;
@@ -9668,6 +9681,9 @@ export async function createRorcDeclarationRequest(input: {
   } else if (controllerType === 'COMPANY') {
     const c = input.controllerCompany;
     if (!c?.companyName?.trim() || !String(c.registerNumber ?? '').trim() || !String(c.legalForm ?? '').trim()) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (!String(c.countryOfIncorporation ?? '').trim()) {
       return { ok: false as const, error: 'INVALID_INPUT' as const };
     }
     if (!String(c.governedByLawAndJurisdiction ?? '').trim() || !String(c.companyAddress ?? '').trim()) {

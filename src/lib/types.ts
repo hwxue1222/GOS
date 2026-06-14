@@ -478,6 +478,7 @@ export type RorcDeclarationRequest = {
   controllerCompany?: {
     companyName: string;
     registerNumber?: string;
+    countryOfIncorporation?: string;
     legalForm?: string;
     governedByLawAndJurisdiction?: string;
     registerOfCompanies?: string;

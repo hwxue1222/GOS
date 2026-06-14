@@ -1,12 +1,138 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 
 type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC';
+
+type SavedDraft = {
+  person?: {
+    effectiveDate?: string;
+    fullName?: string;
+    idType?: IdType;
+    idNo?: string;
+    dateOfBirth?: string;
+    email?: string;
+    nationality?: string;
+    phone?: string;
+    address?: string;
+    ccEnabled?: boolean;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
+    ccEmailAddress?: string;
+  };
+  company?: {
+    effectiveDate?: string;
+    companyName?: string;
+    registerNumber?: string;
+    countryOfIncorporation?: string;
+    legalForm?: string;
+    governedByLawAndJurisdiction?: string;
+    registerOfCompanies?: string;
+    companyAddress?: string;
+    ccEnabled?: boolean;
+    ccName?: string;
+    ccTitle?: string;
+    ccPhone?: string;
+    ccEmailAddress?: string;
+  };
+};
+
+const countryOptions = [
+  'Singapore',
+  'Brunei',
+  'Cambodia',
+  'Indonesia',
+  'Laos',
+  'Malaysia',
+  'Myanmar',
+  'Philippines',
+  'Thailand',
+  'Vietnam',
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Ireland',
+  'Germany',
+  'France',
+  'Italy',
+  'Spain',
+  'Netherlands',
+  'Switzerland',
+  'Sweden',
+  'Norway',
+  'Denmark',
+  'Finland',
+  'Belgium',
+  'Austria',
+  'Portugal',
+  'Australia',
+  'New Zealand',
+  'China',
+  'Chinese/Hong Kong SAR',
+  'Chinese/Macao SAR',
+  'China Taiwan',
+] as const;
+
+function maskKeepStartEnd(raw: string, startKeep: number, endKeep: number) {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  if (s.length <= startKeep + endKeep) return `${s.slice(0, Math.max(1, startKeep))}${'*'.repeat(Math.max(2, s.length - Math.max(1, startKeep)))}`;
+  const mid = '*'.repeat(Math.max(3, s.length - startKeep - endKeep));
+  return `${s.slice(0, startKeep)}${mid}${s.slice(s.length - endKeep)}`;
+}
+
+function maskEmail(raw: string) {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  const at = s.indexOf('@');
+  if (at <= 0) return maskKeepStartEnd(s, 2, 1);
+  const local = s.slice(0, at);
+  const domain = s.slice(at + 1);
+  const localMasked = local.length <= 2 ? `${local[0] ?? ''}***` : `${local.slice(0, 2)}***`;
+  const domainParts = domain.split('.');
+  const first = domainParts[0] ?? '';
+  const rest = domainParts.slice(1).join('.')
+  const domainMasked = first ? `${maskKeepStartEnd(first, 1, 1)}${rest ? `.${rest}` : ''}` : domain;
+  return `${localMasked}@${domainMasked}`;
+}
+
+function maskPhone(raw: string) {
+  const s = String(raw ?? '').replace(/\s+/g, '').trim();
+  if (!s) return '';
+  const keep = 4;
+  if (s.length <= keep) return '*'.repeat(Math.max(3, s.length));
+  return `${'*'.repeat(Math.max(3, s.length - keep))}${s.slice(-keep)}`;
+}
+
+function maskDateYmd(raw: string) {
+  const s = String(raw ?? '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return s ? maskKeepStartEnd(s, 0, 4) : '';
+  return `**/**/${m[1]}`;
+}
+
+function readSavedDraft(key: string): SavedDraft {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as SavedDraft;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedDraft(key: string, value: SavedDraft) {
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
 
 export default function RorcClient() {
   const router = useRouter();
@@ -16,6 +142,25 @@ export default function RorcClient() {
 
   const [mode, setMode] = useState<'PERSON' | 'COMPANY'>('PERSON');
   const [effectiveDate, setEffectiveDate] = useState(todayYmd);
+
+  const savedKey = companyId ? `gos.rorc.saved.${companyId}` : '';
+  const [saved, setSaved] = useState<SavedDraft>({});
+  const [useSavedPerson, setUseSavedPerson] = useState(false);
+  const [useSavedCompany, setUseSavedCompany] = useState(false);
+
+  useEffect(() => {
+    if (!savedKey) return;
+    const next = readSavedDraft(savedKey);
+    setSaved(next);
+    setUseSavedPerson(!!next.person);
+    setUseSavedCompany(!!next.company);
+    if (next.person?.effectiveDate) setEffectiveDate(String(next.person.effectiveDate).slice(0, 10));
+  }, [savedKey]);
+
+  useEffect(() => {
+    if (mode === 'PERSON' && saved.person?.effectiveDate) setEffectiveDate(String(saved.person.effectiveDate).slice(0, 10));
+    if (mode === 'COMPANY' && saved.company?.effectiveDate) setEffectiveDate(String(saved.company.effectiveDate).slice(0, 10));
+  }, [mode, saved.company?.effectiveDate, saved.person?.effectiveDate]);
 
   const [person, setPerson] = useState({
     fullName: '',
@@ -36,6 +181,7 @@ export default function RorcClient() {
   const [company, setCompany] = useState({
     companyName: '',
     registerNumber: '',
+    countryOfIncorporation: '',
     legalForm: '',
     governedByLawAndJurisdiction: '',
     registerOfCompanies: '',
@@ -72,6 +218,50 @@ export default function RorcClient() {
     }
 
     if (mode === 'PERSON') {
+      const savedP = saved.person;
+      if (useSavedPerson && savedP) {
+        setSubmitting(true);
+        try {
+          const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              effectiveDate: eff,
+              controllerType: 'PERSON',
+              controllerPerson: {
+                fullName: String(savedP.fullName ?? ''),
+                idType: savedP.idType,
+                idNo: String(savedP.idNo ?? ''),
+                dateOfBirth: String(savedP.dateOfBirth ?? ''),
+                email: String(savedP.email ?? ''),
+                nationality: String(savedP.nationality ?? ''),
+                phone: String(savedP.phone ?? ''),
+                address: String(savedP.address ?? ''),
+                ccEmailAddress: savedP.ccEnabled ? String(savedP.ccEmailAddress ?? '') || undefined : undefined,
+                ccName: savedP.ccEnabled ? String(savedP.ccName ?? '') || undefined : undefined,
+                ccTitle: savedP.ccEnabled ? String(savedP.ccTitle ?? '') || undefined : undefined,
+                ccPhone: savedP.ccEnabled ? String(savedP.ccPhone ?? '') || undefined : undefined,
+                useCcEmailInstead: false,
+              },
+            }),
+          }).catch(() => null);
+          const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
+          if (!res?.ok || !j?.ok || !j.request?.id) {
+            setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+            return;
+          }
+          setSaved((prev) => {
+            const next: SavedDraft = { ...prev, person: { ...savedP, effectiveDate: eff } };
+            if (savedKey) writeSavedDraft(savedKey, next);
+            return next;
+          });
+          router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
+        } finally {
+          setSubmitting(false);
+        }
+        return;
+      }
+
       const p = {
         ...person,
         fullName: person.fullName.trim(),
@@ -132,6 +322,73 @@ export default function RorcClient() {
           setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
           return;
         }
+
+        setSaved((prev) => {
+          const next: SavedDraft = {
+            ...prev,
+            person: {
+              effectiveDate: eff,
+              fullName: p.fullName,
+              idType: p.idType,
+              idNo: p.idNo,
+              dateOfBirth: p.dateOfBirth,
+              email: p.email,
+              nationality: p.nationality,
+              phone: p.phone,
+              address: p.address,
+              ccEnabled: p.ccEnabled,
+              ccName: p.ccName,
+              ccTitle: p.ccTitle,
+              ccPhone: p.ccPhone,
+              ccEmailAddress: p.ccEmailAddress,
+            },
+          };
+          if (savedKey) writeSavedDraft(savedKey, next);
+          return next;
+        });
+        router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    const savedC = saved.company;
+    if (useSavedCompany && savedC) {
+      setSubmitting(true);
+      try {
+        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            effectiveDate: eff,
+            controllerType: 'COMPANY',
+            controllerCompany: {
+              companyName: String(savedC.companyName ?? ''),
+              registerNumber: String(savedC.registerNumber ?? ''),
+              countryOfIncorporation: String(savedC.countryOfIncorporation ?? ''),
+              legalForm: String(savedC.legalForm ?? ''),
+              governedByLawAndJurisdiction: String(savedC.governedByLawAndJurisdiction ?? ''),
+              registerOfCompanies: String(savedC.registerOfCompanies ?? '') || undefined,
+              companyAddress: String(savedC.companyAddress ?? ''),
+              ccEmailAddress: savedC.ccEnabled ? String(savedC.ccEmailAddress ?? '') || undefined : undefined,
+              ccName: savedC.ccEnabled ? String(savedC.ccName ?? '') || undefined : undefined,
+              ccTitle: savedC.ccEnabled ? String(savedC.ccTitle ?? '') || undefined : undefined,
+              ccPhone: savedC.ccEnabled ? String(savedC.ccPhone ?? '') || undefined : undefined,
+              useCcEmailInstead: false,
+            },
+          }),
+        }).catch(() => null);
+        const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
+        if (!res?.ok || !j?.ok || !j.request?.id) {
+          setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+          return;
+        }
+        setSaved((prev) => {
+          const next: SavedDraft = { ...prev, company: { ...savedC, effectiveDate: eff } };
+          if (savedKey) writeSavedDraft(savedKey, next);
+          return next;
+        });
         router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
       } finally {
         setSubmitting(false);
@@ -143,6 +400,7 @@ export default function RorcClient() {
       ...company,
       companyName: company.companyName.trim(),
       registerNumber: company.registerNumber.trim(),
+      countryOfIncorporation: company.countryOfIncorporation.trim(),
       legalForm: company.legalForm.trim(),
       governedByLawAndJurisdiction: company.governedByLawAndJurisdiction.trim(),
       registerOfCompanies: company.registerOfCompanies.trim(),
@@ -156,6 +414,7 @@ export default function RorcClient() {
 
     if (!c.companyName) return void setSubmitError('RORC Controller Company is required.');
     if (!c.registerNumber) return void setSubmitError('RORC Controller Company Register Number is required.');
+    if (!c.countryOfIncorporation) return void setSubmitError('Country of incorporation is required.');
     if (!c.legalForm) return void setSubmitError('Legal Form Of The Entity is required.');
     if (!c.governedByLawAndJurisdiction) return void setSubmitError('The Law By Which It Is Governed And In Which Jurisdiction is required.');
     if (!c.companyAddress) return void setSubmitError('RORC Controller Company Address is required.');
@@ -177,6 +436,7 @@ export default function RorcClient() {
           controllerCompany: {
             companyName: c.companyName,
             registerNumber: c.registerNumber,
+            countryOfIncorporation: c.countryOfIncorporation,
             legalForm: c.legalForm,
             governedByLawAndJurisdiction: c.governedByLawAndJurisdiction,
             registerOfCompanies: c.registerOfCompanies || undefined,
@@ -194,6 +454,29 @@ export default function RorcClient() {
         setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
+
+      setSaved((prev) => {
+        const next: SavedDraft = {
+          ...prev,
+          company: {
+            effectiveDate: eff,
+            companyName: c.companyName,
+            registerNumber: c.registerNumber,
+            countryOfIncorporation: c.countryOfIncorporation,
+            legalForm: c.legalForm,
+            governedByLawAndJurisdiction: c.governedByLawAndJurisdiction,
+            registerOfCompanies: c.registerOfCompanies,
+            companyAddress: c.companyAddress,
+            ccEnabled: c.ccEnabled,
+            ccName: c.ccName,
+            ccTitle: c.ccTitle,
+            ccPhone: c.ccPhone,
+            ccEmailAddress: c.ccEmailAddress,
+          },
+        };
+        if (savedKey) writeSavedDraft(savedKey, next);
+        return next;
+      });
       router.push(`/corporate-secretary/applications/rorc/${encodeURIComponent(j.request.id)}`);
     } finally {
       setSubmitting(false);
@@ -223,15 +506,34 @@ export default function RorcClient() {
 
           {mode === 'PERSON' ? (
             <>
+              {saved.person ? (
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="checkbox"
+                    checked={useSavedPerson}
+                    onChange={(e) => setUseSavedPerson(e.target.checked)}
+                  />
+                  Use saved details (masked)
+                </label>
+              ) : null}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
                     <span className="text-red-500">*</span> RORC Controller Full Name
                   </div>
                   <input
-                    value={person.fullName}
-                    onChange={(e) => setPerson((v) => ({ ...v, fullName: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    value={
+                      useSavedPerson && saved.person
+                        ? maskKeepStartEnd(String(saved.person.fullName ?? ''), 1, 1)
+                        : person.fullName
+                    }
+                    onChange={(e) => {
+                      if (useSavedPerson) return;
+                      setPerson((v) => ({ ...v, fullName: e.target.value }));
+                    }}
+                    disabled={useSavedPerson}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
                 <label className="text-sm">
@@ -240,9 +542,13 @@ export default function RorcClient() {
                   </div>
                   <div className="mt-1 grid grid-cols-12 gap-2">
                     <select
-                      value={person.idType}
-                      onChange={(e) => setPerson((v) => ({ ...v, idType: e.target.value as IdType }))}
-                      className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      value={(useSavedPerson && saved.person?.idType ? saved.person.idType : person.idType) as IdType}
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, idType: e.target.value as IdType }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="col-span-5 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     >
                       <option value="PASSPORT">Passport</option>
                       <option value="NRIC">NRIC</option>
@@ -250,9 +556,17 @@ export default function RorcClient() {
                       <option value="IC">IC</option>
                     </select>
                     <input
-                      value={person.idNo}
-                      onChange={(e) => setPerson((v) => ({ ...v, idNo: e.target.value }))}
-                      className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={
+                        useSavedPerson && saved.person
+                          ? maskKeepStartEnd(String(saved.person.idNo ?? ''), 2, 2)
+                          : person.idNo
+                      }
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, idNo: e.target.value }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="col-span-7 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </div>
                 </label>
@@ -263,21 +577,33 @@ export default function RorcClient() {
                   <div className="text-black">
                     <span className="text-red-500">*</span> Date Of Birth
                   </div>
-                  <input
-                    type="date"
-                    value={person.dateOfBirth}
-                    onChange={(e) => setPerson((v) => ({ ...v, dateOfBirth: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
+                  {useSavedPerson && saved.person ? (
+                    <input
+                      value={maskDateYmd(String(saved.person.dateOfBirth ?? ''))}
+                      disabled
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    />
+                  ) : (
+                    <input
+                      type="date"
+                      value={person.dateOfBirth}
+                      onChange={(e) => setPerson((v) => ({ ...v, dateOfBirth: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  )}
                 </label>
                 <label className="text-sm">
                   <div className="text-black">
                     <span className="text-red-500">*</span> Email
                   </div>
                   <input
-                    value={person.email}
-                    onChange={(e) => setPerson((v) => ({ ...v, email: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    value={useSavedPerson && saved.person ? maskEmail(String(saved.person.email ?? '')) : person.email}
+                    onChange={(e) => {
+                      if (useSavedPerson) return;
+                      setPerson((v) => ({ ...v, email: e.target.value }));
+                    }}
+                    disabled={useSavedPerson}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
               </div>
@@ -287,9 +613,17 @@ export default function RorcClient() {
                   <span className="text-red-500">*</span> Nationality
                 </div>
                 <input
-                  value={person.nationality}
-                  onChange={(e) => setPerson((v) => ({ ...v, nationality: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  value={
+                    useSavedPerson && saved.person
+                      ? maskKeepStartEnd(String(saved.person.nationality ?? ''), 1, 0)
+                      : person.nationality
+                  }
+                  onChange={(e) => {
+                    if (useSavedPerson) return;
+                    setPerson((v) => ({ ...v, nationality: e.target.value }));
+                  }}
+                  disabled={useSavedPerson}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
 
@@ -299,9 +633,13 @@ export default function RorcClient() {
                     <span className="text-red-500">*</span> Phone
                   </div>
                   <input
-                    value={person.phone}
-                    onChange={(e) => setPerson((v) => ({ ...v, phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    value={useSavedPerson && saved.person ? maskPhone(String(saved.person.phone ?? '')) : person.phone}
+                    onChange={(e) => {
+                      if (useSavedPerson) return;
+                      setPerson((v) => ({ ...v, phone: e.target.value }));
+                    }}
+                    disabled={useSavedPerson}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
                 <label className="text-sm">
@@ -322,18 +660,27 @@ export default function RorcClient() {
                   <span className="text-red-500">*</span> Address
                 </div>
                 <textarea
-                  value={person.address}
-                  onChange={(e) => setPerson((v) => ({ ...v, address: e.target.value }))}
+                  value={
+                    useSavedPerson && saved.person
+                      ? maskKeepStartEnd(String(saved.person.address ?? ''), 6, 0)
+                      : person.address
+                  }
+                  onChange={(e) => {
+                    if (useSavedPerson) return;
+                    setPerson((v) => ({ ...v, address: e.target.value }));
+                  }}
                   rows={3}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  disabled={useSavedPerson}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
                   type="checkbox"
-                  checked={person.ccEnabled}
+                  checked={useSavedPerson && saved.person ? !!saved.person.ccEnabled : person.ccEnabled}
                   onChange={(e) => {
+                    if (useSavedPerson) return;
                     const checked = e.target.checked;
                     setPerson((v) => ({
                       ...v,
@@ -348,42 +695,67 @@ export default function RorcClient() {
                           }),
                     }));
                   }}
+                  disabled={useSavedPerson}
                 />
                 CC management to declare
               </label>
 
-              {person.ccEnabled ? (
+              {(useSavedPerson && saved.person ? !!saved.person.ccEnabled : person.ccEnabled) ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="text-sm">
                     <div className="text-black/70">CC Name</div>
                     <input
-                      value={person.ccName}
-                      onChange={(e) => setPerson((v) => ({ ...v, ccName: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={
+                        useSavedPerson && saved.person
+                          ? maskKeepStartEnd(String(saved.person.ccName ?? ''), 1, 1)
+                          : person.ccName
+                      }
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, ccName: e.target.value }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Position</div>
                     <input
-                      value={person.ccTitle}
-                      onChange={(e) => setPerson((v) => ({ ...v, ccTitle: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={
+                        useSavedPerson && saved.person
+                          ? maskKeepStartEnd(String(saved.person.ccTitle ?? ''), 2, 0)
+                          : person.ccTitle
+                      }
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, ccTitle: e.target.value }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Phone</div>
                     <input
-                      value={person.ccPhone}
-                      onChange={(e) => setPerson((v) => ({ ...v, ccPhone: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={useSavedPerson && saved.person ? maskPhone(String(saved.person.ccPhone ?? '')) : person.ccPhone}
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, ccPhone: e.target.value }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Email Address</div>
                     <input
-                      value={person.ccEmailAddress}
-                      onChange={(e) => setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={useSavedPerson && saved.person ? maskEmail(String(saved.person.ccEmailAddress ?? '')) : person.ccEmailAddress}
+                      onChange={(e) => {
+                        if (useSavedPerson) return;
+                        setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }));
+                      }}
+                      disabled={useSavedPerson}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                 </div>
@@ -392,15 +764,34 @@ export default function RorcClient() {
             </>
           ) : (
             <>
+              {saved.company ? (
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="checkbox"
+                    checked={useSavedCompany}
+                    onChange={(e) => setUseSavedCompany(e.target.checked)}
+                  />
+                  Use saved details (masked)
+                </label>
+              ) : null}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
                   <div className="text-black">
                     <span className="text-red-500">*</span> RORC Controller Company
                   </div>
                   <input
-                    value={company.companyName}
-                    onChange={(e) => setCompany((v) => ({ ...v, companyName: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    value={
+                      useSavedCompany && saved.company
+                        ? maskKeepStartEnd(String(saved.company.companyName ?? ''), 2, 2)
+                        : company.companyName
+                    }
+                    onChange={(e) => {
+                      if (useSavedCompany) return;
+                      setCompany((v) => ({ ...v, companyName: e.target.value }));
+                    }}
+                    disabled={useSavedCompany}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
                 <label className="text-sm">
@@ -408,9 +799,17 @@ export default function RorcClient() {
                     <span className="text-red-500">*</span> RORC Controller Company Register Number
                   </div>
                   <input
-                    value={company.registerNumber}
-                    onChange={(e) => setCompany((v) => ({ ...v, registerNumber: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    value={
+                      useSavedCompany && saved.company
+                        ? maskKeepStartEnd(String(saved.company.registerNumber ?? ''), 2, 2)
+                        : company.registerNumber
+                    }
+                    onChange={(e) => {
+                      if (useSavedCompany) return;
+                      setCompany((v) => ({ ...v, registerNumber: e.target.value }));
+                    }}
+                    disabled={useSavedCompany}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
               </div>
@@ -421,10 +820,18 @@ export default function RorcClient() {
                     <span className="text-red-500">*</span> Legal Form Of The Entity
                   </div>
                   <input
-                    value={company.legalForm}
-                    onChange={(e) => setCompany((v) => ({ ...v, legalForm: e.target.value }))}
+                    value={
+                      useSavedCompany && saved.company
+                        ? maskKeepStartEnd(String(saved.company.legalForm ?? ''), 6, 0)
+                        : company.legalForm
+                    }
+                    onChange={(e) => {
+                      if (useSavedCompany) return;
+                      setCompany((v) => ({ ...v, legalForm: e.target.value }));
+                    }}
                     placeholder="e.g. Private company limited by shares (Hong Kong)"
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    disabled={useSavedCompany}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
                 <label className="text-sm">
@@ -432,23 +839,43 @@ export default function RorcClient() {
                     <span className="text-red-500">*</span> The Law By Which It Is Governed And In Which Jurisdiction
                   </div>
                   <input
-                    value={company.governedByLawAndJurisdiction}
-                    onChange={(e) => setCompany((v) => ({ ...v, governedByLawAndJurisdiction: e.target.value }))}
+                    value={
+                      useSavedCompany && saved.company
+                        ? maskKeepStartEnd(String(saved.company.governedByLawAndJurisdiction ?? ''), 6, 0)
+                        : company.governedByLawAndJurisdiction
+                    }
+                    onChange={(e) => {
+                      if (useSavedCompany) return;
+                      setCompany((v) => ({ ...v, governedByLawAndJurisdiction: e.target.value }));
+                    }}
                     placeholder="e.g. Companies Ordinance (Cap. 622), Hong Kong"
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    disabled={useSavedCompany}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="text-sm">
-                  <div className="text-black/70">The Register Of Companies</div>
-                  <input
-                    value={company.registerOfCompanies}
-                    onChange={(e) => setCompany((v) => ({ ...v, registerOfCompanies: e.target.value }))}
-                    placeholder="e.g. Companies Registry (Hong Kong)"
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
+                  <div className="text-black">
+                    <span className="text-red-500">*</span> Country of incorporation
+                  </div>
+                  <select
+                    value={useSavedCompany && saved.company ? String(saved.company.countryOfIncorporation ?? '') : company.countryOfIncorporation}
+                    onChange={(e) => {
+                      if (useSavedCompany) return;
+                      setCompany((v) => ({ ...v, countryOfIncorporation: e.target.value }));
+                    }}
+                    disabled={useSavedCompany}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                  >
+                    <option value="">Select...</option>
+                    {countryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="text-sm">
                   <div className="text-black">
@@ -464,22 +891,49 @@ export default function RorcClient() {
               </div>
 
               <label className="text-sm">
+                <div className="text-black/70">The Register Of Companies</div>
+                <input
+                  value={
+                    useSavedCompany && saved.company
+                      ? maskKeepStartEnd(String(saved.company.registerOfCompanies ?? ''), 6, 0)
+                      : company.registerOfCompanies
+                  }
+                  onChange={(e) => {
+                    if (useSavedCompany) return;
+                    setCompany((v) => ({ ...v, registerOfCompanies: e.target.value }));
+                  }}
+                  placeholder="e.g. Companies Registry (Hong Kong)"
+                  disabled={useSavedCompany}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                />
+              </label>
+
+              <label className="text-sm">
                 <div className="text-black">
                   <span className="text-red-500">*</span> RORC Controller Company Address
                 </div>
                 <textarea
-                  value={company.companyAddress}
-                  onChange={(e) => setCompany((v) => ({ ...v, companyAddress: e.target.value }))}
+                  value={
+                    useSavedCompany && saved.company
+                      ? maskKeepStartEnd(String(saved.company.companyAddress ?? ''), 6, 0)
+                      : company.companyAddress
+                  }
+                  onChange={(e) => {
+                    if (useSavedCompany) return;
+                    setCompany((v) => ({ ...v, companyAddress: e.target.value }));
+                  }}
                   rows={3}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  disabled={useSavedCompany}
+                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                 />
               </label>
 
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
                   type="checkbox"
-                  checked={company.ccEnabled}
+                  checked={useSavedCompany && saved.company ? !!saved.company.ccEnabled : company.ccEnabled}
                   onChange={(e) => {
+                    if (useSavedCompany) return;
                     const checked = e.target.checked;
                     setCompany((v) => ({
                       ...v,
@@ -494,42 +948,67 @@ export default function RorcClient() {
                           }),
                     }));
                   }}
+                  disabled={useSavedCompany}
                 />
                 CC management to declare
               </label>
 
-              {company.ccEnabled ? (
+              {(useSavedCompany && saved.company ? !!saved.company.ccEnabled : company.ccEnabled) ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="text-sm">
                     <div className="text-black/70">CC Name</div>
                     <input
-                      value={company.ccName}
-                      onChange={(e) => setCompany((v) => ({ ...v, ccName: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={
+                        useSavedCompany && saved.company
+                          ? maskKeepStartEnd(String(saved.company.ccName ?? ''), 1, 1)
+                          : company.ccName
+                      }
+                      onChange={(e) => {
+                        if (useSavedCompany) return;
+                        setCompany((v) => ({ ...v, ccName: e.target.value }));
+                      }}
+                      disabled={useSavedCompany}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Position</div>
                     <input
-                      value={company.ccTitle}
-                      onChange={(e) => setCompany((v) => ({ ...v, ccTitle: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={
+                        useSavedCompany && saved.company
+                          ? maskKeepStartEnd(String(saved.company.ccTitle ?? ''), 2, 0)
+                          : company.ccTitle
+                      }
+                      onChange={(e) => {
+                        if (useSavedCompany) return;
+                        setCompany((v) => ({ ...v, ccTitle: e.target.value }));
+                      }}
+                      disabled={useSavedCompany}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Phone</div>
                     <input
-                      value={company.ccPhone}
-                      onChange={(e) => setCompany((v) => ({ ...v, ccPhone: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={useSavedCompany && saved.company ? maskPhone(String(saved.company.ccPhone ?? '')) : company.ccPhone}
+                      onChange={(e) => {
+                        if (useSavedCompany) return;
+                        setCompany((v) => ({ ...v, ccPhone: e.target.value }));
+                      }}
+                      disabled={useSavedCompany}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">CC Email Address</div>
                     <input
-                      value={company.ccEmailAddress}
-                      onChange={(e) => setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      value={useSavedCompany && saved.company ? maskEmail(String(saved.company.ccEmailAddress ?? '')) : company.ccEmailAddress}
+                      onChange={(e) => {
+                        if (useSavedCompany) return;
+                        setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }));
+                      }}
+                      disabled={useSavedCompany}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   </label>
                 </div>

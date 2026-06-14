@@ -110,6 +110,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     name: typeof body?.name === 'string' ? body.name.trim() : undefined,
     code: typeof body?.code === 'string' ? body.code.trim() : undefined,
     companyRegistrationNo: typeof body?.companyRegistrationNo === 'string' ? body.companyRegistrationNo.trim() || undefined : undefined,
+    countryOfBusinessRegistration:
+      typeof body?.countryOfBusinessRegistration === 'string' ? body.countryOfBusinessRegistration.trim() || undefined : undefined,
     fye: typeof body?.fye === 'string' ? body.fye.trim() || undefined : undefined,
     contactPerson: typeof body?.contactPerson === 'string' ? body.contactPerson.trim() || undefined : undefined,
     address: typeof body?.address === 'string' ? body.address.trim() || undefined : undefined,
@@ -148,7 +150,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     }
   }
 
-  const updated = await updateClient(clientId, patch);
+  let updated = null as Awaited<ReturnType<typeof updateClient>>;
+  try {
+    updated = await updateClient(clientId, patch);
+  } catch (e) {
+    const msg = String((e as Error | null)?.message ?? '');
+    if (msg === 'DUPLICATE_CLIENT_CODE') {
+      return NextResponse.json({ ok: false, error: 'DUPLICATE_CLIENT_CODE' }, { status: 400 });
+    }
+    throw e;
+  }
   if (!updated) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   return NextResponse.json({ ok: true, client: updated });
 }

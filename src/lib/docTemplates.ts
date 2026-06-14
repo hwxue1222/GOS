@@ -1038,7 +1038,7 @@ export function renderCertificateOfAppointmentOfCorporateSecretaryHtml(input: {
     <div class="p" style="margin-top: 18px;">
       We, the undersigned, being a Director and the Corporate Representative of ${companyName}
       ${companyRegistrationNo ? `(Company Registration No. ${companyRegistrationNo})` : ''}
-      (Country of business registration: ${country}), hereby certify that ${csName} is appointed as the corporate secretary of the Company.
+      (Country of incorporation: ${country}), hereby certify that ${csName} is appointed as the corporate secretary of the Company.
     </div>
 
     <div class="p">Dated: ${dated}</div>
