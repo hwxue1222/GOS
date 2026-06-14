@@ -235,6 +235,20 @@ export async function POST(req: Request) {
         : Promise.resolve({ ok: false }),
     );
   }
+  for (const l of (signLinks as any).cr ?? []) {
+    jobs.push(
+      baseUrl
+        ? sendSigningInvite({
+            to: l.email,
+            url: `${baseUrl}${l.url}`,
+            companyName,
+            applicationName: appName,
+            documentTitle: l.documentTitle ?? 'Certificate of Appointment of Corporate Representative',
+            signerRole: l.signerRole ?? 'Signatory',
+          })
+        : Promise.resolve({ ok: false }),
+    );
+  }
   await Promise.all(jobs);
 
   return NextResponse.json({ ok: true, transfer: r.transfer, documents: (r as any).documents, signLinks: r.signLinks });
