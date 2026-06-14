@@ -8786,16 +8786,22 @@ export async function createCompanyUpdateRequest(input: {
     const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
 
-    const nextPrimary = typeof primaryIn === 'string' ? primaryIn.trim() : '';
-    const finalPrimary = (hasPrimary ? nextPrimary : '') || originalPrimary;
-    if (!finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const nextPrimary = primaryIn === null ? '' : typeof primaryIn === 'string' ? primaryIn.trim() : '';
+    let finalPrimary = (hasPrimary ? nextPrimary : '') || originalPrimary;
 
-    const finalSecondary = (() => {
+    let finalSecondary = (() => {
       if (!hasSecondary) return originalSecondary;
       if (secondaryIn === null) return '';
       const v = typeof secondaryIn === 'string' ? secondaryIn.trim() : '';
       return v;
     })();
+
+    if (!finalPrimary && finalSecondary) {
+      finalPrimary = finalSecondary;
+      finalSecondary = '';
+    }
+
+    if (!finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     if (finalSecondary && finalSecondary === finalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
     if (finalPrimary === originalPrimary && finalSecondary === originalSecondary) return { ok: false as const, error: 'INVALID_INPUT' as const };
