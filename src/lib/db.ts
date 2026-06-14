@@ -9695,7 +9695,11 @@ export async function createRorcDeclarationRequest(input: {
   const effectiveDate = input.effectiveDate.trim();
   if (!effectiveDate) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
-  const controllerType = input.controllerType;
+  let controllerType = input.controllerType;
+  if (!controllerType) {
+    if (input.controllerPerson && String((input.controllerPerson as any)?.fullName ?? '').trim()) controllerType = 'PERSON';
+    else if (input.controllerCompany && String((input.controllerCompany as any)?.companyName ?? '').trim()) controllerType = 'COMPANY';
+  }
 
   const removeRorcRoleIds = Array.isArray(input.removeRorcRoleIds)
     ? input.removeRorcRoleIds.map((x) => String(x).trim()).filter(Boolean)

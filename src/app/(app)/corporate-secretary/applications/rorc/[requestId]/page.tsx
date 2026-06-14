@@ -105,7 +105,9 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     { label: 'Type', value: 'Declaration of Company Controller (RORC)' },
     { label: 'Status', value: r.status },
     { label: 'Effective date', value: r.effectiveDate },
-    ...(r.controllerType ? [{ label: 'Controller type', value: r.controllerType }] : []),
+    ...(r.controllerType || r.controllerPerson?.fullName || r.controllerCompany?.companyName
+      ? [{ label: 'Controller type', value: r.controllerType ?? (r.controllerPerson?.fullName ? 'PERSON' : 'COMPANY') }]
+      : []),
     { label: 'Submitted', value: (r.submittedAt ?? r.createdAt).slice(0, 10) },
     { label: 'Updated', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
   ];
@@ -131,6 +133,16 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     .filter(Boolean);
   const oldNames = oldControllerNames.length ? oldControllerNames.join(', ') : '-';
 
+  const newControllerLabel = (() => {
+    if (r.controllerPerson?.fullName?.trim()) return r.controllerPerson.fullName.trim();
+    if (r.controllerCompany?.companyName?.trim()) {
+      const n = r.controllerCompany.companyName.trim();
+      const reg = String(r.controllerCompany.registerNumber ?? '').trim();
+      return reg ? `${n} (${reg})` : n;
+    }
+    return addNames;
+  })();
+
   const auditLogs = (db.auditLogs ?? [])
     .filter((l) => l.entityType === 'rorc_declaration_request' && l.entityId === r.id)
     .slice()
@@ -149,54 +161,24 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />
           <SectionCard title="Requested changes" subtitle="New controller and previous controller(s).">
-            {r.controllerType ? (
-              <div className="space-y-3 text-sm">
-                {r.controllerType === 'PERSON' ? (
-                  <>
-                    <div>
-                      <div className="text-black/50">New controller (personal)</div>
-                      <div className="mt-1 text-black/80">{r.controllerPerson?.fullName ?? '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-black/50">Email</div>
-                      <div className="mt-1 text-black/80">
-                        {(r.controllerPerson?.useCcEmailInstead ? r.controllerPerson?.ccEmailAddress : r.controllerPerson?.email) ?? '-'}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-black/50">Old controller(s)</div>
-                      <div className="mt-1 text-black/80">{oldNames}</div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <div className="text-black/50">New controller (company)</div>
-                      <div className="mt-1 text-black/80">{r.controllerCompany?.companyName ?? '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-black/50">Register number</div>
-                      <div className="mt-1 text-black/80">{r.controllerCompany?.registerNumber ?? '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-black/50">Old controller(s)</div>
-                      <div className="mt-1 text-black/80">{oldNames}</div>
-                    </div>
-                  </>
-                )}
+            <div className="space-y-3 text-sm">
+              <div>
+                <div className="text-black/50">New controller(s)</div>
+                <div className="mt-1 text-black/80">{newControllerLabel || '-'}</div>
               </div>
-            ) : (
-              <div className="space-y-3 text-sm">
+              {r.controllerPerson?.fullName?.trim() ? (
                 <div>
-                  <div className="text-black/50">New controller(s)</div>
-                  <div className="mt-1 text-black/80">{addNames}</div>
+                  <div className="text-black/50">Email</div>
+                  <div className="mt-1 text-black/80">
+                    {(r.controllerPerson?.useCcEmailInstead ? r.controllerPerson?.ccEmailAddress : r.controllerPerson?.email) ?? '-'}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-black/50">Old controller(s)</div>
-                  <div className="mt-1 text-black/80">{oldNames}</div>
-                </div>
+              ) : null}
+              <div>
+                <div className="text-black/50">Old controller(s)</div>
+                <div className="mt-1 text-black/80">{oldNames}</div>
               </div>
-            )}
+            </div>
           </SectionCard>
           {r.message?.trim() ? (
             <SectionCard title="Message" subtitle="Notes provided when submitting this request.">
