@@ -1292,20 +1292,27 @@ export function renderCompanyUpdateRequestHtml(input: {
     const old2 = formatSsic(old2Code);
     const next1 = formatSsic(next1Code);
     const next2 = formatSsic(next2Code);
-    const changed1 = !!next1Code && old1Code.toLowerCase() !== next1Code.toLowerCase();
-    const changed2 = !!next2Code && old2Code.toLowerCase() !== next2Code.toLowerCase();
-    const parts = [
-      changed1
-        ? old1Code
-          ? `from "<strong>${esc(old1)}</strong>" to "<strong>${esc(next1)}</strong>"`
-          : `to "<strong>${esc(next1)}</strong>"`
-        : '',
-      changed2
-        ? old2Code
-          ? `from "<strong>${esc(old2)}</strong>" to "<strong>${esc(next2)}</strong>"`
-          : `to "<strong>${esc(next2)}</strong>"`
-        : '',
-    ].filter(Boolean);
+
+    const currentItems = [
+      ...(old1Code ? [`<div>Activity 1: <strong>${esc(old1)}</strong></div>`] : []),
+      ...(old2Code ? [`<div>Activity 2: <strong>${esc(old2)}</strong></div>`] : []),
+    ].join('');
+
+    const nextItems = [
+      ...(next1Code ? [`<div>Activity 1: <strong>${esc(next1)}</strong></div>`] : []),
+      ...(next2Code ? [`<div>Activity 2: <strong>${esc(next2)}</strong></div>`] : []),
+    ].join('');
+
+    const statement =
+      currentItems && nextItems
+        ? `
+That the business activities of the Company are changed from:
+<div style="margin-left: 18px; margin-top: 6px;">${currentItems}</div>
+<div style="margin-top: 10px;">to:</div>
+<div style="margin-left: 18px; margin-top: 6px;">${nextItems}</div>
+<div style="margin-top: 10px;">with immediate effect.</div>
+`.trim()
+        : 'That the business activities of the Company remain unchanged.';
 
     const directors = (input.directors ?? [])
       .map((d) => ({ fullName: String(d.fullName ?? '').trim(), email: String(d.email ?? '').trim() || undefined }))
@@ -1358,10 +1365,9 @@ export function renderCompanyUpdateRequestHtml(input: {
     <div class="subtitle">RESOLVED –</div>
     <div class="subtitle">CHANGE OF BUSINESS ACTIVITIES</div>
     <div class="block" style="white-space: pre-wrap;">
-      ${parts.length ? `That the business activities are changed ${parts.join(' and ')} with immediate effect.` : 'That the business activities of the Company remain unchanged.'}
+      ${statement}
     </div>
     ${signatureBlocks}
-    <div style="margin-top: 18px;">Date: <span class="red">${esc(dated)}</span></div>
     <div style="margin-top: 18px;"><strong>Dated</strong>: ${esc(dated)}</div>
 </html>
 `.trim();
