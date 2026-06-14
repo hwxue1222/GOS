@@ -86,6 +86,21 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
       decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}/decision`,
     }));
 
+  const shareTransferRows = buildSecretaryServiceApplications(db, allowedClientIds)
+    .filter((r) => r.type === 'SHARE_TRANSFER')
+    .filter((r) => r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO')
+    .map((r) => ({
+      id: `ST-${r.source.id}`,
+      typeLabel: 'Transfer of Shares',
+      companyId: r.companyId,
+      companyName: r.companyName,
+      applicationDate: r.applicationDate,
+      editDate: r.editDate,
+      status: r.status,
+      detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
+      decisionUrl: `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}/decision`,
+    }));
+
   const labelForType = (t: string) => {
     if (t === 'CHANGE_COMPANY_NAME') return 'Change of Company Name';
     if (t === 'CHANGE_FINANCIAL_YEAR_END') return 'Change of Financial Year End (FYE)';
@@ -152,7 +167,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
       };
     });
 
-  const rows = [...companyUpdateRows, ...rorcRows, ...agmRows, ...pendingDirectorRows].sort(
+  const rows = [...companyUpdateRows, ...rorcRows, ...agmRows, ...pendingDirectorRows, ...shareTransferRows].sort(
     (a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''),
   );
 
