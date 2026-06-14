@@ -128,6 +128,12 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
     if (allowedClientIds && !allowedClientIds.has(r.clientId)) continue;
     const applicationDate = iso(r.submittedAt || r.createdAt);
     const editDate = iso(r.updatedAt || r.createdAt);
+
+    const packetIds = (r.packetIds ?? []).length ? (r.packetIds ?? []) : [r.packetId];
+    const packets = packetIds.map((id) => db.signaturePackets.find((p) => p.id === id) ?? null);
+    const allSigned = packets.length > 0 && packets.every((p) => p?.status === 'SIGNED');
+    const derivedStatus = r.status === 'PENDING_REVIEW' && !allSigned ? 'SIGNING' : statusFromRorcDeclaration(r);
+
     rows.push({
       id: `RORC-${r.id}`,
       type: 'RORC_DECLARATION',
@@ -135,7 +141,7 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
       companyName: client.name,
       applicationDate,
       editDate,
-      status: statusFromRorcDeclaration(r),
+      status: derivedStatus,
       source: { kind: 'RORC_DECLARATION_REQUEST', id: r.id },
     });
   }

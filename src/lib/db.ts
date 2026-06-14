@@ -7088,6 +7088,10 @@ async function finalizeRorcDeclarationIfReady(db: Db, packet: SignaturePacket) {
   if (packet.relatedType !== 'RORC_DECLARATION') return;
   if (packet.status !== 'SIGNED') return;
 
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'RORC_DECLARATION' && p.relatedId === packet.relatedId);
+  if (!packets.length) return;
+  if (!packets.every((p) => p.status === 'SIGNED')) return;
+
   const list = Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
     ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
     : [];
