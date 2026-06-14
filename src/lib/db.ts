@@ -8796,6 +8796,15 @@ export async function createCompanyUpdateRequest(input: {
       return v;
     })();
 
+    if (typeof primaryIn === 'string') {
+      const v = primaryIn.trim();
+      if (v && v !== originalPrimary && originalSecondary && v === originalSecondary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+    if (typeof secondaryIn === 'string') {
+      const v = secondaryIn.trim();
+      if (v && v !== originalSecondary && originalPrimary && v === originalPrimary) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
+
     if (!finalPrimary && finalSecondary) {
       finalPrimary = finalSecondary;
       finalSecondary = '';

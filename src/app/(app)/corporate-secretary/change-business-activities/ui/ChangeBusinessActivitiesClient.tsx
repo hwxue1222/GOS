@@ -84,6 +84,16 @@ export default function ChangeBusinessActivitiesClient() {
 
     const originalPrimary = String(client.ssicPrimaryCode ?? '').trim();
     const originalSecondary = String(client.ssicSecondaryCode ?? '').trim();
+
+    if (!removePrimary && ssicPrimaryCode && ssicPrimaryCode !== originalPrimary && originalSecondary && ssicPrimaryCode === originalSecondary) {
+      setSubmitError('New Activity 1 cannot be same as existing Activity 2.');
+      return;
+    }
+    if (!removeSecondary && ssicSecondaryCode && ssicSecondaryCode !== originalSecondary && originalPrimary && ssicSecondaryCode === originalPrimary) {
+      setSubmitError('New Activity 2 cannot be same as existing Activity 1.');
+      return;
+    }
+
     const resolvedPrimary = removePrimary ? '' : ssicPrimaryCode;
     const resolvedSecondary = removeSecondary ? '' : ssicSecondaryCode;
     if (resolvedPrimary === originalPrimary && resolvedSecondary === originalSecondary) {
