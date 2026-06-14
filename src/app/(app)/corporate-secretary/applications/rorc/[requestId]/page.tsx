@@ -51,6 +51,15 @@ function extractDocValue(html: string, keyIncludes: string) {
   return m ? stripTags(m[1] ?? '') : '';
 }
 
+function deriveControllerNameFromHtml(html: string) {
+  const personName = extractDocValue(html, 'full name');
+  if (personName) return personName;
+  const companyName = extractDocValue(html, 'Name');
+  if (!companyName) return '';
+  const reg = extractDocValue(html, 'Entity Number') || extractDocValue(html, 'identification number');
+  return reg ? `${companyName} (${reg})` : companyName;
+}
+
 export default async function RorcApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -168,6 +177,36 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     return list.length ? list.join(', ') : '';
   })();
 
+  const oldNamesFromPreviousRequest = (() => {
+    const list = (db as any).rorcDeclarationRequests as Array<any> | undefined;
+    if (!Array.isArray(list)) return '';
+    const cutoff = String(r.submittedAt ?? r.createdAt ?? '').trim();
+    const prev = list
+      .filter((x) => x && x.clientId === r.clientId && x.id !== r.id)
+      .filter((x) => x.status === 'COMPLETE')
+      .filter((x) => String(x.decidedAt ?? x.updatedAt ?? x.createdAt ?? '') < cutoff)
+      .slice()
+      .sort((a, b) => String(b.decidedAt ?? b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.decidedAt ?? a.updatedAt ?? a.createdAt ?? '')))[0];
+    if (!prev) return '';
+    const stored = String(prev.newControllerName ?? '').trim();
+    if (stored) return stored;
+    if (prev.controllerPerson?.fullName?.trim()) return String(prev.controllerPerson.fullName).trim();
+    if (prev.controllerCompany?.companyName?.trim()) {
+      const n = String(prev.controllerCompany.companyName).trim();
+      const reg = String(prev.controllerCompany.registerNumber ?? '').trim();
+      return reg ? `${n} (${reg})` : n;
+    }
+    const add = Array.isArray(prev.addControllers) ? prev.addControllers : [];
+    const names = add.map((x: any) => String(x?.fullName ?? '').trim()).filter(Boolean);
+    if (names.length) return names.join(', ');
+
+    const packetIds = Array.isArray(prev.packetIds) && prev.packetIds.length ? prev.packetIds : [prev.packetId];
+    const packets = (db.signaturePackets ?? []).filter((p: any) => packetIds.includes(p.id));
+    const docById = new Map((db.documents ?? []).map((d: any) => [d.id, d]));
+    const html = packets.map((p: any) => docById.get(p.documentId)?.html ?? '').find((h: any) => !!String(h ?? '').trim()) ?? '';
+    return html ? deriveControllerNameFromHtml(html) : '';
+  })();
+
   const oldNamesFromThisDecision = (() => {
     const decidedAt = String(r.decidedAt ?? '').trim();
     if (!decidedAt) return '';
@@ -195,7 +234,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     )
       .map((x: any) => String(x ?? '').trim())
       .filter(Boolean)
-      .join(', ') || oldNamesFromThisDecision || activeOldNamesFallback || '-';
+      .join(', ') || oldNamesFromThisDecision || activeOldNamesFallback || oldNamesFromPreviousRequest || '-';
 
   const docHtml = ctx.documents[0]?.html ?? '';
   const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
