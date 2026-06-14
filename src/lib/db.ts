@@ -10018,6 +10018,14 @@ export async function decideRorcDeclarationRequest(input: {
 
   if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
 
+  const controllerKind = ((): 'PERSON' | 'COMPANY' | '' => {
+    const t = String((r as any).controllerType ?? '').trim().toUpperCase();
+    if (t === 'PERSON' || t === 'COMPANY') return t;
+    if (r.controllerPerson?.fullName?.trim()) return 'PERSON';
+    if (r.controllerCompany?.companyName?.trim()) return 'COMPANY';
+    return '';
+  })();
+
   for (let i = 0; i < db.clientPartyRoles.length; i++) {
     const role = db.clientPartyRoles[i];
     if (role.clientId !== r.clientId) continue;
@@ -10026,7 +10034,7 @@ export async function decideRorcDeclarationRequest(input: {
     db.clientPartyRoles[i] = { ...role, toDate: r.effectiveDate, updatedAt: now };
   }
 
-  if (r.controllerType === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
+  if (controllerKind === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
     const fullName = r.controllerPerson.fullName.trim();
     const email = typeof r.controllerPerson.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
     const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
@@ -10045,7 +10053,7 @@ export async function decideRorcDeclarationRequest(input: {
     db.clientPartyRoles.unshift(role);
   }
 
-  if (r.controllerType === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
+  if (controllerKind === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
     const companyName = r.controllerCompany.companyName.trim();
     const regNo = String(r.controllerCompany.registerNumber ?? '').trim();
     const regKey = String(regNo ?? '')

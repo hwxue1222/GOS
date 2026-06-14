@@ -127,13 +127,48 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
     return rorcRows.filter((r) => keyOf(r) === maxKey);
   })();
 
+  const derivedRorcRows = (() => {
+    if (latestRorcRows.length) return latestRorcRows;
+    const list = (db as any).rorcDeclarationRequests as Array<any> | undefined;
+    const rorcReq =
+      Array.isArray(list)
+        ? list
+            .filter((x) => x?.clientId === clientId && x?.status === 'COMPLETE')
+            .slice()
+            .sort((a, b) => String(b?.decidedAt ?? b?.updatedAt ?? b?.createdAt ?? '').localeCompare(String(a?.decidedAt ?? a?.updatedAt ?? a?.createdAt ?? '')))[0]
+        : null;
+    if (!rorcReq) return [] as any[];
+    const p = rorcReq.controllerPerson;
+    const c = rorcReq.controllerCompany;
+    if (p?.fullName?.trim()) {
+      return [
+        {
+          role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
+          entity: { type: 'PERSON', person: { fullName: String(p.fullName).trim(), hasLogin: false } },
+        },
+      ];
+    }
+    if (c?.companyName?.trim()) {
+      return [
+        {
+          role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}` },
+          entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: String(c.companyName).trim() } },
+        },
+      ];
+    }
+    const add = Array.isArray(rorcReq.addControllers) ? rorcReq.addControllers : [];
+    const names = add.map((x: any) => String(x?.fullName ?? '').trim()).filter(Boolean);
+    if (!names.length) return [] as any[];
+    return names.map((n: string, i: number) => ({ role: { id: `derived_${String(rorcReq.id ?? '').trim() || 'rorc'}_${i}` }, entity: { type: 'PERSON', person: { fullName: n, hasLogin: false } } }));
+  })();
+
   return NextResponse.json({
     ok: true,
     client,
     roles: {
       directors: byRole('DIRECTOR'),
       shareholders: byRole('SHAREHOLDER'),
-      rorc: latestRorcRows,
+      rorc: derivedRorcRows,
       secretaries: byRole('SECRETARY'),
     },
   });
