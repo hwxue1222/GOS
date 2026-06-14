@@ -121,6 +121,15 @@ export default function RorcClient() {
   const [personLockedFromLookup, setPersonLockedFromLookup] = useState(false);
   const [companyLockedFromLookup, setCompanyLockedFromLookup] = useState(false);
 
+  const [matchedPerson, setMatchedPerson] = useState<null | {
+    dateOfBirth: string;
+    email: string;
+    nationality: string;
+    phone: string;
+    address: string;
+  }>(null);
+  const [matchedCompany, setMatchedCompany] = useState<null | { countryOfIncorporation: string; companyAddress: string }>(null);
+
   const savedKey = companyId ? `gos.rorc.saved.${companyId}` : '';
   const [saved, setSaved] = useState<SavedDraft>({});
   const [useSavedPerson, setUseSavedPerson] = useState(false);
@@ -204,15 +213,22 @@ export default function RorcClient() {
       if (!res?.ok || !j || (j as any).ok !== true) return;
       const found = (j as any).person ?? null;
       if (!found) return;
-      setPerson((v) => ({
-        ...v,
-        fullName: String(found.fullName ?? ''),
-        idNo: String(found.idNo ?? v.idNo ?? ''),
+      setMatchedPerson({
         dateOfBirth: String(found.dob ?? ''),
         email: String(found.email ?? ''),
         nationality: String(found.nationality ?? ''),
         phone: String(found.phone ?? ''),
         address: String(found.address ?? ''),
+      });
+      setPerson((v) => ({
+        ...v,
+        fullName: String(found.fullName ?? ''),
+        idNo: String(found.idNo ?? v.idNo ?? ''),
+        dateOfBirth: '',
+        email: '',
+        nationality: '',
+        phone: '',
+        address: '',
       }));
       setPersonLockedFromLookup(true);
     }, 250);
@@ -249,12 +265,16 @@ export default function RorcClient() {
       if (!res?.ok || !j || (j as any).ok !== true) return;
       const found = (j as any).company ?? null;
       if (!found) return;
+      setMatchedCompany({
+        countryOfIncorporation: String(found.countryOfIncorporation ?? ''),
+        companyAddress: String(found.registeredOfficeAddress ?? found.address ?? ''),
+      });
       setCompany((v) => ({
         ...v,
         companyName: String(found.name ?? ''),
         registerNumber: String(found.companyRegistrationNo ?? v.registerNumber ?? ''),
-        countryOfIncorporation: String(found.countryOfIncorporation ?? ''),
-        companyAddress: String(found.registeredOfficeAddress ?? found.address ?? ''),
+        countryOfIncorporation: '',
+        companyAddress: '',
       }));
       setCompanyLockedFromLookup(true);
     }, 250);
@@ -326,11 +346,11 @@ export default function RorcClient() {
         ...person,
         fullName: person.fullName.trim(),
         idNo: person.idNo.trim(),
-        dateOfBirth: person.dateOfBirth.trim(),
-        email: person.email.trim(),
-        nationality: person.nationality.trim(),
-        phone: person.phone.trim(),
-        address: person.address.trim(),
+        dateOfBirth: (personLockedFromLookup && matchedPerson ? matchedPerson.dateOfBirth : person.dateOfBirth).trim(),
+        email: (personLockedFromLookup && matchedPerson ? matchedPerson.email : person.email).trim(),
+        nationality: (personLockedFromLookup && matchedPerson ? matchedPerson.nationality : person.nationality).trim(),
+        phone: (personLockedFromLookup && matchedPerson ? matchedPerson.phone : person.phone).trim(),
+        address: (personLockedFromLookup && matchedPerson ? matchedPerson.address : person.address).trim(),
         ccEnabled: !!person.ccEnabled,
         ccName: person.ccName.trim(),
         ccTitle: person.ccTitle.trim(),
@@ -460,11 +480,11 @@ export default function RorcClient() {
       ...company,
       companyName: company.companyName.trim(),
       registerNumber: company.registerNumber.trim(),
-      countryOfIncorporation: company.countryOfIncorporation.trim(),
+      countryOfIncorporation: (companyLockedFromLookup && matchedCompany ? matchedCompany.countryOfIncorporation : company.countryOfIncorporation).trim(),
       legalForm: company.legalForm.trim(),
       governedByLawAndJurisdiction: company.governedByLawAndJurisdiction.trim(),
       registerOfCompanies: company.registerOfCompanies.trim(),
-      companyAddress: company.companyAddress.trim(),
+      companyAddress: (companyLockedFromLookup && matchedCompany ? matchedCompany.companyAddress : company.companyAddress).trim(),
       ccEnabled: !!company.ccEnabled,
       ccName: company.ccName.trim(),
       ccTitle: company.ccTitle.trim(),
@@ -582,7 +602,11 @@ export default function RorcClient() {
                   <input
                     type="checkbox"
                     checked={personLockedFromLookup}
-                    onChange={(e) => setPersonLockedFromLookup(e.target.checked)}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setPersonLockedFromLookup(next);
+                      if (!next) setMatchedPerson(null);
+                    }}
                   />
                   Matched existing member by ID (lock fields)
                 </label>
@@ -617,6 +641,7 @@ export default function RorcClient() {
                       onChange={(e) => {
                         if (useSavedPerson) return;
                         setPersonLockedFromLookup(false);
+                        setMatchedPerson(null);
                         setPerson((v) => ({ ...v, idType: e.target.value as IdType }));
                       }}
                       disabled={useSavedPerson}
@@ -637,6 +662,7 @@ export default function RorcClient() {
                       onChange={(e) => {
                         if (useSavedPerson) return;
                         setPersonLockedFromLookup(false);
+                        setMatchedPerson(null);
                         setPerson((v) => ({ ...v, idNo: e.target.value }));
                       }}
                       disabled={useSavedPerson}
@@ -858,7 +884,11 @@ export default function RorcClient() {
                   <input
                     type="checkbox"
                     checked={companyLockedFromLookup}
-                    onChange={(e) => setCompanyLockedFromLookup(e.target.checked)}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setCompanyLockedFromLookup(next);
+                      if (!next) setMatchedCompany(null);
+                    }}
                   />
                   Matched existing company by registration no (lock fields)
                 </label>
@@ -896,6 +926,7 @@ export default function RorcClient() {
                     onChange={(e) => {
                       if (useSavedCompany) return;
                       setCompanyLockedFromLookup(false);
+                      setMatchedCompany(null);
                       setCompany((v) => ({ ...v, registerNumber: e.target.value }));
                     }}
                     disabled={useSavedCompany}
