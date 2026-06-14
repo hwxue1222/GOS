@@ -26,6 +26,7 @@ export default function RorcClient() {
     nationality: '',
     phone: '',
     address: '',
+    ccEnabled: false,
     ccName: '',
     ccTitle: '',
     ccPhone: '',
@@ -40,6 +41,7 @@ export default function RorcClient() {
     governedByLawAndJurisdiction: '',
     registerOfCompanies: '',
     companyAddress: '',
+    ccEnabled: false,
     ccName: '',
     ccTitle: '',
     ccPhone: '',
@@ -81,6 +83,7 @@ export default function RorcClient() {
         nationality: person.nationality.trim(),
         phone: person.phone.trim(),
         address: person.address.trim(),
+        ccEnabled: !!person.ccEnabled,
         ccName: person.ccName.trim(),
         ccTitle: person.ccTitle.trim(),
         ccPhone: person.ccPhone.trim(),
@@ -93,15 +96,17 @@ export default function RorcClient() {
       if (!p.nationality) return void setSubmitError('Nationality is required.');
       if (!p.phone) return void setSubmitError('Phone is required.');
       if (!p.address) return void setSubmitError('Address is required.');
-      if (p.useCcEmailInstead) {
-        if (!p.ccEmailAddress) return void setSubmitError('Cc Email Address is required.');
-      } else {
-        if (!p.email) return void setSubmitError('Email is required.');
-      }
-      if (p.ccEmailAddress) {
+      if (p.ccEnabled) {
         if (!p.ccName) return void setSubmitError('CC name is required.');
         if (!p.ccTitle) return void setSubmitError('CC position is required.');
         if (!p.ccPhone) return void setSubmitError('CC phone is required.');
+        if (!p.ccEmailAddress) return void setSubmitError('CC email address is required.');
+      }
+      if (p.useCcEmailInstead) {
+        if (!p.ccEnabled) return void setSubmitError('CC management to declare is required when using CC email.');
+        if (!p.ccEmailAddress) return void setSubmitError('CC email address is required.');
+      } else {
+        if (!p.email) return void setSubmitError('Email is required.');
       }
 
       setSubmitting(true);
@@ -121,10 +126,10 @@ export default function RorcClient() {
               nationality: p.nationality,
               phone: p.phone,
               address: p.address,
-              ccName: p.ccName || undefined,
-              ccTitle: p.ccTitle || undefined,
-              ccPhone: p.ccPhone || undefined,
-              ccEmailAddress: p.ccEmailAddress || undefined,
+              ccName: p.ccEnabled ? p.ccName || undefined : undefined,
+              ccTitle: p.ccEnabled ? p.ccTitle || undefined : undefined,
+              ccPhone: p.ccEnabled ? p.ccPhone || undefined : undefined,
+              ccEmailAddress: p.ccEnabled ? p.ccEmailAddress || undefined : undefined,
               useCcEmailInstead: p.useCcEmailInstead,
             },
           }),
@@ -149,6 +154,7 @@ export default function RorcClient() {
       governedByLawAndJurisdiction: company.governedByLawAndJurisdiction.trim(),
       registerOfCompanies: company.registerOfCompanies.trim(),
       companyAddress: company.companyAddress.trim(),
+      ccEnabled: !!company.ccEnabled,
       ccName: company.ccName.trim(),
       ccTitle: company.ccTitle.trim(),
       ccPhone: company.ccPhone.trim(),
@@ -160,11 +166,11 @@ export default function RorcClient() {
     if (!c.legalForm) return void setSubmitError('Legal Form Of The Entity is required.');
     if (!c.governedByLawAndJurisdiction) return void setSubmitError('The Law By Which It Is Governed And In Which Jurisdiction is required.');
     if (!c.companyAddress) return void setSubmitError('RORC Controller Company Address is required.');
-    if (c.useCcEmailInstead && !c.ccEmailAddress) return void setSubmitError('Cc Email Address is required.');
-    if (c.ccEmailAddress) {
+    if (c.ccEnabled) {
       if (!c.ccName) return void setSubmitError('CC name is required.');
       if (!c.ccTitle) return void setSubmitError('CC position is required.');
       if (!c.ccPhone) return void setSubmitError('CC phone is required.');
+      if (!c.ccEmailAddress) return void setSubmitError('CC email address is required.');
     }
 
     setSubmitting(true);
@@ -182,10 +188,10 @@ export default function RorcClient() {
             governedByLawAndJurisdiction: c.governedByLawAndJurisdiction,
             registerOfCompanies: c.registerOfCompanies || undefined,
             companyAddress: c.companyAddress,
-            ccName: c.ccName || undefined,
-            ccTitle: c.ccTitle || undefined,
-            ccPhone: c.ccPhone || undefined,
-            ccEmailAddress: c.ccEmailAddress || undefined,
+            ccName: c.ccEnabled ? c.ccName || undefined : undefined,
+            ccTitle: c.ccEnabled ? c.ccTitle || undefined : undefined,
+            ccPhone: c.ccEnabled ? c.ccPhone || undefined : undefined,
+            ccEmailAddress: c.ccEnabled ? c.ccEmailAddress || undefined : undefined,
             useCcEmailInstead: c.useCcEmailInstead,
           },
         }),
@@ -331,49 +337,77 @@ export default function RorcClient() {
                 />
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-sm">
-                  <div className="text-black/70">CC Name</div>
-                  <input
-                    value={person.ccName}
-                    onChange={(e) => setPerson((v) => ({ ...v, ccName: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Position</div>
-                  <input
-                    value={person.ccTitle}
-                    onChange={(e) => setPerson((v) => ({ ...v, ccTitle: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Phone</div>
-                  <input
-                    value={person.ccPhone}
-                    onChange={(e) => setPerson((v) => ({ ...v, ccPhone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Email Address</div>
-                  <input
-                    value={person.ccEmailAddress}
-                    onChange={(e) => setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-              </div>
-
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
                   type="checkbox"
-                  checked={person.useCcEmailInstead}
-                  onChange={(e) => setPerson((v) => ({ ...v, useCcEmailInstead: e.target.checked }))}
+                  checked={person.ccEnabled}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setPerson((v) => ({
+                      ...v,
+                      ccEnabled: checked,
+                      ...(checked
+                        ? {}
+                        : {
+                            ccName: '',
+                            ccTitle: '',
+                            ccPhone: '',
+                            ccEmailAddress: '',
+                            useCcEmailInstead: false,
+                          }),
+                    }));
+                  }}
                 />
-                To use cc email address instead of origin email address
+                CC management to declare
               </label>
+
+              {person.ccEnabled ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Name</div>
+                    <input
+                      value={person.ccName}
+                      onChange={(e) => setPerson((v) => ({ ...v, ccName: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Position</div>
+                    <input
+                      value={person.ccTitle}
+                      onChange={(e) => setPerson((v) => ({ ...v, ccTitle: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Phone</div>
+                    <input
+                      value={person.ccPhone}
+                      onChange={(e) => setPerson((v) => ({ ...v, ccPhone: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Email Address</div>
+                    <input
+                      value={person.ccEmailAddress}
+                      onChange={(e) => setPerson((v) => ({ ...v, ccEmailAddress: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {person.ccEnabled ? (
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="checkbox"
+                    checked={person.useCcEmailInstead}
+                    onChange={(e) => setPerson((v) => ({ ...v, useCcEmailInstead: e.target.checked }))}
+                  />
+                  To use cc email address instead of origin email address
+                </label>
+              ) : null}
             </>
           ) : (
             <>
@@ -457,49 +491,65 @@ export default function RorcClient() {
                 />
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-sm">
-                  <div className="text-black/70">CC Name</div>
-                  <input
-                    value={company.ccName}
-                    onChange={(e) => setCompany((v) => ({ ...v, ccName: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Position</div>
-                  <input
-                    value={company.ccTitle}
-                    onChange={(e) => setCompany((v) => ({ ...v, ccTitle: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Phone</div>
-                  <input
-                    value={company.ccPhone}
-                    onChange={(e) => setCompany((v) => ({ ...v, ccPhone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">CC Email Address</div>
-                  <input
-                    value={company.ccEmailAddress}
-                    onChange={(e) => setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  />
-                </label>
-              </div>
-
               <label className="flex items-center gap-2 text-sm text-black/80">
                 <input
                   type="checkbox"
-                  checked={company.useCcEmailInstead}
-                  onChange={(e) => setCompany((v) => ({ ...v, useCcEmailInstead: e.target.checked }))}
+                  checked={company.ccEnabled}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setCompany((v) => ({
+                      ...v,
+                      ccEnabled: checked,
+                      ...(checked
+                        ? {}
+                        : {
+                            ccName: '',
+                            ccTitle: '',
+                            ccPhone: '',
+                            ccEmailAddress: '',
+                          }),
+                    }));
+                  }}
                 />
-                To use cc email address instead of origin email address
+                CC management to declare
               </label>
+
+              {company.ccEnabled ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Name</div>
+                    <input
+                      value={company.ccName}
+                      onChange={(e) => setCompany((v) => ({ ...v, ccName: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Position</div>
+                    <input
+                      value={company.ccTitle}
+                      onChange={(e) => setCompany((v) => ({ ...v, ccTitle: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Phone</div>
+                    <input
+                      value={company.ccPhone}
+                      onChange={(e) => setCompany((v) => ({ ...v, ccPhone: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <div className="text-black/70">CC Email Address</div>
+                    <input
+                      value={company.ccEmailAddress}
+                      onChange={(e) => setCompany((v) => ({ ...v, ccEmailAddress: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+              ) : null}
             </>
           )}
 
