@@ -9839,7 +9839,7 @@ export async function createRorcDeclarationRequest(input: {
       }
     }
   } else {
-    if (!removeRorcRoleIds.length && !addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!addControllers.length) return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
 
   const directors = await listClientDirectors(input.clientId);
@@ -10134,7 +10134,8 @@ export async function decideRorcDeclarationRequest(input: {
     const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
     const m = html.match(re);
-    return m ? stripTags(m[1] ?? '') : '';
+    const v = m ? stripTags(m[1] ?? '') : '';
+    return v.trim().toUpperCase() === 'NA' ? '' : v;
   };
 
   const docPersonName = firstDocHtml ? extractDocValue(firstDocHtml, 'full name') : '';

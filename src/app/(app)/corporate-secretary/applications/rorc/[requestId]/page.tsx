@@ -48,7 +48,8 @@ function extractDocValue(html: string, keyIncludes: string) {
   const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
   const m = html.match(re);
-  return m ? stripTags(m[1] ?? '') : '';
+  const v = m ? stripTags(m[1] ?? '') : '';
+  return v.trim().toUpperCase() === 'NA' ? '' : v;
 }
 
 export default async function RorcApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
