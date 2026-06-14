@@ -10120,25 +10120,60 @@ export async function decideRorcDeclarationRequest(input: {
     return { ok: true as const, request: list[idx] };
   }
 
-  if (r.status !== 'PENDING_REVIEW' && r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+  const docById = new Map(db.documents.map((d) => [d.id, d]));
+  const firstDocHtml = packets.map((p) => docById.get(p.documentId)?.html ?? '').find((h) => !!String(h ?? '').trim()) ?? '';
+  const decodeHtmlEntities = (s: string) =>
+    s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  const stripTags = (s: string) => decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
+  const extractDocValue = (html: string, keyIncludes: string) => {
+    const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
+    const m = html.match(re);
+    return m ? stripTags(m[1] ?? '') : '';
+  };
+
+  const docPersonName = firstDocHtml ? extractDocValue(firstDocHtml, 'full name') : '';
+  const docCompanyName = firstDocHtml ? extractDocValue(firstDocHtml, 'Name公司名字') : '';
+  const docCompanyReg = firstDocHtml
+    ? extractDocValue(firstDocHtml, 'Unique Entity Number') || extractDocValue(firstDocHtml, '公司注册号')
+    : '';
+  const docCompanyAddress = firstDocHtml
+    ? extractDocValue(firstDocHtml, 'Address of registered office') || extractDocValue(firstDocHtml, '公司注册地址')
+    : '';
 
   const controllerKind = ((): 'PERSON' | 'COMPANY' | '' => {
     const t = String((r as any).controllerType ?? '').trim().toUpperCase();
     if (t === 'PERSON' || t === 'COMPANY') return t;
     if (r.controllerPerson?.fullName?.trim()) return 'PERSON';
     if (r.controllerCompany?.companyName?.trim()) return 'COMPANY';
+    if (docPersonName) return 'PERSON';
+    if (docCompanyName) return 'COMPANY';
     return '';
   })();
 
-  if (!controllerKind && !(r.addControllers ?? []).length) return { ok: false as const, error: 'INVALID_INPUT' as const };
-
-  const hasValidNewController = (() => {
-    if (controllerKind === 'PERSON') return !!r.controllerPerson?.fullName?.trim();
-    if (controllerKind === 'COMPANY') return !!r.controllerCompany?.companyName?.trim();
-    return (r.addControllers ?? []).some((x) => String(x?.fullName ?? '').trim());
+  const resolved = (() => {
+    if (controllerKind === 'PERSON') {
+      const fullName = String(r.controllerPerson?.fullName ?? '').trim() || docPersonName;
+      return fullName ? ({ kind: 'PERSON' as const, fullName } as const) : null;
+    }
+    if (controllerKind === 'COMPANY') {
+      const companyName = String(r.controllerCompany?.companyName ?? '').trim() || docCompanyName;
+      if (!companyName) return null;
+      const registerNumber = String(r.controllerCompany?.registerNumber ?? '').trim() || docCompanyReg;
+      const companyAddress = String(r.controllerCompany?.companyAddress ?? '').trim() || docCompanyAddress;
+      return { kind: 'COMPANY' as const, companyName, registerNumber, companyAddress } as const;
+    }
+    const names = (r.addControllers ?? []).map((x) => String(x?.fullName ?? '').trim()).filter(Boolean);
+    if (names.length) return { kind: 'ADD' as const, names } as const;
+    return null;
   })();
 
-  if (!hasValidNewController) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  if (!resolved) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
@@ -10176,15 +10211,16 @@ export async function decideRorcDeclarationRequest(input: {
   const newControllerNameComputed = (() => {
     const stored = String((r as any).newControllerName ?? '').trim();
     if (stored) return stored;
-    if (controllerKind === 'PERSON') return String(r.controllerPerson?.fullName ?? '').trim();
-    if (controllerKind === 'COMPANY') {
-      const n = String(r.controllerCompany?.companyName ?? '').trim();
-      const reg = String(r.controllerCompany?.registerNumber ?? '').trim();
-      return reg ? `${n} (${reg})` : n;
+    if (resolved.kind === 'PERSON') return resolved.fullName;
+    if (resolved.kind === 'COMPANY') {
+      const reg = String(resolved.registerNumber ?? '').trim();
+      return reg ? `${resolved.companyName} (${reg})` : resolved.companyName;
     }
-    const names = (r.addControllers ?? []).map((x) => String(x.fullName ?? '').trim()).filter(Boolean);
-    return names.join(', ');
+    if (resolved.kind === 'ADD') return resolved.names.join(', ');
+    return '';
   })();
+
+  if (!newControllerNameComputed) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
   if (oldRoleIds.length) {
     for (let i = 0; i < db.clientPartyRoles.length; i++) {
@@ -10205,9 +10241,9 @@ export async function decideRorcDeclarationRequest(input: {
     }
   }
 
-  if (controllerKind === 'PERSON' && r.controllerPerson?.fullName?.trim()) {
-    const fullName = r.controllerPerson.fullName.trim();
-    const email = typeof r.controllerPerson.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
+  if (resolved.kind === 'PERSON') {
+    const fullName = resolved.fullName.trim();
+    const email = typeof r.controllerPerson?.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
     const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
     const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
     const role: ClientPartyRole = {
@@ -10224,9 +10260,9 @@ export async function decideRorcDeclarationRequest(input: {
     db.clientPartyRoles.unshift(role);
   }
 
-  if (controllerKind === 'COMPANY' && r.controllerCompany?.companyName?.trim()) {
-    const companyName = r.controllerCompany.companyName.trim();
-    const regNo = String(r.controllerCompany.registerNumber ?? '').trim();
+  if (resolved.kind === 'COMPANY') {
+    const companyName = resolved.companyName.trim();
+    const regNo = String(resolved.registerNumber ?? '').trim();
     const regKey = String(regNo ?? '')
       .trim()
       .replace(/\s+/g, '')
@@ -10260,7 +10296,7 @@ export async function decideRorcDeclarationRequest(input: {
             ...existingExt,
             name: companyName || existingExt.name,
             jurisdiction: String(r.controllerCompany?.countryOfIncorporation ?? '').trim() || existingExt.jurisdiction,
-            address: String(r.controllerCompany?.companyAddress ?? '').trim() || existingExt.address,
+            address: String(r.controllerCompany?.companyAddress ?? resolved.companyAddress ?? '').trim() || existingExt.address,
             updatedAt: now,
           }
         : {
@@ -10268,7 +10304,7 @@ export async function decideRorcDeclarationRequest(input: {
             name: companyName,
             registrationNo: regNo || undefined,
             jurisdiction: String(r.controllerCompany?.countryOfIncorporation ?? '').trim() || undefined,
-            address: String(r.controllerCompany?.companyAddress ?? '').trim() || undefined,
+            address: String(r.controllerCompany?.companyAddress ?? resolved.companyAddress ?? '').trim() || undefined,
             createdAt: now,
             updatedAt: now,
           };
