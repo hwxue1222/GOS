@@ -160,6 +160,30 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V5 = 'clients.codeMigration.v5';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V6 = 'clients.codeMigration.v6';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
+const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
+
+function isSingaporeCompanyRegistrationNo(regNo: string) {
+  const v = String(regNo ?? '').trim();
+  return /^\d{9}[A-Za-z]$/.test(v);
+}
+
+function migrateClientCountryOfIncorporationV1(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CLIENT_COUNTRY_INCORP_V1]) return false;
+  let changed = false;
+  for (const c of db.clients) {
+    if (!c || c.deletedAt) continue;
+    const existing = String((c as any).countryOfBusinessRegistration ?? '').trim();
+    if (existing) continue;
+    const regNo = String((c as any).companyRegistrationNo ?? '').trim();
+    if (!regNo) continue;
+    if (!isSingaporeCompanyRegistrationNo(regNo)) continue;
+    (c as any).countryOfBusinessRegistration = 'Singapore';
+    changed = true;
+  }
+  db.seed[SEED_KEY_CLIENT_COUNTRY_INCORP_V1] = true;
+  return changed;
+}
 
 function migrateClientCodesV1(db: Db) {
   if (!db.seed) db.seed = {};
@@ -5256,6 +5280,7 @@ export async function readDb(): Promise<Db> {
   if (migrateClientCodesV6(db)) changed = true;
   if (migrateClientCodesV7(db)) changed = true;
   if (migrateClientCodesV8(db)) changed = true;
+  if (migrateClientCountryOfIncorporationV1(db)) changed = true;
   if (cleanupClientNameStatusSuffixes(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot(db)) changed = true;
   if (seedSecretaryCompaniesFromScreenshot2(db)) changed = true;
