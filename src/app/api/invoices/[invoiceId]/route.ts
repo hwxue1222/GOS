@@ -153,10 +153,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
       if (!nextPaidAt) return NextResponse.json({ ok: false, error: 'PAID_AT_REQUIRED' }, { status: 400 });
 
       const noteRaw = typeof body?.paymentNote === 'string' ? body.paymentNote.trim() : '';
-      if (!noteRaw) return NextResponse.json({ ok: false, error: 'PAYMENT_NOTE_REQUIRED' }, { status: 400 });
-
       paidAt = nextPaidAt;
-      paymentNote = noteRaw;
+      paymentNote = noteRaw || undefined;
     } else {
       if (body && 'paidAt' in body) {
         const raw = body.paidAt ? String(body.paidAt) : '';
@@ -169,8 +167,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
 
       if (body && 'paymentNote' in body) {
         const note = body.paymentNote ? String(body.paymentNote).trim() : '';
-        if (!note) return NextResponse.json({ ok: false, error: 'PAYMENT_NOTE_REQUIRED' }, { status: 400 });
-        paymentNote = note;
+        paymentNote = note || undefined;
       } else {
         paymentNote = current.paymentNote;
       }
