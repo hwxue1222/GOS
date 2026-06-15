@@ -528,8 +528,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           />
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5">
-          <div className="border-b border-black/10 bg-black/[0.02] px-3 py-3">
+        <div className="mt-4 rounded-xl bg-white border border-black/5 flex flex-col max-h-[calc(100vh-260px)]">
+          <div className="border-b border-black/10 bg-black/[0.02] px-3 py-3 shrink-0">
             <input
               value={search}
               onChange={(e) => {
@@ -540,9 +540,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
               placeholder="Search invoices (bill to, invoice no, issuer, status, amount, dates, created by...)"
             />
           </div>
-          <table className="w-full text-sm table-auto">
-            <thead className="text-left text-black/60">
-              <tr className="border-b border-black/10 bg-black/[0.02]">
+          <div className="overflow-y-auto">
+            <table className="w-full text-sm table-auto">
+              <thead className="text-left text-black/60">
+                <tr className="border-b border-black/10 bg-black/[0.02] sticky top-0">
                 <th className="px-3 py-3 align-top">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
                 </th>
@@ -567,54 +568,55 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 <th className="px-3 py-3 align-top">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
                 </th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((row) => {
-                const inv = row.invoice;
-                const s = statusLabel(inv.status);
-                return (
-                  <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                    <td className="px-3 py-3 overflow-hidden">
-                      {row.client ? (
-                        <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
-                        <div className="block truncate text-black/80">
-                          {row.client.code} {row.client.name}
-                        </div>
-                        </div>
-                      ) : (
-                        <div className="truncate text-black/80" title={inv.billTo.companyName || '-'}>
-                          {inv.billTo.companyName || '-'}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-3">
-                      <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
-                        {inv.invoiceNo}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3 text-black/70">{inv.issuer}</td>
-                    <td className="px-3 py-3">{formatDateDMY(inv.issueDate)}</td>
-                    <td className="px-3 py-3">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
-                    <td className="px-3 py-3">{formatMoney(inv.currency, inv.total)}</td>
-                    <td className="px-3 py-3">
-                      <span className={['inline-flex px-2 py-1 rounded-full text-xs font-semibold', s.cls].join(' ')}>
-                        {s.text}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-black/70">{row.createdByName}</td>
-                  </tr>
-                );
-              })}
-              {visible.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-black/50">
-                    No invoices
-                  </td>
                 </tr>
-              ) : null}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visible.map((row) => {
+                  const inv = row.invoice;
+                  const s = statusLabel(inv.status);
+                  return (
+                    <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
+                      <td className="px-3 py-3 overflow-hidden">
+                        {row.client ? (
+                          <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
+                          <div className="block truncate text-black/80">
+                            {row.client.code} {row.client.name}
+                          </div>
+                          </div>
+                        ) : (
+                          <div className="truncate text-black/80" title={inv.billTo.companyName || '-'}>
+                            {inv.billTo.companyName || '-'}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
+                          {inv.invoiceNo}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3 text-black/70">{inv.issuer}</td>
+                      <td className="px-3 py-3">{formatDateDMY(inv.issueDate)}</td>
+                      <td className="px-3 py-3">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
+                      <td className="px-3 py-3">{formatMoney(inv.currency, inv.total)}</td>
+                      <td className="px-3 py-3">
+                        <span className={['inline-flex px-2 py-1 rounded-full text-xs font-semibold', s.cls].join(' ')}>
+                          {s.text}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-black/70">{row.createdByName}</td>
+                    </tr>
+                  );
+                })}
+                {visible.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-black/50">
+                      No invoices
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {showAdd ? (
