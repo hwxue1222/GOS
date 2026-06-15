@@ -73,6 +73,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
   const [clients] = useState<ClientLite[]>(initialClients);
 
   const [search, setSearch] = usePersistedState('gos.invoices.search', '');
+  const [statusFilter, setStatusFilter] = usePersistedState<InvoiceStatus | ''>('gos.invoices.status', '');
+  const [issuerFilter, setIssuerFilter] = usePersistedState<InvoiceIssuer | ''>('gos.invoices.issuer', '');
   const [pageSize, setPageSize] = usePersistedState('gos.invoices.pageSize', 20);
   const [page, setPage] = usePersistedState('gos.invoices.page', 1);
 
@@ -80,6 +82,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdInvoice, setCreatedInvoice] = useState<Invoice | null>(null);
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientSearch, setNewClientSearch] = useState('');
@@ -121,6 +125,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     const q = search.trim();
     const rows = invoices.filter((row) => {
       const inv = row.invoice;
+      if (statusFilter && inv.status !== statusFilter) return false;
+      if (issuerFilter && inv.issuer !== issuerFilter) return false;
       if (!q) return true;
       const clientText = row.client ? `${row.client.code} ${row.client.name}` : '';
       const billToText = inv.billTo.companyName || '';
@@ -132,7 +138,9 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       );
     });
     return rows.sort((a, b) => (b.invoice.issueDate || '').localeCompare(a.invoice.issueDate || '') || b.invoice.createdAt.localeCompare(a.invoice.createdAt));
-  }, [invoices, search]);
+  }, [invoices, issuerFilter, search, statusFilter]);
+
+  const activeFilterCount = (statusFilter ? 1 : 0) + (issuerFilter ? 1 : 0);
 
   const total = filtered.length;
   const safePageSize = Math.max(1, Number(pageSize) || 20);
@@ -485,6 +493,66 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
   return (
     <div className="flex-1">
+      {filtersOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/30" onMouseDown={() => setFiltersOpen(false)}>
+          <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
+              <div className="text-base font-semibold">Filters</div>
+              <button onClick={() => setFiltersOpen(false)} className="text-black/50 hover:text-black">
+                ✕
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <div className="text-xs text-black/60 mb-1">Status</div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as InvoiceStatus | '');
+                    setPage(1);
+                  }}
+                  className="h-9 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                >
+                  <option value="">All</option>
+                  <option value="UNPAID">Unpaid</option>
+                  <option value="PAID">Paid</option>
+                  <option value="VOID">Void</option>
+                </select>
+              </div>
+              <div>
+                <div className="text-xs text-black/60 mb-1">Issuer</div>
+                <select
+                  value={issuerFilter}
+                  onChange={(e) => {
+                    setIssuerFilter(e.target.value as InvoiceIssuer | '');
+                    setPage(1);
+                  }}
+                  className="h-9 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                >
+                  <option value="">All</option>
+                  <option value="BBY_SG">BBY.SG</option>
+                  <option value="BYBRIDGE">Bybridge</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-black/5 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  setStatusFilter('');
+                  setIssuerFilter('');
+                  setPage(1);
+                }}
+                className="rounded-md border border-black/10 bg-white px-4 py-2 text-sm"
+              >
+                Clear
+              </button>
+              <button onClick={() => setFiltersOpen(false)} className="rounded-md bg-black text-white px-4 py-2 text-sm font-medium">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">Invoices</h1>
@@ -500,6 +568,12 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
             >
               Export CSV
+            </button>
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+            >
+              Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
             </button>
             <button
               disabled={!canCreate}
