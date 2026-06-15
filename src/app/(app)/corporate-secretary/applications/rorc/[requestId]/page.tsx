@@ -31,27 +31,6 @@ async function canClientAccessRequest(user: { email: string }, clientId: string)
   return false;
 }
 
-function decodeHtmlEntities(s: string) {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function stripTags(s: string) {
-  return decodeHtmlEntities(String(s ?? '').replace(/<[^>]*>/g, '')).trim();
-}
-
-function extractDocValue(html: string, keyIncludes: string) {
-  const k = keyIncludes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`<td\\s+class="k">[^<]*${k}[^<]*<\\/td>\\s*<td\\s+class="v">([\\s\\S]*?)<\\/td>`, 'i');
-  const m = html.match(re);
-  const v = m ? stripTags(m[1] ?? '') : '';
-  return v.trim().toUpperCase() === 'NA' ? '' : v;
-}
-
 export default async function RorcApplicationDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -153,21 +132,6 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
     .map((x) => x.trim())
     .filter(Boolean);
 
-  const activeOldNames = db.clientPartyRoles
-    .filter((x) => x.clientId === r.clientId && x.role === 'RORC' && !x.toDate)
-    .map((x) => {
-      const party = partyById.get(x.partyId) ?? null;
-      if (!party) return null;
-      if (party.type === 'PERSON' && party.personId) return personById.get(party.personId)?.fullName ?? null;
-      if (party.type === 'COMPANY' && party.clientId) return clientById.get(party.clientId)?.name ?? null;
-      if (party.type === 'COMPANY' && party.externalCompanyId) return externalCompanyById.get(party.externalCompanyId)?.name ?? null;
-      return null;
-    })
-    .filter((x): x is string => !!x)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .join(', ');
-
   const storedOldNames = (
     (Array.isArray((r as any).oldControllerNames) && (r as any).oldControllerNames.length
       ? (r as any).oldControllerNames
@@ -178,17 +142,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       .join(', ') || ''
   ).trim();
 
-  const oldNames = storedOldNames || (r.status === 'COMPLETE' ? '' : activeOldNames) || '-';
-
-  const docHtml = ctx.documents[0]?.html ?? '';
-  const docNewPersonName = docHtml ? extractDocValue(docHtml, 'full name') : '';
-  const docNewCompanyName = docHtml ? extractDocValue(docHtml, 'Name公司名字') : '';
-  const docNewCompanyReg = docHtml
-    ? extractDocValue(docHtml, 'Unique Entity Number') || extractDocValue(docHtml, '公司注册号')
-    : '';
-  const docNewControllerLabel =
-    docNewPersonName ||
-    (docNewCompanyName ? (docNewCompanyReg ? `${docNewCompanyName} (${docNewCompanyReg})` : docNewCompanyName) : '');
+  const oldNames = storedOldNames || '-';
 
   const newControllerLabel = (() => {
     const stored = String((r as any).newControllerName ?? '').trim();
@@ -200,7 +154,7 @@ export default async function RorcApplicationDetailPage({ params }: { params: Pr
       return reg ? `${n} (${reg})` : n;
     }
     if (addNames && addNames !== '-') return addNames;
-    return docNewControllerLabel || '-';
+    return '-';
   })();
 
   const auditLogs = (db.auditLogs ?? [])

@@ -123,52 +123,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
     return rorcRows.filter((x: any) => String(x?.role?.fromDate ?? '').trim() === maxKey);
   })();
 
-  const rorcFallback = (() => {
-    if (rorcLatest.length) return rorcLatest;
-    const list = (db as any).rorcDeclarationRequests as Array<any> | undefined;
-    if (!Array.isArray(list)) return rorcLatest;
-    const last = list
-      .filter((x) => x && x.clientId === clientId && x.status === 'COMPLETE')
-      .slice()
-      .sort((a, b) => String(b.decidedAt ?? b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.decidedAt ?? a.updatedAt ?? a.createdAt ?? '')))[0];
-    if (!last) return rorcLatest;
-    const stored = String(last.newControllerName ?? '').trim();
-    if (stored) {
-      return [
-        {
-          role: { id: `derived_${String(last.id ?? '').trim() || 'rorc'}` },
-          entity: { type: 'PERSON', person: { fullName: stored, hasLogin: false } },
-        },
-      ];
-    }
-    const p = last.controllerPerson;
-    if (p?.fullName?.trim()) {
-      return [
-        {
-          role: { id: `derived_${String(last.id ?? '').trim() || 'rorc'}` },
-          entity: { type: 'PERSON', person: { fullName: String(p.fullName).trim(), hasLogin: false } },
-        },
-      ];
-    }
-    const c = last.controllerCompany;
-    if (c?.companyName?.trim()) {
-      return [
-        {
-          role: { id: `derived_${String(last.id ?? '').trim() || 'rorc'}` },
-          entity: { type: 'COMPANY', company: { id: 'derived', code: 'DERIVED', name: String(c.companyName).trim() } },
-        },
-      ];
-    }
-    return rorcLatest;
-  })();
-
   return NextResponse.json({
     ok: true,
     client,
     roles: {
       directors: byRole('DIRECTOR'),
       shareholders: byRole('SHAREHOLDER'),
-      rorc: rorcFallback,
+      rorc: rorcLatest,
       secretaries: byRole('SECRETARY'),
     },
   });
