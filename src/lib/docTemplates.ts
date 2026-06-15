@@ -886,6 +886,7 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
   shareholderCompanyAddress: string;
   targetCompanyName: string;
   representativeName: string;
+  representativeEmail?: string;
   representativeAddress: string;
   witnessIdTypeLabel: string;
   witnessIdNo: string;
@@ -895,13 +896,15 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
   directorSignerEmail?: string;
   dateYmd: string;
 }) {
-  const sig = signatureLineBlocks({
+  const directorSig = signatureLineBlocks({
     signers: [{ fullName: input.directorSignerName, email: input.directorSignerEmail }],
+  });
+  const repSig = signatureLineBlocks({
+    signers: [{ fullName: input.representativeName, email: input.representativeEmail }],
   });
   const datedLong = toDayOfMonthLong(input.dateYmd);
   const shareholderAddress = input.shareholderCompanyAddress.trim() ? esc(input.shareholderCompanyAddress) : '______________________________';
   const representativeAddress = input.representativeAddress.trim() ? esc(input.representativeAddress) : '______________________________';
-  const witnessPhone = String(input.witnessPhone ?? '').trim();
   return `
 <!doctype html>
 <html>
@@ -948,19 +951,20 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
     <div class="block">Director</div>
 
     <div class="block">Signed For &amp;</div>
+    ${directorSig}
     <div class="block">On Behalf of ${esc(input.shareholderCompanyName)}</div>
 
     <div class="grid2 block">
       <div>
         <div>Signature of authorised representative</div>
-        ${sig}
+        ${repSig}
       </div>
       <div>
         <div>Witnessed by</div>
-        <div class="mt2">Name:&nbsp;&nbsp;${esc(input.representativeName)}</div>
-        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;${esc(input.witnessIdTypeLabel)} ${esc(input.witnessIdNo)}</div>
-        <div class="mt2">Phone No.:&nbsp;&nbsp;${esc(witnessPhone)}</div>
-        <div class="mt2">Email:&nbsp;&nbsp;${esc(input.witnessEmail)}</div>
+        <div class="mt2">Name:&nbsp;&nbsp;</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
       </div>
     </div>
   </body>
