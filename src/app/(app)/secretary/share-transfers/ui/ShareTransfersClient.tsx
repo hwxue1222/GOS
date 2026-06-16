@@ -94,8 +94,16 @@ type ShareTransferDraft = {
   shareClass: (typeof SHARE_CLASS_OPTIONS)[number];
   transferorPartyId: string;
   transferorRepresentativePersonId: string;
+  transferorCorporateRepresentativeName: string;
+  transferorCorporateRepresentativeEmail: string;
+  transferorDirectorSignerName: string;
+  transferorDirectorSignerEmail: string;
   transfereeMode: 'EXISTING' | 'NEW';
   transfereePartyId: string;
+  transfereeCorporateRepresentativeName: string;
+  transfereeCorporateRepresentativeEmail: string;
+  transfereeDirectorSignerName: string;
+  transfereeDirectorSignerEmail: string;
   newShareholderKind: NewShareholderKind;
   newPersonLockedFromLookup: boolean;
   newPerson: NewShareholderPerson;
@@ -113,8 +121,16 @@ function makeDraft(): ShareTransferDraft {
     shareClass: 'ORDINARY SHARE',
     transferorPartyId: '',
     transferorRepresentativePersonId: '',
+    transferorCorporateRepresentativeName: '',
+    transferorCorporateRepresentativeEmail: '',
+    transferorDirectorSignerName: '',
+    transferorDirectorSignerEmail: '',
     transfereeMode: 'EXISTING',
     transfereePartyId: '',
+    transfereeCorporateRepresentativeName: '',
+    transfereeCorporateRepresentativeEmail: '',
+    transfereeDirectorSignerName: '',
+    transfereeDirectorSignerEmail: '',
     newShareholderKind: 'PERSON',
     newPersonLockedFromLookup: false,
     newPerson: {
@@ -500,6 +516,12 @@ export default function ShareTransfersClient(props: {
     if (transferor?.kind === 'COMPANY' && transferor.companyClientId) {
       if (!d.transferorRepresentativePersonId.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_REPRESENTATIVE`;
     }
+    if (transferor?.kind === 'COMPANY' && !transferor.companyClientId) {
+      if (!d.transferorCorporateRepresentativeName.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_REP_NAME`;
+      if (!d.transferorCorporateRepresentativeEmail.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_REP_EMAIL`;
+      if (!d.transferorDirectorSignerName.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_SIGNER_NAME`;
+      if (!d.transferorDirectorSignerEmail.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEROR_SIGNER_EMAIL`;
+    }
 
     if (!d.effectiveDate) return `Transfer #${index + 1}: INVALID_EFFECTIVE_DATE`;
     if (!d.shares || d.shares <= 0) return `Transfer #${index + 1}: INVALID_SHARES`;
@@ -509,6 +531,13 @@ export default function ShareTransfersClient(props: {
     if (d.transfereeMode === 'EXISTING') {
       if (!d.transfereePartyId) return `Transfer #${index + 1}: INVALID_TRANSFEREE`;
       if (d.transfereePartyId === d.transferorPartyId) return `Transfer #${index + 1}: TRANSFEROR_EQUALS_TRANSFEREE`;
+      const transferee = shareholderByPartyId.get(d.transfereePartyId) ?? null;
+      if (transferee?.kind === 'COMPANY' && !transferee.companyClientId) {
+        if (!d.transfereeCorporateRepresentativeName.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEREE_REP_NAME`;
+        if (!d.transfereeCorporateRepresentativeEmail.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEREE_REP_EMAIL`;
+        if (!d.transfereeDirectorSignerName.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEREE_SIGNER_NAME`;
+        if (!d.transfereeDirectorSignerEmail.trim()) return `Transfer #${index + 1}: INVALID_TRANSFEREE_SIGNER_EMAIL`;
+      }
     }
 
     if (d.transfereeMode === 'NEW') {
@@ -576,10 +605,21 @@ export default function ShareTransfersClient(props: {
               kind: 'EXISTING_PARTY',
               partyId: d.transferorPartyId,
               representativePersonId: d.transferorRepresentativePersonId,
+              corporateRepresentativeName: d.transferorCorporateRepresentativeName,
+              corporateRepresentativeEmail: d.transferorCorporateRepresentativeEmail,
+              directorSignerName: d.transferorDirectorSignerName,
+              directorSignerEmail: d.transferorDirectorSignerEmail,
             },
             transferee:
               d.transfereeMode === 'EXISTING'
-                ? { kind: 'EXISTING_PARTY', partyId: d.transfereePartyId }
+                ? {
+                    kind: 'EXISTING_PARTY',
+                    partyId: d.transfereePartyId,
+                    corporateRepresentativeName: d.transfereeCorporateRepresentativeName,
+                    corporateRepresentativeEmail: d.transfereeCorporateRepresentativeEmail,
+                    directorSignerName: d.transfereeDirectorSignerName,
+                    directorSignerEmail: d.transfereeDirectorSignerEmail,
+                  }
                 : d.newShareholderKind === 'PERSON'
                   ? {
                       kind: 'NEW_PERSON',
@@ -626,6 +666,7 @@ export default function ShareTransfersClient(props: {
           | {
               shareTransferFormDocumentId?: string;
               directorsResolutionDocumentId?: string;
+              corporateRepresentativeCertificateDocumentId?: string;
               corporateSecretaryCertificateDocumentId?: string;
             }
           | undefined;
@@ -634,6 +675,11 @@ export default function ShareTransfersClient(props: {
         }
         if (docs?.directorsResolutionDocumentId) {
           docLines.push(`Director's resolution PDF — /api/documents/${docs.directorsResolutionDocumentId}/pdf`);
+        }
+        if (docs?.corporateRepresentativeCertificateDocumentId) {
+          docLines.push(
+            `Corporate representative appointment certificate PDF — /api/documents/${docs.corporateRepresentativeCertificateDocumentId}/pdf`,
+          );
         }
         if (docs?.corporateSecretaryCertificateDocumentId) {
           docLines.push(
@@ -646,6 +692,8 @@ export default function ShareTransfersClient(props: {
           ...(j?.signLinks?.br ?? []),
           ...(j?.signLinks?.sta ?? []),
           ...(j?.signLinks?.rdr ?? []),
+          ...(j?.signLinks?.cs ?? []),
+          ...(j?.signLinks?.cr ?? []),
         ];
         for (const x of all) signLines.push(`${x.email} — ${x.url}`);
 
@@ -731,6 +779,10 @@ export default function ShareTransfersClient(props: {
                             patchDraft(d.id, {
                               transferorPartyId: e.target.value,
                               transferorRepresentativePersonId: '',
+                              transferorCorporateRepresentativeName: '',
+                              transferorCorporateRepresentativeEmail: '',
+                              transferorDirectorSignerName: '',
+                              transferorDirectorSignerEmail: '',
                             })
                           }
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
@@ -765,6 +817,44 @@ export default function ShareTransfersClient(props: {
                                 </option>
                               ))}
                             </select>
+                          </label>
+                        </div>
+                      ) : null}
+
+                      {shareholderByPartyId.get(d.transferorPartyId)?.kind === 'COMPANY' &&
+                      !shareholderByPartyId.get(d.transferorPartyId)?.companyClientId ? (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="text-sm">
+                            <div className="text-black/70">Corporate representative name</div>
+                            <input
+                              value={d.transferorCorporateRepresentativeName}
+                              onChange={(e) => patchDraft(d.id, { transferorCorporateRepresentativeName: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Corporate representative email</div>
+                            <input
+                              value={d.transferorCorporateRepresentativeEmail}
+                              onChange={(e) => patchDraft(d.id, { transferorCorporateRepresentativeEmail: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Director signer name</div>
+                            <input
+                              value={d.transferorDirectorSignerName}
+                              onChange={(e) => patchDraft(d.id, { transferorDirectorSignerName: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Director signer email</div>
+                            <input
+                              value={d.transferorDirectorSignerEmail}
+                              onChange={(e) => patchDraft(d.id, { transferorDirectorSignerEmail: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
                           </label>
                         </div>
                       ) : null}
@@ -827,7 +917,14 @@ export default function ShareTransfersClient(props: {
                             if (v === '__NEW__') {
                               patchDraft(d.id, { transfereeMode: 'NEW', transfereePartyId: '' });
                             } else {
-                              patchDraft(d.id, { transfereeMode: 'EXISTING', transfereePartyId: v });
+                              patchDraft(d.id, {
+                                transfereeMode: 'EXISTING',
+                                transfereePartyId: v,
+                                transfereeCorporateRepresentativeName: '',
+                                transfereeCorporateRepresentativeEmail: '',
+                                transfereeDirectorSignerName: '',
+                                transfereeDirectorSignerEmail: '',
+                              });
                             }
                           }}
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
@@ -845,6 +942,45 @@ export default function ShareTransfersClient(props: {
                         </select>
                         {loadingShareholders ? <div className="mt-2 text-xs text-black/50">Loading shareholders...</div> : null}
                       </div>
+
+                      {d.transfereeMode === 'EXISTING' &&
+                      shareholderByPartyId.get(d.transfereePartyId)?.kind === 'COMPANY' &&
+                      !shareholderByPartyId.get(d.transfereePartyId)?.companyClientId ? (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="text-sm">
+                            <div className="text-black/70">Corporate representative name</div>
+                            <input
+                              value={d.transfereeCorporateRepresentativeName}
+                              onChange={(e) => patchDraft(d.id, { transfereeCorporateRepresentativeName: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Corporate representative email</div>
+                            <input
+                              value={d.transfereeCorporateRepresentativeEmail}
+                              onChange={(e) => patchDraft(d.id, { transfereeCorporateRepresentativeEmail: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Director signer name</div>
+                            <input
+                              value={d.transfereeDirectorSignerName}
+                              onChange={(e) => patchDraft(d.id, { transfereeDirectorSignerName: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-sm">
+                            <div className="text-black/70">Director signer email</div>
+                            <input
+                              value={d.transfereeDirectorSignerEmail}
+                              onChange={(e) => patchDraft(d.id, { transfereeDirectorSignerEmail: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
 
                       {d.transfereeMode === 'NEW' ? (
                         <div className="mt-3 space-y-3">

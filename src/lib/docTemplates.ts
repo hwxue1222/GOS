@@ -972,6 +972,96 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
 `.trim();
 }
 
+export function renderShareTransferCertificateOfAppointmentOfCorporateRepresentativeHtml(input: {
+  companyName: string;
+  companyRegistrationNo?: string;
+  companyAddress: string;
+  representativeName: string;
+  representativeEmail?: string;
+  representativeAddress: string;
+  directorSignerName: string;
+  directorSignerEmail?: string;
+  dateYmd: string;
+}) {
+  const directorSig = signatureLineBlocks({
+    signers: [{ fullName: input.directorSignerName, email: input.directorSignerEmail }],
+  });
+  const repSig = signatureLineBlocks({
+    signers: [{ fullName: input.representativeName, email: input.representativeEmail }],
+  });
+  const datedLong = toDayOfMonthLong(input.dateYmd);
+  const companyAddress = input.companyAddress.trim() ? esc(input.companyAddress) : '______________________________';
+  const representativeAddress = input.representativeAddress.trim()
+    ? esc(input.representativeAddress)
+    : '______________________________';
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Certificate of Appointment of Corporate Representative</title>
+    <style>
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .center { text-align: center; }
+      .block { margin-top: 10px; }
+      .sig-row { margin-top: 16px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 4px; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+      .mt2 { margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="title">${esc(input.companyName)}</div>
+    ${input.companyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+
+    <div class="block title center">CERTIFICATE OF APPOINTMENT OF CORPORATE REPRESENTATIVE</div>
+
+    <div class="block">We, ${esc(input.companyName)} of ${companyAddress} hereby appoint:-</div>
+
+    <div class="block">${esc(input.representativeName)}</div>
+    <div class="block">of address:&nbsp;&nbsp;${representativeAddress}</div>
+
+    <div class="block">or failing him / her,</div>
+    <div class="block">Mr / Ms</div>
+    <div class="block">of address:</div>
+
+    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to share transfer.</div>
+    <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
+
+    <div class="block">Dated this ${esc(datedLong)}</div>
+
+    <div class="block">We confirm that ${esc(input.companyName)} is not required to have a Common Seal under the provisions of its Articles of Association or the prevailing laws applicable to the company in its country of incorporation.</div>
+    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(input.companyName)}</div>
+
+    <div class="block">${esc(input.directorSignerName)}</div>
+    <div class="block">Director</div>
+
+    <div class="block">Signed For &amp;</div>
+    ${directorSig}
+    <div class="block">On Behalf of ${esc(input.companyName)}</div>
+
+    <div class="grid2 block">
+      <div>
+        <div>Signature of authorised representative</div>
+        ${repSig}
+      </div>
+      <div>
+        <div>Witnessed by</div>
+        <div class="mt2">Name:&nbsp;&nbsp;</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
+      </div>
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
 function toDayOfMonthLong(ymd: string) {
   const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return '';

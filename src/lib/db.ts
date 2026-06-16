@@ -7240,11 +7240,26 @@ export async function listShareTransfers() {
 export async function createShareTransferRequest(input: {
   clientId: string;
   transferor:
-    | { kind: 'EXISTING_PARTY'; partyId: string; representativePersonId?: string }
+    | {
+        kind: 'EXISTING_PARTY';
+        partyId: string;
+        representativePersonId?: string;
+        corporateRepresentativeName?: string;
+        corporateRepresentativeEmail?: string;
+        directorSignerName?: string;
+        directorSignerEmail?: string;
+      }
     | { kind: 'PERSON'; fullName: string; email: string }
     | { kind: 'COMPANY_CLIENT'; clientId: string };
   transferee:
-    | { kind: 'EXISTING_PARTY'; partyId: string }
+    | {
+        kind: 'EXISTING_PARTY';
+        partyId: string;
+        corporateRepresentativeName?: string;
+        corporateRepresentativeEmail?: string;
+        directorSignerName?: string;
+        directorSignerEmail?: string;
+      }
     | { kind: 'PERSON'; fullName: string; email: string }
     | {
         kind: 'NEW_PERSON';
@@ -7506,26 +7521,44 @@ export async function createShareTransferRequest(input: {
     }
   }
 
-  const externalRdrConfigByPartyId = new Map<
+  const corporateRepConfigByPartyId = new Map<
     string,
     { companyName: string; repName: string; repEmail: string; signerName: string; signerEmail: string }
   >();
+
+  const maybeStoreCorporateRepConfig = (party: Party, cfg: { repName?: string; repEmail?: string; signerName?: string; signerEmail?: string }) => {
+    if (!(party.type === 'COMPANY' && party.externalCompanyId)) return;
+    const repName = String(cfg.repName ?? '').trim();
+    const repEmail = String(cfg.repEmail ?? '').trim();
+    const signerName = String(cfg.signerName ?? '').trim();
+    const signerEmail = String(cfg.signerEmail ?? '').trim();
+    if (!repName || !repEmail || !signerName || !signerEmail) return;
+    corporateRepConfigByPartyId.set(party.id, { companyName: party.displayName, repName, repEmail, signerName, signerEmail });
+  };
+
   if (input.transferee.kind === 'NEW_COMPANY') {
-    const party = transferee.party;
-    if (party.type === 'COMPANY' && party.externalCompanyId) {
-      const repName = String(input.transferee.corporateRepresentativeName ?? '').trim();
-      const repEmail = String(input.transferee.corporateRepresentativeEmail ?? '').trim();
-      const signerName = String(input.transferee.directorSignerName ?? '').trim();
-      const signerEmail = String(input.transferee.directorSignerEmail ?? '').trim();
-      if (!repName || !repEmail || !signerName || !signerEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
-      externalRdrConfigByPartyId.set(party.id, {
-        companyName: party.displayName,
-        repName,
-        repEmail,
-        signerName,
-        signerEmail,
-      });
-    }
+    maybeStoreCorporateRepConfig(transferee.party, {
+      repName: input.transferee.corporateRepresentativeName,
+      repEmail: input.transferee.corporateRepresentativeEmail,
+      signerName: input.transferee.directorSignerName,
+      signerEmail: input.transferee.directorSignerEmail,
+    });
+  }
+  if (input.transferor.kind === 'EXISTING_PARTY') {
+    maybeStoreCorporateRepConfig(transferor.party, {
+      repName: input.transferor.corporateRepresentativeName,
+      repEmail: input.transferor.corporateRepresentativeEmail,
+      signerName: input.transferor.directorSignerName,
+      signerEmail: input.transferor.directorSignerEmail,
+    });
+  }
+  if (input.transferee.kind === 'EXISTING_PARTY') {
+    maybeStoreCorporateRepConfig(transferee.party, {
+      repName: input.transferee.corporateRepresentativeName,
+      repEmail: input.transferee.corporateRepresentativeEmail,
+      signerName: input.transferee.directorSignerName,
+      signerEmail: input.transferee.directorSignerEmail,
+    });
   }
 
   const transferorPartyId = transferor.party.id;
@@ -7574,7 +7607,7 @@ export async function createShareTransferRequest(input: {
     if (party.type === 'PERSON') return party.displayName;
     if (party.type === 'COMPANY') {
       if (party.externalCompanyId) {
-        const cfg = externalRdrConfigByPartyId.get(party.id) ?? null;
+        const cfg = corporateRepConfigByPartyId.get(party.id) ?? null;
         if (cfg?.repName?.trim()) return cfg.repName.trim();
       }
       const activeRep = db.companyRepresentatives
@@ -7724,7 +7757,7 @@ export async function createShareTransferRequest(input: {
   const ensureAutoRdr = async (companyParty: Party) => {
     const companyClientId = companyParty.clientId;
     if (!companyClientId && companyParty.externalCompanyId) {
-      const cfg = externalRdrConfigByPartyId.get(companyParty.id) ?? null;
+      const cfg = corporateRepConfigByPartyId.get(companyParty.id) ?? null;
       if (!cfg) return null;
 
       const rdrId = newId('rdr');
@@ -7898,73 +7931,147 @@ export async function createShareTransferRequest(input: {
     directorsResolutionDocumentId: brDoc.id,
   };
 
-  if (transferee.party.type === 'COMPANY' && transferee.party.externalCompanyId) {
-    const cfg = externalRdrConfigByPartyId.get(transferee.party.id) ?? null;
-    if (cfg) {
-      const ext = db.externalCompanies.find((c) => c.id === transferee.party.externalCompanyId) ?? null;
-      const certHtml = (await import('@/lib/docTemplates')).renderCertificateOfAppointmentOfCorporateRepresentativeHtml({
-        shareholderCompanyName: transferee.party.displayName,
-        shareholderCompanyRegistrationNo: ext?.registrationNo,
-        shareholderCompanyAddress: String(ext?.address ?? '').trim(),
-        targetCompanyName: client.name,
-        representativeName: cfg.repName,
-        representativeEmail: cfg.repEmail,
-        representativeAddress: '',
-        witnessIdTypeLabel: 'Passport',
-        witnessIdNo: '',
-        witnessPhone: '',
-        witnessEmail: '',
-        directorSignerName: cfg.signerName,
-        directorSignerEmail: cfg.signerEmail,
-        dateYmd: now.slice(0, 10),
-      });
+  const isSingaporeClient = (clientId: string) => {
+    const c = db.clients.find((x) => x.id === clientId) ?? null;
+    if (!c || c.deletedAt) return false;
+    const country = String((c as Client).countryOfIncorporation ?? '').trim().toLowerCase();
+    if (country === 'singapore') return true;
+    const reg = String((c as Client).companyRegistrationNo ?? '').trim();
+    return !!reg && isSingaporeCompanyRegistrationNo(reg);
+  };
 
-      const certDoc: Document = {
-        id: newId('doc'),
-        type: 'CR_CERT',
-        title: `Certificate of Appointment of Corporate Representative - ${transferee.party.displayName}`,
-        html: certHtml,
-        sha256: sha256Hex(certHtml),
-        createdAt: now,
-      };
-      db.documents.unshift(certDoc);
+  const needsShareTransferCrCert = (party: Party) => {
+    if (party.type !== 'COMPANY') return false;
+    if (party.clientId && isSingaporeClient(party.clientId)) return false;
+    if (party.externalCompanyId) return true;
+    if (party.clientId) return true;
+    return false;
+  };
 
-      const packet: SignaturePacket = {
-        id: newId('spk'),
-        kind: 'CR_CERT',
-        relatedType: 'SHARE_TRANSFER',
-        relatedId: transferId,
-        documentId: certDoc.id,
-        status: 'SIGNING',
+  const createShareTransferCrCert = async (party: Party, sideLabel: 'Transferor' | 'Transferee') => {
+    if (party.type !== 'COMPANY') return;
+
+    let companyName = party.displayName;
+    let companyRegistrationNo: string | undefined = undefined;
+    let companyAddress = '';
+
+    if (party.externalCompanyId) {
+      const ext = db.externalCompanies.find((c) => c.id === party.externalCompanyId) ?? null;
+      companyName = ext?.name?.trim() || companyName;
+      companyRegistrationNo = ext?.registrationNo;
+      companyAddress = String(ext?.address ?? '').trim();
+    }
+
+    if (party.clientId) {
+      const c = db.clients.find((x) => x.id === party.clientId) ?? null;
+      if (c && !c.deletedAt) {
+        companyName = c.name;
+        companyRegistrationNo = c.companyRegistrationNo;
+        companyAddress = String(c.registeredOfficeAddress ?? c.address ?? '').trim();
+      }
+    }
+
+    let repName = '';
+    let repEmail = '';
+    let directorSignerName = '';
+    let directorSignerEmail = '';
+
+    if (party.externalCompanyId) {
+      const cfg = corporateRepConfigByPartyId.get(party.id) ?? null;
+      if (!cfg) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      repName = cfg.repName;
+      repEmail = cfg.repEmail;
+      directorSignerName = cfg.signerName;
+      directorSignerEmail = cfg.signerEmail;
+    } else {
+      const nextRepEmail = resolveStaEmail(party);
+      const nextRepName = getSignerNameForParty(party);
+      if (!nextRepEmail || !nextRepName) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+      repName = nextRepName;
+      repEmail = nextRepEmail;
+
+      const companyClientId = party.clientId;
+      if (!companyClientId) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const directors = db.clientPartyRoles
+        .filter((r) => r.clientId === companyClientId && r.role === 'DIRECTOR' && !r.resignationDate)
+        .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+        .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+        .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+        .filter((p): p is Person => !!p);
+      const director = directors.find((d) => !!String(d.email ?? '').trim()) ?? null;
+      if (!director) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+      directorSignerName = director.fullName;
+      directorSignerEmail = String(director.email ?? '').trim();
+    }
+
+    const templates = await import('@/lib/docTemplates');
+    const certHtml = templates.renderShareTransferCertificateOfAppointmentOfCorporateRepresentativeHtml({
+      companyName,
+      companyRegistrationNo,
+      companyAddress,
+      representativeName: repName,
+      representativeEmail: repEmail,
+      representativeAddress: '',
+      directorSignerName,
+      directorSignerEmail,
+      dateYmd: now.slice(0, 10),
+    });
+
+    const certDoc: Document = {
+      id: newId('doc'),
+      type: 'CR_CERT',
+      title: `Certificate of Appointment of Corporate Representative (${sideLabel}) - ${companyName}`,
+      html: certHtml,
+      sha256: sha256Hex(certHtml),
+      createdAt: now,
+    };
+    db.documents.unshift(certDoc);
+
+    const packet: SignaturePacket = {
+      id: newId('spk'),
+      kind: 'CR_CERT',
+      relatedType: 'SHARE_TRANSFER',
+      relatedId: transferId,
+      documentId: certDoc.id,
+      status: 'SIGNING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signaturePackets.unshift(packet);
+
+    const uniqueEmails = Array.from(new Set([directorSignerEmail, repEmail].map((e) => e.trim().toLowerCase()).filter(Boolean)));
+    for (const email of uniqueEmails) {
+      const token = newToken();
+      const req: SignatureRequest = {
+        id: newId('sgr'),
+        packetId: packet.id,
+        email,
+        tokenHash: sha256Hex(token),
+        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'PENDING',
         createdAt: now,
         updatedAt: now,
       };
-      db.signaturePackets.unshift(packet);
-
-      const uniqueEmails = Array.from(new Set([cfg.signerEmail, cfg.repEmail].map((e) => e.trim().toLowerCase()).filter(Boolean)));
-      for (const email of uniqueEmails) {
-        const token = newToken();
-        const req: SignatureRequest = {
-          id: newId('sgr'),
-          packetId: packet.id,
-          email,
-          tokenHash: sha256Hex(token),
-          expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'PENDING',
-          createdAt: now,
-          updatedAt: now,
-        };
-        db.signatureRequests.unshift(req);
-        crCertLinks.push({
-          email,
-          url: `/sign/${token}`,
-          signerRole: email === cfg.repEmail.trim().toLowerCase() ? 'Corporate Representative' : 'Director',
-          documentTitle: certDoc.title,
-        });
-      }
-
-      documents.corporateRepresentativeCertificateDocumentId = certDoc.id;
+      db.signatureRequests.unshift(req);
+      crCertLinks.push({
+        email,
+        url: `/sign/${token}`,
+        signerRole: email === repEmail.trim().toLowerCase() ? `Corporate Representative (${sideLabel})` : `Director (${sideLabel})`,
+        documentTitle: certDoc.title,
+      });
     }
+
+    documents.corporateRepresentativeCertificateDocumentId = documents.corporateRepresentativeCertificateDocumentId ?? certDoc.id;
+    return { ok: true as const };
+  };
+
+  for (const entry of [
+    { party: transferor.party, side: 'Transferor' as const },
+    { party: transferee.party, side: 'Transferee' as const },
+  ]) {
+    if (!needsShareTransferCrCert(entry.party)) continue;
+    const created = await createShareTransferCrCert(entry.party as Party, entry.side);
+    if (created && !created.ok) return created;
   }
 
   if (transferee.party.type === 'COMPANY' && transferee.party.clientId && isNonSingaporeClient(transferee.party.clientId)) {
