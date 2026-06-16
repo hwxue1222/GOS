@@ -296,7 +296,7 @@ export default async function CorporateSecretaryApplicationsPage({
                     {visibleRows.map((r) => {
                       const deleteUrl = (() => {
                         if (me.role !== 'client') return '';
-                        if (r.status !== 'SIGNING' && r.status !== 'REJECTED') return '';
+                        if (r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE') return '';
                         if (!r.companyId || !r.sourceId) return '';
                         if (r.typeKey === 'director_change') {
                           return `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.sourceId)}`;
