@@ -7894,8 +7894,19 @@ export async function createShareTransferRequest(input: {
   };
 
   const staSignerPairs: Array<{ email: string; signerRole: string }> = [];
+  const resolveStaEmailForShareTransfer = (party: Party) => {
+    const direct = resolveStaEmail(party);
+    if (direct) return direct;
+    if (party.type === 'COMPANY' && party.externalCompanyId) {
+      const cfg = corporateRepConfigByPartyId.get(party.id) ?? null;
+      const repEmail = String(cfg?.repEmail ?? '').trim();
+      if (repEmail) return repEmail;
+    }
+    return null;
+  };
+
   for (const party of [transferor.party, transferee.party]) {
-    const email = resolveStaEmail(party);
+    const email = resolveStaEmailForShareTransfer(party);
     if (email) {
       const roleLabel =
         party.id === transferor.party.id
@@ -7916,6 +7927,11 @@ export async function createShareTransferRequest(input: {
       rdrLinks.push(
         ...created.links.map((l) => ({ ...l, signerRole: 'Director', documentTitle: `Corporate Representative - ${party.displayName}` })),
       );
+      for (const l of created.links) {
+        const roleLabel = party.id === transferor.party.id ? 'Director (Transferor)' : 'Director (Transferee)';
+        staSignerPairs.push({ email: l.email, signerRole: roleLabel });
+        staSignerEmails.push(l.email);
+      }
       continue;
     }
     return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
@@ -8153,33 +8169,31 @@ export async function createShareTransferRequest(input: {
   }
 
   const staLinks: Array<{ email: string; url: string; signerRole: string; documentTitle: string }> = [];
-  if (blockingRdrIds.length === 0) {
-    (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
-    const uniqueStaEmails = Array.from(new Set(staSignerEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
-    for (const emailKey of uniqueStaEmails) {
-      const token = newToken();
-      const req: SignatureRequest = {
-        id: newId('sgr'),
-        packetId: staPacket.id,
-        email: emailKey,
-        tokenHash: sha256Hex(token),
-        expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'PENDING',
-        createdAt: now,
-        updatedAt: now,
-      };
-      db.signatureRequests.unshift(req);
-      const role =
-        staSignerPairs
-          .filter((p) => p.email.trim().toLowerCase() === emailKey)
-          .map((p) => p.signerRole)
-          .filter(Boolean);
-      const signerRole = role.length ? Array.from(new Set(role)).join(' & ') : 'Signatory';
-      staLinks.push({ email: emailKey, url: `/sign/${token}`, signerRole, documentTitle: staDoc.title });
-    }
+  (staPacket as unknown as { status: SignaturePacket['status'] }).status = 'SIGNING';
+  const uniqueStaEmails = Array.from(new Set(staSignerEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+  for (const emailKey of uniqueStaEmails) {
+    const token = newToken();
+    const req: SignatureRequest = {
+      id: newId('sgr'),
+      packetId: staPacket.id,
+      email: emailKey,
+      tokenHash: sha256Hex(token),
+      expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.signatureRequests.unshift(req);
+    const role =
+      staSignerPairs
+        .filter((p) => p.email.trim().toLowerCase() === emailKey)
+        .map((p) => p.signerRole)
+        .filter(Boolean);
+    const signerRole = role.length ? Array.from(new Set(role)).join(' & ') : 'Signatory';
+    staLinks.push({ email: emailKey, url: `/sign/${token}`, signerRole, documentTitle: staDoc.title });
   }
 
-  const status: ShareTransfer['status'] = blockingRdrIds.length > 0 ? 'BLOCKED_REPRESENTATIVE' : 'SIGNING';
+  const status: ShareTransfer['status'] = 'SIGNING';
   const transfer: ShareTransfer = {
     id: transferId,
     clientId: client.id,
@@ -8212,7 +8226,8 @@ export async function resumeShareTransfer(transferId: string) {
   const idx = db.shareTransfers.findIndex((t) => t.id === transferId);
   if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
   const t = db.shareTransfers[idx];
-  if (t.status !== 'BLOCKED_REPRESENTATIVE') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (t.status !== 'BLOCKED_REPRESENTATIVE' && t.status !== 'SIGNING' && t.status !== 'NEED_MORE_INFO' && t.status !== 'PENDING_REVIEW')
+    return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const staPacketIdx = db.signaturePackets.findIndex((p) => p.id === t.staPacketId);
   if (staPacketIdx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
@@ -8231,17 +8246,31 @@ export async function resumeShareTransfer(transferId: string) {
       const rep = db.companyRepresentatives
         .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
         .find((r) => !r.effectiveTo);
-      if (!rep) return null;
-      const person = db.persons.find((p) => p.id === rep.representativePersonId) ?? null;
-      return person?.email ?? null;
+      if (rep) {
+        const person = db.persons.find((p) => p.id === rep.representativePersonId) ?? null;
+        return person?.email ?? null;
+      }
+
+      if (party.clientId) {
+        const directors = db.clientPartyRoles
+          .filter((r) => r.clientId === party.clientId && r.role === 'DIRECTOR' && !r.resignationDate)
+          .map((r) => db.parties.find((p) => p.id === r.partyId) ?? null)
+          .filter((p): p is Party => !!p && p.type === 'PERSON' && !!p.personId)
+          .map((p) => db.persons.find((x) => x.id === p.personId!) ?? null)
+          .filter((p): p is Person => !!p);
+        const emails = directors.map((d) => d.email).filter((e): e is string => !!e && !!e.trim());
+        return emails[0] ?? null;
+      }
+
+      return null;
     }
     return null;
   };
 
-  const emails = [resolveEmail(transferorParty), resolveEmail(transfereeParty)];
-  if (emails.some((e) => !e)) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
+  const emails = [resolveEmail(transferorParty), resolveEmail(transfereeParty)].filter((e): e is string => !!e && !!e.trim());
+  if (emails.length < 2) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
 
-  const uniqueEmails = Array.from(new Set((emails as string[]).map((e) => e.trim().toLowerCase()).filter(Boolean)));
+  const uniqueEmails = Array.from(new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
 
   const now = nowIso();
   const links: Array<{ email: string; url: string }> = [];
