@@ -655,8 +655,25 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                     >
                       {formatDateDMY(it.job.dueDate)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-[#7a5cff]">
-                      {it.job.deletedAt ? 'Deleted' : it.job.completed ? 'Complete' : it.job.status}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className={
+                          [
+                            'inline-flex px-2 py-1 rounded-full text-xs font-semibold',
+                            it.job.deletedAt
+                              ? 'bg-black/10 text-black/70'
+                              : it.job.completed
+                                ? 'bg-green-100 text-green-700'
+                                : it.job.status === 'Pending'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : it.job.status === 'Processing'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-black/10 text-black/70',
+                          ].join(' ')
+                        }
+                      >
+                        {it.job.deletedAt ? 'Deleted' : it.job.completed ? 'Complete' : it.job.status}
+                      </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {it.manager ? (
