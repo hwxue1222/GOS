@@ -8853,7 +8853,7 @@ export async function deleteCompanyUpdateRequest(input: { requestId: string; del
 
   const r = list[idx];
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
-  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (r.status !== 'PENDING_SIGNATURES' && r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   deleteSignaturePacketCascade(db, r.packetId);
   list.splice(idx, 1);
@@ -8872,7 +8872,7 @@ export async function deleteDirectorChangeRequest(input: { requestId: string; de
 
   const r = list[idx];
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
-  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (r.status !== 'PENDING_SIGNATURES' && r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === r.id);
   if (packets.length) {
@@ -8896,7 +8896,7 @@ export async function deleteRorcDeclarationRequest(input: { requestId: string; d
 
   const r = list[idx];
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
-  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (r.status !== 'PENDING_SIGNATURES' && r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   deleteSignaturePacketCascade(db, r.packetId);
   list.splice(idx, 1);
@@ -8915,7 +8915,7 @@ export async function deleteAnnualGeneralMeetingRequest(input: { requestId: stri
 
   const r = list[idx];
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
-  if (r.status !== 'PENDING_SIGNATURES') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (r.status !== 'PENDING_SIGNATURES' && r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   deleteSignaturePacketCascade(db, r.packetId);
   list.splice(idx, 1);
@@ -8931,7 +8931,7 @@ export async function deleteShareTransfer(input: { transferId: string }) {
   const t = db.shareTransfers[idx];
 
   const st = String((t as any).status ?? '');
-  if (st !== 'SIGNING') return { ok: false as const, error: 'INVALID_STATE' as const };
+  if (st !== 'SIGNING' && st !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
   for (const p of packets) deleteSignaturePacketCascade(db, p.id);
