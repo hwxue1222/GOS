@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomInt } from 'crypto';
 import ssic from '@/data/ssic.json';
 import { hashPassword } from '@/lib/password';
 import { newId } from '@/lib/id';
@@ -11,6 +11,8 @@ import type {
   CompanyUpdateRequest,
   CompanyUpdateRequestType,
   CompanyRepresentative,
+  Contract,
+  ContractTemplate,
   Currency,
   Db,
   DirectorChangeRequest,
@@ -103,6 +105,8 @@ function emptyDb(): Db {
     documents: [],
     signaturePackets: [],
     signatureRequests: [],
+    contractTemplates: [],
+    contracts: [],
     representativeDesignationRequests: [],
     shareTransfers: [],
     directorChangeRequests: [],
@@ -163,6 +167,8 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V6 = 'clients.codeMigration.v6';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
+const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
+const SEED_KEY_CONTRACTS_TEMPLATES_V3 = 'contracts.templates.v3';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -198,6 +204,291 @@ function migrateClientCountryOfIncorporationV1(db: Db) {
     changed = true;
   }
   db.seed[SEED_KEY_CLIENT_COUNTRY_INCORP_V1] = true;
+  return changed;
+}
+
+function ensureContractsCollections(db: Db) {
+  let changed = false;
+  if (!Array.isArray((db as unknown as { contractTemplates?: unknown }).contractTemplates)) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { contracts?: unknown }).contracts)) {
+    (db as unknown as { contracts: Contract[] }).contracts = [];
+    changed = true;
+  }
+  return changed;
+}
+
+function seedContractsModuleV1(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_MODULE_V1]) return false;
+
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  if (templates.length === 0) {
+    const now = nowIso();
+    templates.unshift({
+      id: newId('ctp'),
+      name: 'Basic Service Contract',
+      placeholders: [
+        { key: 'client_name', label: 'Client name', required: true },
+        { key: 'client_email', label: 'Client email', required: true },
+        { key: 'service', label: 'Service description', required: true },
+        { key: 'fee', label: 'Fee', required: true },
+        { key: 'date', label: 'Date (YYYY-MM-DD)', required: true },
+      ],
+      templateHtml: `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Contract</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-size: 16px; font-weight: 700; text-align: center; }
+      .muted { color: #555; }
+      .block { margin-top: 12px; }
+      .kv { margin-top: 6px; }
+      .kv b { display: inline-block; min-width: 120px; }
+      .sig { margin-top: 28px; }
+      .sig-line { margin-top: 14px; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="title">Service Contract</div>
+    <div class="block muted">Contract No: {{contract_no}}</div>
+
+    <div class="block">
+      <div class="kv"><b>Client</b> {{client_name}}</div>
+      <div class="kv"><b>Email</b> {{client_email}}</div>
+      <div class="kv"><b>Date</b> {{date}}</div>
+    </div>
+
+    <div class="block">
+      <div style="font-weight:700;">Service</div>
+      <div style="margin-top:6px;">{{service}}</div>
+    </div>
+
+    <div class="block">
+      <div style="font-weight:700;">Fee</div>
+      <div style="margin-top:6px;">{{fee}}</div>
+    </div>
+
+    <div class="sig">
+      <div style="font-weight:700;">Client signature</div>
+      <div class="sig-line">______________________________</div>
+      <div style="margin-top:6px;"><span data-signer="{{client_email}}"></span></div>
+    </div>
+  </body>
+</html>`,
+      createdAt: now,
+      updatedAt: now,
+    });
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_MODULE_V1] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV3(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3]) return false;
+
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+
+  const targetIdx = templates.findIndex((t) =>
+    ['Basic Service Contract', 'Corporate Service Agreement', '公司秘书服务协议 / Service Agreement'].includes(String(t.name ?? '').trim()),
+  );
+
+  const tpl: ContractTemplate = {
+    id: targetIdx >= 0 ? templates[targetIdx].id : newId('ctp'),
+    name: '公司秘书服务协议 / Service Agreement',
+    placeholders: [
+      { key: 'partyA_name', label: '甲方（公司名称） / Party A (Company Name)', required: true },
+      { key: 'partyA_uen', label: 'UEN公司注册号 / UEN Registration No.', required: true },
+      { key: 'partyA_address', label: '联系地址 / Address', required: true },
+      { key: 'partyA_contact', label: '联系电话 / Contact Number', required: true },
+      { key: 'partyA_email', label: '电邮地址 / Email', required: true },
+      { key: 'date', label: '日期(YYYY-MM-DD) / Date (YYYY-MM-DD)', required: true },
+    ],
+    templateHtml: `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Service Agreement</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-size: 16px; font-weight: 800; text-align: center; }
+      .subtitle { font-size: 14px; font-weight: 800; text-align: center; margin-top: 2px; }
+      .muted { color: #555; }
+      .block { margin-top: 10px; }
+      .kv { margin-top: 4px; }
+      .kv b { display: inline-block; min-width: 140px; }
+      .content { margin-top: 16px; white-space: pre-wrap; }
+      .sig { margin-top: 22px; }
+      .sig-line { margin-top: 10px; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="title">公司秘书服务协议</div>
+    <div class="subtitle">Service Agreement</div>
+    <div class="block muted">合同编号 / Contract No: {{contract_no}}</div>
+
+    <div class="block">
+      <div class="kv"><b>甲方（公司名称） / Party A (Company Name):</b> {{partyA_name}}</div>
+      <div class="kv"><b>UEN公司注册号 / UEN Registration No.:</b> {{partyA_uen}}</div>
+      <div class="kv"><b>联系地址 / Address:</b> {{partyA_address}}</div>
+      <div class="kv"><b>联系电话 / Contact Number:</b> {{partyA_contact}}</div>
+      <div class="kv"><b>电邮地址 / Email:</b> {{partyA_email}}</div>
+    </div>
+
+    <div class="block">
+      <div class="kv"><b>Party乙方：</b> BBY.SG PTE LTD</div>
+      <div class="kv"><b>UEN公司注册号：</b> 201608450W</div>
+      <div class="kv"><b>Addesss联系地址：</b> 8 Burn Road#15-03 Trivex Singapore 369977</div>
+      <div class="kv"><b>Contact联系电话：</b> (+65) 62215600/91526685 (Luke)</div>
+      <div class="kv"><b>Email电邮地址:</b> Luke@bby.sg</div>
+    </div>
+
+    <div class="content">为了维护合同当事的合法权益，依据《新加坡共和国合同法》及相关法律法规，甲乙双方本着自愿、平等、协商一致的原则，就乙方接受甲方的委托提供设立新加坡公司等法定秘书服务（“服务”），达成如下协议：
+一、 SERVICES PROVIDED服务内容
+乙方向甲方提供的以下服务：
+（1）CORPORATE SECRETARY SERVICE 公司秘书服务
+Corporate secretary services are included as below: 服务包括：
+Maintain various registers; 设立公司登记表
+Appointment of local nominee director; 任命本地挂名董事
+Update of changes and file ACRA lodgement; 更新公司信息
+Provision of registered office address; 提供公司注册地址
+Prepare resolutions and ACRA filing; 准备公司的决议文件
+Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报
+* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。
+（2）Appointment of local nominee director本地挂名董事服务
+Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters).本地挂名董事不参与公司的运营（包括但不限于银行相关的业务）。
+The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。
+二、乙方义务
+1、乙方按照甲方要求提供所需服务；
+2、乙方负责管理本地挂名董事，符合新加坡政府的要求；
+3、乙方协助甲方提供新加坡公司注册地址。
+三、甲方义务
+1、甲方向乙方如实提供公司实际控制人的背景调查资料，没有政治风险任务；
+2、甲方遵守所在国和新加坡的法律法规，合法经营；
+3、甲方在所在或和新加坡的经营活动不涉及洗钱、资助恐怖组织等活动。
+四、收费标准
+1、乙方收费标准如下：
+- 公司注册费（一次性，送第一年公司秘书服务）
+- 本地挂名董事费（一年）
+以双方协商同意的最终发票金额为准。其他服务，请见附录一。
+2、参照本合同，同时乙方需向甲方提供对应服务的发票，甲方安排10日内付款。
+3、付款方式如下：
+Beneficiary’s Name收款人名称
+BBY.SG PTE LTD
+Beneficiary’s address收款人地址
+10 Anson Road#10-13A International Plaza, Singapore 079903
+Bank Name银行名称
+Maybank Singapore
+Swift Code国际汇款联行号
+MBBESGS2
+Bank account number银行账号（新币）
+04011569555
+Bank address银行地址
+2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907
+五、退费规定
+1、乙方未能按照本合同要求完成工作，乙方全额退还甲方按照发票支付的对应款项。
+2、除不可抗力原因以外，甲方自身原因，单方面要求解除本合同，已缴纳的服务费不予退还。
+六、不可抗力条款
+1、本合同所称不可抗力，是指不能预见、不能避免并不能克服的客观情况，如重大自然灾害、瘟疫、外交纠纷、战争、骚乱、罢工等；本合同所称甲乙双方影响范围之外的 情况，是指政策变化，如由甲方所在国的政府、新加坡政府等机构决定的事项。
+2、一方因不可抗力不能履行合同的，应当立即通知对方，说明不可抗力的发生日期、 事件性质、预计持续的时间及对该方履行本合同的影响。对不可抗力所造成的影响，双 方应及时协商解决办法和补救措施。因不可抗力不能履行合同的一方，应尽力采取合理 措施减轻可能给对方造成的损失，否则应对由此而扩大的损失承担赔偿责任。
+七、违约责任
+1、双方应严格履行本合同中全部条款，任何一方违约应承担相应的违约责任。
+2、甲方为完成本合同之目的而提供虚假材料，服务费用不予退还，且乙方不承担任何 责任，因此造成乙方的损失的，甲方还应当赔偿乙方由此造成的一切损失。
+八、生效条款
+1、本合同自乙方及甲方签署之日起生效，除非依本合同的规定提前终止，本合同的有 效期是24个月。
+2、双方提前一个月书面解约，否则到期自动延期。
+3、本合同一式两份，具有同等效力，双方各执一份。
+九、适用的法律及争议解决方法
+1、本合同的履行、解释及争议解决均适用新加坡共和国有关法律。
+2、双方在履行本合同中如发生争议，应由双方协商解决。如协商不成，各方均有权向 新加坡法院提出诉讼。
+十、本合同的补充、变更和修改
+对本合同的任何补充、变更、修改可采用电子通讯工具（如微信聊天）、Email或者书面补充、变更和修改合同的条款。补充合同的条款在双方通过上述形式确认后与本合同具有同等法律效力。
+甲方（签字）:
+乙方（签字）BBY.SG PTE LTD
+法定代表（签字）:
+法定代表（签字）:
+法定代表姓名:
+法定代表姓名:Xue Hongwei
+签字时间:
+签字时间:
+Annex 1附录1：服务内容及收费
+1、INCORPORATION SERVICE 设立公司服务（1000新币）
+Name application; 公司名称预申请
+KYC;背景调查
+Appointment of local nominee director; 任命本地挂名董事（请见3）
+Incorporation with ACRA; ACRA公司注册
+Provision of registered office address; 提供公司注册地址
+Prepare resolution for first board meeting for incorporation; 准备公司设立第一次董事决议
+Prepare standard Constitution; 准备标准格式公司章程
+Purchase of Bizfile; 购买公司注册纸
+2、CORPORATE SECRETARY SERVICE 公司秘书服务（400新币/年，第一年免费）
+Maintain various registers; 设立公司登记表
+Update of changes and file ACRA lodgement; 更新公司信息
+Provision of registered office address; 提供公司注册地址
+Prepare resolutions and ACRA filing; 准备公司的决议文件
+Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报
+* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。
+3、 Appointment of local nominee director本地挂名董事服务（5000新币/年）
+Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters). 本地挂名董事不参与公司的日常运营（包括但不限于银行相关的业务）。
+The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。
+Optional可选服务
+4、Accounting & Taxation财税服务
+Maintain full set of accounts per month; 每月记账
+Compilation of unaudited annual financial report; 年终结算（600新币/年起）
+Tax computation and annual return. 税务计算和年度申报（400新币/年起）
+5、Compliance合规服务（1000新币/月）
+Monthly review of bank statement; 每月银行对账
+Support the clients to liaise with bank and address the questions from bank; 协助客户回答银行问题
+Support the clients to perform KYC by bank; 协助完成银行背景调查
+Ensure the compliance with the anti-money laundering and countering the financing of terrorism laws and regulations by governments and banks; 保障反洗钱和资助恐怖活动的相关新加坡的法律法规
+Take prompt actions to prevent the bank from closing the bank account but subject to bank’s approval.采取适当行动保障银行账号免被关闭（最终解释权属于银行）
+Review the company’s daily cash and non-cash transactions; 日常现金和非现金交易合规
+Monitor the transactions which may expose the company to risks of money-laundering and terrorism. 公司交易合规以及反洗钱和反恐怖组织资金的合规
+6、Other Services其他服务
+Bank account opening; 银行开户（一次性开户费2000新币）
+Virtual office service; 虚拟办公室（每月500新币起，包括一间办公室+邮件代收发+日常管理+办公地址）
+Apply the work permit for employee; 申请工作准证（3000新币/人）
+Auditing. 审计（4000新币/年起）</div>
+
+    <div class="sig">
+      <div class="kv"><b>日期 / Date:</b> {{date}}</div>
+      <div class="block" style="font-weight:700;">甲方签字 / Party A signature</div>
+      <div class="sig-line">______________________________</div>
+      <div class="block"><span data-signer="{{partyA_email}}"></span></div>
+    </div>
+  </body>
+</html>`,
+    createdAt: targetIdx >= 0 ? templates[targetIdx].createdAt : now,
+    updatedAt: now,
+  };
+
+  if (targetIdx >= 0) {
+    templates[targetIdx] = tpl;
+    changed = true;
+  } else {
+    templates.unshift(tpl);
+    changed = true;
+  }
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3] = true;
   return changed;
 }
 
@@ -5309,6 +5600,8 @@ export async function readDb(): Promise<Db> {
   if (dedupeClientsByNormalizedNameAlways(db)) changed = true;
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
+  if (seedContractsModuleV1(db)) changed = true;
+  if (seedContractsTemplatesV3(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
@@ -6883,6 +7176,98 @@ export async function createDocument(input: { type: Document['type']; title: str
   return doc;
 }
 
+function parseContractNoSeq(contractNo: string) {
+  const m = String(contractNo ?? '').trim().match(/^BBY-(\d{4})-(\d{2})-(\d{3})-(\d+)$/);
+  if (!m) return null;
+  const seq = Number(m[3]);
+  if (!Number.isFinite(seq) || seq <= 0) return null;
+  return { year: m[1], month: m[2], seq };
+}
+
+function nextContractNo(db: Db, now: Date) {
+  const year = String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const list = (db.contracts ?? []) as Contract[];
+  let maxSeq = 0;
+  for (const c of list) {
+    const parsed = parseContractNoSeq(c.contractNo);
+    if (!parsed) continue;
+    if (parsed.year !== year || parsed.month !== month) continue;
+    if (parsed.seq > maxSeq) maxSeq = parsed.seq;
+  }
+  const nextSeq = maxSeq + 1;
+  const seqStr = String(nextSeq).padStart(3, '0');
+  const rnd = String(randomInt(0, 10000)).padStart(4, '0');
+  return `BBY-${year}-${month}-${seqStr}-${rnd}`;
+}
+
+export async function listContractTemplates() {
+  const db = await readDb();
+  const list = (db.contractTemplates ?? []) as ContractTemplate[];
+  return list.slice().sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
+}
+
+export async function listContracts() {
+  const db = await readDb();
+  const list = (db.contracts ?? []) as Contract[];
+  return list.slice().sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+}
+
+export async function findContractById(contractId: string) {
+  const db = await readDb();
+  const list = (db.contracts ?? []) as Contract[];
+  return list.find((c) => c.id === contractId) ?? null;
+}
+
+export async function createContract(input: {
+  templateId: string;
+  clientName: string;
+  clientEmail: string;
+  fields: Record<string, string>;
+  createdByUserId: string;
+}) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const template = templates.find((t) => t.id === input.templateId) ?? null;
+  if (!template) throw new Error('NOT_FOUND');
+
+  const createdAt = nowIso();
+  const contractNo = nextContractNo(db, new Date(createdAt));
+  const contract: Contract = {
+    id: newId('ctr'),
+    contractNo,
+    templateId: template.id,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail,
+    fields: input.fields ?? {},
+    status: 'DRAFT',
+    createdByUserId: input.createdByUserId,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  const list = (db.contracts ?? []) as Contract[];
+  list.unshift(contract);
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+  await writeDb(db);
+  return contract;
+}
+
+export async function updateContract(contractId: string, patch: Partial<Pick<Contract, 'clientName' | 'clientEmail' | 'fields' | 'status' | 'documentId' | 'packetId' | 'sentAt' | 'signedAt' | 'voidedAt'>>) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const list = (db.contracts ?? []) as Contract[];
+  const idx = list.findIndex((c) => c.id === contractId);
+  if (idx < 0) return null;
+  const now = nowIso();
+  const next: Contract = { ...list[idx], ...patch, updatedAt: now };
+  list[idx] = next;
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+  await writeDb(db);
+  return next;
+}
+
 export async function createSignaturePacket(input: {
   kind: SignaturePacket['kind'];
   relatedType: SignaturePacket['relatedType'];
@@ -7124,6 +7509,20 @@ async function finalizeAgmIfReady(db: Db, packet: SignaturePacket) {
   (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
 }
 
+async function finalizeContractIfReady(db: Db, packet: SignaturePacket) {
+  if (packet.relatedType !== 'CONTRACT') return;
+  if (packet.status !== 'SIGNED') return;
+  if (!Array.isArray((db as unknown as { contracts?: unknown }).contracts)) return;
+  const list = (db.contracts ?? []) as Contract[];
+  const idx = list.findIndex((c) => c.id === packet.relatedId);
+  if (idx < 0) return;
+  const c = list[idx];
+  if (c.status === 'SIGNED') return;
+  const now = nowIso();
+  list[idx] = { ...c, status: 'SIGNED', signedAt: now, updatedAt: now };
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+}
+
 export async function signByToken(input: {
   token: string;
   otp: string;
@@ -7224,6 +7623,7 @@ export async function signByToken(input: {
     await finalizeCompanyUpdateIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeRorcDeclarationIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeAgmIfReady(db, db.signaturePackets[packetIdx]);
+    await finalizeContractIfReady(db, db.signaturePackets[packetIdx]);
   } else if (packet.status === 'DRAFT') {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
   }

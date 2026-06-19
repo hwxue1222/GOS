@@ -13,7 +13,7 @@ export type PermissionAction =
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices' | 'secretary' | 'people';
+export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices' | 'secretary' | 'people' | 'contracts';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -244,7 +244,8 @@ export type DocumentType =
   | 'RORC_DECL'
   | 'AGM_NOTICE'
   | 'AGM_MIN'
-  | 'AGM_DIR_STMT';
+  | 'AGM_DIR_STMT'
+  | 'CONTRACT';
 
 export type Document = {
   id: string;
@@ -266,19 +267,56 @@ export type SignaturePacketKind =
   | 'RORC_DECL'
   | 'AGM_NOTICE'
   | 'AGM_MIN'
-  | 'AGM_DIR_STMT';
+  | 'AGM_DIR_STMT'
+  | 'CONTRACT';
 
 export type SignaturePacketStatus = 'DRAFT' | 'SIGNING' | 'SIGNED';
 
 export type SignaturePacket = {
   id: string;
   kind: SignaturePacketKind;
-  relatedType: 'RDR' | 'SHARE_TRANSFER' | 'DIRECTOR_CHANGE' | 'COMPANY_UPDATE' | 'RORC_DECLARATION' | 'ANNUAL_GENERAL_MEETING';
+  relatedType:
+    | 'RDR'
+    | 'SHARE_TRANSFER'
+    | 'DIRECTOR_CHANGE'
+    | 'COMPANY_UPDATE'
+    | 'RORC_DECLARATION'
+    | 'ANNUAL_GENERAL_MEETING'
+    | 'CONTRACT';
   relatedId: string;
   documentId: string;
   status: SignaturePacketStatus;
   createdAt: string;
   updatedAt?: string;
+};
+
+export type ContractStatus = 'DRAFT' | 'READY' | 'SIGNING' | 'SIGNED' | 'VOID';
+
+export type ContractTemplate = {
+  id: string;
+  name: string;
+  templateHtml: string;
+  placeholders: Array<{ key: string; label: string; required?: boolean }>;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type Contract = {
+  id: string;
+  contractNo: string;
+  templateId: string;
+  clientName: string;
+  clientEmail: string;
+  fields: Record<string, string>;
+  status: ContractStatus;
+  documentId?: string;
+  packetId?: string;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt?: string;
+  sentAt?: string;
+  signedAt?: string;
+  voidedAt?: string;
 };
 
 export type DirectorChangeRequestStatus =
@@ -657,6 +695,8 @@ export type Db = {
   documents: Document[];
   signaturePackets: SignaturePacket[];
   signatureRequests: SignatureRequest[];
+  contractTemplates?: ContractTemplate[];
+  contracts?: Contract[];
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
   directorChangeRequests?: DirectorChangeRequest[];

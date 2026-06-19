@@ -122,6 +122,8 @@ export async function sendSigningInvite(input: {
   companyName?: string;
   documentTitle?: string;
   signerRole?: string;
+  subject?: string;
+  message?: string;
 }) {
   const issuer = getInvoiceIssuerConfig('BBY_SG');
   const today = new Date();
@@ -137,11 +139,23 @@ export async function sendSigningInvite(input: {
   const documentTitle = String(input.documentTitle ?? '').trim();
   const signerRole = String(input.signerRole ?? '').trim();
 
+  const escHtml = (s: string) =>
+    s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
   const salutation = signerRole.toLowerCase().includes('director') ? 'Dear Director,' : 'Dear Signatory,';
-  const subjectParts = [companyName || 'Company', documentTitle || applicationName || 'Signing', signerRole ? `(${signerRole})` : '']
-    .map((x) => x.trim())
-    .filter(Boolean);
-  const subject = subjectParts.join(' ');
+  const subject = (() => {
+    const override = String(input.subject ?? '').trim();
+    if (override) return override;
+    const subjectParts = [companyName || 'Company', documentTitle || applicationName || 'Signing', signerRole ? `(${signerRole})` : '']
+      .map((x) => x.trim())
+      .filter(Boolean);
+    return subjectParts.join(' ');
+  })();
 
   const intro = (() => {
     const pieces: string[] = [];
@@ -151,12 +165,14 @@ export async function sendSigningInvite(input: {
     if (signerRole) pieces.push(`Signing as: <strong>${signerRole}</strong>`);
     return pieces.length ? pieces.join('<br />') : '';
   })();
+  const message = String(input.message ?? '').trim();
   const html = `
 <div style="font-family: ui-sans-serif,system-ui; line-height:1.6; font-size:14px; color:#111;">
   <div>${salutation}</div>
   <div style="margin-top:10px;">
     ${intro || 'Please click the link below to review and sign.'}
   </div>
+  ${message ? `<div style="margin-top:10px;">${escHtml(message).replaceAll('\n', '<br />')}</div>` : ''}
   <div style="margin-top:12px;">
     <a href="${input.url}">${input.url}</a>
   </div>

@@ -2596,3 +2596,28 @@ f) the accounting and other records required to be kept by the company in accord
 </html>
 `.trim();
 }
+
+export function renderContractHtml(input: {
+  templateHtml: string;
+  contractNo: string;
+  clientName: string;
+  clientEmail: string;
+  fields: Record<string, string>;
+}) {
+  const map: Record<string, string> = {
+    contract_no: input.contractNo,
+    client_name: input.clientName,
+    client_email: input.clientEmail,
+    ...(input.fields ?? {}),
+  };
+
+  let html = String(input.templateHtml ?? '');
+  for (const [k, v] of Object.entries(map)) {
+    const key = String(k ?? '').trim();
+    if (!key) continue;
+    const raw = String(v ?? '').trim();
+    const safe = esc(raw).replaceAll('\n', '<br />');
+    html = html.replaceAll(`{{${key}}}`, safe);
+  }
+  return html;
+}

@@ -15,6 +15,7 @@ type Props = {
     | 'invoices'
     | 'reports'
     | 'secretary'
+    | 'contracts'
     | 'dashboard'
     | 'incorporation'
     | 'corporate-secretary';
@@ -99,6 +100,9 @@ export default async function AppTopNav({ active }: Props) {
             </NavLink>
             <NavLink href="/invoices" active={active === 'invoices'}>
               {tServer(lang, 'nav.invoices')}
+            </NavLink>
+            <NavLink href="/contracts" active={active === 'contracts'}>
+              {tServer(lang, 'nav.contracts')}
             </NavLink>
             <NavLink href="/secretary/companies" active={active === 'secretary'}>
               {tServer(lang, 'nav.secretary')}

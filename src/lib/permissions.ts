@@ -18,6 +18,7 @@ function basePermissionsForRole(role: Role): Permissions {
       invoices: { viewAll: true, create: true, update: true, markPaid: true },
       secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
       people: { viewAssigned: true, viewAll: true, create: true, update: true, import: true },
+      contracts: { viewAssigned: true, viewAll: true, create: true, update: true },
     };
   }
   if (role === 'client') {
@@ -29,6 +30,7 @@ function basePermissionsForRole(role: Role): Permissions {
       invoices: {},
       secretary: { viewAssigned: true, update: true },
       people: {},
+      contracts: {},
     };
   }
   return {
@@ -39,6 +41,7 @@ function basePermissionsForRole(role: Role): Permissions {
     invoices: {},
     secretary: {},
     people: {},
+    contracts: {},
   };
 }
 
@@ -54,6 +57,7 @@ function mergePermissions(base: Permissions, override?: Permissions): Permission
     invoices: { ...(base.invoices ?? {}), ...(o.invoices ?? {}) },
     secretary: { ...(base.secretary ?? {}), ...(o.secretary ?? {}) },
     people: { ...(base.people ?? {}), ...(o.people ?? {}) },
+    contracts: { ...(base.contracts ?? {}), ...(o.contracts ?? {}) },
   };
 }
 
