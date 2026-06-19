@@ -171,8 +171,6 @@ export default async function SecretaryAcraFilingPage() {
           </div>
 
           <div className="mt-6">
-            <div className="text-sm font-semibold">Corporate Secretary Services</div>
-            <div className="mt-1 text-sm text-black/60">Applications (including approved/rejected history)</div>
             <div className="mt-3">
               <SecretaryCsReviewClient rows={csRows} />
             </div>
@@ -180,7 +178,6 @@ export default async function SecretaryAcraFilingPage() {
 
           <div className="mt-8">
             <div className="text-sm font-semibold">Incorporation</div>
-            <div className="mt-1 text-sm text-black/60">Submitted / processing applications</div>
             <div className="mt-3">
               <SecretaryIncorporationReviewClient rows={incRows} />
             </div>
