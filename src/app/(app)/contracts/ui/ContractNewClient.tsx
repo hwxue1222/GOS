@@ -106,6 +106,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setError('TEMPLATE_REQUIRED');
       return null;
     }
+    if (!clientName || !clientEmail) {
+      setError('CLIENT_REQUIRED');
+      setErrorDetail('请先填写甲方公司名称与甲方邮箱（用于生成合同与发送签署）。');
+      return null;
+    }
     const payload = { templateId: tpl.id, clientName, clientEmail, fields };
     setSaving(true);
     try {
@@ -383,14 +388,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             <div className="rounded-xl bg-white border border-black/5 p-3 flex flex-wrap gap-2">
               <button
                 onClick={() => void saveDraft()}
-                disabled={saving || rendering || sending}
+                disabled={saving || rendering || sending || !clientName || !clientEmail}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
               <button
                 onClick={() => void generateDocument()}
-                disabled={saving || rendering || sending}
+                disabled={saving || rendering || sending || !clientName || !clientEmail}
                 className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
               >
                 {rendering ? 'Rendering…' : 'Render document'}
@@ -406,7 +411,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </a>
               <button
                 onClick={() => void sendForSigning()}
-                disabled={saving || rendering || sending}
+                disabled={saving || rendering || sending || !clientName || !clientEmail}
                 className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
               >
                 {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
