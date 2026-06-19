@@ -26,11 +26,13 @@ function statusLabel(status: ContractStatus) {
 export default function ContractDetailClient({ initialContract, templateName, documentSha256, signatureRequests }: Props) {
   const [contract, setContract] = useState<Contract>(initialContract);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string>('');
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
   const [signerEmail, setSignerEmail] = useState<string>(String((initialContract as any)?.fields?.signer_email ?? '').trim());
   const [signerFullName, setSignerFullName] = useState<string>(String((initialContract as any)?.fields?.signer_full_name ?? '').trim());
   const [signerTitle, setSignerTitle] = useState<string>(String((initialContract as any)?.fields?.signer_title ?? '').trim());
+  const [pdfCheck, setPdfCheck] = useState<string>('');
 
   const st = statusLabel(contract.status);
   const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
@@ -38,12 +40,14 @@ export default function ContractDetailClient({ initialContract, templateName, do
 
   async function renderDoc() {
     setError(null);
+    setErrorDetail('');
     setRendering(true);
     try {
       const res = await fetch(`/api/contracts/${encodeURIComponent(contract.id)}/render`, { method: 'POST' }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
-        setError(j?.error || 'FAILED');
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
         return;
       }
       setContract(j.contract as Contract);
@@ -54,6 +58,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
 
   async function sendSign() {
     setError(null);
+    setErrorDetail('');
     setSending(true);
     try {
       const res = await fetch(`/api/contracts/${encodeURIComponent(contract.id)}/send-sign`, {
@@ -67,7 +72,8 @@ export default function ContractDetailClient({ initialContract, templateName, do
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
-        setError(j?.error || 'FAILED');
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
         return;
       }
       setContract(j.contract as Contract);
@@ -77,6 +83,18 @@ export default function ContractDetailClient({ initialContract, templateName, do
     } finally {
       setSending(false);
     }
+  }
+
+  async function checkPdf() {
+    setPdfCheck('');
+    const url = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?debug=1`;
+    const res = await fetch(url).catch(() => null);
+    if (!res) {
+      setPdfCheck('NETWORK_ERROR');
+      return;
+    }
+    const text = await res.text().catch(() => '');
+    setPdfCheck(`HTTP ${res.status}\n${text}`);
   }
 
   const reqs = useMemo(() => {
@@ -103,6 +121,9 @@ export default function ContractDetailClient({ initialContract, templateName, do
       </div>
 
       {error ? <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div> : null}
+      {errorDetail ? (
+        <pre className="mt-2 rounded-xl bg-white border border-black/5 p-3 text-xs text-black/70 overflow-auto">{errorDetail}</pre>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-8">
@@ -200,6 +221,15 @@ export default function ContractDetailClient({ initialContract, templateName, do
               >
                 Download PDF
               </a>
+              <button
+                onClick={() => void checkPdf()}
+                className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
+              >
+                Check PDF error
+              </button>
+              {pdfCheck ? (
+                <pre className="rounded-lg bg-white border border-black/10 p-3 text-xs text-black/70 overflow-auto">{pdfCheck}</pre>
+              ) : null}
               <button
                 onClick={() => void sendSign()}
                 disabled={rendering || sending}

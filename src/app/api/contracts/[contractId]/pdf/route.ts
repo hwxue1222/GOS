@@ -65,33 +65,53 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
   }
 
   const { contractId } = await params;
-  const contract = await findContractById(contractId);
-  if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-  if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
-
-  const templates = await listContractTemplates();
-  const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
-  if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
   if (debug) {
     const hasKv = !!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN;
     const hasRedis = !!process.env.REDIS_URL;
     const hasChromeEnv = !!process.env.PUPPETEER_EXECUTABLE_PATH || !!process.env.CHROME_EXECUTABLE_PATH;
+    let contractExists = false;
+    let canReadContract = false;
+    try {
+      const c = await findContractById(contractId);
+      contractExists = !!c;
+      canReadContract = !!c && canAccess(user, c);
+    } catch {
+      contractExists = false;
+      canReadContract = false;
+    }
+
     return NextResponse.json(
       {
         ok: true,
         contractId,
-        templateId: contract.templateId,
         vercel: !!process.env.VERCEL,
-        db: { hasKv, hasRedis },
-        pdf: { hasChromeEnv },
+        db: {
+          hasKv,
+          hasRedis,
+          key: process.env.GOS_KV_DB_KEY?.trim() || 'gos:db',
+        },
+        pdf: {
+          hasChromeEnv,
+        },
+        contract: {
+          exists: contractExists,
+          canRead: canReadContract,
+        },
       },
       { status: 200 },
     );
   }
+
+  const contract = await findContractById(contractId);
+  if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  const templates = await listContractTemplates();
+  const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
+  if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
   const html = renderContractHtml({
     templateHtml: tpl.templateHtml,
