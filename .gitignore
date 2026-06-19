@@ -25,6 +25,7 @@
 
 # temp
 /tmp/
+tmp_*.html
 
 # misc
 .DS_Store
