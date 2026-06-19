@@ -295,6 +295,8 @@ export type ContractStatus = 'DRAFT' | 'READY' | 'SIGNING' | 'SIGNED' | 'VOID';
 export type ContractTemplate = {
   id: string;
   name: string;
+  engine?: 'HTML' | 'DOCX';
+  docxTemplateKey?: 'corp_service_agreement';
   templateHtml: string;
   placeholders: Array<{ key: string; label: string; required?: boolean }>;
   createdAt: string;

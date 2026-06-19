@@ -168,7 +168,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V3 = 'contracts.templates.v3';
+const SEED_KEY_CONTRACTS_TEMPLATES_V4 = 'contracts.templates.v4';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -295,14 +295,16 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV3(db: Db) {
+function seedContractsTemplatesV4(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V4] && templates.length > 0) return false;
+
   const now = nowIso();
+
 
   const targetIdx = templates.findIndex((t) =>
     ['Basic Service Contract', 'Corporate Service Agreement', '公司秘书服务协议 / Service Agreement'].includes(String(t.name ?? '').trim()),
@@ -311,6 +313,8 @@ function seedContractsTemplatesV3(db: Db) {
   const tpl: ContractTemplate = {
     id: targetIdx >= 0 ? templates[targetIdx].id : newId('ctp'),
     name: '公司秘书服务协议 / Service Agreement',
+    engine: 'DOCX',
+    docxTemplateKey: 'corp_service_agreement',
     placeholders: [
       { key: 'partyA_name', label: '甲方（公司名称） / Party A (Company Name)', required: true },
       { key: 'partyA_uen', label: 'UEN公司注册号 / UEN Registration No.', required: true },
@@ -487,7 +491,7 @@ Auditing. 审计（4000新币/年起）</div>
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V4] = true;
   return changed;
 }
 
@@ -5600,7 +5604,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV3(db)) changed = true;
+  if (seedContractsTemplatesV4(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

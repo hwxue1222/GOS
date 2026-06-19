@@ -6,6 +6,7 @@ export default function SignClient(props: {
   token: string;
   title: string;
   html: string;
+  pdfUrl?: string;
   sha256: string;
   requestEmail: string;
   requestStatus: string;
@@ -26,6 +27,7 @@ export default function SignClient(props: {
     token,
     title,
     html,
+    pdfUrl,
     sha256,
     requestEmail,
     requestStatus,
@@ -232,6 +234,14 @@ export default function SignClient(props: {
               </div>
             </div>
           ) : null}
+
+          <div className="mt-6 rounded-lg border border-black/10 overflow-hidden bg-white">
+            {pdfUrl ? (
+              <iframe title="document" src={pdfUrl} className="w-full" style={{ height: '70vh' }} />
+            ) : (
+              <iframe title="document" srcDoc={html} className="w-full" style={{ height: '70vh' }} />
+            )}
+          </div>
 
           {error ? <div className="mt-4 text-sm text-red-600">{error}</div> : null}
           {info ? <div className="mt-4 text-sm text-green-700">{info}</div> : null}

@@ -30,7 +30,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const [sending, setSending] = useState(false);
 
   const st = statusLabel(contract.status);
-  const pdfUrl = contract.documentId ? `/api/documents/${encodeURIComponent(contract.documentId)}/pdf?disposition=inline` : '';
+  const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
 
   async function renderDoc() {
     setError(null);
@@ -176,4 +176,3 @@ export default function ContractDetailClient({ initialContract, templateName, do
     </div>
   );
 }
-

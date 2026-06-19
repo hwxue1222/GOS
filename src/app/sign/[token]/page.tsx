@@ -19,12 +19,14 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   const requiresSignerProfile =
     ctx.packet.relatedType === 'RORC_DECLARATION' && !ctx.person && (!ctx.request.signerFullName || !ctx.request.signerIdNo || !ctx.request.signerPhone);
   const expired = ctx.request.status === 'EXPIRED';
+  const pdfUrl = ctx.packet.kind === 'CONTRACT' ? `/api/sign/${encodeURIComponent(token)}/pdf?disposition=inline` : undefined;
 
   return (
     <SignClient
       token={token}
       title={ctx.document.title}
       html={ctx.document.html}
+      pdfUrl={pdfUrl}
       sha256={ctx.document.sha256}
       requestEmail={ctx.request.email}
       requestStatus={ctx.request.status}

@@ -160,7 +160,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     }
   }
 
-  const pdfUrl = documentId ? `/api/documents/${encodeURIComponent(documentId)}/pdf?disposition=inline` : '';
+  const pdfUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
