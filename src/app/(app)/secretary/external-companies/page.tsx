@@ -10,7 +10,12 @@ function isActiveRole(r: { role: string; resignationDate?: string; toDate?: stri
   return true;
 }
 
-export default async function SecretaryCompaniesPage() {
+function isExternalCompanyCode(code: unknown) {
+  const c = String(code ?? '').trim();
+  return /^SC/i.test(c);
+}
+
+export default async function SecretaryExternalCompaniesPage() {
   const me = await getCurrentUser();
   if (!me) return null;
   if (!hasPermission(me, 'secretary', 'viewAll') && !hasPermission(me, 'secretary', 'viewAssigned')) {
@@ -27,7 +32,7 @@ export default async function SecretaryCompaniesPage() {
   }
 
   const db = await readDb();
-  const allClients = db.clients.filter((c) => !c.deletedAt);
+  const allClients = db.clients.filter((c) => !c.deletedAt).filter((c) => isExternalCompanyCode(c.code));
   const canViewAll = hasPermission(me, 'secretary', 'viewAll');
   let clients = allClients;
   if (!canViewAll) {
@@ -106,9 +111,12 @@ export default async function SecretaryCompaniesPage() {
         <SecretaryCompaniesClient
           initialItems={items}
           canViewPeople={me.role !== 'client'}
-          activeSection="companies"
+          subtitle="External Companies"
+          helperText="Only showing clients with code prefix SC"
+          activeSection="external-companies"
         />
       </div>
     </div>
   );
 }
+

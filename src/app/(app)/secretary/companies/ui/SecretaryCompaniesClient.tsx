@@ -33,6 +33,9 @@ type CompanyRow = {
 type Props = {
   initialItems: CompanyRow[];
   canViewPeople?: boolean;
+  subtitle?: string;
+  helperText?: string;
+  activeSection?: 'companies' | 'external-companies';
 };
 
 function money(currency?: string, amount?: number) {
@@ -40,11 +43,15 @@ function money(currency?: string, amount?: number) {
   return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default function SecretaryCompaniesClient({ initialItems, canViewPeople }: Props) {
+export default function SecretaryCompaniesClient({ initialItems, canViewPeople, subtitle, helperText, activeSection }: Props) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [page, setPage] = usePersistedState('gos.secretary.companies.page', 1);
   const [pageSize, setPageSize] = usePersistedState('gos.secretary.companies.pageSize', 20);
+
+  const navBtnBase = 'rounded-md bg-white border border-black/10 px-3 py-2 text-sm font-medium';
+  const navBtnActive = `${navBtnBase} bg-[#2f7bdc] text-white border-[#2f7bdc]`;
+  const navBtnInactive = `${navBtnBase} text-black/70 hover:bg-black/[0.02]`;
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -81,9 +88,22 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople }
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</h1>
-          <div className="mt-1 text-sm text-black/60">{t('secretary.companies')}</div>
+          <div className="mt-1 text-sm text-black/60">{subtitle ?? t('secretary.companies')}</div>
+          {helperText ? <div className="mt-1 text-xs text-black/40">{helperText}</div> : null}
         </div>
         <div className="flex items-center gap-2 w-full justify-end">
+          <Link
+            href="/secretary/companies"
+            className={(activeSection ?? 'companies') === 'companies' ? navBtnActive : navBtnInactive}
+          >
+            Companies
+          </Link>
+          <Link
+            href="/secretary/external-companies"
+            className={(activeSection ?? 'companies') === 'external-companies' ? navBtnActive : navBtnInactive}
+          >
+            External Companies
+          </Link>
           <Link
             href="/secretary/acra-filing"
             className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
@@ -150,6 +170,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople }
                       {it.client.name}
                     </a>
                   </div>
+                  {it.client.code?.trim() ? <div className="mt-0.5 text-xs text-black/40">Code: {it.client.code}</div> : null}
                   {it.client.fka?.trim() ? <div className="mt-0.5 text-xs text-black/40">FKA: {it.client.fka}</div> : null}
                 </td>
                 <td className="px-4 py-3">{it.client.companyRegistrationNo ?? '-'}</td>
