@@ -92,29 +92,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     const f = (contract.fields ?? {}) as Record<string, string>;
     const companyEmail = String(f.company_signatory_email ?? '').trim();
     const principalEmail = String(f.principal_signatory_email ?? '').trim();
-    if (!companyEmail && !principalEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
-    if (companyEmail) {
-      const l = await createSignatureRequestsForPacket({
-        packetId: packet.id,
-        emails: [companyEmail],
-        defaults: {
-          signerFullName: String(f.company_auth_name ?? '').trim() || undefined,
-          signerTitle: String(f.company_auth_designation ?? '').trim() || undefined,
-        },
-      });
-      links = links.concat(l);
-    }
-    if (principalEmail) {
-      const l = await createSignatureRequestsForPacket({
-        packetId: packet.id,
-        emails: [principalEmail],
-        defaults: {
-          signerFullName: String(f.principal_auth_name ?? '').trim() || undefined,
-          signerTitle: String(f.principal_auth_designation ?? '').trim() || undefined,
-        },
-      });
-      links = links.concat(l);
-    }
+    if (!companyEmail || !principalEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    const l1 = await createSignatureRequestsForPacket({
+      packetId: packet.id,
+      emails: [companyEmail],
+      defaults: {
+        signerFullName: String(f.company_auth_name ?? '').trim() || undefined,
+        signerTitle: String(f.company_auth_designation ?? '').trim() || undefined,
+      },
+    });
+    const l2 = await createSignatureRequestsForPacket({
+      packetId: packet.id,
+      emails: [principalEmail],
+      defaults: {
+        signerFullName: String(f.principal_auth_name ?? '').trim() || undefined,
+        signerTitle: String(f.principal_auth_designation ?? '').trim() || undefined,
+      },
+    });
+    links = links.concat(l1, l2);
   } else {
     const signerEmail =
       (emails[0] ?? '').trim() ||

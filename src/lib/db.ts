@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V16 = 'contracts.templates.v16';
+const SEED_KEY_CONTRACTS_TEMPLATES_V17 = 'contracts.templates.v17';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV16(db: Db) {
+function seedContractsTemplatesV17(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V16] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V17] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -620,8 +620,8 @@ function seedContractsTemplatesV16(db: Db) {
       { key: 'principal_auth_nric', label: 'Principal signatory NRIC/Passport number', required: true },
       { key: 'principal_auth_designation', label: 'Principal signatory designation', required: true },
       { key: 'principal_auth_date', label: 'Principal signatory date (YYYY-MM-DD)', required: true },
-      { key: 'company_signatory_email', label: 'Company signatory email', required: false },
-      { key: 'principal_signatory_email', label: 'Principal signatory email', required: false },
+      { key: 'company_signatory_email', label: 'Company signatory email', required: true },
+      { key: 'principal_signatory_email', label: 'Principal signatory email', required: true },
     ],
     templateHtml: `<!doctype html>
 <html>
@@ -1084,7 +1084,7 @@ function seedContractsTemplatesV16(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V16] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V17] = true;
   return changed;
 }
 
@@ -6255,7 +6255,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV16(db)) changed = true;
+  if (seedContractsTemplatesV17(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

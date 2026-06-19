@@ -266,9 +266,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           )
         : [];
 
-      if (isNomineeTemplate && nomineeEmails.length === 0) {
+      if (isNomineeTemplate && nomineeEmails.length < 2) {
         setError('SIGNER_EMAIL_REQUIRED');
-        setErrorDetail('请填写 Company signatory email 和/或 Principal signatory email。');
+        setErrorDetail('请填写 Company signatory email 和 Principal signatory email。');
         return;
       }
 
