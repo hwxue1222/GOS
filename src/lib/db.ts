@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V22 = 'contracts.templates.v22';
+const SEED_KEY_CONTRACTS_TEMPLATES_V23 = 'contracts.templates.v23';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV22(db: Db) {
+function seedContractsTemplatesV23(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V22] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V23] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -899,19 +899,19 @@ function seedContractsTemplatesV22(db: Db) {
 <p class="p4"><br></p>
 <p class="p9">Any Notice may be delivered personally or by prepaid registered or certified post (airmail, if appropriate) or by electronic mail and shall be deemed to have been served:-<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
-<p class="p3">if by personal delivery, at the time of deliver; or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if by mail, within two (2) working days after posting if sent to a local address, or within eight (8) working days if sent to an overseas address; or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if by electronic mail, upon receipt by the party transmitting such Notice of a confirmation (including an electronic confirmation) from the addressee or the addressee’s system that the addressee has received the Notice.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(a) if by personal delivery, at the time of deliver; or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) if by mail, within two (2) working days after posting if sent to a local address, or within eight (8) working days if sent to an overseas address; or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(c) if by electronic mail, upon receipt by the party transmitting such Notice of a confirmation (including an electronic confirmation) from the addressee or the addressee’s system that the addressee has received the Notice.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p3">13. TERMINATION<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p9">13.1  BBY may terminate this Agreement at any time by giving Notice in writing to the Principal or Authorized Person served to his last known address and that such Notice (hereinafter referred to as “Notice of Termination”) shall be given in accordance with the provisions of Clause 13 herein:<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
-<p class="p3">if the Principal and/or the Company shall have committed any breach of their obligations under this Agreement, including non payment of fee within the period stipulated in Clause 4 herein being shall be deemed to be a breach for this purpose; or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if the Principal, the Company or the Authorized Person(s) fails to respond to BBY or its Nominee Director/s within [twenty-one (21)] working days from the date of any letter, fax or email sent to the Principal or the Authorized Person(s) at his last known address; or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if the Principal and/or the Company shall have become insolvent or have committed an act of bankruptcy or compounded with the Principal’s or Company's creditors generally (whether in Singapore or elsewhere); or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if the Principal, the Company and/or its major shareholders and directors shall have been charged or convicted of a criminal offence that carries an imprisonment term (whether in Singapore or elsewhere); or<span class="Apple-converted-space"> </span></p>
-<p class="p3">if any bank or financial institution which the Company maintains banking accounts with initiated a bank account(s) closure voluntarily with or without any recourse option given to the Company. <span class="s5"><br>
+<p class="p11">(a) if the Principal and/or the Company shall have committed any breach of their obligations under this Agreement, including non payment of fee within the period stipulated in Clause 4 herein being shall be deemed to be a breach for this purpose; or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) if the Principal, the Company or the Authorized Person(s) fails to respond to BBY or its Nominee Director/s within [twenty-one (21)] working days from the date of any letter, fax or email sent to the Principal or the Authorized Person(s) at his last known address; or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(c) if the Principal and/or the Company shall have become insolvent or have committed an act of bankruptcy or compounded with the Principal’s or Company's creditors generally (whether in Singapore or elsewhere); or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(d) if the Principal, the Company and/or its major shareholders and directors shall have been charged or convicted of a criminal offence that carries an imprisonment term (whether in Singapore or elsewhere); or<span class="Apple-converted-space"> </span></p>
+<p class="p11">(e) if any bank or financial institution which the Company maintains banking accounts with initiated a bank account(s) closure voluntarily with or without any recourse option given to the Company. <span class="s5"><br>
 </span></p>
 <p class="p9">13.2  Either the Principal or BBY may terminate this Agreement by giving the other party one (1) calendar month’s notice of such intention or one (1) month’s pro rata Annual Fee in lieu of such notice. Save for the first year of service, the Principal may apply any non-utilized pro rata Annual Fee towards the notice in lieu provided that any balance shall not be refunded. <span class="s5"><br>
 </span></p>
@@ -1084,7 +1084,7 @@ function seedContractsTemplatesV22(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V22] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V23] = true;
   return changed;
 }
 
@@ -6255,7 +6255,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV22(db)) changed = true;
+  if (seedContractsTemplatesV23(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
