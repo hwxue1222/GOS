@@ -7388,7 +7388,7 @@ export function nextContractNo(db: Db, now: Date) {
   }
   const nextSeq = maxSeq + 1;
   const seqStr = String(nextSeq).padStart(3, '0');
-  const rnd = String(randomInt(0, 10000)).padStart(4, '0');
+  const rnd = String(randomInt(0, 10));
   return `BBY-${year}-${month}-${seqStr}-${rnd}`;
 }
 

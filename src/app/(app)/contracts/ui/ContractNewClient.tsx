@@ -24,6 +24,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     const safe = escHtml(String(v ?? '')).replaceAll('\n', '<br />');
     html = html.replaceAll(`{{${k}}}`, safe);
   }
+  html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
   return html;
 }
 
