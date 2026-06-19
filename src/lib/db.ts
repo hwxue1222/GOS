@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V18 = 'contracts.templates.v18';
+const SEED_KEY_CONTRACTS_TEMPLATES_V19 = 'contracts.templates.v19';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV18(db: Db) {
+function seedContractsTemplatesV19(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V18] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V19] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -683,22 +683,6 @@ function seedContractsTemplatesV18(db: Db) {
     td.td7 {min-width: 240.8px; min-height: 23.9px; background-color: #ffffff; border-style: solid; border-width: 1.0px 1.0px 1.0px 1.0px; border-color: #000000 #000000 #000000 #000000; padding: 0.0px 5.0px 0.0px 5.0px}
     td.td8 {min-width: 240.8px; min-height: 13.9px; background-color: #ffffff; border-style: solid; border-width: 1.0px 1.0px 1.0px 1.0px; border-color: #000000 #000000 #000000 #000000; padding: 0.0px 5.0px 0.0px 5.0px}
 
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&display=swap');
-    @page { size: A4; margin: 18mm 18mm 20mm; }
-    html, body { background: #ffffff; }
-    body { font-family: "Noto Serif", "Times New Roman", ui-serif, serif; font-size: 11pt; line-height: 1.55; color: #111; }
-    p { margin: 0 0 10px 0; }
-    p.p1 { display: none; }
-    p.p2 { font-size: 16pt; font-weight: 700; letter-spacing: 0.6px; margin: 0 0 14px 0; }
-    p.p3, p.p6, p.p8, p.p9, p.p11, p.p12, p.p20 { font-size: 11pt; }
-    p.p24 { display: none; }
-    table.t1 { width: 100%; border-collapse: collapse; }
-    td.td1, td.td2, td.td3, td.td4, td.td5, td.td6, td.td7, td.td8 { min-width: auto; border: 1px solid #111; padding: 6px 10px; }
-    td.td7, td.td8 { width: 50%; }
-    td.td7 > p.p18, td.td7 > p.p21 { margin: 6px 0 0 0; min-height: 22px; border-bottom: 1px solid #111; }
-    td.td8 > p.p18, td.td8 > p.p21 { margin: 0; }
-    p.p15 { font-weight: 600; }
-    p.p16, p.p19 { font-weight: 600; }
   </style>
 </head>
 <body>
@@ -1101,7 +1085,7 @@ function seedContractsTemplatesV18(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V18] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V19] = true;
   return changed;
 }
 
@@ -6272,7 +6256,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV18(db)) changed = true;
+  if (seedContractsTemplatesV19(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
