@@ -328,7 +328,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
             <div className="h-[70vh]">
-              {previewHtml ? (
+              {contractId ? (
+                <iframe title="preview" src={pdfUrl} className="w-full h-full" />
+              ) : previewHtml ? (
                 <iframe title="preview" srcDoc={previewHtml} className="w-full h-full" />
               ) : (
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>

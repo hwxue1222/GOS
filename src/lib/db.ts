@@ -168,7 +168,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V9 = 'contracts.templates.v9';
+const SEED_KEY_CONTRACTS_TEMPLATES_V10 = 'contracts.templates.v10';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -295,13 +295,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV9(db: Db) {
+function seedContractsTemplatesV10(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V9] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V10] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -342,17 +342,23 @@ function seedContractsTemplatesV9(db: Db) {
         line-height: 1.55;
         font-size: 12px;
         background: #f3f4f6;
+        overflow-x: hidden;
       }
-      .sheet { padding: 18px 0; counter-reset: page; }
-      .page { width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
+      .sheet { padding: 18px 12px; counter-reset: page; }
+      .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
       .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+      @media (max-width: 720px) {
+        .page { padding: 22px 16px; }
+        .logo { height: 38px; }
+      }
       @media print {
         body { background: #fff; }
         .sheet { padding: 0; }
         .page { width: auto; min-height: auto; margin: 0; box-shadow: none; padding: 36px 42px; }
+        .page + .page { break-before: page; }
         .page::after { content: none; }
       }
-      .header { display: flex; align-items: flex-start; justify-content: flex-end; gap: 16px; }
+      .header { display: flex; align-items: flex-start; justify-content: center; gap: 16px; }
       .logo { height: 44px; width: auto; object-fit: contain; }
       .meta-row { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 11px; color: var(--muted); text-align: right; }
       .meta-row b { color: var(--text); font-weight: 700; }
@@ -595,7 +601,7 @@ function seedContractsTemplatesV9(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V9] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V10] = true;
   return changed;
 }
 
@@ -5708,7 +5714,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV9(db)) changed = true;
+  if (seedContractsTemplatesV10(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
