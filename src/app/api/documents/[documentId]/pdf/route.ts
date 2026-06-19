@@ -207,6 +207,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
           signerEmail: String(r.email ?? '').trim().toLowerCase(),
           signerName: String(r.signerFullName ?? r.rdrRepresentativeName ?? '').trim(),
           signerTitle: String(r.signerTitle ?? '').trim(),
+          signerSignedDate: String(r.signerSignedDate ?? '').trim(),
           signedAt: String(r.signedAt ?? ''),
         }))
         .filter((x) => !!x.signerEmail && !!x.signedAt);
@@ -257,7 +258,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
                 if (!el) continue;
                 const email = String(it.signerEmail || '').trim();
 
-                const signedAtText = toDdMmYyyy(String(it.signedAt || ''));
+                const signedAtText = toDdMmYyyy(String(it.signerSignedDate || it.signedAt || ''));
                 const name = String(it.signerName || '').trim();
                 const title = String(it.signerTitle || '').trim();
                 el.textContent = email
@@ -320,10 +321,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
         { docHash: doc.sha256, sigHash: signatureHash },
       );
 
+      const isContractDoc = doc.type === 'CONTRACT';
       const pdf = await page.pdf({
         format: 'A4',
         printBackground: true,
         preferCSSPageSize: true,
+        ...(isContractDoc
+          ? {
+              displayHeaderFooter: true,
+              headerTemplate: '<div></div>',
+              footerTemplate:
+                '<div style="width:100%;font-size:9px;color:#666;padding:0 12mm;display:flex;justify-content:flex-end;font-family:ui-sans-serif,system-ui;">' +
+                'Page <span class="pageNumber"></span> / <span class="totalPages"></span>' +
+                '</div>',
+              margin: { top: '12mm', bottom: '14mm', left: '12mm', right: '12mm' },
+            }
+          : {}),
       });
 
       const pdfBuffer = Buffer.from(pdf);

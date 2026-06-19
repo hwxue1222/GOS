@@ -168,7 +168,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V8 = 'contracts.templates.v8';
+const SEED_KEY_CONTRACTS_TEMPLATES_V9 = 'contracts.templates.v9';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -295,13 +295,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV8(db: Db) {
+function seedContractsTemplatesV9(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V8] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V9] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -341,12 +341,20 @@ function seedContractsTemplatesV8(db: Db) {
         font-family: "Times New Roman", "Songti SC", "SimSun", ui-serif, serif;
         line-height: 1.55;
         font-size: 12px;
-        background: #fff;
+        background: #f3f4f6;
       }
-      .page { padding: 36px 42px; }
+      .sheet { padding: 18px 0; counter-reset: page; }
+      .page { width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
+      .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+      @media print {
+        body { background: #fff; }
+        .sheet { padding: 0; }
+        .page { width: auto; min-height: auto; margin: 0; box-shadow: none; padding: 36px 42px; }
+        .page::after { content: none; }
+      }
       .header { display: flex; align-items: flex-start; justify-content: flex-end; gap: 16px; }
       .logo { height: 44px; width: auto; object-fit: contain; }
-      .meta-row { margin-top: 10px; display: flex; justify-content: flex-end; gap: 18px; font-size: 11px; color: var(--muted); text-align: right; }
+      .meta-row { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 11px; color: var(--muted); text-align: right; }
       .meta-row b { color: var(--text); font-weight: 700; }
       .meta-row span { white-space: nowrap; color: var(--text); }
       .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
@@ -374,21 +382,22 @@ function seedContractsTemplatesV8(db: Db) {
     </style>
   </head>
   <body>
-    <div class="page">
-      <div class="header">
-        <img class="logo" src="/contracts/image2.png" alt="BBY" />
-      </div>
+    <div class="sheet">
+      <div class="page">
+        <div class="header">
+          <img class="logo" src="/contracts/image2.png" alt="BBY" />
+        </div>
 
-      <div class="meta-row">
-        <div><b>合同编号 / Contract No:</b> <span>{{contract_no}}</span></div>
-        <div><b>日期 / Date:</b> <span>{{date}}</span></div>
-      </div>
+        <div class="meta-row">
+          <div><b>合同编号 / Contract No:</b> <span>{{contract_no}}</span></div>
+          <div><b>日期 / Date:</b> <span>{{date}}</span></div>
+        </div>
 
-      <div class="title">公司秘书服务协议</div>
-      <div class="subtitle">Service Agreement</div>
-      <div class="divider"></div>
+        <div class="title">公司秘书服务协议</div>
+        <div class="subtitle">Service Agreement</div>
+        <div class="divider"></div>
 
-      <div class="parties">
+        <div class="parties">
         <div class="row"><div class="k">甲方 / Party A</div><div class="v">{{partyA_name}}</div></div>
         <div class="row"><div class="k">UEN / 注册号</div><div class="v">{{partyA_uen}}</div></div>
         <div class="row"><div class="k">地址 / Address</div><div class="v">{{partyA_address}}</div></div>
@@ -399,9 +408,9 @@ function seedContractsTemplatesV8(db: Db) {
         <div class="row"><div class="k">地址 / Address</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
         <div class="row"><div class="k">电话 / Contact</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
         <div class="row"><div class="k">邮箱 / Email</div><div class="v">Luke@bby.sg</div></div>
-      </div>
+        </div>
 
-      <div class="section">
+        <div class="section">
         <div class="para">为了维护合同当事的合法权益，依据《新加坡共和国合同法》及相关法律法规，甲乙双方本着自愿、平等、协商一致的原则，就乙方接受甲方的委托提供设立新加坡公司等法定秘书服务（“服务”），达成如下协议：</div>
 
         <div class="section-title">一、 SERVICES PROVIDED 服务内容</div>
@@ -510,7 +519,11 @@ function seedContractsTemplatesV8(db: Db) {
           </div>
         </div>
 
-        <div style="break-before: page;"></div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="section">
         <div class="section-title" style="margin-top:18px;">Annex 1 附录1：服务内容及收费</div>
         <div class="para"><b>1、INCORPORATION SERVICE 设立公司服务（1000新币）</b></div>
         <ul class="list">
@@ -566,6 +579,7 @@ function seedContractsTemplatesV8(db: Db) {
         </ul>
       </div>
     </div>
+  </div>
   </body>
 </html>`,
     createdAt: targetIdx >= 0 ? templates[targetIdx].createdAt : now,
@@ -581,7 +595,7 @@ function seedContractsTemplatesV8(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V8] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V9] = true;
   return changed;
 }
 
@@ -5694,7 +5708,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV8(db)) changed = true;
+  if (seedContractsTemplatesV9(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
@@ -7621,10 +7635,12 @@ export async function signByToken(input: {
   otp: string;
   ip?: string;
   userAgent?: string;
+  signerEmail?: string;
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
   signerTitle?: string;
+  signerSignedDate?: string;
   signerIdType?: string;
   signerIdNo?: string;
   signerPhone?: string;
@@ -7706,11 +7722,21 @@ export async function signByToken(input: {
   }
 
   if (packet.relatedType === 'CONTRACT') {
+    const email = String(input.signerEmail ?? '').trim();
+    if (!email) return { ok: false as const, error: 'EMAIL_REQUIRED' as const };
+    if (email.trim().toLowerCase() !== req.email.trim().toLowerCase()) return { ok: false as const, error: 'EMAIL_MISMATCH' as const };
     const fullName = String(input.signerFullName ?? '').trim();
     const title = String(input.signerTitle ?? '').trim();
     if (!fullName || !title) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
     nextReq.signerFullName = fullName;
     nextReq.signerTitle = title;
+
+    const signedDate = String(input.signerSignedDate ?? '').trim();
+    if (signedDate) {
+      const m = signedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      nextReq.signerSignedDate = signedDate;
+    }
   }
 
   db.signatureRequests[reqIdx] = nextReq;

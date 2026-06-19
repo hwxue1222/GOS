@@ -372,6 +372,7 @@ export type SignatureRequest = {
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
   signerTitle?: string;
+  signerSignedDate?: string;
   signerIdType?: PersonIdType;
   signerIdNo?: string;
   signerPhone?: string;
