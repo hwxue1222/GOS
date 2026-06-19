@@ -1039,7 +1039,7 @@ export default function ShareTransfersClient(props: {
                               <label className="text-sm">
                                 <div className="text-black/70">Date of birth</div>
                                 <input
-                                  type="date"
+                                  type={d.newPersonLockedFromLookup ? 'text' : 'date'}
                                   value={d.newPersonLockedFromLookup ? maskDob(d.newPerson.dob) : d.newPerson.dob}
                                   onChange={(e) => patchDraftPerson(d.id, { dob: e.target.value })}
                                   disabled={d.newPersonLockedFromLookup}

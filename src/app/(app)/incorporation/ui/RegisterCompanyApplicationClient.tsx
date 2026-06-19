@@ -93,10 +93,10 @@ export default function RegisterCompanyApplicationClient(props: Props) {
         <label className="text-sm">
           <div className="text-black/60">Incorporation date (optional)</div>
           <input
+            type="date"
             value={incorporationDate}
             onChange={(e) => setIncorporationDate(e.target.value)}
             className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-            placeholder="YYYY-MM-DD"
           />
         </label>
         <label className="text-sm sm:col-span-2">
@@ -166,4 +166,3 @@ export default function RegisterCompanyApplicationClient(props: Props) {
     </div>
   );
 }
-

@@ -104,10 +104,10 @@ export default function TransferSecretaryApplicationClient(props: Props) {
         <label className="text-sm">
           <div className="text-black/60">Effective date (optional)</div>
           <input
+            type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
             className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-            placeholder="YYYY-MM-DD"
           />
         </label>
         <div />
@@ -174,4 +174,3 @@ export default function TransferSecretaryApplicationClient(props: Props) {
     </div>
   );
 }
-

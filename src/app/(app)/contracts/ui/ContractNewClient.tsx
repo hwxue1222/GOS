@@ -25,6 +25,13 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     html = html.replaceAll(`{{${k}}}`, safe);
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
+
+  if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
+    html = html.replace(
+      /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)\s*(?!<p class="p4"><br><\/p>)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
+      '$1\n<p class="p4"><br></p>\n$2',
+    );
+  }
   return html;
 }
 
@@ -488,19 +495,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     p.key !== 'client_email',
                 );
 
-                const renderInput = (p: { key: string; label: string; required?: boolean }) => (
+                const renderInput = (p: { key: string; label: string; required?: boolean }) => {
+                  const isDateField =
+                    /\bYYYY-MM-DD\b/i.test(p.label) ||
+                    p.key === 'date' ||
+                    p.key === 'dated' ||
+                    p.key === 'agreement_date' ||
+                    p.key.endsWith('_date');
+
+                  return (
                   <div key={p.key} className="md:col-span-1">
                     <div className="text-xs font-medium text-black/60">
                       {p.label}
                       {p.required ? ' *' : ''}
                     </div>
                     <input
+                      type={isDateField ? 'date' : 'text'}
                       value={fields[p.key] ?? ''}
                       onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
                       className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                     />
                   </div>
-                );
+                  );
+                };
 
                 if (!isNomineeTemplate) return ps.map(renderInput);
 

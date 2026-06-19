@@ -362,10 +362,10 @@ export default function PeopleClient() {
               <label className="text-sm">
                 <div className="text-black/60">DOB</div>
                 <input
+                  type="date"
                   value={form.dob}
                   onChange={(e) => setForm((v) => ({ ...v, dob: e.target.value }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-                  placeholder="YYYY-MM-DD"
                 />
               </label>
               <label className="text-sm sm:col-span-2">

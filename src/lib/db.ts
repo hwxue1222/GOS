@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V25 = 'contracts.templates.v25';
+const SEED_KEY_CONTRACTS_TEMPLATES_V26 = 'contracts.templates.v26';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV25(db: Db) {
+function seedContractsTemplatesV26(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V25] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V26] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -851,17 +851,17 @@ function seedContractsTemplatesV25(db: Db) {
 <p class="p11">(a) BBY' directors, agents, employees and Nominees will not be responsible for the operations and management of the Company.<span class="Apple-converted-space"> </span></p>
 <p class="p11">(b) The Principal understands that BBY' directors, agents, employees and Nominees is required to perform “On-going Monitoring” as required by the Accounting and Corporate Regulatory Authority (Filing Agents and Qualified Individuals) Regulations 2015 (“Regulations”) and will fully indemnify and hold BBY' directors, agents, employees and Nominees harmless from any loss, cost or damages in respect thereof to fulfill the requirement of On-going monitoring as BBY shall not be involved in the operations and management of the Company and they will have limited authority to perform any such monitoring including reviewing of every single supporting documents for all banking transactions as required by the Regulations.<span class="Apple-converted-space"> </span></p>
 <p class="p11">(c) <span class="s3">The Principal</span> shall ensure that all the Directors and Shareholders and Beneficial Owners of the Company are aware of and shall perform the ongoing monitoring to identify any of the following situations and highlight them to BBY' directors, agents, employees and Nominees:<span class="Apple-converted-space"> </span></p>
-<p class="p12">- Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;</p>
-<p class="p12">- Suspicious transactions involving Political Exposed Persons;</p>
-<p class="p12">- Unrealistic turnover in business’s accounts.;</p>
-<p class="p12">- Unusual/ uneconomical movement of funds;</p>
-<p class="p12">- Setup of companies in Singapore with no apparent business and low paid up capital;</p>
-<p class="p12">- No physical business operation addresses;</p>
-<p class="p12">- Multiple bank accounts opened with various banks for no apparent economic or business reasons;</p>
-<p class="p12">- Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;</p>
-<p class="p12">- After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;</p>
-<p class="p12">- Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
-<p class="p12">- Any other suspicious transactions relating to money laundering or terrorism financing.</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Suspicious transactions involving Political Exposed Persons;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Unrealistic turnover in business’s accounts.;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Unusual/ uneconomical movement of funds;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Setup of companies in Singapore with no apparent business and low paid up capital;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- No physical business operation addresses;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Multiple bank accounts opened with various banks for no apparent economic or business reasons;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
+<p class="p12"><span class="Apple-tab-span">\t</span>- Any other suspicious transactions relating to money laundering or terrorism financing.</p>
 <p class="p13"><br>
 </p>
 <p class="p4"><br></p>
@@ -1099,7 +1099,7 @@ function seedContractsTemplatesV25(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V25] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V26] = true;
   return changed;
 }
 
@@ -6270,7 +6270,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV25(db)) changed = true;
+  if (seedContractsTemplatesV26(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

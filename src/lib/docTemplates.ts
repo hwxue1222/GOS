@@ -2629,7 +2629,7 @@ export function renderContractHtml(input: {
 
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
-      /(<p class="p(?:8|9)">\d+\.\d[\s\S]*?<\/p>)\s*(?!<p class="p4"><br><\/p>)(<p class="p(?:8|9)">\d+\.\d)/g,
+      /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)\s*(?!<p class="p4"><br><\/p>)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
       '$1\n<p class="p4"><br></p>\n$2',
     );
   }
