@@ -78,7 +78,7 @@ export async function renderCorpServiceAgreementPdf(input: {
   dateYmd: string;
   fields: CorpServiceAgreementFields;
 }) {
-  const templatePath = path.join(process.cwd(), 'src', 'contracts', 'templates', 'corp_service_agreement.docx');
+  const templatePath = path.join(process.cwd(), 'public', 'contracts', 'corp_service_agreement.docx');
   const buf = await fs.readFile(templatePath);
   const zip = await JSZip.loadAsync(buf);
   const xmlRaw = await zip.file('word/document.xml')?.async('string');
