@@ -346,8 +346,9 @@ function seedContractsTemplatesV5(db: Db) {
       .page { padding: 36px 42px; }
       .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
       .logo { height: 44px; width: auto; object-fit: contain; }
-      .meta { text-align: right; font-size: 11px; color: var(--muted); }
+      .meta { flex: 1; text-align: right; font-size: 11px; color: var(--muted); }
       .meta b { color: var(--text); font-weight: 700; }
+      .meta-line { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: baseline; gap: 6px 8px; justify-content: end; }
       .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
       .subtitle { margin-top: 2px; text-align: center; font-size: 14px; font-weight: 700; }
       .divider { margin-top: 14px; height: 1px; background: var(--line); }
@@ -377,8 +378,10 @@ function seedContractsTemplatesV5(db: Db) {
       <div class="header">
         <img class="logo" src="/contracts/image2.png" alt="BBY" />
         <div class="meta">
-          <div><b>合同编号 / Contract No:</b> {{contract_no}}</div>
-          <div style="margin-top:4px;"><b>日期 / Date:</b> {{date}}</div>
+          <div class="meta-line">
+            <b>合同编号 / Contract No:</b><span>{{contract_no}}</span>
+            <b>日期 / Date:</b><span>{{date}}</span>
+          </div>
         </div>
       </div>
 
@@ -503,6 +506,7 @@ function seedContractsTemplatesV5(db: Db) {
           </div>
         </div>
 
+        <div style="break-before: page;"></div>
         <div class="section-title" style="margin-top:18px;">Annex 1 附录1：服务内容及收费</div>
         <div class="para"><b>1、INCORPORATION SERVICE 设立公司服务（1000新币）</b></div>
         <ul class="list">
