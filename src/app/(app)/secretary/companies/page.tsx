@@ -10,6 +10,11 @@ function isActiveRole(r: { role: string; resignationDate?: string; toDate?: stri
   return true;
 }
 
+function isExternalCompanyCode(code: unknown) {
+  const c = String(code ?? '').trim();
+  return /^SC/i.test(c);
+}
+
 export default async function SecretaryCompaniesPage() {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -27,7 +32,7 @@ export default async function SecretaryCompaniesPage() {
   }
 
   const db = await readDb();
-  const allClients = db.clients.filter((c) => !c.deletedAt);
+  const allClients = db.clients.filter((c) => !c.deletedAt).filter((c) => !isExternalCompanyCode(c.code));
   const canViewAll = hasPermission(me, 'secretary', 'viewAll');
   let clients = allClients;
   if (!canViewAll) {
