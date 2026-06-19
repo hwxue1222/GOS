@@ -230,6 +230,43 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
               </div>
 
+              {tpl?.placeholders?.some((p) => p.key === 'partyA_uen') ? (
+                <div className="md:col-span-1">
+                  <div className="text-xs font-medium text-black/60">UEN公司注册号 / UEN Registration No.</div>
+                  <input
+                    value={fields.partyA_uen ?? ''}
+                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_uen: e.target.value }))}
+                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              ) : null}
+              {tpl?.placeholders?.some((p) => p.key === 'partyA_contact') ? (
+                <div className="md:col-span-1">
+                  <div className="text-xs font-medium text-black/60">联系电话 / Contact Number</div>
+                  <input
+                    value={fields.partyA_contact ?? ''}
+                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_contact: e.target.value }))}
+                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              ) : null}
+
+              {tpl?.placeholders?.some((p) => p.key === 'partyA_address') ? (
+                <div className="md:col-span-2">
+                  <div className="text-xs font-medium text-black/60">联系地址 / Address</div>
+                  <input
+                    value={fields.partyA_address ?? ''}
+                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_address: e.target.value }))}
+                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+            <div className="text-sm font-semibold">签署信息 / Signing</div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-2">
                 <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
                 <input
@@ -266,38 +303,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>
-
-              {tpl?.placeholders?.some((p) => p.key === 'partyA_uen') ? (
-                <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">UEN公司注册号 / UEN Registration No.</div>
-                  <input
-                    value={fields.partyA_uen ?? ''}
-                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_uen: e.target.value }))}
-                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </div>
-              ) : null}
-              {tpl?.placeholders?.some((p) => p.key === 'partyA_contact') ? (
-                <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">联系电话 / Contact Number</div>
-                  <input
-                    value={fields.partyA_contact ?? ''}
-                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_contact: e.target.value }))}
-                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </div>
-              ) : null}
-
-              {tpl?.placeholders?.some((p) => p.key === 'partyA_address') ? (
-                <div className="md:col-span-2">
-                  <div className="text-xs font-medium text-black/60">联系地址 / Address</div>
-                  <input
-                    value={fields.partyA_address ?? ''}
-                    onChange={(e) => setFields((prev) => ({ ...prev, partyA_address: e.target.value }))}
-                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </div>
-              ) : null}
             </div>
           </div>
 
@@ -305,7 +310,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             <div className="text-sm font-semibold">Fields</div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               {(tpl?.placeholders ?? [])
-                .filter((p) => !p.key.startsWith('partyA_') && p.key !== 'client_name' && p.key !== 'client_email')
+                .filter(
+                  (p) =>
+                    !p.key.startsWith('partyA_') &&
+                    !p.key.startsWith('signer_') &&
+                    p.key !== 'client_name' &&
+                    p.key !== 'client_email',
+                )
                 .map((p) => (
                 <div key={p.key} className="md:col-span-1">
                   <div className="text-xs font-medium text-black/60">{p.label}{p.required ? ' *' : ''}</div>
