@@ -10,17 +10,15 @@ type Props = {
 };
 
 export default function SecretarySubNavClient({ active, showMembers }: Props) {
-  const tabBase = 'group flex flex-col gap-0.5 rounded-lg border px-3 py-2 text-left';
+  const tabBase = 'rounded-lg border px-3 py-2 text-sm font-semibold';
   const tabActive = `${tabBase} bg-black text-white border-black`;
-  const tabInactive = `${tabBase} bg-white border-black/10 text-black/80 hover:bg-black/[0.02]`;
-  const tabHintActive = 'text-white/80';
-  const tabHintInactive = 'text-black/40 group-hover:text-black/50';
+  const tabInactive = `${tabBase} bg-white border-black/10 text-black/70 hover:bg-black/[0.02]`;
 
-  const tabs: Array<{ key: TabKey; href: string; title: string; hint: string; show?: boolean }> = [
-    { key: 'companies', href: '/secretary/companies', title: 'Companies', hint: 'Main list' },
-    { key: 'external-companies', href: '/secretary/external-companies', title: 'External', hint: 'SC* only' },
-    { key: 'acra-filing', href: '/secretary/acra-filing', title: 'ACRA Filing', hint: 'Queue' },
-    { key: 'members', href: '/secretary/members', title: 'Members', hint: 'People' , show: !!showMembers },
+  const tabs: Array<{ key: TabKey; href: string; title: string; show?: boolean }> = [
+    { key: 'companies', href: '/secretary/companies', title: 'Companies' },
+    { key: 'external-companies', href: '/secretary/external-companies', title: 'External Companies' },
+    { key: 'acra-filing', href: '/secretary/acra-filing', title: 'ACRA Filing' },
+    { key: 'members', href: '/secretary/members', title: 'Members', show: !!showMembers },
   ];
 
   return (
@@ -31,8 +29,7 @@ export default function SecretarySubNavClient({ active, showMembers }: Props) {
           const isActive = active === t.key;
           return (
             <Link key={t.key} href={t.href} className={isActive ? tabActive : tabInactive} aria-current={isActive ? 'page' : undefined}>
-              <div className="text-sm font-semibold leading-5">{t.title}</div>
-              <div className={`text-[11px] leading-4 ${isActive ? tabHintActive : tabHintInactive}`}>{t.hint}</div>
+              {t.title}
             </Link>
           );
         })}

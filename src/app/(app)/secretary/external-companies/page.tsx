@@ -112,11 +112,9 @@ export default async function SecretaryExternalCompaniesPage() {
           initialItems={items}
           canViewPeople={me.role !== 'client'}
           subtitle="External Companies"
-          helperText="Only showing clients with code prefix SC"
           activeSection="external-companies"
         />
       </div>
     </div>
   );
 }
-
