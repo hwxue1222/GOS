@@ -47,6 +47,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [saving, setSaving] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
   const [pdfCheck, setPdfCheck] = useState<string>('');
@@ -269,6 +270,33 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     router.push('/contracts');
   }
 
+  async function downloadPdf() {
+    if (!pdfDownloadUrl) return;
+    setError(null);
+    setErrorDetail('');
+    setDownloading(true);
+    try {
+      const res = await fetch(pdfDownloadUrl).catch(() => null);
+      if (!res?.ok) {
+        const j = (await res?.json().catch(() => null)) as any;
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = contractNo ? `Contract-${contractNo}.pdf` : 'Contract.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function checkPdf() {
     setPdfCheck('');
     if (!contractId) return;
@@ -456,15 +484,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
-              {contractId && (!packetId || !String(packetId).trim()) ? (
-                <button
-                  onClick={() => void deleteDraft()}
-                  disabled={saving || rendering || sending}
-                  className="h-10 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                >
-                  Delete draft
-                </button>
-              ) : null}
               <button
                 onClick={() => void generateDocument()}
                 disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
@@ -472,15 +491,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {rendering ? 'Generating…' : 'Generate'}
               </button>
-              <a
-                href={pdfDownloadUrl}
-                download
+              <button
+                type="button"
+                onClick={() => void downloadPdf()}
+                disabled={!pdfDownloadUrl || downloading}
                 className={`h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] ${
                   pdfDownloadUrl ? '' : 'pointer-events-none opacity-50'
                 }`}
               >
-                Download PDF
-              </a>
+                {downloading ? 'Downloading…' : 'Download PDF'}
+              </button>
               <button
                 onClick={() => void sendForSigning()}
                 disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
