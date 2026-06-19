@@ -5654,9 +5654,17 @@ async function readDbRaw(): Promise<Db> {
       if (!raw) return emptyDb();
       return normalizeDb(JSON.parse(raw) as Db);
     }
+    if (process.env.VERCEL && !process.env.KV_REST_API_URL && !process.env.KV_REST_API_TOKEN && !process.env.REDIS_URL) {
+      throw new Error('DB_NOT_CONFIGURED');
+    }
     const content = await fs.readFile(DB_FILE, 'utf-8');
     return normalizeDb(JSON.parse(content) as Db);
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'DB_NOT_CONFIGURED') throw e;
+    if (process.env.VERCEL && !process.env.KV_REST_API_URL && !process.env.KV_REST_API_TOKEN && !process.env.REDIS_URL) {
+      throw new Error('DB_NOT_CONFIGURED');
+    }
     return emptyDb();
   }
 }
@@ -5675,6 +5683,9 @@ async function writeDbRaw(db: Db) {
     const g = getGlobalDbCache();
     g.__gosDbCache = { db, ts: Date.now() };
     return;
+  }
+  if (process.env.VERCEL && !process.env.KV_REST_API_URL && !process.env.KV_REST_API_TOKEN && !process.env.REDIS_URL) {
+    throw new Error('DB_NOT_CONFIGURED');
   }
   await ensureDir();
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
