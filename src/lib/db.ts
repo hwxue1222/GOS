@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V23 = 'contracts.templates.v23';
+const SEED_KEY_CONTRACTS_TEMPLATES_V24 = 'contracts.templates.v24';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV23(db: Db) {
+function seedContractsTemplatesV24(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V23] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V24] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -766,10 +766,12 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p4"><br></p>
 <p class="p3">Words importing the singular include the plural and vice versa; words importing a gender include every gender and references to persons include body corporate or unincorporate.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><span class="Apple-tab-span">	</span></p>
+<p class="p6"><br></p>
 <p class="p6">2.<span class="Apple-converted-space">  </span>REQUEST FOR SERVICES <span class="s5"><br>
 </span></p>
 <p class="p3">We have requested that BBY provide the Services to the Company. At the request of BBY, all documents for purposes of know-your-client processes shall be timely provided to BBY prior to the commencement of BBY' engagement in providing the Services and as and when required by BBY. <span class="s5"><br>
 </span></p>
+<p class="p3"><br></p>
 <p class="p3">3.<span class="Apple-converted-space">  </span>ARRANGEMENT OF APPOINTMENTS<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p8">3.1 Nominee of Director <span class="s5"><br>
@@ -783,17 +785,20 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p11">(c) In the event that no response is received from the Company within ten (10) working days of receipt of the notice of nomination, to appoint the proposed new Nominee Director to replace the outgoing Nominee Director, BBY will have the right to proceed with changing of the Nominee Director/s and the Principal will be deemed to have unequivocally agreed to the proposed change in the Board of Directors. Thereafter, the new or replacement Nominee Director shall assume the same duties and rights as contained in this Agreement, in the Articles of Association and those set out in the Companies Act of Singapore (the "Act"). In the event that the Company rejects the replacement individual, the Company shall proceed to provide a replacement Director of its own, thereby terminating this Agreement and discharging BBY from obligations accrued and owing under this Agreement, in which case the Company forfeits its deposit under Clause 5.</p>
 <p class="p11">(d) Subject to the provisions of the Act, the Company agrees that no further or special resolution will be required for such a change of Nominee Director by BBY, in which case the Principal and each of the shareholders of the Company shall do everything necessary to ensure that the replacement Nominee Director is duly appointed to the Board of Directors of the Company. The Company agrees that this clause, with respect to consent by the Company, shall override all other requirements in the Memorandum and Articles of Association of the Company pertaining to the requiring of such consent as normally applicable in other situations.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
+<p class="p3"><br></p>
 <p class="p3">4. ANNUAL FEE<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p6">The <span class="s3"><b>annual fee</b></span> for provision of the Nominee Services by BBY is either <span class="s3"><b>S$5,000</b></span>(ex-GST) per annum or any part thereof for providing the Nominee Director Services (hereinafter referred to as “Annual Fee”). This Annual Fee does not include any out-of-pocket expenses incurred by BBY and its Nominee Director incurred on behalf of the Principal’s or Company's account. The first year’s fee shall cover a period of twelve (12) months and be payable at the time of appointment and thereafter, the annual fee will be billed in advance and are due and payable when rendered. Our fees and out-of-pocket charges described above do not include the Goods and Services Tax (“GST”). The GST, withholding taxes or other applicable taxes, if applicable, will be included in our invoices as a separate item and charged at the rate applicable under the relevant legislation. You will be responsible for the whole of our fees, charges and other expenses in respect of all matters relating to this engagement. BBY shall not be required to refund any amount of fees for any fraction of days remaining in a year upon termination.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p10"><br></p>
+<p class="p3"><br></p>
 <p class="p3">5.<span class="Apple-converted-space">  </span>INSTRUCTIONS<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p8">5.1  In providing the Services, BBY and/or its Nominee Director/s shall act upon the instructions of the Principal and/or Authorized Person(s) so appointed by the Principal whose name(s), identity number(s), address(es) and specimen signature(s) may be requested by BBY from time to time. All instructions of the Principal and/or the Authorized Person(s) shall be in writing given in accordance with the provisions of Clause 13 herein. <span class="s5"><br>
 </span></p>
 <p class="p8">5.2  Any change of name, identity number, address and specimen signature of the Principal or Authorized Person shall be given to BBY in writing in accordance with the provisions of Clause 13 herein. <span class="s5"><br>
 </span></p>
+<p class="p3"><br></p>
 <p class="p3">6.<span class="Apple-converted-space">  </span>SERVICES OF NOMINEE DIRECTOR<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p8">6.1  BBY and/or any of its Nominee Director/s shall not be responsible nor be involved in the operations and management of the Company. <span class="s5"><br>
@@ -806,6 +811,7 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p11">(b) registered office; and<span class="Apple-converted-space"> </span></p>
 <p class="p12">(c) filing of the Company’s Annual Return. <span class="s5"><br>
 </span></p>
+<p class="p3"><br></p>
 <p class="p3">7. UNDERTAKINGS AND INDEMNITY<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p3">We hereby undertake, warrant and shall procure that:<span class="Apple-converted-space"> </span></p>
@@ -840,33 +846,36 @@ function seedContractsTemplatesV23(db: Db) {
 </span></p>
 <p class="p8">7.15  The Central Provident Fund or CPF is a compulsory pension fund scheme in which the employer and employee contribute a percentage of monthly salary to the fund. CPF contributions by the employer are mandatory for all local employees who are Singapore citizens or permanent residents earning more than $50 a month. If the Company engages BBY' payroll services for any hiring of local and foreigner employees in Singapore, BBY will collect an additional security deposit of US$2,000 per staff and per family member (with dependent pass) once the Company hires local and foreigner employees in Singapore. <span class="s5"><br>
 </span></p>
-<p class="p9">7.16  The Principal acknowledge and confirm the following:-<span class="Apple-converted-space"> </span></p>
+<p class="p9">7.16  <span class="s3">The Principal</span> <span class="s3">acknowledge</span> and confirm the <span class="s3">following</span>:-<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
-<p class="p3">BBY' directors, agents, employees and Nominees will not be responsible for the operations and management of the Company.<span class="Apple-converted-space"> </span></p>
-<p class="p3">The Principal understands that BBY' directors, agents, employees and Nominees is required to perform “On-going Monitoring” as required by the Accounting and Corporate Regulatory Authority (Filing Agents and Qualified Individuals) Regulations 2015 (“Regulations”) and will fully indemnify and hold BBY' directors, agents, employees and Nominees harmless from any loss, cost or damages in respect thereof to fulfill the requirement of On-going monitoring as BBY shall not be involved in the operations and management of the Company and they will have limited authority to perform any such monitoring including reviewing of every single supporting documents for all banking transactions as required by the Regulations.<span class="Apple-converted-space"> </span></p>
-<p class="p3">The Principal shall ensure that all the Directors and Shareholders and Beneficial Owners of the Company are aware of and shall perform the ongoing monitoring to identify any of the following situations and highlight them to BBY' directors, agents, employees and Nominees:<span class="Apple-converted-space"> </span></p>
-<p class="p11">(a) Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;<span class="Apple-converted-space"> </span></p>
-<p class="p11">(b) Suspicious transactions involving Political Exposed Persons;</p>
-<p class="p11">(c) Unrealistic turnover in business’s accounts.;</p>
-<p class="p11">(d) Unusual/ uneconomical movement of funds;</p>
-<p class="p11">(e) Setup of companies in Singapore with no apparent business and low paid up capital;</p>
-<p class="p11">(f) No physical business operation addresses;<span class="Apple-converted-space"> </span></p>
-<p class="p11">(g) Multiple bank accounts opened with various banks for no apparent economic or business reasons;<span class="Apple-converted-space"> </span></p>
-<p class="p11">(h) Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;<span class="Apple-converted-space"> </span></p>
-<p class="p11">(i) After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;<span class="Apple-converted-space"> </span></p>
-<p class="p11">(j) Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
-<p class="p11">(k) Any other suspicious transactions relating to money laundering or terrorism financing.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(a) BBY' directors, agents, employees and Nominees will not be responsible for the operations and management of the Company.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) The Principal understands that BBY' directors, agents, employees and Nominees is required to perform “On-going Monitoring” as required by the Accounting and Corporate Regulatory Authority (Filing Agents and Qualified Individuals) Regulations 2015 (“Regulations”) and will fully indemnify and hold BBY' directors, agents, employees and Nominees harmless from any loss, cost or damages in respect thereof to fulfill the requirement of On-going monitoring as BBY shall not be involved in the operations and management of the Company and they will have limited authority to perform any such monitoring including reviewing of every single supporting documents for all banking transactions as required by the Regulations.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(c) <span class="s3">The Principal</span> shall ensure that all the Directors and Shareholders and Beneficial Owners of the Company are aware of and shall perform the ongoing monitoring to identify any of the following situations and highlight them to BBY' directors, agents, employees and Nominees:<span class="Apple-converted-space"> </span></p>
+<p class="p12">- Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;</p>
+<p class="p12">- Suspicious transactions involving Political Exposed Persons;</p>
+<p class="p12">- Unrealistic turnover in business’s accounts.;</p>
+<p class="p12">- Unusual/ uneconomical movement of funds;</p>
+<p class="p12">- Setup of companies in Singapore with no apparent business and low paid up capital;</p>
+<p class="p12">- No physical business operation addresses;</p>
+<p class="p12">- Multiple bank accounts opened with various banks for no apparent economic or business reasons;</p>
+<p class="p12">- Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;</p>
+<p class="p12">- After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;</p>
+<p class="p12">- Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
+<p class="p12">- Any other suspicious transactions relating to money laundering or terrorism financing.</p>
 <p class="p13"><br>
 </p>
 <p class="p4"><br></p>
+<p class="p6"><br></p>
 <p class="p6">8.<span class="Apple-converted-space">  </span>EXCLUSION OF LIABILITY <span class="s5"><br>
 </span></p>
 <p class="p6">Neither BBY nor the Nominee Director/s shall be liable in respect of anything done, or omitted to be done, by BBY or the Nominee Director/s in the performance of the Services. BBY or the Nominee Director/s shall be entitled but not obliged, at any time, to do or refrain from doing any act without reference to the Principal(s) and/or the Authorized Person(s) if in the absolute discretion of BBY or the Nominee Director/s it is considered desirable and in the interest of the Company or the Principal(s) to do so or to refrain from doing so. <span class="s5"><br>
 </span></p>
+<p class="p6"><br></p>
 <p class="p6">9.<span class="Apple-converted-space">  </span>VARIATION OF CHARGES, TERMS AND CONDITIONS <span class="s5"><br>
 </span></p>
 <p class="p6">BBY may review the Annual Fee and/or Deposit annually on 31 December or such other times as considered appropriate at BBY' discretion. The review may also cover the provisions of this Agreement or any part of this Agreement by altering, adding to and/or deleting any or all of them and/or making any new terms and/or conditions, and/or appointing a substitute to act in the place of the existing Nominee Director/s. Any alteration and/or variation so made shall be communicated to the Principal and/or Authorized Person(s) as soon as is reasonably practicable HOWEVER any failure to communicate the above shall in no event whatsoever render any alteration and/or variation ineffective or inapplicable. <span class="s5"><br>
 </span></p>
+<p class="p6"><br></p>
 <p class="p6">10.<span class="Apple-converted-space">  </span>JOINT AND SEVERAL LIABILITY AND WAIVER <span class="s5"><br>
 </span></p>
 <p class="p8">10.1<span class="Apple-converted-space">  </span>Liability</p>
@@ -878,10 +887,12 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p11">(a) Waiver of any right, power, authority, discretion or remedy arising on default under this Agreement must be in writing and signed by the party granting the waiver.<span class="Apple-converted-space"> </span></p>
 <p class="p11">(b) A failure or delay in exercise, or partial exercise, of a right, power, authority, discretion or remedy created or arising on default under this Agreement does not result in a waiver of that right, power, authority, discretion or remedy.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
+<p class="p6"><br></p>
 <p class="p6">11.<span class="Apple-converted-space">  </span>CONSENT TO ASSIGNMENT <span class="s5"><br>
 </span></p>
 <p class="p6">Subject to the provisions of this Agreement, this Agreement, together with all its annexes (if any) and subsequent amendments (if any), and all rights and liabilities hereunder shall only be assignable by the Principal subject to the terms and conditions of this Agreement PROVIDED THAT prior written consent from BBY and its Nominee Director/s has been obtained. <span class="s5"><br>
 </span></p>
+<p class="p6"><br></p>
 <p class="p6">12.<span class="Apple-converted-space">  </span>NOTICES <span class="s5"><br>
 </span></p>
 <p class="p9">12.1 Addresses</p>
@@ -903,6 +914,7 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p11">(b) if by mail, within two (2) working days after posting if sent to a local address, or within eight (8) working days if sent to an overseas address; or<span class="Apple-converted-space"> </span></p>
 <p class="p11">(c) if by electronic mail, upon receipt by the party transmitting such Notice of a confirmation (including an electronic confirmation) from the addressee or the addressee’s system that the addressee has received the Notice.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
+<p class="p3"><br></p>
 <p class="p3">13. TERMINATION<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p9">13.1  BBY may terminate this Agreement at any time by giving Notice in writing to the Principal or Authorized Person served to his last known address and that such Notice (hereinafter referred to as “Notice of Termination”) shall be given in accordance with the provisions of Clause 13 herein:<span class="Apple-converted-space"> </span></p>
@@ -933,16 +945,19 @@ function seedContractsTemplatesV23(db: Db) {
 <p class="p9"><span class="s5"><br>
 </span>13.9 Should there be violation of the terms and conditions of the Agreement, BBY shall have the right to forfeit any balances in the Deposit without a need of Notice to the Principal, Company or its Authorised Person.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><span class="Apple-tab-span">	</span></p>
+<p class="p3"><br></p>
 <p class="p3">14.<span class="Apple-converted-space">  </span>SEVERALITY AND LIMITATION OF LIABILITY<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p8">14.1  Notwithstanding that any provision of this Agreement may prove to be illegal or unenforceable, the remaining provisions shall continue in full force and effect. <span class="s5"><br>
 </span></p>
 <p class="p8">14.2  BBY' liability arising out of or related to this Agreement, including without limitation the liability for negligence, will not exceed the amount received by BBY from the Company and/or Principal, which in no way shall exceed the level of the professional fees received for the relevant period at the time the negligence has taken place. The Principal, Company or any of the guarantor/s agree that this provision is fair and reasonable based on the risks that BBY and the Nominee Director/s assume in carrying out the Services as compared to the professional fees that BBY will receive from the Company and/or the Principal. <span class="s5"><br>
 </span></p>
+<p class="p6"><br></p>
 <p class="p6">15. MEDIATION <span class="s5"><br>
 </span></p>
 <p class="p6">Any dispute out of or in connection with this Agreement including any question regarding its existence, validity or termination shall at the first instance be referred to the authorized representatives of the Principal, Company or any of the guarantor/s and BBY and be resolved by amicable negotiations through the Singapore Mediation Centre prior to any filing of any case in the appropriate jurisdiction of the Courts in Singapore. <span class="s5"><br>
 </span></p>
+<p class="p6"><br></p>
 <p class="p6">16. GOVERNING LAW AND JURISDICTION <span class="s5"><br>
 </span></p>
 <p class="p6">This Agreement together with its annexes (if any) and amendments (if any) shall be governed by and construed in accordance with the Laws of Singapore and the parties agree to submit to the non-exclusive jurisdiction of the Courts in Singapore.<span class="Apple-converted-space"> </span></p>
@@ -1084,7 +1099,7 @@ function seedContractsTemplatesV23(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V23] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V24] = true;
   return changed;
 }
 
@@ -6255,7 +6270,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV23(db)) changed = true;
+  if (seedContractsTemplatesV24(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
