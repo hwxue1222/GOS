@@ -129,6 +129,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const clientEmail = String(fields[clientEmailKey] ?? '').trim();
   const signerEmail = String(fields.signer_email ?? '').trim();
 
+  const pdfOpenUrl = contractId && contractNo ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
+
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
     const ignoreKeys = new Set(['signer_email', 'contract_no', 'client_name', 'client_email']);
@@ -515,7 +517,18 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
             </div>
-            {null}
+            {pdfOpenUrl ? (
+              <div className="px-4 py-3 border-t border-black/5">
+                <a
+                  href={pdfOpenUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium inline-flex items-center hover:bg-black/[0.02]"
+                >
+                  Open PDF
+                </a>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
