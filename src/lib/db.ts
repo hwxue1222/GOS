@@ -5665,6 +5665,9 @@ async function readDbRaw(): Promise<Db> {
     if (process.env.VERCEL && !process.env.KV_REST_API_URL && !process.env.KV_REST_API_TOKEN && !process.env.REDIS_URL) {
       throw new Error('DB_NOT_CONFIGURED');
     }
+    if ((await hasKv()) || (await hasRedis())) {
+      throw e;
+    }
     return emptyDb();
   }
 }
