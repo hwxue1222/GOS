@@ -47,6 +47,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string>('');
+  const [pdfCheck, setPdfCheck] = useState<string>('');
 
   const clientNameKey = useMemo(() => {
     const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
@@ -79,6 +81,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   async function saveDraft() {
     setError(null);
+    setErrorDetail('');
     if (!tpl) {
       setError('TEMPLATE_REQUIRED');
       return null;
@@ -94,7 +97,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         }).catch(() => null);
         const j = (await res?.json().catch(() => null)) as any;
         if (!res?.ok || !j?.contract?.id) {
-          setError(j?.error || 'FAILED');
+          setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+          setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
           return null;
         }
         setContractId(j.contract.id);
@@ -109,7 +113,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
-        setError(j?.error || 'FAILED');
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
         return null;
       }
       return j.contract as { id: string };
@@ -120,6 +125,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   async function generateDocument() {
     setError(null);
+    setErrorDetail('');
     const c = await saveDraft();
     const id = contractId || (c as any)?.id;
     if (!id) return;
@@ -129,7 +135,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/render`, { method: 'POST' }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.documentId) {
-        setError(j?.error || 'FAILED');
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
         return;
       }
       setDocumentId(String(j.documentId));
@@ -142,6 +149,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   async function sendForSigning() {
     setError(null);
+    setErrorDetail('');
     const c = await saveDraft();
     const id = contractId || (c as any)?.id;
     if (!id) return;
@@ -155,7 +163,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
-        setError(j?.error || 'FAILED');
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
         return;
       }
       setPacketId(String(j.packetId));
@@ -163,6 +172,19 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     } finally {
       setSending(false);
     }
+  }
+
+  async function checkPdf() {
+    setPdfCheck('');
+    if (!contractId) return;
+    const url = `/api/contracts/${encodeURIComponent(contractId)}/pdf?debug=1`;
+    const res = await fetch(url).catch(() => null);
+    if (!res) {
+      setPdfCheck('NETWORK_ERROR');
+      return;
+    }
+    const text = await res.text().catch(() => '');
+    setPdfCheck(`HTTP ${res.status}\n${text}`);
   }
 
   const pdfUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
@@ -193,6 +215,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       </div>
 
       {error ? <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div> : null}
+      {errorDetail ? (
+        <pre className="mt-2 rounded-xl bg-white border border-black/5 p-3 text-xs text-black/70 overflow-auto">{errorDetail}</pre>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-7">
@@ -387,6 +412,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
             </div>
+            {contractId ? (
+              <div className="px-4 py-3 border-t border-black/5">
+                <div className="flex items-center gap-2">
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02]"
+                  >
+                    Open PDF
+                  </a>
+                  <button
+                    onClick={() => void checkPdf()}
+                    className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
+                  >
+                    Check PDF error
+                  </button>
+                </div>
+                {pdfCheck ? (
+                  <pre className="mt-2 rounded-lg bg-white border border-black/10 p-3 text-xs text-black/70 overflow-auto">{pdfCheck}</pre>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
