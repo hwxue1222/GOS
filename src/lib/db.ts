@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V21 = 'contracts.templates.v21';
+const SEED_KEY_CONTRACTS_TEMPLATES_V22 = 'contracts.templates.v22';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV21(db: Db) {
+function seedContractsTemplatesV22(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V21] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V22] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -672,7 +672,6 @@ function seedContractsTemplatesV21(db: Db) {
     span.s5 {font: 10.0px 'Arial Unicode MS'}
     span.s6 {color: #222222}
     span.s7 {color: #000000}
-    span.s8 {color: #0000ee; text-decoration: underline}
     span.Apple-tab-span {white-space:pre}
     table.t1 {border-collapse: collapse}
     td.td1 {min-width: 157.4px; min-height: 13.9px; background-color: #ffffff; border-style: solid; border-width: 1.0px 1.0px 1.0px 1.0px; border-color: #000000 #000000 #000000 #000000; padding: 0.0px 5.0px 0.0px 5.0px}
@@ -777,7 +776,7 @@ function seedContractsTemplatesV21(db: Db) {
 </span></p>
 <p class="p9">BBY shall arrange for one (1) Nominee Director to consent to the appointment as Nominee Director of the Company. BBY has the sole discretion to provide more than one (1) Nominee Director. <span class="s5"><br>
 </span></p>
-<p class="p9"><span class="s8">3.2  Appointment, resignation and cessation of Nominee Director</span><span class="Apple-converted-space"> </span></p>
+<p class="p9">3.2  Appointment, resignation and cessation of Nominee Director<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p11">(a) If a person nominated by BBY ceases to be a Nominee Director for any reason whatsoever, BBY shall be entitled to nominate any other person to replace him, in which event the Principal or the Company and each of the shareholder/s and director/s of the Company shall do and procure to be done all such acts and things as may be necessary to ensure that the changes to the Board of Directors, including the appointment of the new Nominee Director of the Company will be promptly carried out. A notice of nomination in writing may be sent out by BBY to the Principal and/or to the Company.<span class="Apple-converted-space"> </span></p>
 <p class="p11">(b) The Principal shall, within ten (10) working days of receipt of the notice of nomination, appoint the name stated in the notice of nomination as the new Nominee Director to replace the outgoing Nominee Director, failing which BBY and/or its Nominee Director/s shall be entitled without prejudice to all other rights accruing to any of BBY' existing Nominee Director (if any) under this Agreement, including to apply to the Court for inter alia, specific performance, an order that the Company be wound up, claim for damages, costs and/or any and all other reliefs arising from the performance of Services by BBY and/or its Nominee Director/s, and that the Principal or the Company shall be liable to reimburse BBY and/or its Nominee Director/s in full for all fees, costs, legal costs, and all expenses incurred thereby.<span class="Apple-converted-space"> </span></p>
@@ -846,18 +845,17 @@ function seedContractsTemplatesV21(db: Db) {
 <p class="p3">BBY' directors, agents, employees and Nominees will not be responsible for the operations and management of the Company.<span class="Apple-converted-space"> </span></p>
 <p class="p3">The Principal understands that BBY' directors, agents, employees and Nominees is required to perform “On-going Monitoring” as required by the Accounting and Corporate Regulatory Authority (Filing Agents and Qualified Individuals) Regulations 2015 (“Regulations”) and will fully indemnify and hold BBY' directors, agents, employees and Nominees harmless from any loss, cost or damages in respect thereof to fulfill the requirement of On-going monitoring as BBY shall not be involved in the operations and management of the Company and they will have limited authority to perform any such monitoring including reviewing of every single supporting documents for all banking transactions as required by the Regulations.<span class="Apple-converted-space"> </span></p>
 <p class="p3">The Principal shall ensure that all the Directors and Shareholders and Beneficial Owners of the Company are aware of and shall perform the ongoing monitoring to identify any of the following situations and highlight them to BBY' directors, agents, employees and Nominees:<span class="Apple-converted-space"> </span></p>
-<p class="p3">Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;<span class="Apple-converted-space"> </span></p>
-<p class="p3">Suspicious transactions involving Political Exposed Persons;</p>
-<p class="p3">Unrealistic turnover in business’s accounts.;</p>
-<p class="p3">Unusual/ uneconomical movement of funds;</p>
-<p class="p6">Setup of companies in Singapore with no apparent business and low <span class="s5"><br>
-</span>paid up capital;</p>
-<p class="p3">No physical business operation addresses;<span class="Apple-converted-space"> </span></p>
-<p class="p3">Multiple bank accounts opened with various banks for no apparent economic or business reasons;<span class="Apple-converted-space"> </span></p>
-<p class="p3">Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;<span class="Apple-converted-space"> </span></p>
-<p class="p3">After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;<span class="Apple-converted-space"> </span></p>
-<p class="p3">Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
-<p class="p6">Any other suspicious transactions relating to money laundering or terrorism financing.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(a) Complex or unusually large transactions or unusual patterns of transactions that have no apparent or visible economic or lawful purpose;<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) Suspicious transactions involving Political Exposed Persons;</p>
+<p class="p11">(c) Unrealistic turnover in business’s accounts.;</p>
+<p class="p11">(d) Unusual/ uneconomical movement of funds;</p>
+<p class="p11">(e) Setup of companies in Singapore with no apparent business and low paid up capital;</p>
+<p class="p11">(f) No physical business operation addresses;<span class="Apple-converted-space"> </span></p>
+<p class="p11">(g) Multiple bank accounts opened with various banks for no apparent economic or business reasons;<span class="Apple-converted-space"> </span></p>
+<p class="p11">(h) Frequent large incoming remittances into bank accounts from different individuals and companies, located mainly overseas with no supporting documents;<span class="Apple-converted-space"> </span></p>
+<p class="p11">(i) After receipt of funds in the bank accounts, the funds are usually moved out of Singapore within the next few days without valid reasons. These bank accounts generally have low balances;<span class="Apple-converted-space"> </span></p>
+<p class="p11">(j) Transaction patterns in the bank accounts are often not in line with the company’ principal business;</p>
+<p class="p11">(k) Any other suspicious transactions relating to money laundering or terrorism financing.<span class="Apple-converted-space"> </span></p>
 <p class="p13"><br>
 </p>
 <p class="p4"><br></p>
@@ -877,8 +875,8 @@ function seedContractsTemplatesV21(db: Db) {
 <p class="p10"><br></p>
 <p class="p8">10.2<span class="Apple-converted-space">  </span>Waiver</p>
 <p class="p4"><br></p>
-<p class="p3">Waiver of any right, power, authority, discretion or remedy arising on default under this Agreement must be in writing and signed by the party granting the waiver.<span class="Apple-converted-space"> </span></p>
-<p class="p3">A failure or delay in exercise, or partial exercise, of a right, power, authority, discretion or remedy created or arising on default under this Agreement does not result in a waiver of that right, power, authority, discretion or remedy.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(a) Waiver of any right, power, authority, discretion or remedy arising on default under this Agreement must be in writing and signed by the party granting the waiver.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) A failure or delay in exercise, or partial exercise, of a right, power, authority, discretion or remedy created or arising on default under this Agreement does not result in a waiver of that right, power, authority, discretion or remedy.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p6">11.<span class="Apple-converted-space">  </span>CONSENT TO ASSIGNMENT <span class="s5"><br>
 </span></p>
@@ -1086,7 +1084,7 @@ function seedContractsTemplatesV21(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V21] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V22] = true;
   return changed;
 }
 
@@ -6257,7 +6255,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV21(db)) changed = true;
+  if (seedContractsTemplatesV22(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
