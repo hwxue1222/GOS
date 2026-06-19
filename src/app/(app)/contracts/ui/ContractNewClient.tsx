@@ -260,10 +260,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
     setSending(true);
     try {
+      const nomineeEmails = isNomineeTemplate
+        ? [String((fields as any).company_signatory_email ?? '').trim(), String((fields as any).principal_signatory_email ?? '').trim()].filter(
+            (x) => !!x,
+          )
+        : [];
+
+      if (isNomineeTemplate && nomineeEmails.length === 0) {
+        setError('SIGNER_EMAIL_REQUIRED');
+        setErrorDetail('请填写 Company signatory email 和/或 Principal signatory email。');
+        return;
+      }
+
       const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/send-sign`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ toEmail: signerEmail || undefined }),
+        body: JSON.stringify(isNomineeTemplate ? { emails: nomineeEmails } : { toEmail: signerEmail || undefined }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
@@ -492,7 +504,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                 if (!isNomineeTemplate) return ps.map(renderInput);
 
-                const companyPs = ps.filter((p) => p.key === 'company' || p.key === 'dated' || p.key.startsWith('company_'));
+                const companyPs = ps.filter((p) => p.key === 'company' || p.key === 'agreement_date' || p.key.startsWith('company_'));
                 const principalPs = ps.filter((p) => p.key.startsWith('principal_'));
 
                 return (
@@ -534,7 +546,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {downloading ? 'Downloading…' : 'Download PDF'}
               </button>
-              {showSigningBlock ? (
+              {showSigningBlock || isNomineeTemplate ? (
                 <button
                   onClick={() => void sendForSigning()}
                   disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}

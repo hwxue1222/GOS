@@ -6,6 +6,8 @@ import {
   findContractById,
   listContractTemplates,
   createDocument,
+  nextContractNo,
+  readDb,
   updateContract,
 } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -26,15 +28,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   }
 
   const { contractId } = await params;
-  const contract = await findContractById(contractId);
+  let contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const templateId = contract.templateId;
 
   const body = (await req.json().catch(() => null)) as
     | {
         subject?: string;
         message?: string;
         toEmail?: string;
+        emails?: string[];
         signerFullName?: string;
         signerTitle?: string;
       }
@@ -42,22 +46,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   const subject = typeof body?.subject === 'string' ? body.subject : undefined;
   const message = typeof body?.message === 'string' ? body.message : undefined;
   const toEmail = typeof body?.toEmail === 'string' ? body.toEmail.trim() : '';
+  const emails = Array.isArray(body?.emails) ? body!.emails.map((x) => String(x ?? '').trim()).filter((x) => !!x) : [];
   const signerFullName = typeof body?.signerFullName === 'string' ? body.signerFullName.trim() : '';
   const signerTitle = typeof body?.signerTitle === 'string' ? body.signerTitle.trim() : '';
 
+  const templates = await listContractTemplates();
+  const tpl = templates.find((t) => t.id === templateId) ?? null;
+  if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
+
+  let contractNo = String(contract.contractNo ?? '').trim();
+  if (!contractNo) {
+    const db = await readDb();
+    contractNo = nextContractNo(db, contract.createdAt ? new Date(contract.createdAt) : new Date());
+    const updated = await updateContract(contractId, { contractNo });
+    if (updated) contract = updated;
+  }
+  if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+
   let documentId = contract.documentId;
   if (!documentId) {
-    const templates = await listContractTemplates();
-    const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
-    if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
     const html = renderContractHtml({
       templateHtml: tpl.templateHtml,
-      contractNo: contract.contractNo,
+      contractNo: contractNo || contract.contractNo,
       clientName: contract.clientName,
       clientEmail: contract.clientEmail,
       fields: contract.fields ?? {},
     });
-    const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
+    const title = `Contract ${contractNo || contract.contractNo || '-'} - ${contract.clientName}`;
     const doc = await createDocument({ type: 'CONTRACT', title, html });
     documentId = doc.id;
     await updateContract(contractId, { documentId, status: 'READY' });
@@ -70,16 +85,52 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     documentId,
     status: 'SIGNING',
   });
-  const signerEmail = toEmail || String((contract as any)?.fields?.signer_email ?? '').trim() || contract.clientEmail;
-  if (!signerEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
-  const links = await createSignatureRequestsForPacket({
-    packetId: packet.id,
-    emails: [signerEmail],
-    defaults: {
-      signerFullName: signerFullName || String((contract as any)?.fields?.signer_full_name ?? '').trim() || undefined,
-      signerTitle: signerTitle || String((contract as any)?.fields?.signer_title ?? '').trim() || undefined,
-    },
-  });
+  const isNominee = String(tpl.name ?? '') === 'Nominee Services Indemnity Agreement';
+
+  let links: Array<{ email: string; url: string }> = [];
+  if (isNominee) {
+    const f = (contract.fields ?? {}) as Record<string, string>;
+    const companyEmail = String(f.company_signatory_email ?? '').trim();
+    const principalEmail = String(f.principal_signatory_email ?? '').trim();
+    if (!companyEmail && !principalEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    if (companyEmail) {
+      const l = await createSignatureRequestsForPacket({
+        packetId: packet.id,
+        emails: [companyEmail],
+        defaults: {
+          signerFullName: String(f.company_auth_name ?? '').trim() || undefined,
+          signerTitle: String(f.company_auth_designation ?? '').trim() || undefined,
+        },
+      });
+      links = links.concat(l);
+    }
+    if (principalEmail) {
+      const l = await createSignatureRequestsForPacket({
+        packetId: packet.id,
+        emails: [principalEmail],
+        defaults: {
+          signerFullName: String(f.principal_auth_name ?? '').trim() || undefined,
+          signerTitle: String(f.principal_auth_designation ?? '').trim() || undefined,
+        },
+      });
+      links = links.concat(l);
+    }
+  } else {
+    const signerEmail =
+      (emails[0] ?? '').trim() ||
+      toEmail ||
+      String((contract as any)?.fields?.signer_email ?? '').trim() ||
+      contract.clientEmail;
+    if (!signerEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    links = await createSignatureRequestsForPacket({
+      packetId: packet.id,
+      emails: [signerEmail],
+      defaults: {
+        signerFullName: signerFullName || String((contract as any)?.fields?.signer_full_name ?? '').trim() || undefined,
+        signerTitle: signerTitle || String((contract as any)?.fields?.signer_title ?? '').trim() || undefined,
+      },
+    });
+  }
 
   const origin = req.headers.get('origin')?.trim();
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
@@ -93,7 +144,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
             url: `${baseUrl}${l.url}`,
             companyName: contract.clientName,
             applicationName: 'Contract',
-            documentTitle: `Contract ${contract.contractNo}`,
+            documentTitle: `Contract ${contractNo || contract.contractNo || '-'}`,
             signerRole: 'Client',
             subject,
             message,
@@ -102,12 +153,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     ),
   );
 
-  const nextFields = {
-    ...(contract.fields ?? {}),
-    signer_email: signerEmail,
-    ...(signerFullName ? { signer_full_name: signerFullName } : null),
-    ...(signerTitle ? { signer_title: signerTitle } : null),
-  };
+  const nextFields: Record<string, string> = isNominee
+    ? { ...(contract.fields ?? {}) }
+    : {
+        ...(contract.fields ?? {}),
+        ...(toEmail || (emails[0] ?? '').trim() ? { signer_email: ((emails[0] ?? '').trim() || toEmail).trim() } : null),
+        ...(signerFullName ? { signer_full_name: signerFullName } : null),
+        ...(signerTitle ? { signer_title: signerTitle } : null),
+      };
   const next = await updateContract(contractId, {
     packetId: packet.id,
     status: 'SIGNING',

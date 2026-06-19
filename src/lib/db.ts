@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V14 = 'contracts.templates.v14';
+const SEED_KEY_CONTRACTS_TEMPLATES_V15 = 'contracts.templates.v15';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV14(db: Db) {
+function seedContractsTemplatesV15(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V14] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V15] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -611,18 +611,17 @@ function seedContractsTemplatesV14(db: Db) {
     engine: 'HTML',
     placeholders: [
       { key: 'company', label: 'Company', required: true },
-      { key: 'dated', label: 'Dated (YYYY-MM-DD)', required: true },
-      { key: 'company_auth_signature', label: 'Company signature', required: true },
+      { key: 'agreement_date', label: 'Agreement date (YYYY-MM-DD)', required: true },
       { key: 'company_auth_name', label: 'Company signatory name', required: true },
       { key: 'company_auth_nric', label: 'Company signatory NRIC/Passport number', required: true },
       { key: 'company_auth_designation', label: 'Company signatory designation', required: true },
       { key: 'company_auth_date', label: 'Company signatory date (YYYY-MM-DD)', required: true },
-      { key: 'principal_auth_signature', label: 'Principal signature', required: true },
       { key: 'principal_auth_name', label: 'Principal signatory name', required: true },
       { key: 'principal_auth_nric', label: 'Principal signatory NRIC/Passport number', required: true },
       { key: 'principal_auth_designation', label: 'Principal signatory designation', required: true },
       { key: 'principal_auth_date', label: 'Principal signatory date (YYYY-MM-DD)', required: true },
-      { key: 'principal_name', label: 'Principal name (for declaration)', required: true },
+      { key: 'company_signatory_email', label: 'Company signatory email', required: false },
+      { key: 'principal_signatory_email', label: 'Principal signatory email', required: false },
     ],
     templateHtml: `<!doctype html>
 <html>
@@ -948,7 +947,7 @@ function seedContractsTemplatesV14(db: Db) {
 </span></p>
 <p class="p6">This Agreement together with its annexes (if any) and amendments (if any) shall be governed by and construed in accordance with the Laws of Singapore and the parties agree to submit to the non-exclusive jurisdiction of the Courts in Singapore.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><b></b><br></p>
-<p class="p15"><b>Dated this </b><span class="s4">{{dated}}</span></p>
+<p class="p15"><b>Dated this </b><span class="s4">{{agreement_date}}</span></p>
 <p class="p4"><br></p>
 <p class="p3">For and on behalf of the Company:</p>
 <p class="p4"><br></p>
@@ -960,7 +959,7 @@ function seedContractsTemplatesV14(db: Db) {
         <p class="p17"><br></p>
       </td>
       <td valign="top" class="td7">
-        <p class="p18">{{company_auth_signature}}</p>
+        <p class="p18"><span style="display:none" data-signer="{{company_signatory_email}}"></span><span data-signer-full-name="{{company_signatory_email}}"></span></p>
       </td>
     </tr>
     <tr>
@@ -1012,7 +1011,7 @@ function seedContractsTemplatesV14(db: Db) {
         <p class="p17"><br></p>
       </td>
       <td valign="top" class="td7">
-        <p class="p21">{{principal_auth_signature}}</p>
+        <p class="p21"><span style="display:none" data-signer="{{principal_signatory_email}}"></span><span data-signer-full-name="{{principal_signatory_email}}"></span></p>
       </td>
     </tr>
     <tr>
@@ -1050,9 +1049,9 @@ function seedContractsTemplatesV14(db: Db) {
   </tbody>
 </table>
 <p class="p22"><br></p>
-<p class="p20">I, <span class="s7">{{principal_name}}</span>, agree to the terms and conditions set out in this Agreement and I hereby provide my guarantee in my personal capacity on the faithful compliance of the terms and conditions thereof.<span class="Apple-converted-space"> </span></p>
+<p class="p20">I, <span class="s7">{{principal_auth_name}}</span>, agree to the terms and conditions set out in this Agreement and I hereby provide my guarantee in my personal capacity on the faithful compliance of the terms and conditions thereof.<span class="Apple-converted-space"> </span></p>
 <p class="p22"><br></p>
-<p class="p16">Signature:</p><p class="p23">{{principal_auth_signature}}</p>
+<p class="p16">Signature:</p><p class="p23"><br></p>
 <p class="p16">Name: {{principal_auth_name}}</p><p class="p16">NRIC/Passport number: {{principal_auth_nric}}</p><p class="p16">Designation: {{principal_auth_designation}}</p><p class="p16">Date: {{principal_auth_date}}</p>
 <p class="p18"><br></p>
 <p class="p18"><br></p>
@@ -1085,7 +1084,7 @@ function seedContractsTemplatesV14(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V14] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V15] = true;
   return changed;
 }
 
@@ -6256,7 +6255,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV14(db)) changed = true;
+  if (seedContractsTemplatesV15(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
