@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { formatDateDMY } from '@/lib/date';
 import type { Contract, ContractStatus } from '@/lib/types';
@@ -34,9 +35,11 @@ function monthKeyFromIso(iso: string) {
 }
 
 export default function ContractsListClient({ initialRows }: Props) {
+  const router = useRouter();
   const [search, setSearch] = usePersistedState('gos.contracts.search', '');
   const [status, setStatus] = usePersistedState<ContractStatus | ''>('gos.contracts.status', '');
   const [month, setMonth] = usePersistedState('gos.contracts.month', '');
+  const [deletingId, setDeletingId] = useState<string>('');
 
   const rows = useMemo(() => {
     const q = search.trim();
@@ -125,6 +128,7 @@ export default function ContractsListClient({ initialRows }: Props) {
         ) : (
           rows.map((r) => {
             const st = statusLabel(r.contract.status);
+            const canDelete = r.contract.status === 'DRAFT' && !String(r.contract.contractNo ?? '').trim();
             const href =
               r.contract.status === 'DRAFT' || r.contract.status === 'READY'
                 ? `/contracts/new?contractId=${encodeURIComponent(r.contract.id)}`
@@ -135,15 +139,41 @@ export default function ContractsListClient({ initialRows }: Props) {
                 href={href}
                 className="grid grid-cols-12 px-4 py-3 text-sm border-b border-black/5 hover:bg-black/[0.02] transition-colors"
               >
-                <div className="col-span-3 font-medium truncate">{r.contract.contractNo}</div>
+                <div className="col-span-3 font-medium truncate">{String(r.contract.contractNo ?? '').trim() || '—'}</div>
                 <div className="col-span-3 truncate">
                   <div className="font-medium truncate">{r.contract.clientName}</div>
                   <div className="text-xs text-black/60 truncate">{r.contract.clientEmail}</div>
                 </div>
                 <div className="col-span-2 truncate">{r.templateName}</div>
                 <div className="col-span-2 truncate">{formatDateDMY(r.contract.createdAt)}</div>
-                <div className="col-span-2">
+                <div className="col-span-2 flex items-center justify-between gap-2">
                   <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${st.cls}`}>{st.text}</span>
+                  {canDelete ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (deletingId) return;
+                        if (!confirm('Delete this draft?')) return;
+                        setDeletingId(r.contract.id);
+                        void fetch(`/api/contracts/${encodeURIComponent(r.contract.id)}`, { method: 'DELETE' })
+                          .then((res) => res.json().catch(() => null).then((j) => ({ res, j })))
+                          .then(({ res, j }) => {
+                            if (!res.ok || !j?.ok) {
+                              alert(String(j?.error ?? `HTTP_${res.status}`));
+                              return;
+                            }
+                            router.refresh();
+                          })
+                          .finally(() => setDeletingId(''));
+                      }}
+                      disabled={deletingId === r.contract.id}
+                      className="text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
+                    >
+                      {deletingId === r.contract.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                  ) : null}
                 </div>
               </Link>
             );
