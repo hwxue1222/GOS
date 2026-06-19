@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
 
 type Props = {
@@ -29,6 +29,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 
 export default function ContractNewClient({ initialTemplates }: Props) {
   const templates = initialTemplates;
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? '');
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
@@ -253,6 +254,21 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     }
   }
 
+  async function deleteDraft() {
+    if (!contractId) return;
+    if (!confirm('Delete this draft?')) return;
+    setError(null);
+    setErrorDetail('');
+    const res = await fetch(`/api/contracts/${encodeURIComponent(contractId)}`, { method: 'DELETE' }).catch(() => null);
+    const j = (await res?.json().catch(() => null)) as any;
+    if (!res?.ok || !j?.ok) {
+      setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+      setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+      return;
+    }
+    router.push('/contracts');
+  }
+
   async function checkPdf() {
     setPdfCheck('');
     if (!contractId) return;
@@ -440,6 +456,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
+              {contractId && !contractNo ? (
+                <button
+                  onClick={() => void deleteDraft()}
+                  disabled={saving || rendering || sending}
+                  className="h-10 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Delete draft
+                </button>
+              ) : null}
               <button
                 onClick={() => void generateDocument()}
                 disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}

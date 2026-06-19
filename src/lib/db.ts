@@ -7461,6 +7461,29 @@ export async function updateContract(
   return next;
 }
 
+export async function deleteContract(contractId: string) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const list = (db.contracts ?? []) as Contract[];
+  const idx = list.findIndex((c) => c.id === contractId);
+  if (idx < 0) return null;
+  const contract = list[idx];
+
+  list.splice(idx, 1);
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+
+  if (contract.documentId) {
+    db.documents = (db.documents ?? []).filter((d) => d.id !== contract.documentId);
+  }
+  if (contract.packetId) {
+    db.signaturePackets = (db.signaturePackets ?? []).filter((p) => p.id !== contract.packetId);
+    db.signatureRequests = (db.signatureRequests ?? []).filter((r) => r.packetId !== contract.packetId);
+  }
+
+  await writeDb(db);
+  return contract;
+}
+
 export async function createSignaturePacket(input: {
   kind: SignaturePacket['kind'];
   relatedType: SignaturePacket['relatedType'];

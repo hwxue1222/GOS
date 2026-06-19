@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findContractById, updateContract } from '@/lib/db';
+import { deleteContract, findContractById, updateContract } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function canAccess(user: { id: string }, contract: { createdByUserId: string }) {
@@ -50,4 +50,23 @@ export async function GET(_: Request, { params }: { params: Promise<{ contractId
   if (!current) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, current)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   return NextResponse.json({ ok: true, contract: current });
+}
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ contractId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(user, 'contracts', 'update')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { contractId } = await params;
+  const current = await findContractById(contractId);
+  if (!current) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!canAccess(user, current)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (current.status !== 'DRAFT' || String(current.contractNo ?? '').trim()) {
+    return NextResponse.json({ ok: false, error: 'CANNOT_DELETE' }, { status: 409 });
+  }
+
+  const deleted = await deleteContract(contractId);
+  return NextResponse.json({ ok: true, contract: deleted });
 }

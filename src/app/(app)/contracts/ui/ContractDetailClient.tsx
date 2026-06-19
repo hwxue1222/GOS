@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { Contract, ContractStatus } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
 
@@ -24,6 +25,7 @@ function statusLabel(status: ContractStatus) {
 }
 
 export default function ContractDetailClient({ initialContract, templateName, documentSha256, signatureRequests }: Props) {
+  const router = useRouter();
   const [contract, setContract] = useState<Contract>(initialContract);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
@@ -115,6 +117,20 @@ export default function ContractDetailClient({ initialContract, templateName, do
     }
     const text = await res.text().catch(() => '');
     setPdfCheck(`HTTP ${res.status}\n${text}`);
+  }
+
+  async function deleteDraft() {
+    if (!confirm('Delete this draft?')) return;
+    setError(null);
+    setErrorDetail('');
+    const res = await fetch(`/api/contracts/${encodeURIComponent(contract.id)}`, { method: 'DELETE' }).catch(() => null);
+    const j = (await res?.json().catch(() => null)) as any;
+    if (!res?.ok || !j?.ok) {
+      setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+      setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+      return;
+    }
+    router.push('/contracts');
   }
 
   const reqs = useMemo(() => {
@@ -241,6 +257,15 @@ export default function ContractDetailClient({ initialContract, templateName, do
               >
                 {rendering ? 'Rendering…' : 'Render document'}
               </button>
+              {contract.status === 'DRAFT' && !String(contract.contractNo ?? '').trim() ? (
+                <button
+                  onClick={() => void deleteDraft()}
+                  disabled={rendering || sending}
+                  className="h-10 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Delete draft
+                </button>
+              ) : null}
               <a
                 href={pdfDownloadUrl}
                 download
