@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V20 = 'contracts.templates.v20';
+const SEED_KEY_CONTRACTS_TEMPLATES_V21 = 'contracts.templates.v21';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV20(db: Db) {
+function seedContractsTemplatesV21(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V20] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V21] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -672,6 +672,7 @@ function seedContractsTemplatesV20(db: Db) {
     span.s5 {font: 10.0px 'Arial Unicode MS'}
     span.s6 {color: #222222}
     span.s7 {color: #000000}
+    span.s8 {color: #0000ee; text-decoration: underline}
     span.Apple-tab-span {white-space:pre}
     table.t1 {border-collapse: collapse}
     td.td1 {min-width: 157.4px; min-height: 13.9px; background-color: #ffffff; border-style: solid; border-width: 1.0px 1.0px 1.0px 1.0px; border-color: #000000 #000000 #000000 #000000; padding: 0.0px 5.0px 0.0px 5.0px}
@@ -776,12 +777,12 @@ function seedContractsTemplatesV20(db: Db) {
 </span></p>
 <p class="p9">BBY shall arrange for one (1) Nominee Director to consent to the appointment as Nominee Director of the Company. BBY has the sole discretion to provide more than one (1) Nominee Director. <span class="s5"><br>
 </span></p>
-<p class="p9">3.2  Appointment, resignation and cessation of Nominee Director<span class="Apple-converted-space"> </span></p>
+<p class="p9"><span class="s8">3.2  Appointment, resignation and cessation of Nominee Director</span><span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
-<p class="p3">If a person nominated by BBY ceases to be a Nominee Director for any reason whatsoever, BBY shall be entitled to nominate any other person to replace him, in which event the Principal or the Company and each of the shareholder/s and director/s of the Company shall do and procure to be done all such acts and things as may be necessary to ensure that the changes to the Board of Directors, including the appointment of the new Nominee Director of the Company will be promptly carried out. A notice of nomination in writing may be sent out by BBY to the Principal and/or to the Company.<span class="Apple-converted-space"> </span></p>
-<p class="p3">The Principal shall, within ten (10) working days of receipt of the notice of nomination, appoint the name stated in the notice of nomination as the new Nominee Director to replace the outgoing Nominee Director, failing which BBY and/or its Nominee Director/s shall be entitled without prejudice to all other rights accruing to any of BBY' existing Nominee Director (if any) under this Agreement, including to apply to the Court for inter alia, specific performance, an order that the Company be wound up, claim for damages, costs and/or any and all other reliefs arising from the performance of Services by BBY and/or its Nominee Director/s, and that the Principal or the Company shall be liable to reimburse BBY and/or its Nominee Director/s in full for all fees, costs, legal costs, and all expenses incurred thereby.<span class="Apple-converted-space"> </span></p>
-<p class="p3">In the event that no response is received from the Company within ten (10) working days of receipt of the notice of nomination, to appoint the proposed new Nominee Director to replace the outgoing Nominee Director, BBY will have the right to proceed with changing of the Nominee Director/s and the Principal will be deemed to have unequivocally agreed to the proposed change in the Board of Directors. Thereafter, the new or replacement Nominee Director shall assume the same duties and rights as contained in this Agreement, in the Articles of Association and those set out in the Companies Act of Singapore (the "Act"). In the event that the Company rejects the replacement individual, the Company shall proceed to provide a replacement Director of its own, thereby terminating this Agreement and discharging BBY from obligations accrued and owing under this Agreement, in which case the Company forfeits its deposit under Clause 5.</p>
-<p class="p3">Subject to the provisions of the Act, the Company agrees that no further or special resolution will be required for such a change of Nominee Director by BBY, in which case the Principal and each of the shareholders of the Company shall do everything necessary to ensure that the replacement Nominee Director is duly appointed to the Board of Directors of the Company. The Company agrees that this clause, with respect to consent by the Company, shall override all other requirements in the Memorandum and Articles of Association of the Company pertaining to the requiring of such consent as normally applicable in other situations.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(a) If a person nominated by BBY ceases to be a Nominee Director for any reason whatsoever, BBY shall be entitled to nominate any other person to replace him, in which event the Principal or the Company and each of the shareholder/s and director/s of the Company shall do and procure to be done all such acts and things as may be necessary to ensure that the changes to the Board of Directors, including the appointment of the new Nominee Director of the Company will be promptly carried out. A notice of nomination in writing may be sent out by BBY to the Principal and/or to the Company.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(b) The Principal shall, within ten (10) working days of receipt of the notice of nomination, appoint the name stated in the notice of nomination as the new Nominee Director to replace the outgoing Nominee Director, failing which BBY and/or its Nominee Director/s shall be entitled without prejudice to all other rights accruing to any of BBY' existing Nominee Director (if any) under this Agreement, including to apply to the Court for inter alia, specific performance, an order that the Company be wound up, claim for damages, costs and/or any and all other reliefs arising from the performance of Services by BBY and/or its Nominee Director/s, and that the Principal or the Company shall be liable to reimburse BBY and/or its Nominee Director/s in full for all fees, costs, legal costs, and all expenses incurred thereby.<span class="Apple-converted-space"> </span></p>
+<p class="p11">(c) In the event that no response is received from the Company within ten (10) working days of receipt of the notice of nomination, to appoint the proposed new Nominee Director to replace the outgoing Nominee Director, BBY will have the right to proceed with changing of the Nominee Director/s and the Principal will be deemed to have unequivocally agreed to the proposed change in the Board of Directors. Thereafter, the new or replacement Nominee Director shall assume the same duties and rights as contained in this Agreement, in the Articles of Association and those set out in the Companies Act of Singapore (the "Act"). In the event that the Company rejects the replacement individual, the Company shall proceed to provide a replacement Director of its own, thereby terminating this Agreement and discharging BBY from obligations accrued and owing under this Agreement, in which case the Company forfeits its deposit under Clause 5.</p>
+<p class="p11">(d) Subject to the provisions of the Act, the Company agrees that no further or special resolution will be required for such a change of Nominee Director by BBY, in which case the Principal and each of the shareholders of the Company shall do everything necessary to ensure that the replacement Nominee Director is duly appointed to the Board of Directors of the Company. The Company agrees that this clause, with respect to consent by the Company, shall override all other requirements in the Memorandum and Articles of Association of the Company pertaining to the requiring of such consent as normally applicable in other situations.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p3">4. ANNUAL FEE<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
@@ -1085,7 +1086,7 @@ function seedContractsTemplatesV20(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V20] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V21] = true;
   return changed;
 }
 
@@ -6256,7 +6257,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV20(db)) changed = true;
+  if (seedContractsTemplatesV21(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
