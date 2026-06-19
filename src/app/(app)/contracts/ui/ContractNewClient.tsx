@@ -28,8 +28,13 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
-      /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)\s*(?!<p class="p4"><br><\/p>)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
-      '$1\n<p class="p4"><br></p>\n$2',
+      /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
+      (_, a: string, ws: string, b: string) => {
+        if (ws.includes('<p class="p4"><br></p>') || ws.includes('<p class="p3"><br></p>') || ws.includes('<p class="p10"><br></p>')) {
+          return a + ws + b;
+        }
+        return `${a}\n<p class="p4"><br></p>\n${b}`;
+      },
     );
   }
   return html;
