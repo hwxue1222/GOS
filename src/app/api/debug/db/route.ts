@@ -16,6 +16,7 @@ export async function GET() {
     const mod = await import('@/lib/db');
     const db = await mod.readDb();
     const contracts = (db.contracts ?? []) as any[];
+    const contractTemplates = (db.contractTemplates ?? []) as any[];
     const documents = (db.documents ?? []) as any[];
     const packets = (db.signaturePackets ?? []) as any[];
     const reqs = (db.signatureRequests ?? []) as any[];
@@ -46,6 +47,7 @@ export async function GET() {
           kvKey: process.env.GOS_KV_DB_KEY?.trim() || 'gos:db',
         },
         counts: {
+          contractTemplates: contractTemplates.length,
           contracts: contracts.length,
           documents: documents.length,
           signaturePackets: packets.length,

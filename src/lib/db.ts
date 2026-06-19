@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V10 = 'contracts.templates.v10';
+const SEED_KEY_CONTRACTS_TEMPLATES_V11 = 'contracts.templates.v11';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV10(db: Db) {
+function seedContractsTemplatesV11(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V10] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V11] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -604,7 +604,7 @@ function seedContractsTemplatesV10(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V10] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V11] = true;
   return changed;
 }
 
@@ -1686,10 +1686,54 @@ function normalizeDb(parsed: Db): Db {
     ? (((parsed as unknown as { incorporationApplicationFiles?: IncorporationApplicationFile[] }).incorporationApplicationFiles ?? []) as IncorporationApplicationFile[])
     : [];
 
+  const contractTemplates: ContractTemplate[] = Array.isArray((parsed as unknown as { contractTemplates?: unknown }).contractTemplates)
+    ? (((parsed as unknown as { contractTemplates?: ContractTemplate[] }).contractTemplates ?? []) as ContractTemplate[]).map((t) => {
+        const createdAt = (t as ContractTemplate).createdAt ?? nowIso();
+        const updatedAt = (t as ContractTemplate).updatedAt ?? createdAt;
+        return {
+          ...t,
+          id: String((t as ContractTemplate).id ?? ''),
+          name: String((t as ContractTemplate).name ?? ''),
+          engine: (t as ContractTemplate).engine,
+          templateHtml: String((t as ContractTemplate).templateHtml ?? ''),
+          placeholders: Array.isArray((t as ContractTemplate).placeholders) ? (t as ContractTemplate).placeholders : [],
+          createdAt,
+          updatedAt,
+        };
+      })
+    : [];
+
+  const contracts: Contract[] = Array.isArray((parsed as unknown as { contracts?: unknown }).contracts)
+    ? (((parsed as unknown as { contracts?: Contract[] }).contracts ?? []) as Contract[]).map((c) => {
+        const createdAt = (c as Contract).createdAt ?? nowIso();
+        const updatedAt = (c as Contract).updatedAt ?? createdAt;
+        return {
+          ...c,
+          id: String((c as Contract).id ?? ''),
+          contractNo: String((c as Contract).contractNo ?? ''),
+          templateId: String((c as Contract).templateId ?? ''),
+          clientName: String((c as Contract).clientName ?? ''),
+          clientEmail: String((c as Contract).clientEmail ?? ''),
+          fields: typeof (c as Contract).fields === 'object' && (c as Contract).fields ? (c as Contract).fields : {},
+          status: (c as Contract).status ?? 'DRAFT',
+          createdByUserId: String((c as Contract).createdByUserId ?? ''),
+          createdAt,
+          updatedAt,
+          documentId: typeof (c as Contract).documentId === 'string' ? (c as Contract).documentId : undefined,
+          packetId: typeof (c as Contract).packetId === 'string' ? (c as Contract).packetId : undefined,
+          sentAt: typeof (c as Contract).sentAt === 'string' ? (c as Contract).sentAt : undefined,
+          signedAt: typeof (c as Contract).signedAt === 'string' ? (c as Contract).signedAt : undefined,
+          voidedAt: typeof (c as Contract).voidedAt === 'string' ? (c as Contract).voidedAt : undefined,
+        };
+      })
+    : [];
+
   return {
     users,
     sessions: parsed.sessions ?? [],
     clients,
+    contractTemplates,
+    contracts,
     invoices: normalizedInvoices,
     invoiceEmailHistories: normalizedInvoiceEmailHistories,
     persons,
@@ -5731,7 +5775,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV10(db)) changed = true;
+  if (seedContractsTemplatesV11(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
