@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V15 = 'contracts.templates.v15';
+const SEED_KEY_CONTRACTS_TEMPLATES_V16 = 'contracts.templates.v16';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV15(db: Db) {
+function seedContractsTemplatesV16(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V15] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V16] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -653,25 +653,25 @@ function seedContractsTemplatesV15(db: Db) {
     p.p12 {margin: 0.0px 0.0px 0.0px 36.0px; font: 10.0px 'Helvetica Neue'; color: #000000}
     p.p13 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px 'Arial Unicode MS'; color: #000000}
     p.p14 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 9.0px 'Courier New'; color: #000000}
-    p.p15 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; font: 10.0px 'Helvetica Neue'; color: #ff0000}
-    p.p16 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #ff0000}
-    p.p17 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 11.0px Times; color: #ff0000; min-height: 13.0px}
+    p.p15 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; font: 10.0px 'Helvetica Neue'; color: #000000}
+    p.p16 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #000000}
+    p.p17 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 11.0px Times; color: #000000; min-height: 13.0px}
     p.p18 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Times New Roman'; min-height: 15.0px}
-    p.p19 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 21.0px; font: 12.0px 'Helvetica Light'; color: #ff0000}
+    p.p19 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 21.0px; font: 12.0px 'Helvetica Light'; color: #000000}
     p.p20 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #000000}
     p.p21 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 23.0px; font: 12.0px 'Times New Roman'; min-height: 15.0px}
     p.p22 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #000000; min-height: 12.0px}
-    p.p23 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #ff0000; min-height: 12.0px}
+    p.p23 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: justify; line-height: 20.0px; font: 10.0px 'Helvetica Neue'; color: #000000; min-height: 12.0px}
     p.p24 {margin: 0.0px 0.0px 0.0px 0.0px; font: 10.0px 'Courier New'; color: #000000}
     p.p25 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; color: #000000; min-height: 14.0px}
     p.p26 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; color: #000000; min-height: 14.0px}
     span.s1 {font: 10.0px Helvetica}
     span.s2 {font: 10.0px Times}
     span.s3 {text-decoration: underline}
-    span.s4 {text-decoration: underline ; color: #ff0000}
+    span.s4 {text-decoration: underline ; color: #000000}
     span.s5 {font: 10.0px 'Arial Unicode MS'}
     span.s6 {color: #222222}
-    span.s7 {color: #ff0000}
+    span.s7 {color: #000000}
     span.Apple-tab-span {white-space:pre}
     table.t1 {border-collapse: collapse}
     td.td1 {min-width: 157.4px; min-height: 13.9px; background-color: #ffffff; border-style: solid; border-width: 1.0px 1.0px 1.0px 1.0px; border-color: #000000 #000000 #000000 #000000; padding: 0.0px 5.0px 0.0px 5.0px}
@@ -1084,7 +1084,7 @@ function seedContractsTemplatesV15(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V15] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V16] = true;
   return changed;
 }
 
@@ -6255,7 +6255,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV15(db)) changed = true;
+  if (seedContractsTemplatesV16(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
