@@ -168,7 +168,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V4 = 'contracts.templates.v4';
+const SEED_KEY_CONTRACTS_TEMPLATES_V5 = 'contracts.templates.v5';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -295,13 +295,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV4(db: Db) {
+function seedContractsTemplatesV5(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V4] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V5] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -313,8 +313,7 @@ function seedContractsTemplatesV4(db: Db) {
   const tpl: ContractTemplate = {
     id: targetIdx >= 0 ? templates[targetIdx].id : newId('ctp'),
     name: '公司秘书服务协议 / Service Agreement',
-    engine: 'DOCX',
-    docxTemplateKey: 'corp_service_agreement',
+    engine: 'HTML',
     placeholders: [
       { key: 'partyA_name', label: '甲方（公司名称） / Party A (Company Name)', required: true },
       { key: 'partyA_uen', label: 'UEN公司注册号 / UEN Registration No.', required: true },
@@ -330,151 +329,234 @@ function seedContractsTemplatesV4(db: Db) {
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Service Agreement</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
-      .title { font-size: 16px; font-weight: 800; text-align: center; }
-      .subtitle { font-size: 14px; font-weight: 800; text-align: center; margin-top: 2px; }
-      .muted { color: #555; }
-      .block { margin-top: 10px; }
-      .kv { margin-top: 4px; }
-      .kv b { display: inline-block; min-width: 140px; }
-      .content { margin-top: 16px; white-space: pre-wrap; }
-      .sig { margin-top: 22px; }
-      .sig-line { margin-top: 10px; text-decoration: underline; }
+      :root {
+        --text: #111;
+        --muted: #4b5563;
+        --line: rgba(17, 24, 39, 0.18);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        color: var(--text);
+        font-family: "Times New Roman", "Songti SC", "SimSun", ui-serif, serif;
+        line-height: 1.55;
+        font-size: 12px;
+        background: #fff;
+      }
+      .page { padding: 36px 42px; }
+      .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+      .logo { height: 44px; width: auto; object-fit: contain; }
+      .meta { text-align: right; font-size: 11px; color: var(--muted); }
+      .meta b { color: var(--text); font-weight: 700; }
+      .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
+      .subtitle { margin-top: 2px; text-align: center; font-size: 14px; font-weight: 700; }
+      .divider { margin-top: 14px; height: 1px; background: var(--line); }
+      .parties { margin-top: 14px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+      .parties .row { display: grid; grid-template-columns: 120px 1fr; }
+      .parties .row + .row { border-top: 1px solid var(--line); }
+      .parties .k { padding: 8px 10px; background: rgba(17, 24, 39, 0.03); font-weight: 700; }
+      .parties .v { padding: 8px 10px; }
+      .kv { margin-top: 10px; }
+      .kv .line { margin-top: 4px; }
+      .section { margin-top: 14px; }
+      .section-title { font-weight: 800; font-size: 12px; margin-top: 12px; }
+      .para { margin-top: 8px; color: var(--text); }
+      .list { margin-top: 8px; padding-left: 16px; }
+      .list li { margin: 3px 0; }
+      .note { margin-top: 6px; font-size: 11px; color: var(--muted); }
+      .sig { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+      .sigbox .h { font-weight: 800; }
+      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
+      .sigmeta { margin-top: 8px; font-size: 11px; color: var(--muted); }
+      .signer { display: inline-block; }
     </style>
   </head>
   <body>
-    <div class="title">公司秘书服务协议</div>
-    <div class="subtitle">Service Agreement</div>
-    <div class="block muted">合同编号 / Contract No: {{contract_no}}</div>
+    <div class="page">
+      <div class="header">
+        <img class="logo" src="/contracts/image2.png" alt="BBY" />
+        <div class="meta">
+          <div><b>合同编号 / Contract No:</b> {{contract_no}}</div>
+          <div style="margin-top:4px;"><b>日期 / Date:</b> {{date}}</div>
+        </div>
+      </div>
 
-    <div class="block">
-      <div class="kv"><b>甲方（公司名称） / Party A (Company Name):</b> {{partyA_name}}</div>
-      <div class="kv"><b>UEN公司注册号 / UEN Registration No.:</b> {{partyA_uen}}</div>
-      <div class="kv"><b>联系地址 / Address:</b> {{partyA_address}}</div>
-      <div class="kv"><b>联系电话 / Contact Number:</b> {{partyA_contact}}</div>
-      <div class="kv"><b>电邮地址 / Email:</b> {{partyA_email}}</div>
-    </div>
+      <div class="title">公司秘书服务协议</div>
+      <div class="subtitle">Service Agreement</div>
+      <div class="divider"></div>
 
-    <div class="block">
-      <div class="kv"><b>Party乙方：</b> BBY.SG PTE LTD</div>
-      <div class="kv"><b>UEN公司注册号：</b> 201608450W</div>
-      <div class="kv"><b>Addesss联系地址：</b> 8 Burn Road#15-03 Trivex Singapore 369977</div>
-      <div class="kv"><b>Contact联系电话：</b> (+65) 62215600/91526685 (Luke)</div>
-      <div class="kv"><b>Email电邮地址:</b> Luke@bby.sg</div>
-    </div>
+      <div class="parties">
+        <div class="row"><div class="k">甲方 / Party A</div><div class="v">{{partyA_name}}</div></div>
+        <div class="row"><div class="k">UEN / 注册号</div><div class="v">{{partyA_uen}}</div></div>
+        <div class="row"><div class="k">地址 / Address</div><div class="v">{{partyA_address}}</div></div>
+        <div class="row"><div class="k">电话 / Contact</div><div class="v">{{partyA_contact}}</div></div>
+        <div class="row"><div class="k">邮箱 / Email</div><div class="v">{{partyA_email}}</div></div>
+        <div class="row"><div class="k">乙方 / Party B</div><div class="v">BBY.SG PTE LTD</div></div>
+        <div class="row"><div class="k">UEN / 注册号</div><div class="v">201608450W</div></div>
+        <div class="row"><div class="k">地址 / Address</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
+        <div class="row"><div class="k">电话 / Contact</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
+        <div class="row"><div class="k">邮箱 / Email</div><div class="v">Luke@bby.sg</div></div>
+      </div>
 
-    <div class="content">为了维护合同当事的合法权益，依据《新加坡共和国合同法》及相关法律法规，甲乙双方本着自愿、平等、协商一致的原则，就乙方接受甲方的委托提供设立新加坡公司等法定秘书服务（“服务”），达成如下协议：
-一、 SERVICES PROVIDED服务内容
-乙方向甲方提供的以下服务：
-（1）CORPORATE SECRETARY SERVICE 公司秘书服务
-Corporate secretary services are included as below: 服务包括：
-Maintain various registers; 设立公司登记表
-Appointment of local nominee director; 任命本地挂名董事
-Update of changes and file ACRA lodgement; 更新公司信息
-Provision of registered office address; 提供公司注册地址
-Prepare resolutions and ACRA filing; 准备公司的决议文件
-Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报
-* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。
-（2）Appointment of local nominee director本地挂名董事服务
-Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters).本地挂名董事不参与公司的运营（包括但不限于银行相关的业务）。
-The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。
-二、乙方义务
-1、乙方按照甲方要求提供所需服务；
-2、乙方负责管理本地挂名董事，符合新加坡政府的要求；
-3、乙方协助甲方提供新加坡公司注册地址。
-三、甲方义务
-1、甲方向乙方如实提供公司实际控制人的背景调查资料，没有政治风险任务；
-2、甲方遵守所在国和新加坡的法律法规，合法经营；
-3、甲方在所在或和新加坡的经营活动不涉及洗钱、资助恐怖组织等活动。
-四、收费标准
-1、乙方收费标准如下：
-- 公司注册费（一次性，送第一年公司秘书服务）
-- 本地挂名董事费（一年）
-以双方协商同意的最终发票金额为准。其他服务，请见附录一。
-2、参照本合同，同时乙方需向甲方提供对应服务的发票，甲方安排10日内付款。
-3、付款方式如下：
-Beneficiary’s Name收款人名称
-BBY.SG PTE LTD
-Beneficiary’s address收款人地址
-10 Anson Road#10-13A International Plaza, Singapore 079903
-Bank Name银行名称
-Maybank Singapore
-Swift Code国际汇款联行号
-MBBESGS2
-Bank account number银行账号（新币）
-04011569555
-Bank address银行地址
-2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907
-五、退费规定
-1、乙方未能按照本合同要求完成工作，乙方全额退还甲方按照发票支付的对应款项。
-2、除不可抗力原因以外，甲方自身原因，单方面要求解除本合同，已缴纳的服务费不予退还。
-六、不可抗力条款
-1、本合同所称不可抗力，是指不能预见、不能避免并不能克服的客观情况，如重大自然灾害、瘟疫、外交纠纷、战争、骚乱、罢工等；本合同所称甲乙双方影响范围之外的 情况，是指政策变化，如由甲方所在国的政府、新加坡政府等机构决定的事项。
-2、一方因不可抗力不能履行合同的，应当立即通知对方，说明不可抗力的发生日期、 事件性质、预计持续的时间及对该方履行本合同的影响。对不可抗力所造成的影响，双 方应及时协商解决办法和补救措施。因不可抗力不能履行合同的一方，应尽力采取合理 措施减轻可能给对方造成的损失，否则应对由此而扩大的损失承担赔偿责任。
-七、违约责任
-1、双方应严格履行本合同中全部条款，任何一方违约应承担相应的违约责任。
-2、甲方为完成本合同之目的而提供虚假材料，服务费用不予退还，且乙方不承担任何 责任，因此造成乙方的损失的，甲方还应当赔偿乙方由此造成的一切损失。
-八、生效条款
-1、本合同自乙方及甲方签署之日起生效，除非依本合同的规定提前终止，本合同的有 效期是24个月。
-2、双方提前一个月书面解约，否则到期自动延期。
-3、本合同一式两份，具有同等效力，双方各执一份。
-九、适用的法律及争议解决方法
-1、本合同的履行、解释及争议解决均适用新加坡共和国有关法律。
-2、双方在履行本合同中如发生争议，应由双方协商解决。如协商不成，各方均有权向 新加坡法院提出诉讼。
-十、本合同的补充、变更和修改
-对本合同的任何补充、变更、修改可采用电子通讯工具（如微信聊天）、Email或者书面补充、变更和修改合同的条款。补充合同的条款在双方通过上述形式确认后与本合同具有同等法律效力。
-甲方（签字）:
-乙方（签字）BBY.SG PTE LTD
-法定代表（签字）:
-法定代表（签字）:
-法定代表姓名:
-法定代表姓名:Xue Hongwei
-签字时间:
-签字时间:
-Annex 1附录1：服务内容及收费
-1、INCORPORATION SERVICE 设立公司服务（1000新币）
-Name application; 公司名称预申请
-KYC;背景调查
-Appointment of local nominee director; 任命本地挂名董事（请见3）
-Incorporation with ACRA; ACRA公司注册
-Provision of registered office address; 提供公司注册地址
-Prepare resolution for first board meeting for incorporation; 准备公司设立第一次董事决议
-Prepare standard Constitution; 准备标准格式公司章程
-Purchase of Bizfile; 购买公司注册纸
-2、CORPORATE SECRETARY SERVICE 公司秘书服务（400新币/年，第一年免费）
-Maintain various registers; 设立公司登记表
-Update of changes and file ACRA lodgement; 更新公司信息
-Provision of registered office address; 提供公司注册地址
-Prepare resolutions and ACRA filing; 准备公司的决议文件
-Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报
-* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。
-3、 Appointment of local nominee director本地挂名董事服务（5000新币/年）
-Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters). 本地挂名董事不参与公司的日常运营（包括但不限于银行相关的业务）。
-The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。
-Optional可选服务
-4、Accounting & Taxation财税服务
-Maintain full set of accounts per month; 每月记账
-Compilation of unaudited annual financial report; 年终结算（600新币/年起）
-Tax computation and annual return. 税务计算和年度申报（400新币/年起）
-5、Compliance合规服务（1000新币/月）
-Monthly review of bank statement; 每月银行对账
-Support the clients to liaise with bank and address the questions from bank; 协助客户回答银行问题
-Support the clients to perform KYC by bank; 协助完成银行背景调查
-Ensure the compliance with the anti-money laundering and countering the financing of terrorism laws and regulations by governments and banks; 保障反洗钱和资助恐怖活动的相关新加坡的法律法规
-Take prompt actions to prevent the bank from closing the bank account but subject to bank’s approval.采取适当行动保障银行账号免被关闭（最终解释权属于银行）
-Review the company’s daily cash and non-cash transactions; 日常现金和非现金交易合规
-Monitor the transactions which may expose the company to risks of money-laundering and terrorism. 公司交易合规以及反洗钱和反恐怖组织资金的合规
-6、Other Services其他服务
-Bank account opening; 银行开户（一次性开户费2000新币）
-Virtual office service; 虚拟办公室（每月500新币起，包括一间办公室+邮件代收发+日常管理+办公地址）
-Apply the work permit for employee; 申请工作准证（3000新币/人）
-Auditing. 审计（4000新币/年起）</div>
+      <div class="section">
+        <div class="para">为了维护合同当事的合法权益，依据《新加坡共和国合同法》及相关法律法规，甲乙双方本着自愿、平等、协商一致的原则，就乙方接受甲方的委托提供设立新加坡公司等法定秘书服务（“服务”），达成如下协议：</div>
 
-    <div class="sig">
-      <div class="kv"><b>日期 / Date:</b> {{date}}</div>
-      <div class="block" style="font-weight:700;">甲方签字 / Party A signature</div>
-      <div class="sig-line">______________________________</div>
-      <div class="block"><span data-signer="{{partyA_email}}"></span></div>
+        <div class="section-title">一、 SERVICES PROVIDED 服务内容</div>
+        <div class="para">乙方向甲方提供的以下服务：</div>
+        <div class="para"><b>（1）CORPORATE SECRETARY SERVICE 公司秘书服务</b></div>
+        <div class="para">Corporate secretary services are included as below: 服务包括：</div>
+        <ul class="list">
+          <li>Maintain various registers; 设立公司登记表</li>
+          <li>Appointment of local nominee director; 任命本地挂名董事</li>
+          <li>Update of changes and file ACRA lodgement; 更新公司信息</li>
+          <li>Provision of registered office address; 提供公司注册地址</li>
+          <li>Prepare resolutions and ACRA filing; 准备公司的决议文件</li>
+          <li>Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报</li>
+        </ul>
+        <div class="note">* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。</div>
+
+        <div class="para" style="margin-top:10px;"><b>（2）Appointment of local nominee director 本地挂名董事服务</b></div>
+        <div class="para">Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters). 本地挂名董事不参与公司的运营（包括但不限于银行相关的业务）。</div>
+        <div class="para">The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。</div>
+
+        <div class="section-title">二、乙方义务</div>
+        <ol class="list">
+          <li>乙方按照甲方要求提供所需服务；</li>
+          <li>乙方负责管理本地挂名董事，符合新加坡政府的要求；</li>
+          <li>乙方协助甲方提供新加坡公司注册地址。</li>
+        </ol>
+
+        <div class="section-title">三、甲方义务</div>
+        <ol class="list">
+          <li>甲方向乙方如实提供公司实际控制人的背景调查资料，没有政治风险任务；</li>
+          <li>甲方遵守所在国和新加坡的法律法规，合法经营；</li>
+          <li>甲方在所在或和新加坡的经营活动不涉及洗钱、资助恐怖组织等活动。</li>
+        </ol>
+
+        <div class="section-title">四、收费标准</div>
+        <ol class="list">
+          <li>乙方收费标准如下：
+            <ul class="list" style="margin-top:6px;">
+              <li>公司注册费（一次性，送第一年公司秘书服务）</li>
+              <li>本地挂名董事费（一年）</li>
+            </ul>
+            <div class="para">以双方协商同意的最终发票金额为准。其他服务，请见附录一。</div>
+          </li>
+          <li>参照本合同，同时乙方需向甲方提供对应服务的发票，甲方安排10日内付款。</li>
+          <li>付款方式如下：
+            <div class="kv">
+              <div class="line"><b>Beneficiary’s Name 收款人名称</b>：BBY.SG PTE LTD</div>
+              <div class="line"><b>Beneficiary’s address 收款人地址</b>：10 Anson Road#10-13A International Plaza, Singapore 079903</div>
+              <div class="line"><b>Bank Name 银行名称</b>：Maybank Singapore</div>
+              <div class="line"><b>Swift Code 国际汇款联行号</b>：MBBESGS2</div>
+              <div class="line"><b>Bank account number 银行账号（新币）</b>：04011569555</div>
+              <div class="line"><b>Bank address 银行地址</b>：2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907</div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="section-title">五、退费规定</div>
+        <ol class="list">
+          <li>乙方未能按照本合同要求完成工作，乙方全额退还甲方按照发票支付的对应款项。</li>
+          <li>除不可抗力原因以外，甲方自身原因，单方面要求解除本合同，已缴纳的服务费不予退还。</li>
+        </ol>
+
+        <div class="section-title">六、不可抗力条款</div>
+        <ol class="list">
+          <li>本合同所称不可抗力，是指不能预见、不能避免并不能克服的客观情况，如重大自然灾害、瘟疫、外交纠纷、战争、骚乱、罢工等；本合同所称甲乙双方影响范围之外的情况，是指政策变化，如由甲方所在国的政府、新加坡政府等机构决定的事项。</li>
+          <li>一方因不可抗力不能履行合同的，应当立即通知对方，说明不可抗力的发生日期、事件性质、预计持续的时间及对该方履行本合同的影响。对不可抗力所造成的影响，双方应及时协商解决办法和补救措施。因不可抗力不能履行合同的一方，应尽力采取合理措施减轻可能给对方造成的损失，否则应对由此而扩大的损失承担赔偿责任。</li>
+        </ol>
+
+        <div class="section-title">七、违约责任</div>
+        <ol class="list">
+          <li>双方应严格履行本合同中全部条款，任何一方违约应承担相应的违约责任。</li>
+          <li>甲方为完成本合同之目的而提供虚假材料，服务费用不予退还，且乙方不承担任何责任，因此造成乙方的损失的，甲方还应当赔偿乙方由此造成的一切损失。</li>
+        </ol>
+
+        <div class="section-title">八、生效条款</div>
+        <ol class="list">
+          <li>本合同自乙方及甲方签署之日起生效，除非依本合同的规定提前终止，本合同的有效期是24个月。</li>
+          <li>双方提前一个月书面解约，否则到期自动延期。</li>
+          <li>本合同一式两份，具有同等效力，双方各执一份。</li>
+        </ol>
+
+        <div class="section-title">九、适用的法律及争议解决方法</div>
+        <ol class="list">
+          <li>本合同的履行、解释及争议解决均适用新加坡共和国有关法律。</li>
+          <li>双方在履行本合同中如发生争议，应由双方协商解决。如协商不成，各方均有权向新加坡法院提出诉讼。</li>
+        </ol>
+
+        <div class="section-title">十、本合同的补充、变更和修改</div>
+        <div class="para">对本合同的任何补充、变更、修改可采用电子通讯工具（如微信聊天）、Email或者书面补充、变更和修改合同的条款。补充合同的条款在双方通过上述形式确认后与本合同具有同等法律效力。</div>
+
+        <div class="sig">
+          <div class="sigbox">
+            <div class="h">甲方（签字） / Party A</div>
+            <div class="sigline"></div>
+            <div class="sigmeta"><span class="signer" data-signer="{{partyA_email}}"></span></div>
+          </div>
+          <div class="sigbox">
+            <div class="h">乙方（签字） / Party B</div>
+            <div class="sigline"></div>
+            <div class="sigmeta">BBY.SG PTE LTD</div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:18px;">Annex 1 附录1：服务内容及收费</div>
+        <div class="para"><b>1、INCORPORATION SERVICE 设立公司服务（1000新币）</b></div>
+        <ul class="list">
+          <li>Name application; 公司名称预申请</li>
+          <li>KYC; 背景调查</li>
+          <li>Appointment of local nominee director; 任命本地挂名董事（请见3）</li>
+          <li>Incorporation with ACRA; ACRA公司注册</li>
+          <li>Provision of registered office address; 提供公司注册地址</li>
+          <li>Prepare resolution for first board meeting for incorporation; 准备公司设立第一次董事决议</li>
+          <li>Prepare standard Constitution; 准备标准格式公司章程</li>
+          <li>Purchase of Bizfile; 购买公司注册纸</li>
+        </ul>
+
+        <div class="para"><b>2、CORPORATE SECRETARY SERVICE 公司秘书服务（400新币/年，第一年免费）</b></div>
+        <ul class="list">
+          <li>Maintain various registers; 设立公司登记表</li>
+          <li>Update of changes and file ACRA lodgement; 更新公司信息</li>
+          <li>Provision of registered office address; 提供公司注册地址</li>
+          <li>Prepare resolutions and ACRA filing; 准备公司的决议文件</li>
+          <li>Prepare AGM and minutes and submit annul return. 准备年度股东大会文件和年度申报</li>
+        </ul>
+        <div class="note">* Extra charges may apply for special transactions including share transfer, change of company name, increase and decrease of share capital, declaration of Register of Registrable Controller. 股份转让、更换公司名称、变更注册资本、申报实际控制人等变更，会产生额外费用。</div>
+
+        <div class="para" style="margin-top:10px;"><b>3、Appointment of local nominee director 本地挂名董事服务（5000新币/年）</b></div>
+        <div class="para">Nominee director is not involved in daily operation and any function of the company (including but not limited to bank related matters). 本地挂名董事不参与公司的日常运营（包括但不限于银行相关的业务）。</div>
+        <div class="para">The charge may vary according to the industry. 根据行业不同，本地董事服务费会有不同收费。</div>
+
+        <div class="para" style="margin-top:10px;"><b>Optional 可选服务</b></div>
+        <div class="para"><b>4、Accounting & Taxation 财税服务</b></div>
+        <ul class="list">
+          <li>Maintain full set of accounts per month; 每月记账</li>
+          <li>Compilation of unaudited annual financial report; 年终结算（600新币/年起）</li>
+          <li>Tax computation and annual return. 税务计算和年度申报（400新币/年起）</li>
+        </ul>
+
+        <div class="para"><b>5、Compliance 合规服务（1000新币/月）</b></div>
+        <ul class="list">
+          <li>Monthly review of bank statement; 每月银行对账</li>
+          <li>Support the clients to liaise with bank and address the questions from bank; 协助客户回答银行问题</li>
+          <li>Support the clients to perform KYC by bank; 协助完成银行背景调查</li>
+          <li>Ensure the compliance with the anti-money laundering and countering the financing of terrorism laws and regulations by governments and banks; 保障反洗钱和资助恐怖活动的相关新加坡的法律法规</li>
+          <li>Take prompt actions to prevent the bank from closing the bank account but subject to bank’s approval. 采取适当行动保障银行账号免被关闭（最终解释权属于银行）</li>
+          <li>Review the company’s daily cash and non-cash transactions; 日常现金和非现金交易合规</li>
+          <li>Monitor the transactions which may expose the company to risks of money-laundering and terrorism. 公司交易合规以及反洗钱和反恐怖组织资金的合规</li>
+        </ul>
+
+        <div class="para"><b>6、Other Services 其他服务</b></div>
+        <ul class="list">
+          <li>Bank account opening; 银行开户（一次性开户费2000新币）</li>
+          <li>Virtual office service; 虚拟办公室（每月500新币起，包括一间办公室+邮件代收发+日常管理+办公地址）</li>
+          <li>Apply the work permit for employee; 申请工作准证（3000新币/人）</li>
+          <li>Auditing. 审计（4000新币/年起）</li>
+        </ul>
+      </div>
     </div>
   </body>
 </html>`,
@@ -491,7 +573,7 @@ Auditing. 审计（4000新币/年起）</div>
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V4] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V5] = true;
   return changed;
 }
 
@@ -5604,7 +5686,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV4(db)) changed = true;
+  if (seedContractsTemplatesV5(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

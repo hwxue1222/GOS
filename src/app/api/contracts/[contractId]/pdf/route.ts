@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findContractById, listContractTemplates } from '@/lib/db';
+import { createDocument, findContractById, listContractTemplates, updateContract } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
-import { renderCorpServiceAgreementPdf } from '@/lib/contractsDocx';
+import { renderContractHtml } from '@/lib/docTemplates';
 
 function canAccess(user: { id: string }, contract: { createdByUserId: string }) {
   if (hasPermission(user as any, 'contracts', 'viewAll')) return true;
@@ -26,35 +26,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
   const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
-  if (tpl.engine === 'DOCX' && tpl.docxTemplateKey === 'corp_service_agreement') {
-    const dateYmd = String(contract.fields?.date ?? contract.createdAt?.slice(0, 10) ?? '').slice(0, 10);
-    const pdf = await renderCorpServiceAgreementPdf({
+  let documentId = contract.documentId;
+  if (!documentId) {
+    const html = renderContractHtml({
+      templateHtml: tpl.templateHtml,
       contractNo: contract.contractNo,
-      dateYmd,
-      fields: {
-        partyAName: String(contract.fields?.partyA_name ?? contract.clientName ?? '').trim(),
-        partyAUen: String(contract.fields?.partyA_uen ?? '').trim(),
-        partyAAddress: String(contract.fields?.partyA_address ?? '').trim(),
-        partyAContact: String(contract.fields?.partyA_contact ?? '').trim(),
-        partyAEmail: String(contract.fields?.partyA_email ?? contract.clientEmail ?? '').trim(),
-      },
+      clientName: contract.clientName,
+      clientEmail: contract.clientEmail,
+      fields: contract.fields ?? {},
     });
-
-    const disposition = new URL(req.url).searchParams.get('disposition') === 'attachment' ? 'attachment' : 'inline';
-    return new NextResponse(pdf, {
-      headers: {
-        'content-type': 'application/pdf',
-        'content-disposition': `${disposition}; filename="${contract.contractNo}.pdf"`,
-        'cache-control': 'no-store',
-      },
-    });
+    const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
+    const doc = await createDocument({ type: 'CONTRACT', title, html });
+    documentId = doc.id;
+    await updateContract(contractId, { documentId, status: 'READY' });
   }
 
-  if (contract.documentId) {
-    const disposition = new URL(req.url).searchParams.get('disposition');
-    const q = disposition ? `?disposition=${encodeURIComponent(disposition)}` : '';
-    return NextResponse.redirect(`/api/documents/${encodeURIComponent(contract.documentId)}/pdf${q}`, 302);
-  }
-
-  return NextResponse.json({ ok: false, error: 'DOCUMENT_REQUIRED' }, { status: 400 });
+  const disposition = new URL(req.url).searchParams.get('disposition');
+  const q = disposition ? `?disposition=${encodeURIComponent(disposition)}` : '';
+  return NextResponse.redirect(`/api/documents/${encodeURIComponent(documentId)}/pdf${q}`, 302);
 }
