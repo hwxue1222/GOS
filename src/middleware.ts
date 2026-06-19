@@ -26,6 +26,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith('/contracts/') && /\.(png|jpg|jpeg|svg|webp|gif)$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isPublic) return NextResponse.next();
 

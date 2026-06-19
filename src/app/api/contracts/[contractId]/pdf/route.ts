@@ -32,6 +32,34 @@ function injectBaseHref(html: string, origin: string) {
   return `${baseTag}${html}`;
 }
 
+async function inlineContractAssets(html: string, origin: string) {
+  if (!origin) return html;
+  const matches = Array.from(html.matchAll(/<img\b[^>]*\ssrc="(\/contracts\/[^"?]+\.(?:png|jpg|jpeg|svg|webp|gif))"[^>]*>/gi));
+  const unique = Array.from(new Set(matches.map((m) => m[1])));
+  if (unique.length === 0) return html;
+
+  const map = new Map<string, string>();
+  for (const src of unique) {
+    try {
+      const res = await fetch(`${origin.replace(/\/$/, '')}${src}`, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const contentType = res.headers.get('content-type') || '';
+      const ab = await res.arrayBuffer();
+      const b64 = Buffer.from(ab).toString('base64');
+      const mime = contentType.includes('/') ? contentType.split(';')[0] : 'image/png';
+      map.set(src, `data:${mime};base64,${b64}`);
+    } catch {
+      continue;
+    }
+  }
+
+  let out = html;
+  for (const [src, dataUri] of map.entries()) {
+    out = out.replaceAll(`src="${src}"`, `src="${dataUri}"`);
+  }
+  return out;
+}
+
 async function getBrowser() {
   const g = globalThis as unknown as { __gosContractPdfBrowserPromise?: Promise<Browser> };
   if (!g.__gosContractPdfBrowserPromise) {
@@ -126,6 +154,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
+  if (!String(contract.contractNo ?? '').trim()) {
+    return NextResponse.json({ ok: false, error: 'CONTRACT_NOT_GENERATED' }, { status: 409 });
+  }
+
   const templates = await listContractTemplates();
   const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
@@ -137,7 +169,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     clientEmail: contract.clientEmail,
     fields: contract.fields ?? {},
   });
-  const htmlWithBase = injectBaseHref(html, requestOrigin(req));
+  const origin = requestOrigin(req);
+  const htmlWithBase = injectBaseHref(html, origin);
+  const htmlWithAssets = await inlineContractAssets(htmlWithBase, origin);
   const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
 
   const contentDisposition = url.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
@@ -148,7 +182,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(htmlWithBase, { waitUntil: ['domcontentloaded'], timeout: 45000 });
+      await page.setContent(htmlWithAssets, { waitUntil: ['domcontentloaded'], timeout: 45000 });
       await page.waitForNetworkIdle({ idleTime: 500, timeout: 45000 }).catch(() => null);
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready;

@@ -2625,5 +2625,6 @@ export function renderContractHtml(input: {
     const safe = esc(raw).replaceAll('\n', '<br />');
     html = html.replaceAll(`{{${key}}}`, safe);
   }
+  html = html.replaceAll(/\{\{[a-zA-Z0-9_]+\}\}/g, '');
   return html;
 }

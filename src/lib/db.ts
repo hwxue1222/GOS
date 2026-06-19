@@ -7375,7 +7375,7 @@ function parseContractNoSeq(contractNo: string) {
   return { year: m[1], month: m[2], seq };
 }
 
-function nextContractNo(db: Db, now: Date) {
+export function nextContractNo(db: Db, now: Date) {
   const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const list = (db.contracts ?? []) as Contract[];
@@ -7425,10 +7425,9 @@ export async function createContract(input: {
   if (!template) throw new Error('NOT_FOUND');
 
   const createdAt = nowIso();
-  const contractNo = nextContractNo(db, new Date(createdAt));
   const contract: Contract = {
     id: newId('ctr'),
-    contractNo,
+    contractNo: '',
     templateId: template.id,
     clientName: input.clientName,
     clientEmail: input.clientEmail,
@@ -7445,7 +7444,10 @@ export async function createContract(input: {
   return contract;
 }
 
-export async function updateContract(contractId: string, patch: Partial<Pick<Contract, 'clientName' | 'clientEmail' | 'fields' | 'status' | 'documentId' | 'packetId' | 'sentAt' | 'signedAt' | 'voidedAt'>>) {
+export async function updateContract(
+  contractId: string,
+  patch: Partial<Pick<Contract, 'contractNo' | 'clientName' | 'clientEmail' | 'fields' | 'status' | 'documentId' | 'packetId' | 'sentAt' | 'signedAt' | 'voidedAt'>>,
+) {
   const db = await readDb();
   ensureContractsCollections(db);
   const list = (db.contracts ?? []) as Contract[];

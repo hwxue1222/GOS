@@ -128,6 +128,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const clientEmail = String(fields[clientEmailKey] ?? '').trim();
   const signerEmail = String(fields.signer_email ?? '').trim();
 
+  const missingRequired = useMemo(() => {
+    if (!tpl) return [] as { key: string; label: string }[];
+    const ignoreKeys = new Set(['signer_email', 'contract_no', 'client_name', 'client_email']);
+    const required = (tpl.placeholders ?? []).filter((p) => p.required && !ignoreKeys.has(p.key));
+    const missing = required.filter((p) => !String((fields as any)?.[p.key] ?? '').trim());
+    return missing.map((p) => ({ key: p.key, label: p.label }));
+  }, [fields, tpl]);
+
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
     return renderPreview(tpl.templateHtml, {
@@ -151,6 +159,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (!clientName || !clientEmail) {
       setError('CLIENT_REQUIRED');
       setErrorDetail('请先填写甲方公司名称与甲方邮箱（用于生成合同与发送签署）。');
+      return null;
+    }
+    if (missingRequired.length > 0) {
+      setError('MISSING_REQUIRED_FIELDS');
+      setErrorDetail(missingRequired.map((x) => x.label).join('\n'));
       return null;
     }
     const payload = { templateId: tpl.id, clientName, clientEmail, fields };
@@ -257,7 +270,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const pdfDownloadUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=attachment` : '';
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 pb-28">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-lg font-semibold">{contractId ? 'Edit contract' : 'New contract'}</div>
@@ -417,18 +430,19 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </div>
           </div>
 
-          <div className="mt-4 sticky bottom-4">
-            <div className="rounded-xl bg-white border border-black/5 p-3 flex flex-wrap gap-2">
+          <div className="fixed bottom-0 left-0 right-0 z-40">
+            <div className="max-w-6xl mx-auto px-4 pb-[env(safe-area-inset-bottom)]">
+              <div className="rounded-xl bg-white border border-black/5 p-3 flex flex-wrap gap-2 shadow-sm">
               <button
                 onClick={() => void saveDraft()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail}
+                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
               <button
                 onClick={() => void generateDocument()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail}
+                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
               >
                 {rendering ? 'Generating…' : 'Generate'}
@@ -444,11 +458,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </a>
               <button
                 onClick={() => void sendForSigning()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail}
+                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
               >
                 {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
               </button>
+            </div>
             </div>
           </div>
         </div>

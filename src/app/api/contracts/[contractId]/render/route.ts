@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createDocument, findContractById, listContractTemplates, updateContract } from '@/lib/db';
+import { createDocument, findContractById, listContractTemplates, nextContractNo, readDb, updateContract } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { renderContractHtml } from '@/lib/docTemplates';
 
@@ -18,25 +18,34 @@ export async function POST(_: Request, { params }: { params: Promise<{ contractI
   }
 
   const { contractId } = await params;
-  const contract = await findContractById(contractId);
+  let contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const templates = await listContractTemplates();
-  const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
+  const templateId = contract.templateId;
+  const tpl = templates.find((t) => t.id === templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
+
+  let contractNo = String(contract.contractNo ?? '').trim();
+  if (!contractNo) {
+    const db = await readDb();
+    contractNo = nextContractNo(db, contract.createdAt ? new Date(contract.createdAt) : new Date());
+    const updated = await updateContract(contractId, { contractNo });
+    if (updated) contract = updated;
+  }
 
   const html = renderContractHtml({
     templateHtml: tpl.templateHtml,
-    contractNo: contract.contractNo,
+    contractNo: String(contractNo || contract.contractNo || ''),
     clientName: contract.clientName,
     clientEmail: contract.clientEmail,
     fields: contract.fields ?? {},
   });
 
-  const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
+  const title = `Contract ${String(contractNo || contract.contractNo || '-') } - ${contract.clientName}`;
   const doc = await createDocument({ type: 'CONTRACT', title, html });
-  const next = await updateContract(contractId, { documentId: doc.id, status: 'READY' });
+  const next = await updateContract(contractId, { contractNo, documentId: doc.id, status: 'READY' });
 
   return NextResponse.json({ ok: true, documentId: doc.id, documentSha256: doc.sha256, contract: next });
 }
