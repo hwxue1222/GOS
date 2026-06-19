@@ -15,6 +15,23 @@ import { digitallySignPdfIfEnabled, isPdfPkiEnabled } from '@/lib/pdfPki';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+function requestOrigin(req: Request) {
+  const h = req.headers;
+  const proto = (h.get('x-forwarded-proto') ?? h.get('x-forwarded-protocol') ?? '').trim();
+  const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '').trim();
+  const p = proto || 'https';
+  if (!host) return '';
+  return `${p}://${host}`;
+}
+
+function injectBaseHref(html: string, origin: string) {
+  if (!origin) return html;
+  if (/<base\s+/i.test(html)) return html;
+  const baseTag = `<base href="${origin.replace(/\/$/, '')}/" />`;
+  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, (m) => `${m}${baseTag}`);
+  return `${baseTag}${html}`;
+}
+
 async function getBrowser() {
   const g = globalThis as unknown as { __gosContractPdfBrowserPromise?: Promise<Browser> };
   if (!g.__gosContractPdfBrowserPromise) {
@@ -120,6 +137,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     clientEmail: contract.clientEmail,
     fields: contract.fields ?? {},
   });
+  const htmlWithBase = injectBaseHref(html, requestOrigin(req));
   const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
 
   const contentDisposition = url.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
@@ -130,7 +148,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(html, { waitUntil: ['domcontentloaded'], timeout: 45000 });
+      await page.setContent(htmlWithBase, { waitUntil: ['domcontentloaded'], timeout: 45000 });
       await page.waitForNetworkIdle({ idleTime: 500, timeout: 45000 }).catch(() => null);
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready;
