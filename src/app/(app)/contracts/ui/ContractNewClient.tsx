@@ -50,7 +50,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
-  const [pdfCheck, setPdfCheck] = useState<string>('');
   const [buildInfo, setBuildInfo] = useState<string>('');
 
   const clientNameKey = useMemo(() => {
@@ -297,20 +296,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     }
   }
 
-  async function checkPdf() {
-    setPdfCheck('');
-    if (!contractId) return;
-    const url = `/api/contracts/${encodeURIComponent(contractId)}/pdf?debug=1`;
-    const res = await fetch(url).catch(() => null);
-    if (!res) {
-      setPdfCheck('NETWORK_ERROR');
-      return;
-    }
-    const text = await res.text().catch(() => '');
-    setPdfCheck(`HTTP ${res.status}\n${text}`);
-  }
+  
 
-  const pdfUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
   const pdfDownloadUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=attachment` : '';
 
   return (
@@ -318,8 +305,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-lg font-semibold">{contractId ? 'Edit contract' : 'New contract'}</div>
-          <div className="text-sm text-black/60 mt-1">Fill fields, render document, download PDF, or send for signing.</div>
-          {buildInfo ? <div className="text-xs text-black/50 mt-1">Build: {buildInfo}</div> : null}
+          <div className="text-sm text-black/60 mt-1">Fill fields and generate the contract.</div>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -529,39 +515,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
             </div>
-            {contractId ? (
-              <div className="px-4 py-3 border-t border-black/5">
-                <div className="flex items-center gap-2">
-                  <a
-                    href={pdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02]"
-                  >
-                    Open PDF
-                  </a>
-                  <button
-                    onClick={() => void checkPdf()}
-                    className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
-                  >
-                    Check PDF error
-                  </button>
-                </div>
-                {pdfCheck ? (
-                  <pre className="mt-2 rounded-lg bg-white border border-black/10 p-3 text-xs text-black/70 overflow-auto">{pdfCheck}</pre>
-                ) : null}
-                <div className="mt-2">
-                  <a
-                    href="/api/debug/storage"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-black/60 underline"
-                  >
-                    Open storage debug
-                  </a>
-                </div>
-              </div>
-            ) : null}
+            {null}
           </div>
         </div>
       </div>
