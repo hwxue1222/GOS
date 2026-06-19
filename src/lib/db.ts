@@ -7289,6 +7289,22 @@ export async function createDocument(input: { type: Document['type']; title: str
   return doc;
 }
 
+export async function updateDocumentHtml(input: { documentId: string; title?: string; html: string }) {
+  const db = await readDb();
+  const idx = db.documents.findIndex((d) => d.id === input.documentId);
+  if (idx < 0) return null;
+  const prev = db.documents[idx];
+  const next: Document = {
+    ...prev,
+    title: typeof input.title === 'string' ? input.title : prev.title,
+    html: input.html,
+    sha256: sha256Hex(input.html),
+  };
+  db.documents[idx] = next;
+  await writeDb(db);
+  return next;
+}
+
 function parseContractNoSeq(contractNo: string) {
   const m = String(contractNo ?? '').trim().match(/^BBY-(\d{4})-(\d{2})-(\d{3})-(\d+)$/);
   if (!m) return null;

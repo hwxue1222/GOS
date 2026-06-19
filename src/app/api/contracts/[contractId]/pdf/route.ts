@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createDocument, findContractById, listContractTemplates, updateContract } from '@/lib/db';
+import { createDocument, findContractById, listContractTemplates, updateContract, updateDocumentHtml } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { renderContractHtml } from '@/lib/docTemplates';
 
@@ -26,19 +26,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
   const tpl = templates.find((t) => t.id === contract.templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
+  const html = renderContractHtml({
+    templateHtml: tpl.templateHtml,
+    contractNo: contract.contractNo,
+    clientName: contract.clientName,
+    clientEmail: contract.clientEmail,
+    fields: contract.fields ?? {},
+  });
+  const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
+
   let documentId = contract.documentId;
   if (!documentId) {
-    const html = renderContractHtml({
-      templateHtml: tpl.templateHtml,
-      contractNo: contract.contractNo,
-      clientName: contract.clientName,
-      clientEmail: contract.clientEmail,
-      fields: contract.fields ?? {},
-    });
-    const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
     const doc = await createDocument({ type: 'CONTRACT', title, html });
     documentId = doc.id;
     await updateContract(contractId, { documentId, status: 'READY' });
+  } else if (contract.status !== 'SIGNED') {
+    await updateDocumentHtml({ documentId, title, html });
   }
 
   const disposition = new URL(req.url).searchParams.get('disposition');
