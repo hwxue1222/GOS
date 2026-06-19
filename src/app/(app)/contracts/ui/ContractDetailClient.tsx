@@ -130,16 +130,6 @@ export default function ContractDetailClient({ initialContract, templateName, do
 
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="text-sm font-semibold">Signing</div>
-            <div className="mt-3">
-              <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
-              <input
-                value={signerEmail}
-                onChange={(e) => setSignerEmail(e.target.value)}
-                placeholder="留空则使用甲方联系邮箱"
-                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              />
-              <div className="mt-1 text-xs text-black/50">发起签署时会把链接与OTP发送到这里。</div>
-            </div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
@@ -156,6 +146,16 @@ export default function ContractDetailClient({ initialContract, templateName, do
                   onChange={(e) => setSignerTitle(e.target.value)}
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
+                <input
+                  value={signerEmail}
+                  onChange={(e) => setSignerEmail(e.target.value)}
+                  placeholder="留空则使用甲方联系邮箱"
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+                <div className="mt-1 text-xs text-black/50">发起签署时会把链接与OTP发送到这里。</div>
               </div>
             </div>
             <div className="mt-3 rounded-lg border border-black/10 overflow-hidden">

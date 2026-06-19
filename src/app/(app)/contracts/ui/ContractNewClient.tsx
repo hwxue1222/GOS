@@ -303,17 +303,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="text-sm font-semibold">签署信息 / Signing</div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
-                <input
-                  value={fields.signer_email ?? ''}
-                  onChange={(e) => setFields((prev) => ({ ...prev, signer_email: e.target.value }))}
-                  placeholder="(Optional) 留空则使用上面的 Email"
-                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                />
-                <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP，可能与甲方联系邮箱不同。</div>
-              </div>
-
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
                 <input
@@ -329,6 +318,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_title: e.target.value }))}
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
+                <input
+                  value={fields.signer_email ?? ''}
+                  onChange={(e) => setFields((prev) => ({ ...prev, signer_email: e.target.value }))}
+                  placeholder="(Optional) 留空则使用上面的 Email"
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+                <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP，可能与甲方联系邮箱不同。</div>
               </div>
             </div>
           </div>
