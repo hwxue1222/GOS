@@ -59,6 +59,9 @@ export default function SignClient(props: {
   const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
 
+  const isRorcDecl = packetKind === 'RORC_DECL';
+  const isContract = packetKind === 'CONTRACT';
+
   async function requestOtp() {
     setError(null);
     setInfo(null);
@@ -92,9 +95,15 @@ export default function SignClient(props: {
       }
     }
     if (requiresSignerProfile) {
-      if (!signerFullName.trim() || !signerTitle.trim() || !signerIdNo.trim() || !signerPhone.trim()) {
+      if (!signerFullName.trim() || !signerTitle.trim()) {
         setError('SIGNER_PROFILE_REQUIRED');
         return;
+      }
+      if (isRorcDecl) {
+        if (!signerIdNo.trim() || !signerPhone.trim()) {
+          setError('SIGNER_PROFILE_REQUIRED');
+          return;
+        }
       }
     }
     setSigning(true);
@@ -195,43 +204,47 @@ export default function SignClient(props: {
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
-                <label className="text-sm">
-                  <div className="text-black/70">ID type</div>
-                  <select
-                    disabled={signing}
-                    value={signerIdType}
-                    onChange={(e) => setSignerIdType(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  >
-                    <option value="NRIC">NRIC</option>
-                    <option value="FIN">FIN</option>
-                    <option value="PASSPORT">Passport</option>
-                    <option value="IC">IC</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </label>
-                <label className="text-sm">
-                  <div className="text-black/70">ID no.</div>
-                  <input
-                    disabled={signing}
-                    value={signerIdNo}
-                    onChange={(e) => setSignerIdNo(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  />
-                </label>
-                <label className="text-sm sm:col-span-2">
-                  <div className="text-black/70">Phone</div>
-                  <input
-                    disabled={signing}
-                    value={signerPhone}
-                    onChange={(e) => setSignerPhone(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                  />
-                </label>
+                {isRorcDecl ? (
+                  <>
+                    <label className="text-sm">
+                      <div className="text-black/70">ID type</div>
+                      <select
+                        disabled={signing}
+                        value={signerIdType}
+                        onChange={(e) => setSignerIdType(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                      >
+                        <option value="NRIC">NRIC</option>
+                        <option value="FIN">FIN</option>
+                        <option value="PASSPORT">Passport</option>
+                        <option value="IC">IC</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-black/70">ID no.</div>
+                      <input
+                        disabled={signing}
+                        value={signerIdNo}
+                        onChange={(e) => setSignerIdNo(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                      />
+                    </label>
+                    <label className="text-sm sm:col-span-2">
+                      <div className="text-black/70">Phone</div>
+                      <input
+                        disabled={signing}
+                        value={signerPhone}
+                        onChange={(e) => setSignerPhone(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                      />
+                    </label>
+                  </>
+                ) : null}
               </div>
-              <div className="mt-2 text-xs text-black/50">
-                Required for CC signers who are not in our member records.
-              </div>
+              {isContract ? null : (
+                <div className="mt-2 text-xs text-black/50">Required for CC signers who are not in our member records.</div>
+              )}
             </div>
           ) : null}
 

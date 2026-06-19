@@ -497,7 +497,12 @@ function seedContractsTemplatesV5(db: Db) {
           <div class="sigbox">
             <div class="h">甲方（签字） / Party A</div>
             <div class="sigline"></div>
-            <div class="sigmeta"><span class="signer" data-signer="{{partyA_email}}"></span></div>
+            <div class="sigmeta">
+              <div><b>姓名 / Name:</b> <span data-signer-full-name="{{partyA_email}}"></span></div>
+              <div style="margin-top:4px;"><b>职位 / Title:</b> <span data-signer-title="{{partyA_email}}"></span></div>
+              <div style="margin-top:4px;"><b>时间 / Date:</b> <span data-signer-signed-at="{{partyA_email}}"></span></div>
+              <div style="margin-top:6px;"><span class="signer" data-signer="{{partyA_email}}"></span></div>
+            </div>
           </div>
           <div class="sigbox">
             <div class="h">乙方（签字） / Party B</div>
@@ -7699,6 +7704,14 @@ export async function signByToken(input: {
       nextReq.signerIdNo = idNo;
       nextReq.signerPhone = phone;
     }
+  }
+
+  if (packet.relatedType === 'CONTRACT') {
+    const fullName = String(input.signerFullName ?? '').trim();
+    const title = String(input.signerTitle ?? '').trim();
+    if (!fullName || !title) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
+    nextReq.signerFullName = fullName;
+    nextReq.signerTitle = title;
   }
 
   db.signatureRequests[reqIdx] = nextReq;

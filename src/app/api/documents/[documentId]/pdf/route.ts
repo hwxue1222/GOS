@@ -205,7 +205,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
         .filter((r) => r.status === 'SIGNED' && !!r.signedAt)
         .map((r) => ({
           signerEmail: String(r.email ?? '').trim().toLowerCase(),
-          signerName: String(r.rdrRepresentativeName ?? '').trim(),
+          signerName: String(r.signerFullName ?? r.rdrRepresentativeName ?? '').trim(),
+          signerTitle: String(r.signerTitle ?? '').trim(),
           signedAt: String(r.signedAt ?? ''),
         }))
         .filter((x) => !!x.signerEmail && !!x.signedAt);
@@ -223,19 +224,52 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
             };
 
             const placeholders = Array.from(document.querySelectorAll('[data-signer]')) as HTMLElement[];
+            const nameEls = Array.from(document.querySelectorAll('[data-signer-full-name]')) as HTMLElement[];
+            const titleEls = Array.from(document.querySelectorAll('[data-signer-title]')) as HTMLElement[];
+            const timeEls = Array.from(document.querySelectorAll('[data-signer-signed-at]')) as HTMLElement[];
             if (placeholders.length) {
               const byEmail = new Map<string, HTMLElement>();
               for (const el of placeholders) {
                 const k = String(el.getAttribute('data-signer') || '').toLowerCase();
                 if (k) byEmail.set(k, el);
               }
+
+              const byEmailName = new Map<string, HTMLElement>();
+              for (const el of nameEls) {
+                const k = String(el.getAttribute('data-signer-full-name') || '').toLowerCase();
+                if (k) byEmailName.set(k, el);
+              }
+              const byEmailTitle = new Map<string, HTMLElement>();
+              for (const el of titleEls) {
+                const k = String(el.getAttribute('data-signer-title') || '').toLowerCase();
+                if (k) byEmailTitle.set(k, el);
+              }
+              const byEmailTime = new Map<string, HTMLElement>();
+              for (const el of timeEls) {
+                const k = String(el.getAttribute('data-signer-signed-at') || '').toLowerCase();
+                if (k) byEmailTime.set(k, el);
+              }
+
               for (const it of items) {
                 const key = String(it.signerEmail || '').toLowerCase();
                 if (!key) continue;
                 const el = byEmail.get(key);
                 if (!el) continue;
                 const email = String(it.signerEmail || '').trim();
-                el.textContent = email ? `Signed ${toDdMmYyyy(String(it.signedAt || ''))} (${email})` : `Signed ${toDdMmYyyy(String(it.signedAt || ''))}`;
+
+                const signedAtText = toDdMmYyyy(String(it.signedAt || ''));
+                const name = String(it.signerName || '').trim();
+                const title = String(it.signerTitle || '').trim();
+                el.textContent = email
+                  ? `Signed ${signedAtText}${name ? ' - ' + name : ''}${title ? ' (' + title + ')' : ''} (${email})`
+                  : `Signed ${signedAtText}${name ? ' - ' + name : ''}${title ? ' (' + title + ')' : ''}`;
+
+                const nameEl = byEmailName.get(key);
+                if (nameEl) nameEl.textContent = name;
+                const titleEl = byEmailTitle.get(key);
+                if (titleEl) titleEl.textContent = title;
+                const timeEl = byEmailTime.get(key);
+                if (timeEl) timeEl.textContent = signedAtText;
               }
               return;
             }

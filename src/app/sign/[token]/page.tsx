@@ -17,7 +17,10 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   const requiresRepresentative =
     ctx.packet.relatedType === 'RDR' && (!ctx.rdr?.representativeEmail || !ctx.rdr?.representativeName);
   const requiresSignerProfile =
-    ctx.packet.relatedType === 'RORC_DECLARATION' && !ctx.person && (!ctx.request.signerFullName || !ctx.request.signerIdNo || !ctx.request.signerPhone);
+    (ctx.packet.relatedType === 'RORC_DECLARATION' &&
+      !ctx.person &&
+      (!ctx.request.signerFullName || !ctx.request.signerIdNo || !ctx.request.signerPhone)) ||
+    (ctx.packet.relatedType === 'CONTRACT' && (!ctx.request.signerFullName || !ctx.request.signerTitle));
   const expired = ctx.request.status === 'EXPIRED';
   const pdfUrl = ctx.packet.kind === 'CONTRACT' ? `/api/sign/${encodeURIComponent(token)}/pdf?disposition=inline` : undefined;
 
