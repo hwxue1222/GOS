@@ -62,6 +62,9 @@ type DbCache = {
 };
 
 function getDbCacheTtlMs() {
+  const hasKvEnv = !!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN;
+  const hasRedisEnv = !!process.env.REDIS_URL;
+  if (process.env.VERCEL && (hasKvEnv || hasRedisEnv)) return 0;
   const v = Number(process.env.GOS_DB_CACHE_TTL_MS ?? '1000');
   if (!Number.isFinite(v) || v < 0) return 0;
   return v;
