@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
@@ -49,6 +49,26 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
   const [pdfCheck, setPdfCheck] = useState<string>('');
+  const [buildInfo, setBuildInfo] = useState<string>('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/debug/version', { cache: 'no-store' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as any;
+      if (cancelled) return;
+      if (!res?.ok || !j?.ok) {
+        setBuildInfo('');
+        return;
+      }
+      const sha = String(j.commitSha ?? '').trim();
+      const dep = String(j.deploymentId ?? '').trim();
+      setBuildInfo(`${sha ? sha.slice(0, 7) : 'local'}${dep ? ` • ${dep}` : ''}`);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const clientNameKey = useMemo(() => {
     const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
@@ -196,6 +216,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         <div>
           <div className="text-lg font-semibold">New contract</div>
           <div className="text-sm text-black/60 mt-1">Fill fields, render document, download PDF, or send for signing.</div>
+          {buildInfo ? <div className="text-xs text-black/50 mt-1">Build: {buildInfo}</div> : null}
         </div>
         <div className="flex items-center gap-2">
           <Link

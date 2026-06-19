@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Contract, ContractStatus } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
@@ -33,6 +33,26 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const [signerFullName, setSignerFullName] = useState<string>(String((initialContract as any)?.fields?.signer_full_name ?? '').trim());
   const [signerTitle, setSignerTitle] = useState<string>(String((initialContract as any)?.fields?.signer_title ?? '').trim());
   const [pdfCheck, setPdfCheck] = useState<string>('');
+  const [buildInfo, setBuildInfo] = useState<string>('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/debug/version', { cache: 'no-store' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as any;
+      if (cancelled) return;
+      if (!res?.ok || !j?.ok) {
+        setBuildInfo('');
+        return;
+      }
+      const sha = String(j.commitSha ?? '').trim();
+      const dep = String(j.deploymentId ?? '').trim();
+      setBuildInfo(`${sha ? sha.slice(0, 7) : 'local'}${dep ? ` • ${dep}` : ''}`);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const st = statusLabel(contract.status);
   const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
@@ -108,6 +128,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
           <div className="text-lg font-semibold">{contract.contractNo}</div>
           <div className="text-sm text-black/60 mt-1">{contract.clientName} · {contract.clientEmail}</div>
           <div className="text-xs text-black/60 mt-1">Template: {templateName}</div>
+          {buildInfo ? <div className="text-xs text-black/50 mt-1">Build: {buildInfo}</div> : null}
         </div>
         <div className="flex items-center gap-2">
           <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${st.cls}`}>{st.text}</span>
