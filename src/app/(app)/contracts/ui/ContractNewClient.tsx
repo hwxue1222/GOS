@@ -188,6 +188,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   }
 
   const pdfUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
+  const pdfDownloadUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=attachment` : '';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -374,11 +375,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 {rendering ? 'Rendering…' : 'Render document'}
               </button>
               <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noreferrer"
+                href={pdfDownloadUrl}
+                download
                 className={`h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] ${
-                  pdfUrl ? '' : 'pointer-events-none opacity-50'
+                  pdfDownloadUrl ? '' : 'pointer-events-none opacity-50'
                 }`}
               >
                 Download PDF
@@ -433,6 +433,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 {pdfCheck ? (
                   <pre className="mt-2 rounded-lg bg-white border border-black/10 p-3 text-xs text-black/70 overflow-auto">{pdfCheck}</pre>
                 ) : null}
+                <div className="mt-2">
+                  <a
+                    href="/api/debug/storage"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-black/60 underline"
+                  >
+                    Open storage debug
+                  </a>
+                </div>
               </div>
             ) : null}
           </div>

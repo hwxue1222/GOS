@@ -34,6 +34,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
 
   const st = statusLabel(contract.status);
   const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
+  const pdfDownloadUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=attachment`;
 
   async function renderDoc() {
     setError(null);
@@ -191,11 +192,10 @@ export default function ContractDetailClient({ initialContract, templateName, do
                 {rendering ? 'Rendering…' : 'Render document'}
               </button>
               <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noreferrer"
+                href={pdfDownloadUrl}
+                download
                 className={`h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center justify-center hover:bg-black/[0.02] ${
-                  pdfUrl ? '' : 'pointer-events-none opacity-50'
+                  pdfDownloadUrl ? '' : 'pointer-events-none opacity-50'
                 }`}
               >
                 Download PDF
