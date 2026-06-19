@@ -271,15 +271,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           >
             Back
           </Link>
-          {contractId ? (
-            <button
-              onClick={() => void generateDocument()}
-              disabled={saving || rendering || sending || !clientName || !clientEmail}
-              className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
-            >
-              {rendering ? 'Generating…' : 'Generate'}
-            </button>
-          ) : null}
         </div>
       </div>
 
