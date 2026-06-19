@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V24 = 'contracts.templates.v24';
+const SEED_KEY_CONTRACTS_TEMPLATES_V25 = 'contracts.templates.v25';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV24(db: Db) {
+function seedContractsTemplatesV25(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V24] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V25] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -846,7 +846,7 @@ function seedContractsTemplatesV24(db: Db) {
 </span></p>
 <p class="p8">7.15  The Central Provident Fund or CPF is a compulsory pension fund scheme in which the employer and employee contribute a percentage of monthly salary to the fund. CPF contributions by the employer are mandatory for all local employees who are Singapore citizens or permanent residents earning more than $50 a month. If the Company engages BBY' payroll services for any hiring of local and foreigner employees in Singapore, BBY will collect an additional security deposit of US$2,000 per staff and per family member (with dependent pass) once the Company hires local and foreigner employees in Singapore. <span class="s5"><br>
 </span></p>
-<p class="p9">7.16  <span class="s3">The Principal</span> <span class="s3">acknowledge</span> and confirm the <span class="s3">following</span>:-<span class="Apple-converted-space"> </span></p>
+<p class="p9">7.16  The Principal acknowledge and confirm the following:-<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p11">(a) BBY' directors, agents, employees and Nominees will not be responsible for the operations and management of the Company.<span class="Apple-converted-space"> </span></p>
 <p class="p11">(b) The Principal understands that BBY' directors, agents, employees and Nominees is required to perform “On-going Monitoring” as required by the Accounting and Corporate Regulatory Authority (Filing Agents and Qualified Individuals) Regulations 2015 (“Regulations”) and will fully indemnify and hold BBY' directors, agents, employees and Nominees harmless from any loss, cost or damages in respect thereof to fulfill the requirement of On-going monitoring as BBY shall not be involved in the operations and management of the Company and they will have limited authority to perform any such monitoring including reviewing of every single supporting documents for all banking transactions as required by the Regulations.<span class="Apple-converted-space"> </span></p>
@@ -1099,7 +1099,7 @@ function seedContractsTemplatesV24(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V24] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V25] = true;
   return changed;
 }
 
@@ -6270,7 +6270,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV24(db)) changed = true;
+  if (seedContractsTemplatesV25(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
