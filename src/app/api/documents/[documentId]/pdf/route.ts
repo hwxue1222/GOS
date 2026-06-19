@@ -207,7 +207,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
           signerEmail: String(r.email ?? '').trim().toLowerCase(),
           signerName: String(r.signerFullName ?? r.rdrRepresentativeName ?? '').trim(),
           signerTitle: String(r.signerTitle ?? '').trim(),
-          signerSignedDate: String(r.signerSignedDate ?? '').trim(),
           signedAt: String(r.signedAt ?? ''),
         }))
         .filter((x) => !!x.signerEmail && !!x.signedAt);
@@ -218,10 +217,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
             if (document.fonts?.ready) await document.fonts.ready;
             if (!items?.length) return;
 
-            const toDdMmYyyy = (iso: string) => {
-              const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-              if (!m) return String(iso || '');
-              return `${m[3]}/${m[2]}/${m[1]}`;
+            const toYmdHm = (iso: string) => {
+              const d = new Date(String(iso || ''));
+              if (Number.isNaN(d.getTime())) return String(iso || '');
+              const pad = (n: number) => String(n).padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
             };
 
             const placeholders = Array.from(document.querySelectorAll('[data-signer]')) as HTMLElement[];
@@ -258,7 +258,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
                 if (!el) continue;
                 const email = String(it.signerEmail || '').trim();
 
-                const signedAtText = toDdMmYyyy(String(it.signerSignedDate || it.signedAt || ''));
+                const signedAtText = toYmdHm(String(it.signedAt || ''));
                 const name = String(it.signerName || '').trim();
                 const title = String(it.signerTitle || '').trim();
                 el.textContent = email
@@ -288,7 +288,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
               row.style.marginTop = '6px';
               const name = String(it.signerName || '').trim();
               const email = String(it.signerEmail || '').trim();
-              row.textContent = `${name ? name + ' ' : ''}<${email}> - ${toDdMmYyyy(String(it.signedAt || ''))}`;
+              row.textContent = `${name ? name + ' ' : ''}<${email}> - ${toYmdHm(String(it.signedAt || ''))}`;
               box.appendChild(row);
             }
             document.body.appendChild(box);

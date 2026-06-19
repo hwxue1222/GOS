@@ -19,7 +19,6 @@ export default function SignClient(props: {
   initialRepresentativeEmail: string;
   initialSignerFullName: string;
   initialSignerTitle: string;
-  initialSignerSignedDate: string;
   initialSignerIdType: string;
   initialSignerIdNo: string;
   initialSignerPhone: string;
@@ -41,7 +40,6 @@ export default function SignClient(props: {
     initialRepresentativeEmail,
     initialSignerFullName,
     initialSignerTitle,
-    initialSignerSignedDate,
     initialSignerIdType,
     initialSignerIdNo,
     initialSignerPhone,
@@ -57,7 +55,6 @@ export default function SignClient(props: {
 
   const [signerFullName, setSignerFullName] = useState(initialSignerFullName);
   const [signerTitle, setSignerTitle] = useState(initialSignerTitle);
-  const [signerSignedDate, setSignerSignedDate] = useState(initialSignerSignedDate || new Date().toISOString().slice(0, 10));
   const [signerIdType, setSignerIdType] = useState(initialSignerIdType || 'NRIC');
   const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
@@ -109,15 +106,7 @@ export default function SignClient(props: {
         }
       }
       if (isContract) {
-        const d = signerSignedDate.trim();
-        if (!d) {
-          setError('SIGNER_PROFILE_REQUIRED');
-          return;
-        }
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-          setError('INVALID_INPUT');
-          return;
-        }
+        
       }
     }
     setSigning(true);
@@ -131,7 +120,6 @@ export default function SignClient(props: {
           rdrRepresentativeEmail: repEmail.trim() || undefined,
           signerFullName: signerFullName.trim() || undefined,
           signerTitle: signerTitle.trim() || undefined,
-          signerSignedDate: signerSignedDate.trim() || undefined,
           signerIdType: signerIdType || undefined,
           signerIdNo: signerIdNo.trim() || undefined,
           signerPhone: signerPhone.trim() || undefined,
@@ -211,17 +199,6 @@ export default function SignClient(props: {
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </label>
-                {isContract ? (
-                  <label className="text-sm sm:col-span-2">
-                    <div className="text-black/70">Date (YYYY-MM-DD)</div>
-                    <input
-                      disabled={signing}
-                      value={signerSignedDate}
-                      onChange={(e) => setSignerSignedDate(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                    />
-                  </label>
-                ) : null}
                 <label className="text-sm">
                   <div className="text-black/70">Email</div>
                   <input

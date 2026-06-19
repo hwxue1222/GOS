@@ -31,7 +31,6 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const [signerEmail, setSignerEmail] = useState<string>(String((initialContract as any)?.fields?.signer_email ?? '').trim());
   const [signerFullName, setSignerFullName] = useState<string>(String((initialContract as any)?.fields?.signer_full_name ?? '').trim());
   const [signerTitle, setSignerTitle] = useState<string>(String((initialContract as any)?.fields?.signer_title ?? '').trim());
-  const [signerSignedDate, setSignerSignedDate] = useState<string>(String((initialContract as any)?.fields?.signer_signed_date ?? '').trim());
 
   const st = statusLabel(contract.status);
   const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
@@ -63,7 +62,6 @@ export default function ContractDetailClient({ initialContract, templateName, do
           toEmail: signerEmail.trim() || undefined,
           signerFullName: signerFullName.trim() || undefined,
           signerTitle: signerTitle.trim() || undefined,
-          signerSignedDate: signerSignedDate.trim() || undefined,
         }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
@@ -75,7 +73,6 @@ export default function ContractDetailClient({ initialContract, templateName, do
       setSignerEmail(String((j.contract as any)?.fields?.signer_email ?? signerEmail).trim());
       setSignerFullName(String((j.contract as any)?.fields?.signer_full_name ?? signerFullName).trim());
       setSignerTitle(String((j.contract as any)?.fields?.signer_title ?? signerTitle).trim());
-      setSignerSignedDate(String((j.contract as any)?.fields?.signer_signed_date ?? signerSignedDate).trim());
     } finally {
       setSending(false);
     }
@@ -157,15 +154,6 @@ export default function ContractDetailClient({ initialContract, templateName, do
                 <input
                   value={signerTitle}
                   onChange={(e) => setSignerTitle(e.target.value)}
-                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs font-medium text-black/60">签署日期(YYYY-MM-DD) / Signing date</div>
-                <input
-                  value={signerSignedDate}
-                  onChange={(e) => setSignerSignedDate(e.target.value)}
-                  placeholder="YYYY-MM-DD"
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>

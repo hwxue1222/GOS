@@ -10,7 +10,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
         rdrRepresentativeEmail?: string;
         signerFullName?: string;
         signerTitle?: string;
-        signerSignedDate?: string;
         signerIdType?: string;
         signerIdNo?: string;
         signerPhone?: string;
@@ -31,7 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     rdrRepresentativeEmail: typeof body?.rdrRepresentativeEmail === 'string' ? body.rdrRepresentativeEmail : undefined,
     signerFullName: typeof body?.signerFullName === 'string' ? body.signerFullName : undefined,
     signerTitle: typeof body?.signerTitle === 'string' ? body.signerTitle : undefined,
-    signerSignedDate: typeof body?.signerSignedDate === 'string' ? body.signerSignedDate : undefined,
     signerIdType: typeof body?.signerIdType === 'string' ? body.signerIdType : undefined,
     signerIdNo: typeof body?.signerIdNo === 'string' ? body.signerIdNo : undefined,
     signerPhone: typeof body?.signerPhone === 'string' ? body.signerPhone : undefined,

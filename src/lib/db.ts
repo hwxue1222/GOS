@@ -7424,7 +7424,7 @@ export async function createSignaturePacket(input: {
 export async function createSignatureRequestsForPacket(input: {
   packetId: string;
   emails: string[];
-  defaults?: Partial<Pick<SignatureRequest, 'signerFullName' | 'signerTitle' | 'signerSignedDate'>>;
+  defaults?: Partial<Pick<SignatureRequest, 'signerFullName' | 'signerTitle'>>;
 }) {
   const db = await readDb();
   const createdAt = nowIso();
@@ -7666,7 +7666,6 @@ export async function signByToken(input: {
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
   signerTitle?: string;
-  signerSignedDate?: string;
   signerIdType?: string;
   signerIdNo?: string;
   signerPhone?: string;
@@ -7753,13 +7752,6 @@ export async function signByToken(input: {
     if (!fullName || !title) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };
     nextReq.signerFullName = fullName;
     nextReq.signerTitle = title;
-
-    const signedDate = String(input.signerSignedDate ?? '').trim();
-    if (signedDate) {
-      const m = signedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!m) return { ok: false as const, error: 'INVALID_INPUT' as const };
-      nextReq.signerSignedDate = signedDate;
-    }
   }
 
   db.signatureRequests[reqIdx] = nextReq;

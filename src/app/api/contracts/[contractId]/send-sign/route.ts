@@ -37,7 +37,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
         toEmail?: string;
         signerFullName?: string;
         signerTitle?: string;
-        signerSignedDate?: string;
       }
     | null;
   const subject = typeof body?.subject === 'string' ? body.subject : undefined;
@@ -45,7 +44,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   const toEmail = typeof body?.toEmail === 'string' ? body.toEmail.trim() : '';
   const signerFullName = typeof body?.signerFullName === 'string' ? body.signerFullName.trim() : '';
   const signerTitle = typeof body?.signerTitle === 'string' ? body.signerTitle.trim() : '';
-  const signerSignedDate = typeof body?.signerSignedDate === 'string' ? body.signerSignedDate.trim() : '';
 
   let documentId = contract.documentId;
   if (!documentId) {
@@ -80,7 +78,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     defaults: {
       signerFullName: signerFullName || String((contract as any)?.fields?.signer_full_name ?? '').trim() || undefined,
       signerTitle: signerTitle || String((contract as any)?.fields?.signer_title ?? '').trim() || undefined,
-      signerSignedDate: signerSignedDate || String((contract as any)?.fields?.signer_signed_date ?? '').trim() || undefined,
     },
   });
 
@@ -110,7 +107,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     signer_email: signerEmail,
     ...(signerFullName ? { signer_full_name: signerFullName } : null),
     ...(signerTitle ? { signer_title: signerTitle } : null),
-    ...(signerSignedDate ? { signer_signed_date: signerSignedDate } : null),
   };
   const next = await updateContract(contractId, {
     packetId: packet.id,

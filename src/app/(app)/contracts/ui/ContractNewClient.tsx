@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
 
 type Props = {
@@ -27,6 +28,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 }
 
 export default function ContractNewClient({ initialTemplates }: Props) {
+  const router = useRouter();
   const templates = initialTemplates;
   const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? '');
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
@@ -132,6 +134,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       setDocumentId(String(j.documentId));
       setDocumentSha(String(j.documentSha256 ?? ''));
+      router.push('/contracts');
     } finally {
       setRendering(false);
     }
@@ -171,14 +174,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           <div className="text-lg font-semibold">New contract</div>
           <div className="text-sm text-black/60 mt-1">Fill fields, render document, download PDF, or send for signing.</div>
         </div>
-        {contractId ? (
+        <div className="flex items-center gap-2">
           <Link
-            href={`/contracts/${encodeURIComponent(contractId)}`}
+            href="/contracts"
             className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] transition-colors"
           >
-            View detail
+            Back
           </Link>
-        ) : null}
+          {contractId ? (
+            <Link
+              href={`/contracts/${encodeURIComponent(contractId)}`}
+              className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] transition-colors"
+            >
+              View detail
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {error ? <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div> : null}
@@ -291,15 +302,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <input
                   value={fields.signer_title ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_title: e.target.value }))}
-                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs font-medium text-black/60">签署日期(YYYY-MM-DD) / Signing date</div>
-                <input
-                  value={fields.signer_signed_date ?? fields.date ?? ''}
-                  onChange={(e) => setFields((prev) => ({ ...prev, signer_signed_date: e.target.value }))}
-                  placeholder="YYYY-MM-DD"
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>
