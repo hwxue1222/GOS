@@ -30,9 +30,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
-  const body = (await req.json().catch(() => null)) as { subject?: string; message?: string } | null;
+  const body = (await req.json().catch(() => null)) as
+    | {
+        subject?: string;
+        message?: string;
+        toEmail?: string;
+        signerFullName?: string;
+        signerTitle?: string;
+        signerSignedDate?: string;
+      }
+    | null;
   const subject = typeof body?.subject === 'string' ? body.subject : undefined;
   const message = typeof body?.message === 'string' ? body.message : undefined;
+  const toEmail = typeof body?.toEmail === 'string' ? body.toEmail.trim() : '';
+  const signerFullName = typeof body?.signerFullName === 'string' ? body.signerFullName.trim() : '';
+  const signerTitle = typeof body?.signerTitle === 'string' ? body.signerTitle.trim() : '';
+  const signerSignedDate = typeof body?.signerSignedDate === 'string' ? body.signerSignedDate.trim() : '';
 
   let documentId = contract.documentId;
   if (!documentId) {
@@ -59,7 +72,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     documentId,
     status: 'SIGNING',
   });
-  const links = await createSignatureRequestsForPacket({ packetId: packet.id, emails: [contract.clientEmail] });
+  const signerEmail = toEmail || String((contract as any)?.fields?.signer_email ?? '').trim() || contract.clientEmail;
+  if (!signerEmail) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  const links = await createSignatureRequestsForPacket({
+    packetId: packet.id,
+    emails: [signerEmail],
+    defaults: {
+      signerFullName: signerFullName || String((contract as any)?.fields?.signer_full_name ?? '').trim() || undefined,
+      signerTitle: signerTitle || String((contract as any)?.fields?.signer_title ?? '').trim() || undefined,
+      signerSignedDate: signerSignedDate || String((contract as any)?.fields?.signer_signed_date ?? '').trim() || undefined,
+    },
+  });
 
   const origin = req.headers.get('origin')?.trim();
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
@@ -82,7 +105,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     ),
   );
 
-  const next = await updateContract(contractId, { packetId: packet.id, status: 'SIGNING', sentAt: new Date().toISOString() });
+  const nextFields = {
+    ...(contract.fields ?? {}),
+    signer_email: signerEmail,
+    ...(signerFullName ? { signer_full_name: signerFullName } : null),
+    ...(signerTitle ? { signer_title: signerTitle } : null),
+    ...(signerSignedDate ? { signer_signed_date: signerSignedDate } : null),
+  };
+  const next = await updateContract(contractId, {
+    packetId: packet.id,
+    status: 'SIGNING',
+    sentAt: new Date().toISOString(),
+    fields: nextFields,
+  });
   return NextResponse.json({ ok: true, packetId: packet.id, signLinks: links, contract: next });
 }
-

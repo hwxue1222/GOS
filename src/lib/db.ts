@@ -7421,7 +7421,11 @@ export async function createSignaturePacket(input: {
   return packet;
 }
 
-export async function createSignatureRequestsForPacket(input: { packetId: string; emails: string[] }) {
+export async function createSignatureRequestsForPacket(input: {
+  packetId: string;
+  emails: string[];
+  defaults?: Partial<Pick<SignatureRequest, 'signerFullName' | 'signerTitle' | 'signerSignedDate'>>;
+}) {
   const db = await readDb();
   const createdAt = nowIso();
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
@@ -7438,6 +7442,7 @@ export async function createSignatureRequestsForPacket(input: { packetId: string
       tokenHash: sha256Hex(token),
       expiresAt,
       status: 'PENDING',
+      ...(input.defaults ?? {}),
       createdAt,
       updatedAt: createdAt,
     };

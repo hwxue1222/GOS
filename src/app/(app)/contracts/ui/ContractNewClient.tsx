@@ -60,6 +60,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const clientName = String(fields[clientNameKey] ?? '').trim();
   const clientEmail = String(fields[clientEmailKey] ?? '').trim();
+  const signerEmail = String(fields.signer_email ?? '').trim();
 
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
@@ -147,7 +148,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/send-sign`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ toEmail: signerEmail || undefined }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
@@ -225,6 +226,43 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <input
                   value={fields[clientEmailKey] ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, [clientEmailKey]: e.target.value }))}
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
+                <input
+                  value={fields.signer_email ?? ''}
+                  onChange={(e) => setFields((prev) => ({ ...prev, signer_email: e.target.value }))}
+                  placeholder="(Optional) 留空则使用上面的 Email"
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+                <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP，可能与甲方联系邮箱不同。</div>
+              </div>
+
+              <div className="md:col-span-1">
+                <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
+                <input
+                  value={fields.signer_full_name ?? ''}
+                  onChange={(e) => setFields((prev) => ({ ...prev, signer_full_name: e.target.value }))}
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+              <div className="md:col-span-1">
+                <div className="text-xs font-medium text-black/60">签署人职位 / Signer title</div>
+                <input
+                  value={fields.signer_title ?? ''}
+                  onChange={(e) => setFields((prev) => ({ ...prev, signer_title: e.target.value }))}
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs font-medium text-black/60">签署日期(YYYY-MM-DD) / Signing date</div>
+                <input
+                  value={fields.signer_signed_date ?? fields.date ?? ''}
+                  onChange={(e) => setFields((prev) => ({ ...prev, signer_signed_date: e.target.value }))}
+                  placeholder="YYYY-MM-DD"
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>

@@ -19,6 +19,7 @@ export default function SignClient(props: {
   initialRepresentativeEmail: string;
   initialSignerFullName: string;
   initialSignerTitle: string;
+  initialSignerSignedDate: string;
   initialSignerIdType: string;
   initialSignerIdNo: string;
   initialSignerPhone: string;
@@ -40,6 +41,7 @@ export default function SignClient(props: {
     initialRepresentativeEmail,
     initialSignerFullName,
     initialSignerTitle,
+    initialSignerSignedDate,
     initialSignerIdType,
     initialSignerIdNo,
     initialSignerPhone,
@@ -55,7 +57,7 @@ export default function SignClient(props: {
 
   const [signerFullName, setSignerFullName] = useState(initialSignerFullName);
   const [signerTitle, setSignerTitle] = useState(initialSignerTitle);
-  const [signerSignedDate, setSignerSignedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [signerSignedDate, setSignerSignedDate] = useState(initialSignerSignedDate || new Date().toISOString().slice(0, 10));
   const [signerIdType, setSignerIdType] = useState(initialSignerIdType || 'NRIC');
   const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);

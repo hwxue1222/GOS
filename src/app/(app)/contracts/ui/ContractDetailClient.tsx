@@ -28,6 +28,10 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
+  const [signerEmail, setSignerEmail] = useState<string>(String((initialContract as any)?.fields?.signer_email ?? '').trim());
+  const [signerFullName, setSignerFullName] = useState<string>(String((initialContract as any)?.fields?.signer_full_name ?? '').trim());
+  const [signerTitle, setSignerTitle] = useState<string>(String((initialContract as any)?.fields?.signer_title ?? '').trim());
+  const [signerSignedDate, setSignerSignedDate] = useState<string>(String((initialContract as any)?.fields?.signer_signed_date ?? '').trim());
 
   const st = statusLabel(contract.status);
   const pdfUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=inline`;
@@ -55,7 +59,12 @@ export default function ContractDetailClient({ initialContract, templateName, do
       const res = await fetch(`/api/contracts/${encodeURIComponent(contract.id)}/send-sign`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          toEmail: signerEmail.trim() || undefined,
+          signerFullName: signerFullName.trim() || undefined,
+          signerTitle: signerTitle.trim() || undefined,
+          signerSignedDate: signerSignedDate.trim() || undefined,
+        }),
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
@@ -63,6 +72,10 @@ export default function ContractDetailClient({ initialContract, templateName, do
         return;
       }
       setContract(j.contract as Contract);
+      setSignerEmail(String((j.contract as any)?.fields?.signer_email ?? signerEmail).trim());
+      setSignerFullName(String((j.contract as any)?.fields?.signer_full_name ?? signerFullName).trim());
+      setSignerTitle(String((j.contract as any)?.fields?.signer_title ?? signerTitle).trim());
+      setSignerSignedDate(String((j.contract as any)?.fields?.signer_signed_date ?? signerSignedDate).trim());
     } finally {
       setSending(false);
     }
@@ -120,6 +133,43 @@ export default function ContractDetailClient({ initialContract, templateName, do
 
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="text-sm font-semibold">Signing</div>
+            <div className="mt-3">
+              <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
+              <input
+                value={signerEmail}
+                onChange={(e) => setSignerEmail(e.target.value)}
+                placeholder="留空则使用甲方联系邮箱"
+                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              />
+              <div className="mt-1 text-xs text-black/50">发起签署时会把链接与OTP发送到这里。</div>
+            </div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
+                <input
+                  value={signerFullName}
+                  onChange={(e) => setSignerFullName(e.target.value)}
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+              <div>
+                <div className="text-xs font-medium text-black/60">签署人职位 / Signer title</div>
+                <input
+                  value={signerTitle}
+                  onChange={(e) => setSignerTitle(e.target.value)}
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs font-medium text-black/60">签署日期(YYYY-MM-DD) / Signing date</div>
+                <input
+                  value={signerSignedDate}
+                  onChange={(e) => setSignerSignedDate(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+            </div>
             <div className="mt-3 rounded-lg border border-black/10 overflow-hidden">
               <div className="grid grid-cols-12 px-3 py-2 text-xs font-semibold text-black/60 border-b border-black/10">
                 <div className="col-span-6">Email</div>
