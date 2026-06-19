@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const clientEmail = String(body?.clientEmail ?? '').trim();
   const fields = (body?.fields ?? {}) as Record<string, string>;
 
-  if (!templateId || !clientName || !clientEmail) {
+  if (!templateId || !clientName) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
@@ -46,4 +46,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'FAILED', message: msg }, { status: 500 });
   }
 }
-

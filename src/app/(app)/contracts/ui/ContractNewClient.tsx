@@ -65,6 +65,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return 'client_email';
   }, [tpl]);
 
+  const showClientBlock = useMemo(() => {
+    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
+    return keys.has('partyA_name') || keys.has('partyA_email') || keys.has('client_name') || keys.has('client_email');
+  }, [tpl]);
+
+  const showSigningBlock = useMemo(() => {
+    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
+    return Array.from(keys).some((k) => k.startsWith('signer_'));
+  }, [tpl]);
+
   const editContractId = useMemo(() => {
     const v = String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
     return v;
@@ -126,8 +136,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     };
   }, [clientEmailKey, clientNameKey, editContractId, templateId]);
 
-  const clientName = String(fields[clientNameKey] ?? '').trim();
-  const clientEmail = String(fields[clientEmailKey] ?? '').trim();
+  const clientName = showClientBlock ? String(fields[clientNameKey] ?? '').trim() : String(fields.company ?? '').trim();
+  const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
   const signerEmail = String(fields.signer_email ?? '').trim();
 
   const pdfOpenUrl = contractId && contractNo ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
@@ -143,7 +153,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
     return renderPreview(tpl.templateHtml, {
-      contract_no: contractNo || 'BBY-YYYY-MM-001-0000',
+      contract_no: contractNo || 'BBY-YYYY-MM-001-0',
       client_name: clientName,
       client_email: clientEmail,
       partyA_name: clientName,
@@ -151,6 +161,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       ...fields,
     });
   }, [clientEmail, clientName, contractNo, fields, tpl]);
+
+  const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
+  const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
 
 
   async function saveDraft() {
@@ -160,10 +173,18 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setError('TEMPLATE_REQUIRED');
       return null;
     }
-    if (!clientName || !clientEmail) {
-      setError('CLIENT_REQUIRED');
-      setErrorDetail('请先填写甲方公司名称与甲方邮箱（用于生成合同与发送签署）。');
-      return null;
+    if (showClientBlock) {
+      if (!clientName || !clientEmail) {
+        setError('CLIENT_REQUIRED');
+        setErrorDetail('请先填写甲方公司名称与甲方邮箱（用于生成合同与发送签署）。');
+        return null;
+      }
+    } else {
+      if (!clientName) {
+        setError('CLIENT_REQUIRED');
+        setErrorDetail('请先填写 Company。');
+        return null;
+      }
     }
     if (missingRequired.length > 0) {
       setError('MISSING_REQUIRED_FIELDS');
@@ -344,11 +365,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-semibold">
-              {tpl?.placeholders?.some((p) => p.key === 'partyA_name') ? '客户信息（甲方） / Party A' : 'Client'}
-            </div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {showClientBlock ? (
+            <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+              <div className="text-sm font-semibold">
+                {tpl?.placeholders?.some((p) => p.key === 'partyA_name') ? '客户信息（甲方） / Party A' : 'Client'}
+              </div>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">
                   {tpl?.placeholders?.some((p) => p.key === 'partyA_name')
@@ -403,12 +425,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   />
                 </div>
               ) : null}
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-semibold">签署信息 / Signing</div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {showSigningBlock ? (
+            <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+              <div className="text-sm font-semibold">签署信息 / Signing</div>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
                 <input
@@ -436,30 +460,50 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
                 <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP，可能与甲方联系邮箱不同。</div>
               </div>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="text-sm font-semibold">Fields</div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(tpl?.placeholders ?? [])
-                .filter(
+              {(() => {
+                const ps = (tpl?.placeholders ?? []).filter(
                   (p) =>
                     !p.key.startsWith('partyA_') &&
                     !p.key.startsWith('signer_') &&
                     p.key !== 'client_name' &&
                     p.key !== 'client_email',
-                )
-                .map((p) => (
-                <div key={p.key} className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">{p.label}{p.required ? ' *' : ''}</div>
-                  <input
-                    value={fields[p.key] ?? ''}
-                    onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
-                    className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </div>
-              ))}
+                );
+
+                const renderInput = (p: { key: string; label: string; required?: boolean }) => (
+                  <div key={p.key} className="md:col-span-1">
+                    <div className="text-xs font-medium text-black/60">
+                      {p.label}
+                      {p.required ? ' *' : ''}
+                    </div>
+                    <input
+                      value={fields[p.key] ?? ''}
+                      onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                      className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                    />
+                  </div>
+                );
+
+                if (!isNomineeTemplate) return ps.map(renderInput);
+
+                const companyPs = ps.filter((p) => p.key === 'company' || p.key === 'dated' || p.key.startsWith('company_'));
+                const principalPs = ps.filter((p) => p.key.startsWith('principal_'));
+
+                return (
+                  <>
+                    <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-1">Company</div>
+                    {companyPs.map(renderInput)}
+                    <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-2">Principal</div>
+                    {principalPs.map(renderInput)}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -468,14 +512,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <div className="rounded-xl bg-white border border-black/5 p-3 flex flex-wrap gap-2 shadow-sm">
               <button
                 onClick={() => void saveDraft()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
+                disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
               <button
                 onClick={() => void generateDocument()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
+                disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
               >
                 {rendering ? 'Generating…' : 'Generate'}
@@ -490,13 +534,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {downloading ? 'Downloading…' : 'Download PDF'}
               </button>
-              <button
-                onClick={() => void sendForSigning()}
-                disabled={saving || rendering || sending || !clientName || !clientEmail || missingRequired.length > 0}
-                className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
-              >
-                {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
-              </button>
+              {showSigningBlock ? (
+                <button
+                  onClick={() => void sendForSigning()}
+                  disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
+                  className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
+                >
+                  {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
+                </button>
+              ) : null}
             </div>
             </div>
           </div>

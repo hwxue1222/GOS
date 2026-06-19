@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V13 = 'contracts.templates.v13';
+const SEED_KEY_CONTRACTS_TEMPLATES_V14 = 'contracts.templates.v14';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV13(db: Db) {
+function seedContractsTemplatesV14(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V13] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V14] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -623,11 +623,6 @@ function seedContractsTemplatesV13(db: Db) {
       { key: 'principal_auth_designation', label: 'Principal signatory designation', required: true },
       { key: 'principal_auth_date', label: 'Principal signatory date (YYYY-MM-DD)', required: true },
       { key: 'principal_name', label: 'Principal name (for declaration)', required: true },
-      { key: 'principal_decl_signature', label: 'Principal declaration signature', required: true },
-      { key: 'principal_decl_name', label: 'Principal declaration name', required: true },
-      { key: 'principal_decl_nric', label: 'Principal declaration NRIC/Passport number', required: true },
-      { key: 'principal_decl_designation', label: 'Principal declaration designation', required: true },
-      { key: 'principal_decl_date', label: 'Principal declaration date (YYYY-MM-DD)', required: true },
     ],
     templateHtml: `<!doctype html>
 <html>
@@ -1057,8 +1052,8 @@ function seedContractsTemplatesV13(db: Db) {
 <p class="p22"><br></p>
 <p class="p20">I, <span class="s7">{{principal_name}}</span>, agree to the terms and conditions set out in this Agreement and I hereby provide my guarantee in my personal capacity on the faithful compliance of the terms and conditions thereof.<span class="Apple-converted-space"> </span></p>
 <p class="p22"><br></p>
-<p class="p16">Signature:</p><p class="p23">{{principal_decl_signature}}</p>
-<p class="p16">Name: {{principal_decl_name}}</p><p class="p16">NRIC/Passport number: {{principal_decl_nric}}</p><p class="p16">Designation: {{principal_decl_designation}}</p><p class="p16">Date: {{principal_decl_date}}</p>
+<p class="p16">Signature:</p><p class="p23">{{principal_auth_signature}}</p>
+<p class="p16">Name: {{principal_auth_name}}</p><p class="p16">NRIC/Passport number: {{principal_auth_nric}}</p><p class="p16">Designation: {{principal_auth_designation}}</p><p class="p16">Date: {{principal_auth_date}}</p>
 <p class="p18"><br></p>
 <p class="p18"><br></p>
 <p class="p18"><br></p>
@@ -1090,7 +1085,7 @@ function seedContractsTemplatesV13(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V13] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V14] = true;
   return changed;
 }
 
@@ -6261,7 +6256,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV13(db)) changed = true;
+  if (seedContractsTemplatesV14(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
