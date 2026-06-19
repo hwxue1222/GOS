@@ -21,6 +21,18 @@ export default async function NewContractPage() {
   }
 
   const templates = await listContractTemplates();
+  if (templates.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppTopNav active="contracts" />
+        <div className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">NO_TEMPLATES</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="contracts" />
@@ -30,4 +42,3 @@ export default async function NewContractPage() {
     </div>
   );
 }
-

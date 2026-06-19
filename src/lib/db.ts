@@ -297,12 +297,11 @@ function seedContractsModuleV1(db: Db) {
 
 function seedContractsTemplatesV3(db: Db) {
   if (!db.seed) db.seed = {};
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3]) return false;
-
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V3] && templates.length > 0) return false;
   const now = nowIso();
 
   const targetIdx = templates.findIndex((t) =>
