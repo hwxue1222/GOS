@@ -118,7 +118,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         const j = (await res?.json().catch(() => null)) as any;
         if (!res?.ok || !j?.contract?.id) {
           setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-          setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+          setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
           return null;
         }
         setContractId(j.contract.id);
@@ -134,7 +134,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return null;
       }
       return j.contract as { id: string };
@@ -156,7 +156,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.documentId) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return;
       }
       setDocumentId(String(j.documentId));
@@ -184,7 +184,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return;
       }
       setPacketId(String(j.packetId));

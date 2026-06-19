@@ -67,7 +67,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return;
       }
       setContract(j.contract as Contract);
@@ -93,7 +93,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.contract?.id) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (res ? await res.text().catch(() => '') : 'NETWORK_ERROR'));
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return;
       }
       setContract(j.contract as Contract);
