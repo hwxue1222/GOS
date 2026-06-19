@@ -471,11 +471,15 @@ export default function MembersClient() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</div>
             <div className="mt-1 text-sm text-black/60">Members</div>
+            <div className="mt-3">
+              <SecretarySubNavClient active="members" showMembers={true} />
+            </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-2 justify-end">
             <button
               onClick={() => {
@@ -513,8 +517,6 @@ export default function MembersClient() {
             </select>
           </div>
         </div>
-
-        <SecretarySubNavClient active="members" showMembers={true} />
       </div>
 
       <div className="mt-4 flex items-center justify-end">
