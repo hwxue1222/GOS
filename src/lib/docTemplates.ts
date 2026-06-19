@@ -2604,10 +2604,16 @@ export function renderContractHtml(input: {
   clientEmail: string;
   fields: Record<string, string>;
 }) {
+  const signerEmail =
+    String((input.fields ?? {}).signer_email ?? '').trim() ||
+    String((input.fields ?? {}).partyA_email ?? '').trim() ||
+    String(input.clientEmail ?? '').trim();
+
   const map: Record<string, string> = {
     contract_no: input.contractNo,
     client_name: input.clientName,
     client_email: input.clientEmail,
+    signer_email: signerEmail,
     ...(input.fields ?? {}),
   };
 

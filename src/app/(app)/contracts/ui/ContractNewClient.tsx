@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
 
 type Props = {
@@ -28,7 +27,6 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 }
 
 export default function ContractNewClient({ initialTemplates }: Props) {
-  const router = useRouter();
   const templates = initialTemplates;
   const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? '');
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
@@ -166,7 +164,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       setDocumentId(String(j.documentId));
       setDocumentSha(String(j.documentSha256 ?? ''));
-      router.push('/contracts');
     } finally {
       setRendering(false);
     }
@@ -430,9 +427,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
             <div className="h-[70vh]">
-              {contractId ? (
-                <iframe title="preview" src={pdfUrl} className="w-full h-full" />
-              ) : previewHtml ? (
+              {previewHtml ? (
                 <iframe title="preview" srcDoc={previewHtml} className="w-full h-full" />
               ) : (
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>

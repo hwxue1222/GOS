@@ -130,7 +130,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(html, { waitUntil: ['domcontentloaded'] });
+      await page.setContent(html, { waitUntil: ['domcontentloaded'], timeout: 45000 });
+      await page.waitForNetworkIdle({ idleTime: 500, timeout: 45000 }).catch(() => null);
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready;
       });

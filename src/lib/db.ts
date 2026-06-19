@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V11 = 'contracts.templates.v11';
+const SEED_KEY_CONTRACTS_TEMPLATES_V12 = 'contracts.templates.v12';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV11(db: Db) {
+function seedContractsTemplatesV12(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V11] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V12] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -332,6 +332,7 @@ function seedContractsTemplatesV11(db: Db) {
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Service Agreement</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
       :root {
         --text: #111;
         --muted: #4b5563;
@@ -341,7 +342,7 @@ function seedContractsTemplatesV11(db: Db) {
       html, body { margin: 0; padding: 0; }
       body {
         color: var(--text);
-        font-family: "Times New Roman", "Songti SC", "SimSun", ui-serif, serif;
+        font-family: "Noto Serif SC", "Songti SC", "SimSun", "Times New Roman", ui-serif, serif;
         line-height: 1.55;
         font-size: 12px;
         background: #f3f4f6;
@@ -515,10 +516,10 @@ function seedContractsTemplatesV11(db: Db) {
             <div class="h">甲方（签字） / Party A</div>
             <div class="sigline"></div>
             <div class="sigmeta">
-              <div><b>姓名 / Name:</b> <span data-signer-full-name="{{partyA_email}}"></span></div>
-              <div style="margin-top:4px;"><b>职位 / Title:</b> <span data-signer-title="{{partyA_email}}"></span></div>
-              <div style="margin-top:4px;"><b>时间 / Date:</b> <span data-signer-signed-at="{{partyA_email}}"></span></div>
-              <div style="margin-top:6px;"><span class="signer" data-signer="{{partyA_email}}"></span></div>
+              <div><b>姓名 / Name:</b> <span data-signer-full-name="{{signer_email}}">{{signer_full_name}}</span></div>
+              <div style="margin-top:4px;"><b>职位 / Title:</b> <span data-signer-title="{{signer_email}}">{{signer_title}}</span></div>
+              <div style="margin-top:4px;"><b>时间 / Date:</b> <span data-signer-signed-at="{{signer_email}}"></span></div>
+              <div style="margin-top:6px;"><span class="signer" data-signer="{{signer_email}}"></span></div>
             </div>
           </div>
           <div class="sigbox">
@@ -604,7 +605,7 @@ function seedContractsTemplatesV11(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V11] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V12] = true;
   return changed;
 }
 
@@ -5775,7 +5776,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV11(db)) changed = true;
+  if (seedContractsTemplatesV12(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
