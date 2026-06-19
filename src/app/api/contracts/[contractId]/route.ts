@@ -35,3 +35,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ contra
   return NextResponse.json({ ok: true, contract: next });
 }
 
+export async function GET(_: Request, { params }: { params: Promise<{ contractId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const canViewAll = hasPermission(user, 'contracts', 'viewAll');
+  const canViewAssigned = hasPermission(user, 'contracts', 'viewAssigned');
+  if (!canViewAll && !canViewAssigned) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { contractId } = await params;
+  const current = await findContractById(contractId);
+  if (!current) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!canAccess(user, current)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  return NextResponse.json({ ok: true, contract: current });
+}

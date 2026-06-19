@@ -125,10 +125,14 @@ export default function ContractsListClient({ initialRows }: Props) {
         ) : (
           rows.map((r) => {
             const st = statusLabel(r.contract.status);
+            const href =
+              r.contract.status === 'DRAFT' || r.contract.status === 'READY'
+                ? `/contracts/new?contractId=${encodeURIComponent(r.contract.id)}`
+                : `/contracts/${encodeURIComponent(r.contract.id)}`;
             return (
               <Link
                 key={r.contract.id}
-                href={`/contracts/${encodeURIComponent(r.contract.id)}`}
+                href={href}
                 className="grid grid-cols-12 px-4 py-3 text-sm border-b border-black/5 hover:bg-black/[0.02] transition-colors"
               >
                 <div className="col-span-3 font-medium truncate">{r.contract.contractNo}</div>
@@ -149,4 +153,3 @@ export default function ContractsListClient({ initialRows }: Props) {
     </div>
   );
 }
-

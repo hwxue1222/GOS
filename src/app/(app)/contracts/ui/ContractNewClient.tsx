@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
 
 type Props = {
@@ -28,6 +29,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 
 export default function ContractNewClient({ initialTemplates }: Props) {
   const templates = initialTemplates;
+  const searchParams = useSearchParams();
   const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? '');
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
 
@@ -49,6 +51,23 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [pdfCheck, setPdfCheck] = useState<string>('');
   const [buildInfo, setBuildInfo] = useState<string>('');
 
+  const clientNameKey = useMemo(() => {
+    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
+    if (keys.has('partyA_name')) return 'partyA_name';
+    return 'client_name';
+  }, [tpl]);
+
+  const clientEmailKey = useMemo(() => {
+    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
+    if (keys.has('partyA_email')) return 'partyA_email';
+    return 'client_email';
+  }, [tpl]);
+
+  const editContractId = useMemo(() => {
+    const v = String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
+    return v;
+  }, [searchParams]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -68,17 +87,42 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     };
   }, []);
 
-  const clientNameKey = useMemo(() => {
-    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
-    if (keys.has('partyA_name')) return 'partyA_name';
-    return 'client_name';
-  }, [tpl]);
-
-  const clientEmailKey = useMemo(() => {
-    const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
-    if (keys.has('partyA_email')) return 'partyA_email';
-    return 'client_email';
-  }, [tpl]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!editContractId) return;
+    (async () => {
+      const res = await fetch(`/api/contracts/${encodeURIComponent(editContractId)}`, { method: 'GET' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as any;
+      if (cancelled) return;
+      if (!res?.ok || !j?.contract?.id) {
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+        return;
+      }
+      const c = j.contract as {
+        id: string;
+        contractNo: string;
+        templateId: string;
+        clientName: string;
+        clientEmail: string;
+        fields?: Record<string, string>;
+      };
+      setContractId(String(c.id));
+      setContractNo(String(c.contractNo ?? ''));
+      setTemplateId(String(c.templateId ?? templateId));
+      setFields((prev) => {
+        const next = { ...(prev ?? {}) } as Record<string, string>;
+        const base = (c.fields ?? {}) as Record<string, string>;
+        for (const [k, v] of Object.entries(base)) next[k] = String(v ?? '');
+        next[clientNameKey] = String(c.clientName ?? '');
+        next[clientEmailKey] = String(c.clientEmail ?? '');
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientEmailKey, clientNameKey, editContractId, templateId]);
 
   const clientName = String(fields[clientNameKey] ?? '').trim();
   const clientEmail = String(fields[clientEmailKey] ?? '').trim();
@@ -216,7 +260,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-lg font-semibold">New contract</div>
+          <div className="text-lg font-semibold">{contractId ? 'Edit contract' : 'New contract'}</div>
           <div className="text-sm text-black/60 mt-1">Fill fields, render document, download PDF, or send for signing.</div>
           {buildInfo ? <div className="text-xs text-black/50 mt-1">Build: {buildInfo}</div> : null}
         </div>

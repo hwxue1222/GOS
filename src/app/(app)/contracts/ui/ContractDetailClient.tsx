@@ -132,6 +132,14 @@ export default function ContractDetailClient({ initialContract, templateName, do
         </div>
         <div className="flex items-center gap-2">
           <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${st.cls}`}>{st.text}</span>
+          {contract.status === 'DRAFT' || contract.status === 'READY' ? (
+            <Link
+              href={`/contracts/new?contractId=${encodeURIComponent(contract.id)}`}
+              className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02]"
+            >
+              Edit draft
+            </Link>
+          ) : null}
           <Link
             href="/contracts"
             className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02]"
