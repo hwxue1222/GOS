@@ -63,7 +63,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ contrac
   const current = await findContractById(contractId);
   if (!current) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, current)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  if (current.status !== 'DRAFT' || String(current.contractNo ?? '').trim()) {
+  if ((current.status !== 'DRAFT' && current.status !== 'READY') || current.packetId || current.signedAt) {
     return NextResponse.json({ ok: false, error: 'CANNOT_DELETE' }, { status: 409 });
   }
 

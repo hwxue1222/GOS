@@ -257,7 +257,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
               >
                 {rendering ? 'Rendering…' : 'Render document'}
               </button>
-              {contract.status === 'DRAFT' && !String(contract.contractNo ?? '').trim() ? (
+              {(contract.status === 'DRAFT' || contract.status === 'READY') && !String(contract.packetId ?? '').trim() && !String(contract.signedAt ?? '').trim() ? (
                 <button
                   onClick={() => void deleteDraft()}
                   disabled={rendering || sending}

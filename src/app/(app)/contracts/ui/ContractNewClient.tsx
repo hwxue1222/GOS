@@ -456,7 +456,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
-              {contractId && !contractNo ? (
+              {contractId && (!packetId || !String(packetId).trim()) ? (
                 <button
                   onClick={() => void deleteDraft()}
                   disabled={saving || rendering || sending}

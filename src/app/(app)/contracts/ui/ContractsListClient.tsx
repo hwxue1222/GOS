@@ -128,7 +128,10 @@ export default function ContractsListClient({ initialRows }: Props) {
         ) : (
           rows.map((r) => {
             const st = statusLabel(r.contract.status);
-            const canDelete = r.contract.status === 'DRAFT' && !String(r.contract.contractNo ?? '').trim();
+            const canDelete =
+              (r.contract.status === 'DRAFT' || r.contract.status === 'READY') &&
+              !String((r.contract as any).packetId ?? '').trim() &&
+              !String((r.contract as any).signedAt ?? '').trim();
             const href =
               r.contract.status === 'DRAFT' || r.contract.status === 'READY'
                 ? `/contracts/new?contractId=${encodeURIComponent(r.contract.id)}`
@@ -155,7 +158,8 @@ export default function ContractsListClient({ initialRows }: Props) {
                         e.preventDefault();
                         e.stopPropagation();
                         if (deletingId) return;
-                        if (!confirm('Delete this draft?')) return;
+                        const no = String(r.contract.contractNo ?? '').trim();
+                        if (!confirm(`Delete this draft${no ? ` (${no})` : ''}?`)) return;
                         setDeletingId(r.contract.id);
                         void fetch(`/api/contracts/${encodeURIComponent(r.contract.id)}`, { method: 'DELETE' })
                           .then((res) => res.json().catch(() => null).then((j) => ({ res, j })))
