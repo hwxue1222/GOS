@@ -168,7 +168,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V7 = 'contracts.templates.v7';
+const SEED_KEY_CONTRACTS_TEMPLATES_V8 = 'contracts.templates.v8';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -295,13 +295,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV7(db: Db) {
+function seedContractsTemplatesV8(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V7] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V8] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -344,9 +344,9 @@ function seedContractsTemplatesV7(db: Db) {
         background: #fff;
       }
       .page { padding: 36px 42px; }
-      .header { display: flex; align-items: flex-start; justify-content: flex-start; gap: 16px; }
+      .header { display: flex; align-items: flex-start; justify-content: flex-end; gap: 16px; }
       .logo { height: 44px; width: auto; object-fit: contain; }
-      .meta-row { margin-top: 10px; display: flex; justify-content: flex-end; gap: 18px; font-size: 11px; color: var(--muted); }
+      .meta-row { margin-top: 10px; display: flex; justify-content: flex-end; gap: 18px; font-size: 11px; color: var(--muted); text-align: right; }
       .meta-row b { color: var(--text); font-weight: 700; }
       .meta-row span { white-space: nowrap; color: var(--text); }
       .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
@@ -581,7 +581,7 @@ function seedContractsTemplatesV7(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V7] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V8] = true;
   return changed;
 }
 
@@ -5694,7 +5694,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV7(db)) changed = true;
+  if (seedContractsTemplatesV8(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
