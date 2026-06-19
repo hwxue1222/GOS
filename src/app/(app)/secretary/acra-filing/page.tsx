@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb, listIncorporationApplications } from '@/lib/db';
@@ -7,6 +5,7 @@ import { hasPermission } from '@/lib/permissions';
 import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 import SecretaryCsReviewClient from '@/app/(app)/secretary/corporate-secretary/review/ui/SecretaryCsReviewClient';
 import SecretaryIncorporationReviewClient from '@/app/(app)/secretary/incorporation/review/ui/SecretaryIncorporationReviewClient';
+import SecretarySubNavClient from '@/app/(app)/secretary/ui/SecretarySubNavClient';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -163,25 +162,12 @@ export default async function SecretaryAcraFilingPage() {
       <AppTopNav active="secretary" />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3">
             <div>
               <h1 className="text-xl font-semibold">ACRA Filing</h1>
               <div className="mt-1 text-sm text-black/60">Unified queue for front-end submitted applications</div>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/secretary/companies"
-                className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-              >
-                Companies
-              </Link>
-              <Link
-                href="/secretary/acra-filing"
-                className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium"
-              >
-                ACRA Filing
-              </Link>
-            </div>
+            <SecretarySubNavClient active="acra-filing" showMembers={true} />
           </div>
 
           <div className="mt-6">

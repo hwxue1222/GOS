@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
+import SecretarySubNavClient from '@/app/(app)/secretary/ui/SecretarySubNavClient';
 
 type CompanyRow = {
   client: {
@@ -49,10 +50,6 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
   const [page, setPage] = usePersistedState('gos.secretary.companies.page', 1);
   const [pageSize, setPageSize] = usePersistedState('gos.secretary.companies.pageSize', 20);
 
-  const navBtnBase = 'rounded-md bg-white border border-black/10 px-3 py-2 text-sm font-medium';
-  const navBtnActive = `${navBtnBase} bg-[#2f7bdc] text-white border-[#2f7bdc]`;
-  const navBtnInactive = `${navBtnBase} text-black/70 hover:bg-black/[0.02]`;
-
   const items = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return initialItems;
@@ -85,39 +82,13 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</h1>
-          <div className="mt-1 text-sm text-black/60">{subtitle ?? t('secretary.companies')}</div>
-          {helperText ? <div className="mt-1 text-xs text-black/40">{helperText}</div> : null}
-        </div>
-        <div className="flex items-center gap-2 w-full justify-end">
-          <Link
-            href="/secretary/companies"
-            className={(activeSection ?? 'companies') === 'companies' ? navBtnActive : navBtnInactive}
-          >
-            Companies
-          </Link>
-          <Link
-            href="/secretary/external-companies"
-            className={(activeSection ?? 'companies') === 'external-companies' ? navBtnActive : navBtnInactive}
-          >
-            External Companies
-          </Link>
-          <Link
-            href="/secretary/acra-filing"
-            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-          >
-            ACRA Filing
-          </Link>
-          {canViewPeople ? (
-            <Link
-              href="/secretary/members"
-              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-            >
-              {t('secretary.peopleLibrary')}
-            </Link>
-          ) : null}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</h1>
+            <div className="mt-1 text-sm text-black/60">{subtitle ?? t('secretary.companies')}</div>
+            {helperText ? <div className="mt-1 text-xs text-black/40">{helperText}</div> : null}
+          </div>
           <input
             value={search}
             onChange={(e) => {
@@ -128,6 +99,11 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
             className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
           />
         </div>
+
+        <SecretarySubNavClient
+          active={(activeSection ?? 'companies') === 'external-companies' ? 'external-companies' : 'companies'}
+          showMembers={!!canViewPeople}
+        />
       </div>
 
       <div className="mt-3 flex items-center justify-end">

@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/components/I18nProviderClient';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
 import MembersTable from './MembersTable';
+import SecretarySubNavClient from '@/app/(app)/secretary/ui/SecretarySubNavClient';
 
 type Member = {
   id: string;
@@ -470,59 +470,51 @@ export default function MembersClient() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[#2f7bdc] text-sm">
-            <Link href="/secretary/companies" className="hover:underline">
-              Companies
-            </Link>
-            <span className="mx-2 text-black/30">/</span>
-            <span className="text-black/70">Members</span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xl font-semibold whitespace-nowrap">{t('nav.secretary')}</div>
+            <div className="mt-1 text-sm text-black/60">Members</div>
           </div>
-          <div className="mt-1 text-2xl font-bold">Members</div>
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <button
+              onClick={() => {
+                setError(null);
+                setShowAdd(true);
+              }}
+              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+            >
+              + Add
+            </button>
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder={t('people.searchPlaceholder')}
+              className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+            />
+            <select
+              value={idTypeFilter}
+              onChange={(e) => {
+                setIdTypeFilter(e.target.value as any);
+                setPage(1);
+              }}
+              className="w-[180px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+            >
+              <option value="ALL">ID type: All</option>
+              <option value="NRIC">NRIC</option>
+              <option value="FIN">FIN</option>
+              <option value="PASSPORT">Passport</option>
+              <option value="IC">IC</option>
+              <option value="OTHER">Other</option>
+              <option value="MISSING">(Missing)</option>
+            </select>
+          </div>
         </div>
-        <div className="flex items-center gap-2 w-full justify-end">
-          <Link
-            href="/secretary/acra-filing"
-            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-          >
-            ACRA Filing
-          </Link>
-          <button
-            onClick={() => {
-              setError(null);
-              setShowAdd(true);
-            }}
-            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
-          >
-            + Add
-          </button>
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder={t('people.searchPlaceholder')}
-            className="w-full max-w-md rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-          />
-          <select
-            value={idTypeFilter}
-            onChange={(e) => {
-              setIdTypeFilter(e.target.value as any);
-              setPage(1);
-            }}
-            className="w-[180px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-          >
-            <option value="ALL">ID type: All</option>
-            <option value="NRIC">NRIC</option>
-            <option value="FIN">FIN</option>
-            <option value="PASSPORT">Passport</option>
-            <option value="IC">IC</option>
-            <option value="OTHER">Other</option>
-            <option value="MISSING">(Missing)</option>
-          </select>
-        </div>
+
+        <SecretarySubNavClient active="members" showMembers={true} />
       </div>
 
       <div className="mt-4 flex items-center justify-end">

@@ -4,6 +4,10 @@ import { getCurrentUser } from '@/lib/auth';
 import { listClients, listJobs } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
+function isScExternalCode(code: string) {
+  return /^SC\d+$/i.test(String(code ?? '').trim());
+}
+
 export default async function ClientsPage() {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -24,7 +28,7 @@ export default async function ClientsPage() {
   }
 
   const clientsAll = await listClients();
-  let clients = clientsAll.filter((c) => !c.deletedAt);
+  let clients = clientsAll.filter((c) => !c.deletedAt).filter((c) => !isScExternalCode(c.code));
   if (!canViewAll) {
     const js = await listJobs();
     const assignedClientIds = new Set(
