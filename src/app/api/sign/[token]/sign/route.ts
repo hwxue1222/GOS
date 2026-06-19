@@ -6,7 +6,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const body = (await req.json().catch(() => null)) as
     | {
         otp?: string;
-        signerEmail?: string;
         rdrRepresentativeName?: string;
         rdrRepresentativeEmail?: string;
         signerFullName?: string;
@@ -28,7 +27,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     otp,
     ip,
     userAgent,
-    signerEmail: typeof body?.signerEmail === 'string' ? body.signerEmail : undefined,
     rdrRepresentativeName: typeof body?.rdrRepresentativeName === 'string' ? body.rdrRepresentativeName : undefined,
     rdrRepresentativeEmail: typeof body?.rdrRepresentativeEmail === 'string' ? body.rdrRepresentativeEmail : undefined,
     signerFullName: typeof body?.signerFullName === 'string' ? body.signerFullName : undefined,

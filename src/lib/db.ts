@@ -7657,7 +7657,6 @@ export async function signByToken(input: {
   otp: string;
   ip?: string;
   userAgent?: string;
-  signerEmail?: string;
   rdrRepresentativeName?: string;
   rdrRepresentativeEmail?: string;
   signerFullName?: string;
@@ -7744,9 +7743,6 @@ export async function signByToken(input: {
   }
 
   if (packet.relatedType === 'CONTRACT') {
-    const email = String(input.signerEmail ?? '').trim();
-    if (!email) return { ok: false as const, error: 'EMAIL_REQUIRED' as const };
-    if (email.trim().toLowerCase() !== req.email.trim().toLowerCase()) return { ok: false as const, error: 'EMAIL_MISMATCH' as const };
     const fullName = String(input.signerFullName ?? '').trim();
     const title = String(input.signerTitle ?? '').trim();
     if (!fullName || !title) return { ok: false as const, error: 'SIGNER_PROFILE_REQUIRED' as const };

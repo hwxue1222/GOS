@@ -53,7 +53,6 @@ export default function SignClient(props: {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const [signerEmail, setSignerEmail] = useState(requestEmail);
   const [signerFullName, setSignerFullName] = useState(initialSignerFullName);
   const [signerTitle, setSignerTitle] = useState(initialSignerTitle);
   const [signerSignedDate, setSignerSignedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -64,15 +63,9 @@ export default function SignClient(props: {
   const isRorcDecl = packetKind === 'RORC_DECL';
   const isContract = packetKind === 'CONTRACT';
 
-  const emailMatchesRequest = signerEmail.trim().toLowerCase() === requestEmail.trim().toLowerCase();
-
   async function requestOtp() {
     setError(null);
     setInfo(null);
-    if (isContract && !emailMatchesRequest) {
-      setError('EMAIL_MISMATCH');
-      return;
-    }
     setSending(true);
     try {
       const res = await fetch(`/api/sign/${token}/request-otp`, { method: 'POST' });
@@ -91,10 +84,6 @@ export default function SignClient(props: {
   async function sign() {
     setError(null);
     setInfo(null);
-    if (isContract && !emailMatchesRequest) {
-      setError('EMAIL_MISMATCH');
-      return;
-    }
     const code = otp.trim();
     if (!code) {
       setError('OTP_REQUIRED');
@@ -136,7 +125,6 @@ export default function SignClient(props: {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           otp: code,
-          signerEmail: signerEmail.trim() || undefined,
           rdrRepresentativeName: repName.trim() || undefined,
           rdrRepresentativeEmail: repEmail.trim() || undefined,
           signerFullName: signerFullName.trim() || undefined,
@@ -203,17 +191,6 @@ export default function SignClient(props: {
             <div className="mt-5 rounded-lg border border-black/5 bg-black/[0.02] p-4">
               <div className="text-sm font-medium">Signer information</div>
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {isContract ? (
-                  <label className="text-sm sm:col-span-2">
-                    <div className="text-black/70">Email (must match)</div>
-                    <input
-                      disabled={signing}
-                      value={signerEmail}
-                      onChange={(e) => setSignerEmail(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
-                    />
-                  </label>
-                ) : null}
                 <label className="text-sm">
                   <div className="text-black/70">Full name</div>
                   <input
