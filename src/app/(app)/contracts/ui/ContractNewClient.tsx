@@ -272,12 +272,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             Back
           </Link>
           {contractId ? (
-            <Link
-              href={`/contracts/${encodeURIComponent(contractId)}`}
-              className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] transition-colors"
+            <button
+              onClick={() => void generateDocument()}
+              disabled={saving || rendering || sending || !clientName || !clientEmail}
+              className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
             >
-              View detail
-            </Link>
+              {rendering ? 'Generating…' : 'Generate'}
+            </button>
           ) : null}
         </div>
       </div>
@@ -439,7 +440,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 disabled={saving || rendering || sending || !clientName || !clientEmail}
                 className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
               >
-                {rendering ? 'Rendering…' : 'Render document'}
+                {rendering ? 'Generating…' : 'Generate'}
               </button>
               <a
                 href={pdfDownloadUrl}
