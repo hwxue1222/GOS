@@ -571,7 +571,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </div>
             <div className="h-[70vh]">
               {previewHtml ? (
-                <iframe title="preview" srcDoc={previewHtml} className="w-full h-full" />
+                <iframe title="preview" srcDoc={previewHtml} className="w-full h-full" scrolling="yes" />
               ) : (
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
