@@ -6,6 +6,7 @@ import PeopleTable from '@/app/(app)/secretary/people/ui/PeopleTable';
 import { useI18n } from '@/components/I18nProviderClient';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Person = {
   id: string;
@@ -361,11 +362,10 @@ export default function PeopleClient() {
               </label>
               <label className="text-sm">
                 <div className="text-black/60">DOB</div>
-                <input
-                  type="date"
+                <DateInputYMD
                   value={form.dob}
-                  onChange={(e) => setForm((v) => ({ ...v, dob: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  onChange={(dob) => setForm((v) => ({ ...v, dob }))}
+                  inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
               </label>
               <label className="text-sm sm:col-span-2">

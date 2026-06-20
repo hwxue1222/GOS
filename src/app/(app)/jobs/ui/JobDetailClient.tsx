@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
-import { DateInputDMY } from '@/components/DateInputDMY';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 import type { Role } from '@/lib/types';
 
@@ -590,7 +590,7 @@ export default function JobDetailClient({
               </label>
               <label className="text-sm">
                 <div className="text-black/70">Due date</div>
-                <DateInputDMY
+                <DateInputYMD
                   value={jobDraft.dueDate}
                   onChange={(dueDate) => setJobDraft((v) => ({ ...v, dueDate }))}
                   className="mt-1"
@@ -900,7 +900,7 @@ export default function JobDetailClient({
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Due date</div>
-                    <DateInputDMY
+                    <DateInputYMD
                       value={dupDraft.dueDate}
                       onChange={(dueDate) => setDupDraft((v) => ({ ...v, dueDate }))}
                       className="mt-1"
@@ -1007,7 +1007,7 @@ export default function JobDetailClient({
                               </select>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <DateInputDMY
+                              <DateInputYMD
                                 value={t.createdAt}
                                 onChange={(createdAt) =>
                                   setDupTasks((prev) => prev.map((x, i) => (i === idx ? { ...x, createdAt } : x)))

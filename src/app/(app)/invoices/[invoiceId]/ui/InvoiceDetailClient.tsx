@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
-import { DateInputDMY } from '@/components/DateInputDMY';
+import { DateInputYMD } from '@/components/DateInputYMD';
 import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus, Role } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
@@ -412,7 +412,7 @@ export default function InvoiceDetailClient({
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <div className="text-xs text-black/60 mb-1">Paid Date</div>
-                  <DateInputDMY
+                  <DateInputYMD
                     value={markPaidDate}
                     onChange={(v) => setMarkPaidDate(v)}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
@@ -645,7 +645,7 @@ export default function InvoiceDetailClient({
 
               <div>
                 <div className="text-xs text-black/60 mb-1">Issue Date</div>
-                <DateInputDMY
+                <DateInputYMD
                   value={draft.issueDate}
                   onChange={(v) => setDraft((p) => ({ ...p, issueDate: v }))}
                   disabled={!canEdit}
@@ -655,7 +655,7 @@ export default function InvoiceDetailClient({
 
               <div>
                 <div className="text-xs text-black/60 mb-1">Due Date</div>
-                <DateInputDMY
+                <DateInputYMD
                   value={draft.dueDate}
                   onChange={(v) => setDraft((p) => ({ ...p, dueDate: v }))}
                   disabled={!canEdit}

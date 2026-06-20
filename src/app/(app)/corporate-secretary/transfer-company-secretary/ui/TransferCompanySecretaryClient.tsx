@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 export default function TransferCompanySecretaryClient() {
   const router = useRouter();
@@ -70,11 +71,10 @@ export default function TransferCompanySecretaryClient() {
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <label className="sm:col-span-6 text-sm">
               <div className="text-black">Effective date (optional)</div>
-              <input
-                type="date"
+              <DateInputYMD
                 value={effectiveDate}
-                onChange={(e) => setEffectiveDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                onChange={setEffectiveDate}
+                inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>
 
@@ -138,4 +138,3 @@ export default function TransferCompanySecretaryClient() {
     </ModalShell>
   );
 }
-

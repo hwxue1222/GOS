@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
 import { usePersistedState } from '@/lib/usePersistedState';
-import { DateInputDMY } from '@/components/DateInputDMY';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 import type { Role } from '@/lib/types';
 
@@ -697,7 +697,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
               </label>
               <label className="text-sm">
                 <div className="text-black/70">Appointment date</div>
-                <DateInputDMY
+                <DateInputYMD
                   value={newDirector.appointmentDate}
                   onChange={(next) => setNewDirector((v) => ({ ...v, appointmentDate: next }))}
                   disabled={!canUpdateClient || directorSaving}
@@ -778,7 +778,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {editing ? (
-                          <DateInputDMY
+                          <DateInputYMD
                             value={editDirectorDraft.appointmentDate}
                             onChange={(next) => setEditDirectorDraft((v) => ({ ...v, appointmentDate: next }))}
                             disabled={directorSaving}
@@ -792,7 +792,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {editing ? (
-                          <DateInputDMY
+                          <DateInputYMD
                             value={editDirectorDraft.resignationDate}
                             onChange={(next) => setEditDirectorDraft((v) => ({ ...v, resignationDate: next }))}
                             disabled={directorSaving}

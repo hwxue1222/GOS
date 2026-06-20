@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { DateInputYMD } from '@/components/DateInputYMD';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { formatDateDMY } from '@/lib/date';
 
@@ -362,11 +363,10 @@ export default function ChangeCompanyNameClient() {
               <div className="text-black">
                 <span className="text-red-500">*</span> Meeting date :
               </div>
-              <input
-                type="date"
+              <DateInputYMD
                 value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                onChange={setMeetingDate}
+                inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>
 
@@ -392,11 +392,10 @@ export default function ChangeCompanyNameClient() {
               <div className="text-black">
                 <span className="text-red-500">*</span> Notice date :
               </div>
-              <input
-                type="date"
+              <DateInputYMD
                 value={noticeDate}
-                onChange={(e) => setNoticeDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                onChange={setNoticeDate}
+                inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 max={
                   meetingDate && /^\d{4}-\d{2}-\d{2}$/.test(meetingDate)
                     ? (() => {

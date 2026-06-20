@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { maskAddress, maskDob, maskEmail, maskName, maskNationality, maskPhone } from '@/lib/mask';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type PhoneCountryCode = '+65' | '+86' | '+852' | '+886' | '+60' | '+62' | '+66' | '+84' | '+63' | '+81' | '+82' | '+1' | '+44';
 
@@ -549,12 +550,11 @@ export default function ChangeDirectorClient(props: {
                             className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${showErr && v.missing.dob ? 'border-red-500' : 'border-black/10'}`}
                           />
                         ) : (
-                          <input
-                            type="date"
-                            value={d.dob}
-                            onChange={(e) => patchDirector(i, { dob: e.target.value, dobLocked: false })}
-                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErr && (v.missing.dob || v.invalid.dob) ? 'border-red-500' : 'border-black/10'}`}
-                          />
+                        <DateInputYMD
+                          value={d.dob}
+                          onChange={(dob) => patchDirector(i, { dob, dobLocked: false })}
+                          inputClassName={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErr && (v.missing.dob || v.invalid.dob) ? 'border-red-500' : 'border-black/10'}`}
+                        />
                         )}
                       </label>
 
@@ -599,13 +599,12 @@ export default function ChangeDirectorClient(props: {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Date of appointment
                         </div>
-                        <input
-                          type="date"
+                        <DateInputYMD
                           value={d.appointmentDate}
-                          onChange={(e) => patchDirector(i, { appointmentDate: e.target.value })}
+                          onChange={(appointmentDate) => patchDirector(i, { appointmentDate })}
                           min={ymdNDaysAgo(14)}
                           max={ymdToday()}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErr && (v.missing.appointmentDate || v.invalid.appointmentDate) ? 'border-red-500' : 'border-black/10'}`}
+                          inputClassName={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErr && (v.missing.appointmentDate || v.invalid.appointmentDate) ? 'border-red-500' : 'border-black/10'}`}
                         />
                         {showErr && v.invalid.appointmentDate ? (
                           <div className="mt-1 text-xs text-red-600">Date of appointment must be within the past 14 days and not in the future.</div>
@@ -698,13 +697,12 @@ export default function ChangeDirectorClient(props: {
               <div className="text-black">
                 <span className="text-red-500">*</span> Date of resignation
               </div>
-              <input
-                type="date"
+              <DateInputYMD
                 value={resignationDateYmd}
-                onChange={(e) => setResignationDateYmd(e.target.value)}
+                onChange={setResignationDateYmd}
                 min={ymdNDaysAgo(14)}
                 max={ymdToday()}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>
           </div>

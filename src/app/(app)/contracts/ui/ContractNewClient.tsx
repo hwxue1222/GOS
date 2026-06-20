@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Props = {
   initialTemplates: ContractTemplate[];
@@ -165,7 +166,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
     return renderPreview(tpl.templateHtml, {
-      contract_no: contractNo || 'BBY-YYYY-MM-001-0',
+      contract_no: contractNo || 'BBY-YYYYMM-001-0',
       client_name: clientName,
       client_email: clientEmail,
       partyA_name: clientName,
@@ -508,6 +509,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     p.key === 'agreement_date' ||
                     p.key.endsWith('_date');
 
+                  if (isDateField) {
+                    return (
+                      <div key={p.key} className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">
+                          {p.label}
+                          {p.required ? ' *' : ''}
+                        </div>
+                        <DateInputYMD
+                          value={fields[p.key] ?? ''}
+                          onChange={(next) => setFields((prev) => ({ ...prev, [p.key]: next }))}
+                          inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    );
+                  }
+
                   return (
                   <div key={p.key} className="md:col-span-1">
                     <div className="text-xs font-medium text-black/60">
@@ -515,7 +532,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       {p.required ? ' *' : ''}
                     </div>
                     <input
-                      type={isDateField ? 'date' : 'text'}
+                      type="text"
                       value={fields[p.key] ?? ''}
                       onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
                       className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"

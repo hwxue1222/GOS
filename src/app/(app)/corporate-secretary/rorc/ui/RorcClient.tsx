@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type IdType = 'PASSPORT' | 'NRIC' | 'FIN' | 'IC' | 'OTHER';
 
@@ -741,11 +742,10 @@ export default function RorcClient() {
                       className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     />
                   ) : (
-                    <input
-                      type="date"
+                    <DateInputYMD
                       value={person.dateOfBirth}
-                      onChange={(e) => setPerson((v) => ({ ...v, dateOfBirth: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      onChange={(dateOfBirth) => setPerson((v) => ({ ...v, dateOfBirth }))}
+                      inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                     />
                   )}
                 </label>
@@ -817,11 +817,10 @@ export default function RorcClient() {
                   <div className="text-black">
                     <span className="text-red-500">*</span> Declared On
                   </div>
-                  <input
-                    type="date"
+                  <DateInputYMD
                     value={effectiveDate}
-                    onChange={(e) => setEffectiveDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    onChange={setEffectiveDate}
+                    inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
               </div>
@@ -1053,11 +1052,10 @@ export default function RorcClient() {
                   <div className="text-black">
                     <span className="text-red-500">*</span> Date On Which The Company Becomes Controller
                   </div>
-                  <input
-                    type="date"
+                  <DateInputYMD
                     value={effectiveDate}
-                    onChange={(e) => setEffectiveDate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                    onChange={setEffectiveDate}
+                    inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   />
                 </label>
               </div>

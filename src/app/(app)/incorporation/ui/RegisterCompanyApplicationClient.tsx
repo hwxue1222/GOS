@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Props = {
   defaultCompanyName?: string;
@@ -92,11 +93,10 @@ export default function RegisterCompanyApplicationClient(props: Props) {
         </label>
         <label className="text-sm">
           <div className="text-black/60">Incorporation date (optional)</div>
-          <input
-            type="date"
+          <DateInputYMD
             value={incorporationDate}
-            onChange={(e) => setIncorporationDate(e.target.value)}
-            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
+            onChange={setIncorporationDate}
+            inputClassName="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
           />
         </label>
         <label className="text-sm sm:col-span-2">

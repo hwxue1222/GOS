@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type CompanyOption = { id: string; name: string };
 
@@ -103,11 +104,10 @@ export default function TransferSecretaryApplicationClient(props: Props) {
 
         <label className="text-sm">
           <div className="text-black/60">Effective date (optional)</div>
-          <input
-            type="date"
+          <DateInputYMD
             value={effectiveDate}
-            onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
+            onChange={setEffectiveDate}
+            inputClassName="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
           />
         </label>
         <div />

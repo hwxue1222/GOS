@@ -14,6 +14,7 @@ import {
   type NewDirector,
   ymdToday,
 } from '@/app/(app)/secretary/companies/[clientId]/ui/directorChangeFormUtils';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Props = {
   clientId: string;
@@ -308,11 +309,10 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
           <div className="text-black">
             <span className="text-red-500">*</span> Effective date
           </div>
-          <input
-            type="date"
+          <DateInputYMD
             value={effectiveDate}
-            onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+            onChange={setEffectiveDate}
+            inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
           />
         </label>
         <div className="text-sm">

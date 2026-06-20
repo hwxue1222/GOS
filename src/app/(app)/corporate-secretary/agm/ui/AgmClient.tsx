@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 export default function AgmClient() {
   const router = useRouter();
@@ -169,11 +170,10 @@ export default function AgmClient() {
               <div className="text-black">
                 <span className="text-red-500">*</span> Date Of Meeting
               </div>
-              <input
-                type="date"
+              <DateInputYMD
                 value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                onChange={setMeetingDate}
+                inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
             </label>
 

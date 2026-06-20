@@ -3,6 +3,7 @@
 import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
 import { useI18n } from '@/components/I18nProviderClient';
 import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Client = {
   id: string;
@@ -187,12 +188,11 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
           </label>
           <label className="text-sm">
             <div className="text-black/60">{t('company.incorporationDate')}</div>
-            <input
-              type="date"
+            <DateInputYMD
               value={client.incorporationDate ?? ''}
-              onChange={(e) => onChange({ incorporationDate: e.target.value || undefined })}
+              onChange={(incorporationDate) => onChange({ incorporationDate: incorporationDate || undefined })}
               disabled={!canEdit}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
+              inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
             />
           </label>
           <label className="text-sm sm:col-span-2">

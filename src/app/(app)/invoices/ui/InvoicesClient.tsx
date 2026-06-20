@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
-import { DateInputDMY } from '@/components/DateInputDMY';
+import { DateInputYMD } from '@/components/DateInputYMD';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
 import type { Currency, Invoice, InvoiceIssuer, InvoiceItem, InvoiceStatus, Role } from '@/lib/types';
@@ -853,7 +853,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
                 <div>
                   <div className="text-xs text-black/60 mb-1">Issue Date</div>
-                  <DateInputDMY
+                  <DateInputYMD
                     value={form.issueDate}
                     onChange={(v) => setForm((p) => ({ ...p, issueDate: v }))}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
@@ -862,7 +862,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
                 <div>
                   <div className="text-xs text-black/60 mb-1">Due Date (optional)</div>
-                  <DateInputDMY
+                  <DateInputYMD
                     value={form.dueDate}
                     onChange={(v) => setForm((p) => ({ ...p, dueDate: v }))}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"

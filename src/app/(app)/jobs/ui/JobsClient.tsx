@@ -7,7 +7,7 @@ import { usePersistedState } from '@/lib/usePersistedState';
 import { hasPermission } from '@/lib/permissions';
 import type { Permissions, Role } from '@/lib/types';
 import { formatDateDMY } from '@/lib/date';
-import { DateInputDMY } from '@/components/DateInputDMY';
+import { DateInputYMD } from '@/components/DateInputYMD';
 import PaginationControls from '@/components/PaginationControls';
 
 type JobListItem = {
@@ -791,7 +791,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </label>
                   <label className="text-sm">
                     <div className="text-black/70">Due date</div>
-                    <DateInputDMY
+                    <DateInputYMD
                       value={newJob.dueDate}
                       onChange={(dueDate) => setNewJob((v) => ({ ...v, dueDate }))}
                       className="mt-1"

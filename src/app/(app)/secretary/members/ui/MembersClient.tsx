@@ -6,6 +6,7 @@ import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
 import MembersTable from './MembersTable';
 import SecretarySubNavClient from '@/app/(app)/secretary/ui/SecretarySubNavClient';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type Member = {
   id: string;
@@ -639,11 +640,10 @@ export default function MembersClient() {
               </label>
               <label className="text-sm">
                 <div className="text-black/60">DOB</div>
-                <input
-                  type="date"
+                <DateInputYMD
                   value={form.dob}
-                  onChange={(e) => setForm((v) => ({ ...v, dob: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  onChange={(dob) => setForm((v) => ({ ...v, dob }))}
+                  inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
               </label>
               <label className="text-sm sm:col-span-2">
@@ -781,11 +781,10 @@ export default function MembersClient() {
               </label>
               <label className="text-sm">
                 <div className="text-black/60">DOB</div>
-                <input
-                  type="date"
+                <DateInputYMD
                   value={editForm.dob}
-                  onChange={(e) => setEditForm((v) => ({ ...v, dob: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  onChange={(dob) => setEditForm((v) => ({ ...v, dob }))}
+                  inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                 />
               </label>
               <label className="text-sm sm:col-span-2">

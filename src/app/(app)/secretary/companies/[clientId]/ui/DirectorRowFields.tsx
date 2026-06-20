@@ -2,6 +2,7 @@
 
 import { maskAddress, maskDob, maskEmail, maskName, maskNationality, maskPhone } from '@/lib/mask';
 import { NATIONALITY_OPTIONS, PHONE_COUNTRY_CODES, type NewDirector, type PhoneCountryCode } from './directorChangeFormUtils';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 export default function DirectorRowFields(props: {
   idx: number;
@@ -81,11 +82,10 @@ export default function DirectorRowFields(props: {
               className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${props.showErrors && v.missing.dob ? 'border-red-500' : 'border-black/10'}`}
             />
           ) : (
-            <input
-              type="date"
+            <DateInputYMD
               value={s.dob}
-              onChange={(e) => props.onPatch({ dob: e.target.value, dobLocked: false })}
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${props.showErrors && v.missing.dob ? 'border-red-500' : 'border-black/10'}`}
+              onChange={(dob) => props.onPatch({ dob, dobLocked: false })}
+              inputClassName={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${props.showErrors && v.missing.dob ? 'border-red-500' : 'border-black/10'}`}
             />
           )}
         </label>

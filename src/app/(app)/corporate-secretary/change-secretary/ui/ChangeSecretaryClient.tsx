@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { DateInputYMD } from '@/components/DateInputYMD';
 
 type PhoneCountryCode = '+65' | '+86' | '+852' | '+886' | '+60' | '+62' | '+66' | '+84' | '+63' | '+81' | '+82' | '+1' | '+44';
 
@@ -610,11 +611,10 @@ export default function ChangeSecretaryClient() {
                             className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-black/5 text-black/60 ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                           />
                         ) : (
-                          <input
-                            type="date"
+                          <DateInputYMD
                             value={s.dob}
-                            onChange={(e) => patchSecretary(i, { dob: e.target.value, dobLocked: false })}
-                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
+                            onChange={(dob) => patchSecretary(i, { dob, dobLocked: false })}
+                            inputClassName={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${showErrorsByIdx[i] && validateSecretary(s).missing.dob ? 'border-red-500' : 'border-black/10'}`}
                           />
                         )}
                       </label>
@@ -659,13 +659,12 @@ export default function ChangeSecretaryClient() {
                         <div className="text-black">
                           <span className="text-red-500">*</span> Date of appointment
                         </div>
-                        <input
-                          type="date"
+                        <DateInputYMD
                           value={s.joinDate}
-                          onChange={(e) => patchSecretary(i, { joinDate: e.target.value })}
+                          onChange={(joinDate) => patchSecretary(i, { joinDate })}
                           min={ymdNDaysAgo(14)}
                           max={ymdToday()}
-                          className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
+                          inputClassName={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
                             showErrorsByIdx[i] && (validateSecretary(s).missing.joinDate || validateSecretary(s).invalid.joinDate)
                               ? 'border-red-500'
                               : 'border-black/10'
