@@ -85,7 +85,7 @@ function PeopleList(props: {
 }
 
 export default function RegisterCompanyDetailsSection(props: Props) {
-  const [editing, setEditing] = useState(false);
+  const [editingStep, setEditingStep] = useState<1 | 2 | 3 | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({
     step1: true,
     shareholders: true,
@@ -101,13 +101,13 @@ export default function RegisterCompanyDetailsSection(props: Props) {
     [normalized.step1.companyName, normalized.step1.companySuffix],
   );
 
-  if (editing && props.canEdit) {
+  if (editingStep && props.canEdit) {
     return (
       <div className="rounded-xl bg-white border border-black/5 p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-semibold">Edit details</div>
-          <button type="button" onClick={() => setEditing(false)} className="text-sm text-black/70 hover:underline">
-            Cancel
+          <div className="text-sm font-semibold">Edit</div>
+          <button type="button" onClick={() => setEditingStep(null)} className="text-sm text-[#2f7bdc] hover:underline">
+            Back
           </button>
         </div>
         <div className="mt-4">
@@ -116,10 +116,14 @@ export default function RegisterCompanyDetailsSection(props: Props) {
             applicationId={props.applicationId}
             initialPayload={props.payload}
             canEdit={props.canEdit}
-            onSaved={() => props.onUpdated()}
+            initialStep={editingStep}
+            onSaved={() => {
+              props.onUpdated();
+              setEditingStep(null);
+            }}
             onSubmitted={() => {
               props.onUpdated();
-              setEditing(false);
+              setEditingStep(null);
             }}
           />
         </div>
@@ -137,15 +141,30 @@ export default function RegisterCompanyDetailsSection(props: Props) {
     <div className="rounded-xl bg-white border border-black/5 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm font-semibold">Details</div>
-        {props.canEdit ? (
-          <button type="button" onClick={() => setEditing(true)} className="text-sm text-[#2f7bdc] hover:underline">
-            Edit
-          </button>
-        ) : null}
+        <div />
       </div>
 
       <div className="mt-4 space-y-3">
-        <AccordionItem title="Step 1 - Basic information" open={!!open.step1} onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}>
+        <AccordionItem
+          title="Step 1 - Basic information"
+          open={!!open.step1}
+          onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(1);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
+        >
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <InfoRow label="Company" value={companyNameFull} />
             <InfoRow label="Alternative Name" value={joinCompanyName(normalized.step1.alternativeName, normalized.step1.alternativeSuffix)} />
@@ -162,6 +181,21 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           title={`Shareholders (${shareholders.length})`}
           open={!!open.shareholders}
           onToggle={() => setOpen((p) => ({ ...p, shareholders: !p.shareholders }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(2);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
         >
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -193,7 +227,26 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           </div>
         </AccordionItem>
 
-        <AccordionItem title={`Directors (${directors.length})`} open={!!open.directors} onToggle={() => setOpen((p) => ({ ...p, directors: !p.directors }))}>
+        <AccordionItem
+          title={`Directors (${directors.length})`}
+          open={!!open.directors}
+          onToggle={() => setOpen((p) => ({ ...p, directors: !p.directors }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(2);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
+        >
           <PeopleList
             title="Directors"
             items={directors.map((p) => ({
@@ -209,7 +262,26 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           />
         </AccordionItem>
 
-        <AccordionItem title={`RORC Controllers (${rorc.length})`} open={!!open.rorc} onToggle={() => setOpen((p) => ({ ...p, rorc: !p.rorc }))}>
+        <AccordionItem
+          title={`RORC Controllers (${rorc.length})`}
+          open={!!open.rorc}
+          onToggle={() => setOpen((p) => ({ ...p, rorc: !p.rorc }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(2);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
+        >
           <PeopleList
             title="RORC Controllers"
             items={rorc.map((c) => ({
@@ -225,7 +297,26 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           />
         </AccordionItem>
 
-        <AccordionItem title="Secretary" open={!!open.secretary} onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}>
+        <AccordionItem
+          title="Secretary"
+          open={!!open.secretary}
+          onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(2);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
+        >
           {normalized.step2.useByBridgeCompanySecretary ? (
             <div className="mt-3 text-sm text-black/70">BBY company secretary</div>
           ) : secretary ? (
@@ -249,7 +340,26 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           )}
         </AccordionItem>
 
-        <AccordionItem title="Step 3 - Information confirmed" open={!!open.confirm} onToggle={() => setOpen((p) => ({ ...p, confirm: !p.confirm }))}>
+        <AccordionItem
+          title="Step 3 - Information confirmed"
+          open={!!open.confirm}
+          onToggle={() => setOpen((p) => ({ ...p, confirm: !p.confirm }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingStep(3);
+                }}
+                className="text-sm text-[#2f7bdc] hover:underline"
+              >
+                Edit
+              </button>
+            ) : null
+          }
+        >
           <div className="mt-2 text-sm text-black/70">
             Confirmations saved: {normalized.step3.confirmInfoAccurate && normalized.step3.confirmAuthorizedToSubmit ? 'Yes' : 'No'}
           </div>

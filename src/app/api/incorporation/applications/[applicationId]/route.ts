@@ -60,7 +60,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
 
   if (user.role === 'client') {
     if (app.createdByUserId !== user.id) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-    if (app.status !== 'DRAFT' && app.status !== 'NEED_MORE_INFO') return NextResponse.json({ ok: false, error: 'LOCKED' }, { status: 400 });
+    if (app.status !== 'DRAFT' && app.status !== 'NEED_MORE_INFO' && app.status !== 'SUBMITTED') {
+      return NextResponse.json({ ok: false, error: 'LOCKED' }, { status: 400 });
+    }
   } else {
     if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }

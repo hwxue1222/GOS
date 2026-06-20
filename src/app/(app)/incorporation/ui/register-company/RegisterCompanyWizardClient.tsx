@@ -28,6 +28,7 @@ type Props = {
   applicationId?: string;
   initialPayload?: Record<string, unknown>;
   canEdit?: boolean;
+  initialStep?: 1 | 2 | 3;
   onSaved?: () => void;
   onSubmitted?: () => void;
 };
@@ -49,8 +50,8 @@ export default function RegisterCompanyWizardClient(props: Props) {
 
   const initialPersisted = useMemo<Persisted>(() => {
     const d = normalizeDraftFromPayload(props.initialPayload, props.defaultCompanyName);
-    return { step: 1, draft: d };
-  }, [props.defaultCompanyName, props.initialPayload]);
+    return { step: props.initialStep ?? 1, draft: d };
+  }, [props.defaultCompanyName, props.initialPayload, props.initialStep]);
 
   const [persisted, setPersisted] = usePersistedState<Persisted>(storageKey, initialPersisted);
   const [files, setFiles] = useState<File[]>([]);
@@ -292,6 +293,12 @@ export default function RegisterCompanyWizardClient(props: Props) {
     void save(true);
   }
 
+  function onUpdate() {
+    setShowValidation(true);
+    if (allErrors.length) return;
+    void save(false);
+  }
+
   const stepLabels = ['Basic information', 'Personal information', 'Information confirmed'] as const;
   const stepHasErrors = {
     1: step1Errors.length > 0,
@@ -363,14 +370,25 @@ export default function RegisterCompanyWizardClient(props: Props) {
             >
               Prev
             </button>
-            <button
-              type="button"
-              disabled={busy || !companyNameFull.trim()}
-              onClick={() => void save(false)}
-              className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              Save draft
-            </button>
+            {props.mode === 'create' ? (
+              <button
+                type="button"
+                disabled={busy || !companyNameFull.trim()}
+                onClick={() => void save(false)}
+                className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Save draft
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onUpdate}
+                className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {busy ? 'Updating...' : 'Update'}
+              </button>
+            )}
             {step < 3 ? (
               <button
                 type="button"
@@ -381,14 +399,16 @@ export default function RegisterCompanyWizardClient(props: Props) {
                 Next
               </button>
             ) : (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onSubmit}
-                className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-              >
-                {busy ? 'Submitting...' : 'Submit'}
-              </button>
+              props.mode === 'create' ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onSubmit}
+                  className="rounded-md bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {busy ? 'Submitting...' : 'Submit'}
+                </button>
+              ) : null
             )}
           </div>
         </div>

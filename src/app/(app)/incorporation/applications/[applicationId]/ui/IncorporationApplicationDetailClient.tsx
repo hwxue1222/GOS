@@ -73,7 +73,10 @@ export default function IncorporationApplicationDetailClient(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const canClientEdit = useMemo(() => props.meRole === 'client' && (app.status === 'DRAFT' || app.status === 'NEED_MORE_INFO'), [app.status, props.meRole]);
+  const canClientEdit = useMemo(
+    () => props.meRole === 'client' && (app.status === 'DRAFT' || app.status === 'NEED_MORE_INFO' || app.status === 'SUBMITTED'),
+    [app.status, props.meRole],
+  );
 
   async function refresh() {
     const res = await fetch(`/api/incorporation/applications/${encodeURIComponent(app.id)}`, { cache: 'no-store' }).catch(() => null);
@@ -183,7 +186,9 @@ export default function IncorporationApplicationDetailClient(props: Props) {
             <div className="text-lg font-semibold">{typeLabel}</div>
             <div className="mt-1 text-sm text-black/60">Application ID: {app.id}</div>
           </div>
-          <div />
+          <button type="button" onClick={() => router.push('/')} className="text-sm text-[#2f7bdc] hover:underline">
+            Back
+          </button>
         </div>
 
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">

@@ -123,9 +123,6 @@ export default async function DashboardPage() {
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <Link href={`${detailsHref}#documents`} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
-                                Documents
-                              </Link>
                               <Link href={detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
                                 Details
                               </Link>
