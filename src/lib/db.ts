@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V39 = 'contracts.templates.v39';
+const SEED_KEY_CONTRACTS_TEMPLATES_V40 = 'contracts.templates.v40';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV39(db: Db) {
+function seedContractsTemplatesV40(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V39] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V40] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -529,27 +529,12 @@ function seedContractsTemplatesV39(db: Db) {
 
         <div class="sig">
           <div class="sigbox">
-            <div class="h">甲方（签字） / Party A</div>
-            <div class="sigline"></div>
+            <div class="h">甲方（签字） / Party A&nbsp;&nbsp;{{partyA_name}}</div>
+            <div class="sigline"><span class="signer" data-signer="{{signer_email}}"></span></div>
             <div class="sigmeta">
-              <div class="sigrow">
-                <div class="siglabel">姓名 / Name:</div>
-                <div class="sigvalue">
-                  <div class="name-line">
-                    <span class="signer" data-signer="{{signer_email}}"></span>
-                  </div>
-                  <div class="name-text" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div>
-                </div>
-              </div>
-              <div class="sigrow">
-                <div class="siglabel">职位 / Title:</div>
-                <div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div>
-              </div>
-              <div class="sigrow">
-                <div class="siglabel">时间 / Date:</div>
-                <div class="sigvalue">{{signer_date}}</div>
-                <span style="display:none" data-signer-signed-at="{{signer_email}}"></span>
-              </div>
+              <div class="sigrow"><div class="siglabel">姓名 / Name:</div><div class="sigvalue" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div></div>
+              <div class="sigrow"><div class="siglabel">职位 / Title:</div><div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div></div>
+              <div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{signer_date}}</div><span style="display:none" data-signer-signed-at="{{signer_email}}"></span></div>
             </div>
           </div>
           <div class="sigbox">
@@ -874,27 +859,12 @@ function seedContractsTemplatesV39(db: Db) {
 
         <div class="sig">
           <div class="sigbox">
-            <div class="h">Party A</div>
-            <div class="sigline"></div>
+            <div class="h">Party A&nbsp;&nbsp;{{partyA_name}}</div>
+            <div class="sigline"><span class="signer" data-signer="{{signer_email}}"></span></div>
             <div class="sigmeta">
-              <div class="sigrow">
-                <div class="siglabel">Name:</div>
-                <div class="sigvalue">
-                  <div class="name-line">
-                    <span class="signer" data-signer="{{signer_email}}"></span>
-                  </div>
-                  <div class="name-text" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div>
-                </div>
-              </div>
-              <div class="sigrow">
-                <div class="siglabel">Title:</div>
-                <div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div>
-              </div>
-              <div class="sigrow">
-                <div class="siglabel">Date:</div>
-                <div class="sigvalue">{{signer_date}}</div>
-                <span style="display:none" data-signer-signed-at="{{signer_email}}"></span>
-              </div>
+              <div class="sigrow"><div class="siglabel">Name:</div><div class="sigvalue" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div></div>
+              <div class="sigrow"><div class="siglabel">Title:</div><div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div></div>
+              <div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{signer_date}}</div><span style="display:none" data-signer-signed-at="{{signer_email}}"></span></div>
             </div>
           </div>
           <div class="sigbox">
@@ -1419,7 +1389,7 @@ function seedContractsTemplatesV39(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V39] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V40] = true;
   return changed;
 }
 
@@ -6590,7 +6560,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV39(db)) changed = true;
+  if (seedContractsTemplatesV40(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
