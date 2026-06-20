@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V37 = 'contracts.templates.v37';
+const SEED_KEY_CONTRACTS_TEMPLATES_V38 = 'contracts.templates.v38';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV37(db: Db) {
+function seedContractsTemplatesV38(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V37] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V38] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -666,6 +666,8 @@ function seedContractsTemplatesV37(db: Db) {
       { key: 'pay_swift_code', label: 'Swift Code（国际汇款银行码）', required: true },
       { key: 'pay_bank_account_number', label: 'Bank account number (SGD)（银行账号-新币）', required: true },
       { key: 'pay_bank_address', label: 'Bank address（银行地址）', required: true },
+      { key: 'refund_1', label: 'Refund policy (1)（退费规定1）', required: true },
+      { key: 'refund_2', label: 'Refund policy (2)（退费规定2）', required: true },
       { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
       { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: true },
       { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: true },
@@ -830,6 +832,12 @@ function seedContractsTemplatesV37(db: Db) {
           <div class="p"><b>Swift Code（国际汇款银行码）：</b> {{pay_swift_code}}</div>
           <div class="p"><b>Bank account number (SGD)（银行账号-新币）：</b> {{pay_bank_account_number}}</div>
           <div class="p"><b>Bank address（银行地址）：</b> {{pay_bank_address}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">V. REFUND POLICY（退费规定）</div>
+          <div class="p"><b>1.</b> {{refund_1}}</div>
+          <div class="p"><b>2.</b> {{refund_2}}</div>
         </div>
 
         <div class="section">
@@ -1401,7 +1409,7 @@ function seedContractsTemplatesV37(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V37] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V38] = true;
   return changed;
 }
 
@@ -6572,7 +6580,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV37(db)) changed = true;
+  if (seedContractsTemplatesV38(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

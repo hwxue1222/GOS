@@ -288,6 +288,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         next.pay_bank_address = '2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907';
       }
 
+      if (!String(next.refund_1 ?? '').trim()) {
+        next.refund_1 =
+          "If Party B fails to complete the work in accordance with this Agreement, Party B shall refund Party A the corresponding amount paid based on the invoice(s).（乙方未能按照合同要求完成工作，乙方会退还甲方按据发票支付的对应款项。）";
+      }
+      if (!String(next.refund_2 ?? '').trim()) {
+        next.refund_2 =
+          'Except for force majeure, if Party A unilaterally terminates this Agreement for its own reasons, the paid service fees shall not be refunded.（除不可抗力原因以外，甲方自身原因单方面解除合同，已缴纳的服务费不予退还。）';
+      }
+
       if (!String(next.partyB_obligation_1 ?? '').trim()) {
         next.partyB_obligation_1 = 'Party B shall provide the required services in accordance with Party A\'s requirements.（乙方按照甲方要求提供所需服务。）';
       }
@@ -936,6 +945,21 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">V. Refund policy（退费规定）</div>
+                    {[1, 2].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`refund_${n}`] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`refund_${n}`]: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
