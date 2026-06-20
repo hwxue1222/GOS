@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V41 = 'contracts.templates.v41';
+const SEED_KEY_CONTRACTS_TEMPLATES_V42 = 'contracts.templates.v42';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV41(db: Db) {
+function seedContractsTemplatesV42(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V41] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V42] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -753,7 +753,7 @@ function seedContractsTemplatesV41(db: Db) {
         </div>
 
         <div class="title">{{agreement_title}}</div>
-        <div class="subtitle">Professional Service Agreement（专业服务协议）</div>
+        <div class="subtitle">（专业服务协议）</div>
         <div class="divider"></div>
 
         <div class="parties">
@@ -1389,7 +1389,7 @@ function seedContractsTemplatesV41(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V41] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V42] = true;
   return changed;
 }
 
@@ -6560,7 +6560,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV41(db)) changed = true;
+  if (seedContractsTemplatesV42(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
