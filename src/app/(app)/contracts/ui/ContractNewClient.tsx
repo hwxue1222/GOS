@@ -296,6 +296,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         next.pay_bank_address = '2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907';
       }
 
+      if (!String(next.partyB_signature_url ?? '').trim()) {
+        next.partyB_signature_url = '/contracts/sign-xhw-transparent.png';
+      }
+
       if (!String(next.refund_1 ?? '').trim()) {
         next.refund_1 =
           "If Party B fails to complete the work in accordance with this Agreement, Party B shall refund Party A the corresponding amount paid based on the invoice(s).（乙方未能按照合同要求完成工作，乙方会退还甲方按据发票支付的对应款项。）";
