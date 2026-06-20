@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -29,6 +29,7 @@ type Props = {
   initialPayload?: Record<string, unknown>;
   canEdit?: boolean;
   initialStep?: 1 | 2 | 3;
+  initialFocus?: 'shareholders' | 'directors' | 'rorc' | 'secretary' | 'confirm';
   onSaved?: () => void;
   onSubmitted?: () => void;
 };
@@ -61,6 +62,15 @@ export default function RegisterCompanyWizardClient(props: Props) {
 
   const draft = persisted.draft;
   const step = persisted.step;
+
+  const didApplyInitialStepRef = useRef(false);
+  useEffect(() => {
+    if (props.mode !== 'edit') return;
+    if (!props.initialStep) return;
+    if (didApplyInitialStepRef.current) return;
+    didApplyInitialStepRef.current = true;
+    setPersisted((prev) => ({ ...prev, step: props.initialStep! }));
+  }, [props.initialStep, props.mode, setPersisted]);
 
   const step1Errors = useMemo(() => validateStep1(draft), [draft]);
   const step2Errors = useMemo(() => validateStep2(draft), [draft]);
@@ -345,7 +355,12 @@ export default function RegisterCompanyWizardClient(props: Props) {
         {step === 1 ? (
           <RegisterCompanyStep1 value={draft.step1} onChange={(next) => setDraft({ ...draft, step1: next })} />
         ) : step === 2 ? (
-          <RegisterCompanyStep2 value={draft.step2} totalShares={draft.step1.totalShares} onChange={(next) => setDraft({ ...draft, step2: next })} />
+          <RegisterCompanyStep2
+            value={draft.step2}
+            totalShares={draft.step1.totalShares}
+            initialFocus={props.initialFocus}
+            onChange={(next) => setDraft({ ...draft, step2: next })}
+          />
         ) : (
           <RegisterCompanyStep3
             draft={draft}

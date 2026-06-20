@@ -85,7 +85,13 @@ function PeopleList(props: {
 }
 
 export default function RegisterCompanyDetailsSection(props: Props) {
-  const [editingStep, setEditingStep] = useState<1 | 2 | 3 | null>(null);
+  const [editing, setEditing] = useState<
+    | null
+    | {
+        step: 1 | 2 | 3;
+        focus?: 'shareholders' | 'directors' | 'rorc' | 'secretary' | 'confirm';
+      }
+  >(null);
   const [open, setOpen] = useState<Record<string, boolean>>({
     step1: true,
     shareholders: true,
@@ -101,12 +107,12 @@ export default function RegisterCompanyDetailsSection(props: Props) {
     [normalized.step1.companyName, normalized.step1.companySuffix],
   );
 
-  if (editingStep && props.canEdit) {
+  if (editing && props.canEdit) {
     return (
       <div className="rounded-xl bg-white border border-black/5 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold">Edit</div>
-          <button type="button" onClick={() => setEditingStep(null)} className="text-sm text-[#2f7bdc] hover:underline">
+          <button type="button" onClick={() => setEditing(null)} className="text-sm text-[#2f7bdc] hover:underline">
             Back
           </button>
         </div>
@@ -116,14 +122,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
             applicationId={props.applicationId}
             initialPayload={props.payload}
             canEdit={props.canEdit}
-            initialStep={editingStep}
+            initialStep={editing.step}
+            initialFocus={editing.focus}
             onSaved={() => {
               props.onUpdated();
-              setEditingStep(null);
+              setEditing(null);
             }}
             onSubmitted={() => {
               props.onUpdated();
-              setEditingStep(null);
+              setEditing(null);
             }}
           />
         </div>
@@ -156,7 +163,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(1);
+                  setEditing({ step: 1 });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >
@@ -188,7 +195,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(2);
+                  setEditing({ step: 2, focus: 'shareholders' });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >
@@ -238,7 +245,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(2);
+                  setEditing({ step: 2, focus: 'directors' });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >
@@ -273,7 +280,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(2);
+                  setEditing({ step: 2, focus: 'rorc' });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >
@@ -308,7 +315,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(2);
+                  setEditing({ step: 2, focus: 'secretary' });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >
@@ -351,7 +358,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEditingStep(3);
+                  setEditing({ step: 3, focus: 'confirm' });
                 }}
                 className="text-sm text-[#2f7bdc] hover:underline"
               >

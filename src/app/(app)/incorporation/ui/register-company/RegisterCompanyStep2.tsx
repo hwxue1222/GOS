@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import { DateInputYMD } from '@/components/DateInputYMD';
 
 import { RegisterCompanyCard, SectionActionButton } from '@/app/(app)/incorporation/ui/register-company/RegisterCompanyCard';
@@ -28,10 +30,39 @@ function formatSharePct(part: number | null, total: number | null) {
   return `${pct.toFixed(pct < 1 ? 2 : 1)}%`;
 }
 
-export default function RegisterCompanyStep2(props: { value: Step2; totalShares?: string; onChange: (next: Step2) => void }) {
+export default function RegisterCompanyStep2(props: {
+  value: Step2;
+  totalShares?: string;
+  initialFocus?: 'shareholders' | 'directors' | 'rorc' | 'secretary' | 'confirm';
+  onChange: (next: Step2) => void;
+}) {
   const v = props.value;
   const set = (patch: Partial<Step2>) => props.onChange({ ...v, ...patch });
   const totalShares = parsePositiveInt(props.totalShares ?? '');
+
+  const shareholdersRef = useRef<HTMLDivElement | null>(null);
+  const directorsRef = useRef<HTMLDivElement | null>(null);
+  const rorcRef = useRef<HTMLDivElement | null>(null);
+  const secretaryRef = useRef<HTMLDivElement | null>(null);
+  const didScrollRef = useRef(false);
+
+  useEffect(() => {
+    if (!props.initialFocus) return;
+    if (didScrollRef.current) return;
+    const target =
+      props.initialFocus === 'shareholders'
+        ? shareholdersRef.current
+        : props.initialFocus === 'directors'
+          ? directorsRef.current
+          : props.initialFocus === 'rorc'
+            ? rorcRef.current
+            : props.initialFocus === 'secretary'
+              ? secretaryRef.current
+              : null;
+    if (!target) return;
+    didScrollRef.current = true;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [props.initialFocus]);
 
   function updateShareholder(idx: number, next: ShareholderDraft) {
     const list = v.shareholders.slice();
@@ -61,11 +92,12 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
 
   return (
     <div className="space-y-4">
-      <RegisterCompanyCard
-        title="Shareholder information"
-        right={<SectionActionButton label="Add Shareholder" onClick={() => set({ shareholders: [...v.shareholders, emptyShareholder()] })} />}
-      >
-        <div className="space-y-4">
+      <div ref={shareholdersRef}>
+        <RegisterCompanyCard
+          title="Shareholder information"
+          right={<SectionActionButton label="Add Shareholder" onClick={() => set({ shareholders: [...v.shareholders, emptyShareholder()] })} />}
+        >
+          <div className="space-y-4">
           {v.shareholders.map((sh, idx) => (
             <div key={sh.id} className="rounded-xl border border-black/10 p-4">
               <div className="flex items-center justify-between gap-3">
@@ -138,18 +170,20 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
               </div>
             </div>
           ))}
-        </div>
-      </RegisterCompanyCard>
+          </div>
+        </RegisterCompanyCard>
+      </div>
 
-      <RegisterCompanyCard
-        title="Director information"
-        right={
-          <button type="button" onClick={copyShareholdersToDirectors} className="text-sm text-black/70 hover:underline">
-            Copy Shareholders
-          </button>
-        }
-      >
-        <div className="space-y-4">
+      <div ref={directorsRef}>
+        <RegisterCompanyCard
+          title="Director information"
+          right={
+            <button type="button" onClick={copyShareholdersToDirectors} className="text-sm text-black/70 hover:underline">
+              Copy Shareholders
+            </button>
+          }
+        >
+          <div className="space-y-4">
           {v.directors.map((d, idx) => (
             <div key={d.id} className="rounded-xl border border-black/10 p-4">
               <div className="flex items-center justify-between gap-3">
@@ -181,14 +215,16 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
               To use BBY nominee director service
             </label>
           </div>
-        </div>
-      </RegisterCompanyCard>
+          </div>
+        </RegisterCompanyCard>
+      </div>
 
-      <RegisterCompanyCard
-        title="RORC Controller information"
-        right={<SectionActionButton label="Add Controller" onClick={() => set({ rorcControllers: [...v.rorcControllers, { id: emptyPerson().id, person: emptyPerson(), initiationAt: '' }] })} />}
-      >
-        <div className="space-y-4">
+      <div ref={rorcRef}>
+        <RegisterCompanyCard
+          title="RORC Controller information"
+          right={<SectionActionButton label="Add Controller" onClick={() => set({ rorcControllers: [...v.rorcControllers, { id: emptyPerson().id, person: emptyPerson(), initiationAt: '' }] })} />}
+        >
+          <div className="space-y-4">
           {v.rorcControllers.map((c, idx) => (
             <div key={c.id} className="rounded-xl border border-black/10 p-4">
               <div className="flex items-center justify-between gap-3">
@@ -220,11 +256,13 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
               </div>
             </div>
           ))}
-        </div>
-      </RegisterCompanyCard>
+          </div>
+        </RegisterCompanyCard>
+      </div>
 
-      <RegisterCompanyCard title="Secretary information">
-        <div className="space-y-4">
+      <div ref={secretaryRef}>
+        <RegisterCompanyCard title="Secretary information">
+          <div className="space-y-4">
           <label className="flex items-center gap-2 text-sm text-black/70">
             <input
               type="checkbox"
@@ -235,8 +273,9 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
             To use BBY company secretary
           </label>
           {!v.useByBridgeCompanySecretary ? <PersonFields value={v.secretary} onChange={(p) => set({ secretary: p })} /> : null}
-        </div>
-      </RegisterCompanyCard>
+          </div>
+        </RegisterCompanyCard>
+      </div>
     </div>
   );
 }
