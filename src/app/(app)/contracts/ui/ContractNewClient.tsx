@@ -91,6 +91,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return Array.from(keys).some((k) => k.startsWith('signer_'));
   }, [tpl]);
 
+  const requiredKeys = useMemo(() => {
+    return new Set((tpl?.placeholders ?? []).filter((p) => p.required).map((p) => p.key));
+  }, [tpl]);
+
   const editContractId = useMemo(() => {
     const v = String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
     return v;
@@ -432,6 +436,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   {tpl?.placeholders?.some((p) => p.key === 'partyA_name')
                     ? '甲方（公司名称） / Party A (Company Name)'
                     : 'Name'}
+                  {requiredKeys.has(clientNameKey) ? ' *' : ''}
                 </div>
                 <input
                   value={fields[clientNameKey] ?? ''}
@@ -442,6 +447,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">
                   {tpl?.placeholders?.some((p) => p.key === 'partyA_email') ? '电邮地址 / Email' : 'Email'}
+                  {requiredKeys.has(clientEmailKey) ? ' *' : ''}
                 </div>
                 <input
                   value={fields[clientEmailKey] ?? ''}
@@ -452,7 +458,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
               {tpl?.placeholders?.some((p) => p.key === 'partyA_uen') ? (
                 <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">UEN公司注册号 / UEN Registration No.</div>
+                  <div className="text-xs font-medium text-black/60">
+                    UEN公司注册号 / UEN Registration No.
+                    {requiredKeys.has('partyA_uen') ? ' *' : ''}
+                  </div>
                   <input
                     value={fields.partyA_uen ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_uen: e.target.value }))}
@@ -462,7 +471,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               ) : null}
               {tpl?.placeholders?.some((p) => p.key === 'partyA_contact') ? (
                 <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">联系电话 / Contact Number</div>
+                  <div className="text-xs font-medium text-black/60">
+                    联系电话 / Contact Number
+                    {requiredKeys.has('partyA_contact') ? ' *' : ''}
+                  </div>
                   <input
                     value={fields.partyA_contact ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_contact: e.target.value }))}
@@ -473,7 +485,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
               {tpl?.placeholders?.some((p) => p.key === 'partyA_address') ? (
                 <div className="md:col-span-2">
-                  <div className="text-xs font-medium text-black/60">联系地址 / Address</div>
+                  <div className="text-xs font-medium text-black/60">
+                    联系地址 / Address
+                    {requiredKeys.has('partyA_address') ? ' *' : ''}
+                  </div>
                   <input
                     value={fields.partyA_address ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_address: e.target.value }))}
@@ -490,7 +505,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <div className="text-sm font-semibold">签署信息 / Signing</div>
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-1">
-                <div className="text-xs font-medium text-black/60">签署人姓名 / Signer name</div>
+                <div className="text-xs font-medium text-black/60">
+                  签署人姓名 / Signer name
+                  {requiredKeys.has('signer_full_name') ? ' *' : ''}
+                </div>
                 <input
                   value={fields.signer_full_name ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_full_name: e.target.value }))}
@@ -498,7 +516,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
               </div>
               <div className="md:col-span-1">
-                <div className="text-xs font-medium text-black/60">签署人职位 / Signer title</div>
+                <div className="text-xs font-medium text-black/60">
+                  签署人职位 / Signer title
+                  {requiredKeys.has('signer_title') ? ' *' : ''}
+                </div>
                 <input
                   value={fields.signer_title ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_title: e.target.value }))}
@@ -507,7 +528,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </div>
 
               <div className="md:col-span-1">
-                <div className="text-xs font-medium text-black/60">签署日期 / Signer date</div>
+                <div className="text-xs font-medium text-black/60">
+                  签署日期 / Signer date
+                  {requiredKeys.has('signer_date') ? ' *' : ''}
+                </div>
                 <DateInputYMD
                   value={fields.signer_date ?? ''}
                   onChange={(next) => setFields((prev) => ({ ...prev, signer_date: next }))}
@@ -516,7 +540,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </div>
 
               <div className="md:col-span-2">
-                <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
+                <div className="text-xs font-medium text-black/60">
+                  签署邮箱 / Signing email
+                  {requiredKeys.has('signer_email') ? ' *' : ''}
+                </div>
                 <input
                   value={fields.signer_email ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_email: e.target.value }))}
