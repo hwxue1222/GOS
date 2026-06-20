@@ -122,6 +122,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return new Set((tpl?.placeholders ?? []).filter((p) => p.required).map((p) => p.key));
   }, [tpl]);
 
+  const partyAEntityType = useMemo(() => {
+    const v = String((fields as any).partyA_entity_type ?? '').trim().toLowerCase();
+    return v === 'individual' ? 'individual' : 'company';
+  }, [fields]);
+
   const editContractId = useMemo(() => {
     const v = String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
     return v;
@@ -593,17 +598,50 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <div className="text-sm font-semibold">
                 {tpl?.placeholders?.some((p) => p.key === 'partyA_name') ? '客户信息（甲方） / Party A' : 'Client'}
               </div>
+              {tpl?.placeholders?.some((p) => p.key === 'partyA_name') ? (
+                <div className="mt-2 flex items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setFields((prev) => ({ ...prev, partyA_entity_type: 'company' }))}
+                    className={
+                      partyAEntityType === 'company'
+                        ? 'h-8 px-3 rounded-md border border-black/20 bg-black text-white font-medium'
+                        : 'h-8 px-3 rounded-md border border-black/10 bg-white text-black font-medium hover:bg-black/[0.02]'
+                    }
+                  >
+                    公司 / Company
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFields((prev) => ({ ...prev, partyA_entity_type: 'individual' }))}
+                    className={
+                      partyAEntityType === 'individual'
+                        ? 'h-8 px-3 rounded-md border border-black/20 bg-black text-white font-medium'
+                        : 'h-8 px-3 rounded-md border border-black/10 bg-white text-black font-medium hover:bg-black/[0.02]'
+                    }
+                  >
+                    个人 / Individual
+                  </button>
+                </div>
+              ) : null}
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">
                   {tpl?.placeholders?.some((p) => p.key === 'partyA_name')
-                    ? '甲方（公司名称） / Party A (Company Name)'
+                    ? partyAEntityType === 'individual'
+                      ? '甲方（姓名） / Party A (Name)'
+                      : '甲方（公司名称） / Party A (Company Name)'
                     : 'Name'}
                   {requiredKeys.has(clientNameKey) ? ' *' : ''}
                 </div>
                 <input
                   value={fields[clientNameKey] ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, [clientNameKey]: e.target.value }))}
+                  placeholder={
+                    tpl?.placeholders?.some((p) => p.key === 'partyA_name') && partyAEntityType === 'individual'
+                      ? 'e.g. Zhang San'
+                      : undefined
+                  }
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>
@@ -622,12 +660,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               {tpl?.placeholders?.some((p) => p.key === 'partyA_uen') ? (
                 <div className="md:col-span-1">
                   <div className="text-xs font-medium text-black/60">
-                    UEN公司注册号 / UEN Registration No.
+                    {partyAEntityType === 'individual' ? '证件号 / ID' : 'UEN公司注册号 / UEN Registration No.'}
                     {requiredKeys.has('partyA_uen') ? ' *' : ''}
                   </div>
                   <input
                     value={fields.partyA_uen ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_uen: e.target.value }))}
+                    placeholder={partyAEntityType === 'individual' ? 'e.g. Passport No.' : undefined}
                     className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                   />
                 </div>
