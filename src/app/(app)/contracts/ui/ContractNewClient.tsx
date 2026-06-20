@@ -946,7 +946,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="mt-4 text-xs font-medium text-black/60">Payment details（收款信息）</div>
                     <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Beneficiary's Name（收款人名称） *</div>
+                        <div className="text-xs font-medium text-black/60">Beneficiary Name（收款人名称） *</div>
                         <input
                           value={fields.pay_beneficiary_name ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_name: e.target.value }))}
@@ -962,7 +962,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <div className="text-xs font-medium text-black/60">Beneficiary's address（收款人地址） *</div>
+                        <div className="text-xs font-medium text-black/60">Beneficiary address（收款人地址） *</div>
                         <input
                           value={fields.pay_beneficiary_address ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_address: e.target.value }))}

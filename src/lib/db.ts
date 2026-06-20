@@ -10671,8 +10671,8 @@ export async function createCompanyUpdateRequest(input: {
   const signLinks: Array<{ email: string; url: string; title?: string }> = [];
 
   let primaryPacketId = '';
-  let requestStatus: CompanyUpdateRequest['status'] = 'PENDING_SIGNATURES';
-  let signedAt: string | undefined = undefined;
+  const requestStatus: CompanyUpdateRequest['status'] = 'PENDING_SIGNATURES';
+  const signedAt: string | undefined = undefined;
 
   if (type === 'CHANGE_COMPANY_NAME') {
     const newCompanyName = String(p.newCompanyName ?? '').trim();

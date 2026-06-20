@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import IncorporationDetailsSection from '@/app/(app)/incorporation/applications/[applicationId]/ui/IncorporationDetailsSection';
 import IncorporationMaterialsSection from '@/app/(app)/incorporation/applications/[applicationId]/ui/IncorporationMaterialsSection';
 import IncorporationTimelineSection from '@/app/(app)/incorporation/applications/[applicationId]/ui/IncorporationTimelineSection';
+import RegisterCompanyDetailsSection from '@/app/(app)/incorporation/applications/[applicationId]/ui/RegisterCompanyDetailsSection';
 
 type Application = {
   id: string;
@@ -204,14 +205,24 @@ export default function IncorporationApplicationDetailClient(props: Props) {
         </div>
       </div>
 
-      <IncorporationDetailsSection
-        application={app}
-        canClientEdit={canClientEdit}
-        busy={busy}
-        onChangeApplication={setApp}
-        onSave={() => void savePatch({ payload: app.payload })}
-        onSubmit={() => void submit()}
-      />
+      {app.type === 'REGISTER_COMPANY' ? (
+        <RegisterCompanyDetailsSection
+          applicationId={app.id}
+          status={app.status}
+          payload={app.payload}
+          canEdit={canClientEdit}
+          onUpdated={() => void refresh()}
+        />
+      ) : (
+        <IncorporationDetailsSection
+          application={app}
+          canClientEdit={canClientEdit}
+          busy={busy}
+          onChangeApplication={setApp}
+          onSave={() => void savePatch({ payload: app.payload })}
+          onSubmit={() => void submit()}
+        />
+      )}
 
       <IncorporationMaterialsSection files={files} uploading={uploading} onUpload={(fl) => void onUpload(fl)} />
 

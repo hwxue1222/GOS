@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
@@ -127,8 +127,8 @@ export default function ChangeDirectorClient(props: {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const lookupTimerByIdx = useMemo(() => new Map<number, ReturnType<typeof setTimeout>>(), []);
-  const lookupSeqByIdx = useMemo(() => new Map<number, number>(), []);
+  const lookupTimerByIdxRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const lookupSeqByIdxRef = useRef(new Map<number, number>());
 
   useEffect(() => {
     const raw = window.localStorage.getItem(draftKey(companyId));
@@ -178,8 +178,8 @@ export default function ChangeDirectorClient(props: {
     const idNo = String(idNoRaw ?? '').trim();
     if (!idNo) return;
 
-    const seq = (lookupSeqByIdx.get(idx) ?? 0) + 1;
-    lookupSeqByIdx.set(idx, seq);
+    const seq = (lookupSeqByIdxRef.current.get(idx) ?? 0) + 1;
+    lookupSeqByIdxRef.current.set(idx, seq);
 
     const res = await fetch(
       `/api/portal/people-lookup?idNo=${encodeURIComponent(idNo)}&idTypeLabel=${encodeURIComponent(idTypeLabel)}`,
@@ -193,7 +193,7 @@ export default function ChangeDirectorClient(props: {
       | { ok: false; error?: string }
       | null;
 
-    if ((lookupSeqByIdx.get(idx) ?? 0) !== seq) return;
+    if ((lookupSeqByIdxRef.current.get(idx) ?? 0) !== seq) return;
     if (!res?.ok || !json || !('ok' in json) || !json.ok) return;
     if (!('person' in json) || !json.person) return;
 
@@ -486,9 +486,9 @@ export default function ChangeDirectorClient(props: {
                                   : {}),
                               });
                               if (!wasLocked && d.idNo.trim()) {
-                                const t = lookupTimerByIdx.get(i);
+                                const t = lookupTimerByIdxRef.current.get(i);
                                 if (t) clearTimeout(t);
-                                lookupTimerByIdx.set(
+                                lookupTimerByIdxRef.current.set(
                                   i,
                                   setTimeout(() => {
                                     void lookupMemberByIdNo(i, d.idNo, next);
@@ -523,9 +523,9 @@ export default function ChangeDirectorClient(props: {
                                     }
                                   : {}),
                               });
-                              const t = lookupTimerByIdx.get(i);
+                              const t = lookupTimerByIdxRef.current.get(i);
                               if (t) clearTimeout(t);
-                              lookupTimerByIdx.set(
+                              lookupTimerByIdxRef.current.set(
                                 i,
                                 setTimeout(() => {
                                   void lookupMemberByIdNo(i, next, d.idTypeLabel);

@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   }
 
   const { contractId } = await params;
-  let contract = await findContractById(contractId);
+  const contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   const templateId = contract.templateId;
@@ -52,11 +52,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   const tpl = templates.find((t) => t.id === templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
-  let contractNo = String(contract.contractNo ?? '').trim();
+  const contractNo = String(contract.contractNo ?? '').trim();
   if (!contractNo) {
     return NextResponse.json({ ok: false, error: 'CONTRACT_NOT_GENERATED' }, { status: 409 });
   }
-  if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
   let documentId = contract.documentId;
   if (!documentId) {
