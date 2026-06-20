@@ -138,14 +138,6 @@ export default function RegisterCompanyStep1(props: {
             <span className="text-red-600">*</span> Registered Share Capital
           </div>
           <div className="mt-1 flex gap-2">
-            <div className="flex items-center rounded-md border border-black/10 bg-white px-3 py-2 text-sm text-black/60">S$</div>
-            <input
-              value={v.paidUpCapitalAmount}
-              onChange={(e) => set({ paidUpCapitalAmount: e.target.value })}
-              className="flex-1 rounded-md border border-black/10 px-3 py-2"
-              inputMode="decimal"
-              placeholder=""
-            />
             <select
               value={v.paidUpCapitalCurrency}
               onChange={(e) => set({ paidUpCapitalCurrency: e.target.value as Currency })}
@@ -157,6 +149,13 @@ export default function RegisterCompanyStep1(props: {
                 </option>
               ))}
             </select>
+            <input
+              value={v.paidUpCapitalAmount}
+              onChange={(e) => set({ paidUpCapitalAmount: e.target.value })}
+              className="flex-1 rounded-md border border-black/10 px-3 py-2"
+              inputMode="decimal"
+              placeholder=""
+            />
           </div>
         </label>
 
