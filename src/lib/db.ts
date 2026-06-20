@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V33 = 'contracts.templates.v33';
+const SEED_KEY_CONTRACTS_TEMPLATES_V34 = 'contracts.templates.v34';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV33(db: Db) {
+function seedContractsTemplatesV34(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V33] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V34] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -656,6 +656,12 @@ function seedContractsTemplatesV33(db: Db) {
       { key: 'service_title_4', label: 'Services provided (4) title', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body', required: false },
       { key: 'fee_standard_1', label: 'Fee standard (1)', required: true },
+      { key: 'partyB_obligation_1', label: 'Party B obligations (1)', required: true },
+      { key: 'partyB_obligation_2', label: 'Party B obligations (2)', required: true },
+      { key: 'partyB_obligation_3', label: 'Party B obligations (3)', required: true },
+      { key: 'partyA_obligation_1', label: 'Party A obligations (1)', required: true },
+      { key: 'partyA_obligation_2', label: 'Party A obligations (2)', required: true },
+      { key: 'partyA_obligation_3', label: 'Party A obligations (3)', required: true },
       { key: 'force_majeure_1', label: 'Force majeure (1)', required: true },
       { key: 'force_majeure_2', label: 'Force majeure (2)', required: true },
       { key: 'force_majeure_3', label: 'Force majeure (3)', required: true },
@@ -749,15 +755,15 @@ function seedContractsTemplatesV33(db: Db) {
 
         <div class="parties">
           <div class="row"><div class="k">Party A</div><div class="v">{{partyA_name}}</div></div>
-          <div class="row"><div class="k">UEN / 注册号</div><div class="v">{{partyA_uen}}</div></div>
-          <div class="row"><div class="k">Address / 地址</div><div class="v">{{partyA_address}}</div></div>
-          <div class="row"><div class="k">Contact / 电话</div><div class="v">{{partyA_contact}}</div></div>
-          <div class="row"><div class="k">Email / 邮箱</div><div class="v">{{partyA_email}}</div></div>
+          <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">{{partyA_uen}}</div></div>
+          <div class="row"><div class="k">Address（地址）</div><div class="v">{{partyA_address}}</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">{{partyA_contact}}</div></div>
+          <div class="row"><div class="k">Email（邮箱）</div><div class="v">{{partyA_email}}</div></div>
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
-          <div class="row"><div class="k">UEN / 注册号</div><div class="v">201608450W</div></div>
-          <div class="row"><div class="k">Address / 地址</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact / 电话</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
-          <div class="row"><div class="k">Email / 邮箱</div><div class="v">Luke@bby.sg</div></div>
+          <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
+          <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
+          <div class="row"><div class="k">Email（邮箱）</div><div class="v">Luke@bby.sg</div></div>
         </div>
 
         <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.</div>
@@ -787,6 +793,20 @@ function seedContractsTemplatesV33(db: Db) {
         <div class="section">
           <div class="section-title">IV. FEES</div>
           <div class="p"><b>1.</b> {{fee_standard_1}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">II. PARTY B OBLIGATIONS</div>
+          <div class="p"><b>1.</b> {{partyB_obligation_1}}</div>
+          <div class="p"><b>2.</b> {{partyB_obligation_2}}</div>
+          <div class="p"><b>3.</b> {{partyB_obligation_3}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">III. PARTY A OBLIGATIONS</div>
+          <div class="p"><b>1.</b> {{partyA_obligation_1}}</div>
+          <div class="p"><b>2.</b> {{partyA_obligation_2}}</div>
+          <div class="p"><b>3.</b> {{partyA_obligation_3}}</div>
         </div>
 
         <div class="section">
@@ -1358,7 +1378,7 @@ function seedContractsTemplatesV33(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V33] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V34] = true;
   return changed;
 }
 
@@ -6529,7 +6549,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV33(db)) changed = true;
+  if (seedContractsTemplatesV34(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

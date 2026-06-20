@@ -270,6 +270,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           'Any additional services will be charged separately as agreed by both parties.';
       }
 
+      if (!String(next.partyB_obligation_1 ?? '').trim()) {
+        next.partyB_obligation_1 = 'Party B shall provide the required services in accordance with Party A\'s requirements.';
+      }
+      if (!String(next.partyB_obligation_2 ?? '').trim()) {
+        next.partyB_obligation_2 =
+          'Party B shall arrange for a local nominee director and comply with the relevant requirements of the Government of Singapore.';
+      }
+      if (!String(next.partyB_obligation_3 ?? '').trim()) {
+        next.partyB_obligation_3 = 'Party B shall provide Party A with a registered address in Singapore.';
+      }
+
+      if (!String(next.partyA_obligation_1 ?? '').trim()) {
+        next.partyA_obligation_1 =
+          'Party A shall truthfully provide background information and supporting materials of the ultimate beneficial owner / actual controller, and confirm that there are no political exposure or prohibited risks.';
+      }
+      if (!String(next.partyA_obligation_2 ?? '').trim()) {
+        next.partyA_obligation_2 = 'Party A shall comply with the laws and regulations of Singapore and operate the business in good faith.';
+      }
+      if (!String(next.partyA_obligation_3 ?? '').trim()) {
+        next.partyA_obligation_3 =
+          'Party A shall ensure that its business activities in its home country and in Singapore do not involve money laundering, terrorist financing or other illegal activities.';
+      }
+
       if (!String(next.force_majeure_1 ?? '').trim()) {
         next.force_majeure_1 =
           'Force majeure refers to unforeseeable, unavoidable and insurmountable objective circumstances, such as major natural disasters, epidemics, war, riots, snowstorms, strikes, etc., as well as policy changes and changes in regulatory requirements beyond the control of both parties.';
@@ -765,6 +788,40 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       rows={6}
                       className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                     />
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Party B obligations</div>
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`partyB_obligation_${n}`] ?? ''}
+                          onChange={(e) =>
+                            setFields((prev) => ({ ...prev, [`partyB_obligation_${n}`]: e.target.value }))
+                          }
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Party A obligations</div>
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`partyA_obligation_${n}`] ?? ''}
+                          onChange={(e) =>
+                            setFields((prev) => ({ ...prev, [`partyA_obligation_${n}`]: e.target.value }))
+                          }
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
