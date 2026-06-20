@@ -105,7 +105,7 @@ export default function PortalForgotPasswordPage() {
         ) : null}
 
         {error ? <div className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</div> : null}
-        {sent && !error ? <div className="mt-4 text-sm text-black/70">Code sent. / 验证码已发送</div> : null}
+        {sent && !error ? <div className="mt-4 text-sm text-black/70 dark:text-white/70">Code sent. / 验证码已发送</div> : null}
 
         <div className="mt-6 grid grid-cols-1 gap-2">
           {step === 'request' ? (
@@ -138,4 +138,3 @@ export default function PortalForgotPasswordPage() {
     </main>
   );
 }
-

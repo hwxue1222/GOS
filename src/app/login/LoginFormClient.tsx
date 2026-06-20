@@ -133,7 +133,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
           <button
             type="button"
             onClick={() => router.push(mode === 'portal' ? '/portal/forgot-password' : '/admin/forgot-password')}
-            className="text-black/70 hover:text-black underline underline-offset-4"
+            className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white underline underline-offset-4"
           >
             Forgot password? / 忘记密码
           </button>

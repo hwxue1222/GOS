@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { createIncorporationApplication, listIncorporationApplications, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { sendEmail } from '@/lib/email';
+import { buildIncorporationSubmittedEmail } from '@/lib/incorporationSubmitEmail';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -116,6 +118,20 @@ export async function POST(req: Request) {
     actor: { id: user.id, name: user.name, role: user.role },
   });
 
-  return NextResponse.json({ ok: true, application: app });
-}
+  let emailOk = true;
+  if (submit && user.role === 'client' && user.email) {
+    try {
+      const { subject, html } = buildIncorporationSubmittedEmail({
+        application: app,
+        applicantName: user.name,
+        applicantEmail: user.email,
+        origin: new URL(req.url).origin,
+      });
+      await sendEmail({ to: [user.email], subject, html });
+    } catch {
+      emailOk = false;
+    }
+  }
 
+  return NextResponse.json({ ok: true, application: app, emailOk });
+}

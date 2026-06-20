@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getIncorporationApplicationDetail, transitionIncorporationApplicationStatus } from '@/lib/db';
+import { sendEmail } from '@/lib/email';
+import { buildIncorporationSubmittedEmail } from '@/lib/incorporationSubmitEmail';
 
-export async function POST(_req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
   const { applicationId } = await ctx.params;
@@ -21,6 +23,21 @@ export async function POST(_req: Request, ctx: { params: Promise<{ applicationId
     actor: { id: user.id, name: user.name, role: user.role },
   });
 
-  return NextResponse.json({ ok: true, application: next });
-}
+  let emailOk = true;
+  const baseOrigin = new URL(req.url).origin;
+  if (user.email) {
+    try {
+      const { subject, html } = buildIncorporationSubmittedEmail({
+        application: next ?? app,
+        applicantName: user.name,
+        applicantEmail: user.email,
+        origin: baseOrigin,
+      });
+      await sendEmail({ to: [user.email], subject, html });
+    } catch {
+      emailOk = false;
+    }
+  }
 
+  return NextResponse.json({ ok: true, application: next, emailOk });
+}
