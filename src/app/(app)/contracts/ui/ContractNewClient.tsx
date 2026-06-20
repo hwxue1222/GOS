@@ -183,6 +183,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   }, [clientEmail, clientName, contractNo, fields, tpl]);
 
   const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
+  const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
   const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
 
   useEffect(() => {
@@ -207,6 +208,20 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setAnnualFeeAmount(raw);
     }
   }, [isNomineeTemplate, (fields as any).annual_fee]);
+
+  useEffect(() => {
+    if (!isProfessionalTemplate) return;
+    setFields((prev) => {
+      const next = { ...(prev ?? {}) } as Record<string, string>;
+      if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
+      if (!String(next.signer_date ?? '').trim()) next.signer_date = String(next.date ?? '').trim() || new Date().toISOString().slice(0, 10);
+      if (!String(next.signer_email ?? '').trim()) {
+        const pe = String(next.partyA_email ?? '').trim();
+        if (pe) next.signer_email = pe;
+      }
+      return next;
+    });
+  }, [isProfessionalTemplate]);
 
 
   async function saveDraft() {

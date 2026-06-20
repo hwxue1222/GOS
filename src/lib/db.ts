@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V30 = 'contracts.templates.v30';
+const SEED_KEY_CONTRACTS_TEMPLATES_V31 = 'contracts.templates.v31';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV30(db: Db) {
+function seedContractsTemplatesV31(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V30] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V31] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -630,6 +630,160 @@ function seedContractsTemplatesV30(db: Db) {
     changed = true;
   } else {
     templates.unshift(tpl);
+    changed = true;
+  }
+
+  const proIdx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  const professionalTpl: ContractTemplate = {
+    id: proIdx >= 0 ? templates[proIdx].id : newId('ctp'),
+    name: 'Professional Service Agreement',
+    engine: 'HTML',
+    placeholders: [
+      { key: 'agreement_title', label: 'Agreement title', required: true },
+      { key: 'date', label: 'Date (YYYY-MM-DD)', required: true },
+      { key: 'partyA_name', label: 'Party A (Company name)', required: true },
+      { key: 'partyA_uen', label: 'Party A UEN / Registration number', required: true },
+      { key: 'partyA_address', label: 'Party A address', required: true },
+      { key: 'partyA_contact', label: 'Party A contact number', required: true },
+      { key: 'partyA_email', label: 'Party A email', required: true },
+      { key: 'service_item_1', label: 'Services provided (1)', required: true },
+      { key: 'service_item_2', label: 'Services provided (2)', required: false },
+      { key: 'service_item_3', label: 'Services provided (3)', required: false },
+      { key: 'service_item_4', label: 'Services provided (4)', required: false },
+      { key: 'fee_item_1', label: 'Fee standard (1)', required: true },
+      { key: 'signer_full_name', label: 'Signer name', required: true },
+      { key: 'signer_title', label: 'Signer title', required: true },
+      { key: 'signer_date', label: 'Signer date (YYYY-MM-DD)', required: true },
+      { key: 'signer_email', label: 'Signing email', required: true },
+    ],
+    templateHtml: `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT -->
+    <title>{{agreement_title}}</title>
+    <style>
+      :root { --text:#111; --muted:#4b5563; --line:rgba(17,24,39,0.18); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body { color: var(--text); font-family: "Times New Roman", ui-serif, serif; line-height: 1.55; font-size: 12px; background: #f3f4f6; }
+      .sheet { padding: 18px 12px; counter-reset: page; }
+      .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
+      .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+      @media print { body { background: #fff; } .sheet { padding: 0; } .page { margin: 0; box-shadow: none; } }
+
+      .title { text-align: center; font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+      .subtitle { text-align: center; color: var(--muted); font-size: 11px; margin-top: 4px; }
+      .meta { margin-top: 10px; color: var(--muted); font-size: 11px; }
+      .hr { border-top: 1px solid var(--line); margin: 14px 0; }
+
+      .h2 { font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
+      .p { margin: 6px 0; }
+      .kv { margin: 4px 0; }
+      .kv b { display: inline-block; min-width: 160px; }
+
+      ol.services { margin: 6px 0 0 0; padding-left: 0; list-style: none; }
+      ol.services li { display: grid; grid-template-columns: 46px 1fr; gap: 8px; margin: 6px 0; }
+      .svc-no { font-weight: 700; }
+      .svc-text { }
+
+      .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+      .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+      .sigbox .h { font-weight: 800; }
+      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
+      .sigmeta { margin-top: 10px; font-size: 11px; color: var(--muted); }
+      .sigrow { display: grid; grid-template-columns: 86px 1fr; gap: 8px; margin-top: 6px; align-items: start; }
+      .siglabel { color: var(--text); font-weight: 700; }
+      .sigvalue { color: var(--text); }
+      .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
+      .name-line .signer { position: absolute; inset: 0; display: block; }
+      .name-text { margin-top: 4px; color: var(--text); }
+      .signer { display: inline-block; }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <div class="page">
+        <div class="title">{{agreement_title}}</div>
+        <div class="subtitle">Professional Service Agreement</div>
+        <div class="meta">Contract No: {{contract_no}} &nbsp;&nbsp; Date: {{date}}</div>
+        <div class="hr"></div>
+
+        <div class="h2">1. Parties</div>
+        <div class="p">This Professional Service Agreement (the "Agreement") is entered into between:</div>
+        <div class="p">
+          <div class="kv"><b>Party A (Company)</b> {{partyA_name}}</div>
+          <div class="kv"><b>UEN / Registration No.</b> {{partyA_uen}}</div>
+          <div class="kv"><b>Address</b> {{partyA_address}}</div>
+          <div class="kv"><b>Contact Number</b> {{partyA_contact}}</div>
+          <div class="kv"><b>Email</b> {{partyA_email}}</div>
+        </div>
+        <div class="p">
+          <div class="kv"><b>Party B</b> BBY.SG PTE LTD</div>
+        </div>
+
+        <div class="h2">2. Services Provided</div>
+        <div class="p">Party B agrees to provide the following professional services to Party A:</div>
+        <ol class="services">
+          <li data-svc-item="1"><span class="svc-no">(1)</span><span class="svc-text">{{service_item_1}}</span></li>
+          <li data-svc-item="2"><span class="svc-no">(2)</span><span class="svc-text">{{service_item_2}}</span></li>
+          <li data-svc-item="3"><span class="svc-no">(3)</span><span class="svc-text">{{service_item_3}}</span></li>
+          <li data-svc-item="4"><span class="svc-no">(4)</span><span class="svc-text">{{service_item_4}}</span></li>
+        </ol>
+
+        <div class="h2">3. Fees</div>
+        <div class="p">The fees and billing terms are as follows:</div>
+        <div class="p"><b>(1)</b> {{fee_item_1}}</div>
+        <div class="p">All fees are exclusive of taxes unless stated otherwise.</div>
+
+        <div class="h2">4. General Terms</div>
+        <div class="p">This Agreement constitutes the entire agreement between the parties and supersedes all prior discussions. Any amendment must be in writing and signed by both parties.</div>
+        <div class="p">This Agreement shall be governed by the laws of Singapore.</div>
+
+        <div class="sig">
+          <div class="sigbox">
+            <div class="h">Party A</div>
+            <div class="sigline"></div>
+            <div class="sigmeta">
+              <div class="sigrow">
+                <div class="siglabel">Name:</div>
+                <div class="sigvalue">
+                  <div class="name-line">
+                    <span class="signer" data-signer="{{signer_email}}"></span>
+                  </div>
+                  <div class="name-text" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div>
+                </div>
+              </div>
+              <div class="sigrow">
+                <div class="siglabel">Title:</div>
+                <div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div>
+              </div>
+              <div class="sigrow">
+                <div class="siglabel">Date:</div>
+                <div class="sigvalue">{{signer_date}}</div>
+                <span style="display:none" data-signer-signed-at="{{signer_email}}"></span>
+              </div>
+            </div>
+          </div>
+          <div class="sigbox">
+            <div class="h">Party B</div>
+            <div class="sigline"></div>
+            <div class="sigmeta">BBY.SG PTE LTD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`,
+    createdAt: proIdx >= 0 ? templates[proIdx].createdAt : now,
+    updatedAt: now,
+  };
+  if (proIdx >= 0) {
+    templates[proIdx] = professionalTpl;
+    changed = true;
+  } else {
+    templates.unshift(professionalTpl);
     changed = true;
   }
 
@@ -1130,7 +1284,7 @@ function seedContractsTemplatesV30(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V30] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V31] = true;
   return changed;
 }
 
@@ -6301,7 +6455,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV30(db)) changed = true;
+  if (seedContractsTemplatesV31(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

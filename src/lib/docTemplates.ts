@@ -2638,5 +2638,20 @@ export function renderContractHtml(input: {
       },
     );
   }
+
+  if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
+    const serviceValues = [1, 2, 3, 4].map((n) => String((input.fields ?? {})[`service_item_${n}`] ?? '').trim());
+    for (let n = 1; n <= 4; n++) {
+      if (serviceValues[n - 1]) continue;
+      html = html.replace(new RegExp(`<li\\s+data-svc-item="${n}">[\\s\\S]*?<\\/li>\\s*`, 'g'), '');
+    }
+
+    let nextNo = 1;
+    html = html.replace(/<li\s+data-svc-item="\d+">[\s\S]*?<\/li>/g, (block) => {
+      const updated = block.replace(/<span class="svc-no">\(\d+\)<\/span>/, `<span class="svc-no">(${nextNo})</span>`);
+      nextNo += 1;
+      return updated;
+    });
+  }
   return html;
 }
