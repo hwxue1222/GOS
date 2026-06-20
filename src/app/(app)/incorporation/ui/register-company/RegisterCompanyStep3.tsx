@@ -350,7 +350,7 @@ export default function RegisterCompanyStep3(props: {
               As an authorized representative of the company, I have read BBY consultancy KYC questionnaire (Click to download) Statement that it believes
               that there is no violation of any of its provision and that is has no relations or business dealings with prohibited countries and
               organizations, The actual controllers, Shareholders and directors of the company and their direct relatives are not politically exposed
-              persons or persons subject to political risks impact
+              persons or persons subject to political risks impact.
             </span>
           </label>
         </div>
