@@ -79,7 +79,7 @@ export function validateStep2(draft: RegisterCompanyDraft) {
     .filter((n) => Number.isFinite(n));
   const sumShares = shareholderShares.reduce((a, b) => a + b, 0);
   if (Number.isFinite(totalShares) && totalShares > 0 && shareholderShares.length === draft.step2.shareholders.length) {
-    if (sumShares !== totalShares) e.push('Total shares must equal the sum of shares held by shareholders.');
+    if (sumShares > totalShares) e.push('Total shares held by shareholders cannot exceed Total Number Of Shares.');
   }
   if (!draft.step2.directors.length) e.push('At least 1 director is required.');
   for (const d of draft.step2.directors) e.push(...validatePerson(d));
