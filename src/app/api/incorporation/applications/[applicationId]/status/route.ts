@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getIncorporationApplicationDetail, transitionIncorporationApplicationStatus, updateIncorporationApplication } from '@/lib/db';
+import { getIncorporationApplicationDetail, transitionAndApplyIncorporationApplicationStatus, updateIncorporationApplication } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 export async function POST(req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
@@ -34,7 +34,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
   }
 
   const decided = toStatus === 'COMPLETED' || toStatus === 'REJECTED';
-  const next = await transitionIncorporationApplicationStatus({
+  const next = await transitionAndApplyIncorporationApplicationStatus({
     applicationId,
     toStatus: toStatus as 'PROCESSING' | 'NEED_MORE_INFO' | 'COMPLETED' | 'REJECTED',
     actor: { id: user.id, name: user.name, role: user.role },
@@ -42,6 +42,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     decided,
   });
 
-  return NextResponse.json({ ok: true, application: next });
+  if (!next.ok) return NextResponse.json({ ok: false, error: next.error }, { status: 400 });
+  return NextResponse.json({ ok: true, application: next.application });
 }
-

@@ -12866,6 +12866,319 @@ export async function transitionIncorporationApplicationStatus(input: {
   return next;
 }
 
+function parsePersonIdTypeFromLabel(label: unknown): Person['idType'] | undefined {
+  const s = String(label ?? '').trim();
+  if (s === 'NRIC No.') return 'NRIC';
+  if (s === 'FIN No.') return 'FIN';
+  if (s === 'Passport No.') return 'PASSPORT';
+  if (s === 'IC No.') return 'IC';
+  return undefined;
+}
+
+function normalizeEmailKey(v: unknown) {
+  return String(v ?? '').trim().toLowerCase();
+}
+
+function normalizeIdNoKey(v: unknown) {
+  return String(v ?? '').trim().replace(/\s+/g, '').toLowerCase();
+}
+
+function getOrCreatePersonFromDraft(db: Db, draft: Record<string, unknown>) {
+  const fullName = String(draft.fullName ?? '').trim();
+  if (!fullName) return null;
+  const email = normalizeEmailKey(draft.email);
+  const idNoKey = normalizeIdNoKey(draft.idNo);
+
+  const hit = email ? db.persons.find((p) => !p.deletedAt && normalizeEmailKey(p.email) === email) ?? null : null;
+  const hit2 = !hit && idNoKey ? db.persons.find((p) => !p.deletedAt && normalizeIdNoKey(p.idNo) === idNoKey) ?? null : null;
+  const target = hit ?? hit2;
+  const now = nowIso();
+  const idType = parsePersonIdTypeFromLabel(draft.idTypeLabel);
+  const patch: Partial<Person> = {
+    fullName,
+    email: email || undefined,
+    phone: typeof draft.phone === 'string' ? draft.phone.trim() || undefined : undefined,
+    idType,
+    idNo: typeof draft.idNo === 'string' ? draft.idNo.trim() || undefined : undefined,
+    nationality: typeof draft.nationality === 'string' ? draft.nationality.trim() || undefined : undefined,
+    dob: typeof draft.dob === 'string' ? draft.dob.trim() || undefined : undefined,
+    address: typeof draft.address === 'string' ? draft.address.trim() || undefined : undefined,
+    updatedAt: now,
+  };
+
+  if (target) {
+    const idx = db.persons.findIndex((p) => p.id === target.id);
+    if (idx >= 0) db.persons[idx] = { ...target, ...patch, id: target.id, createdAt: target.createdAt };
+    return db.persons[idx];
+  }
+
+  const person: Person = {
+    id: newId('per'),
+    fullName,
+    email: email || undefined,
+    phone: typeof draft.phone === 'string' ? draft.phone.trim() || undefined : undefined,
+    idType,
+    idNo: typeof draft.idNo === 'string' ? draft.idNo.trim() || undefined : undefined,
+    nationality: typeof draft.nationality === 'string' ? draft.nationality.trim() || undefined : undefined,
+    dob: typeof draft.dob === 'string' ? draft.dob.trim() || undefined : undefined,
+    address: typeof draft.address === 'string' ? draft.address.trim() || undefined : undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.persons.unshift(person);
+  return person;
+}
+
+function getOrCreatePartyForPerson(db: Db, person: Person) {
+  const hit = db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) ?? null;
+  if (hit) return hit;
+  const now = nowIso();
+  const party: Party = {
+    id: newId('pty'),
+    type: 'PERSON',
+    displayName: person.fullName,
+    personId: person.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.parties.unshift(party);
+  return party;
+}
+
+function getOrCreatePartyForCompanyClient(db: Db, client: Client) {
+  const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === client.id) ?? null;
+  if (hit) return hit;
+  const now = nowIso();
+  const party: Party = {
+    id: newId('pty'),
+    type: 'COMPANY',
+    displayName: client.name,
+    clientId: client.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.parties.unshift(party);
+  return party;
+}
+
+export async function transitionAndApplyIncorporationApplicationStatus(input: {
+  applicationId: string;
+  toStatus: IncorporationApplicationStatus;
+  actor: { id: string; name: string; role: Role };
+  note?: string;
+  decided?: boolean;
+}) {
+  const db = await readDb();
+  if (!db.incorporationApplicationEvents) db.incorporationApplicationEvents = [];
+  const list = db.incorporationApplications ?? [];
+  const idx = list.findIndex((a) => a.id === input.applicationId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const prev = list[idx];
+  const now = nowIso();
+
+  let patchCompanyId: string | undefined = prev.companyId;
+  let patchCompanyName: string | undefined = prev.companyName;
+
+  if (input.toStatus === 'COMPLETED') {
+    if (prev.type === 'REGISTER_COMPANY') {
+      const payload = prev.payload ?? {};
+      const companyName = String(prev.companyName ?? (payload as any).companyName ?? '').trim();
+      if (!companyName) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+      const existingClient = prev.companyId ? db.clients.find((c) => c.id === prev.companyId && !c.deletedAt) ?? null : null;
+      if (existingClient) {
+        patchCompanyId = existingClient.id;
+        patchCompanyName = existingClient.name;
+      } else {
+        const codeSeed = nextScCode(db);
+        const paidUpCurrency = String((payload as any).paidUpCapitalCurrency ?? '').trim().toUpperCase();
+        const paidUpAmountRaw = String((payload as any).paidUpCapitalAmount ?? '').trim();
+        const paidUpAmount = paidUpAmountRaw ? Number(paidUpAmountRaw) : undefined;
+        const totalShares = typeof (payload as any).totalShares === 'number' ? (payload as any).totalShares : undefined;
+        const ssicPrimaryCode = typeof (payload as any).ssicPrimaryCode === 'string' ? (payload as any).ssicPrimaryCode.trim() || undefined : undefined;
+        const ssicSecondaryCode = typeof (payload as any).ssicSecondaryCode === 'string' ? (payload as any).ssicSecondaryCode.trim() || undefined : undefined;
+        const address = typeof (payload as any).address === 'string' ? (payload as any).address.trim() || undefined : undefined;
+        const registeredOfficeAddress = address;
+
+        const client: Client = {
+          id: newId('cli'),
+          code: codeSeed,
+          name: companyName,
+          address,
+          ssicPrimaryCode,
+          ssicSecondaryCode,
+          paidUpCapitalCurrency: paidUpCurrency === 'SGD' || paidUpCurrency === 'USD' || paidUpCurrency === 'MYR' || paidUpCurrency === 'CNY' ? (paidUpCurrency as any) : undefined,
+          paidUpCapitalAmount: typeof paidUpAmount === 'number' && Number.isFinite(paidUpAmount) ? paidUpAmount : undefined,
+          totalShares: typeof totalShares === 'number' && Number.isFinite(totalShares) ? totalShares : undefined,
+          registeredOfficeAddress,
+          tags: ['incorporation'],
+          createdAt: now,
+        };
+        db.clients.unshift(client);
+
+        const shareholders = Array.isArray((payload as any).shareholders) ? ((payload as any).shareholders as Array<Record<string, unknown>>) : [];
+        const directors = Array.isArray((payload as any).directors) ? ((payload as any).directors as Array<Record<string, unknown>>) : [];
+        const rorcControllers = Array.isArray((payload as any).rorcControllers) ? ((payload as any).rorcControllers as Array<Record<string, unknown>>) : [];
+
+        for (const sh of shareholders) {
+          const kind = String((sh as any).kind ?? '').trim();
+          const shares = typeof (sh as any).shares === 'number' ? (sh as any).shares : 0;
+          if (kind === 'PERSON') {
+            const personDraft = (sh as any).person && typeof (sh as any).person === 'object' ? ((sh as any).person as Record<string, unknown>) : null;
+            if (!personDraft) continue;
+            const person = getOrCreatePersonFromDraft(db, personDraft);
+            if (!person) continue;
+            const party = getOrCreatePartyForPerson(db, person);
+            upsertRole(db, { clientId: client.id, partyId: party.id, role: 'SHAREHOLDER', shares, createdIso: `${now.slice(0, 10)}T00:00:00.000Z` });
+          } else if (kind === 'COMPANY') {
+            const companyDraft = (sh as any).company && typeof (sh as any).company === 'object' ? ((sh as any).company as Record<string, unknown>) : null;
+            if (!companyDraft) continue;
+            const companyClientId = typeof (companyDraft as any).clientId === 'string' ? String((companyDraft as any).clientId).trim() : '';
+            const existing = companyClientId ? db.clients.find((c) => c.id === companyClientId && !c.deletedAt) ?? null : null;
+            const companyName2 = String((companyDraft as any).companyName ?? '').trim();
+            const regNo = String((companyDraft as any).registrationNo ?? '').trim() || undefined;
+            const address2 = typeof (companyDraft as any).address === 'string' ? String((companyDraft as any).address).trim() || undefined : undefined;
+            const email2 = typeof (companyDraft as any).email === 'string' ? String((companyDraft as any).email).trim() || undefined : undefined;
+            const corpClient: Client =
+              existing ??
+              ({
+                id: newId('cli'),
+                code: nextScCode(db),
+                name: companyName2 || 'Corporate shareholder',
+                companyRegistrationNo: regNo,
+                address: address2,
+                email: email2,
+                tags: ['corporate-shareholder'],
+                createdAt: now,
+              } as Client);
+            if (!existing) db.clients.unshift(corpClient);
+            const party = getOrCreatePartyForCompanyClient(db, corpClient);
+            upsertRole(db, { clientId: client.id, partyId: party.id, role: 'SHAREHOLDER', shares, createdIso: `${now.slice(0, 10)}T00:00:00.000Z` });
+          }
+        }
+
+        for (const d of directors) {
+          const person = getOrCreatePersonFromDraft(db, d);
+          if (!person) continue;
+          const party = getOrCreatePartyForPerson(db, person);
+          upsertRole(db, { clientId: client.id, partyId: party.id, role: 'DIRECTOR', createdIso: `${now.slice(0, 10)}T00:00:00.000Z` });
+        }
+
+        for (const c of rorcControllers) {
+          const personDraft = (c as any).person && typeof (c as any).person === 'object' ? ((c as any).person as Record<string, unknown>) : null;
+          if (!personDraft) continue;
+          const person = getOrCreatePersonFromDraft(db, personDraft);
+          if (!person) continue;
+          const party = getOrCreatePartyForPerson(db, person);
+          const effectiveYmd = typeof (c as any).initiationAt === 'string' && String((c as any).initiationAt).trim() ? String((c as any).initiationAt).trim() : now.slice(0, 10);
+          upsertRole(db, { clientId: client.id, partyId: party.id, role: 'RORC', createdIso: `${effectiveYmd}T00:00:00.000Z` });
+        }
+
+        const useByBridge = Boolean((payload as any).useByBridgeCompanySecretary);
+        if (useByBridge) {
+          const byBridgeIdNoKey = 's7864540g';
+          const byBridgePerson = db.persons.find((p) => !p.deletedAt && normalizeIdNoKey(p.idNo) === byBridgeIdNoKey) ?? null;
+          const person: Person =
+            byBridgePerson ??
+            ({
+              id: newId('per'),
+              fullName: 'BBY Company Secretary',
+              email: 'Luke@bby.sg',
+              idType: 'NRIC',
+              idNo: 'S7864540G',
+              nationality: 'Singapore',
+              address: registeredOfficeAddress,
+              createdAt: now,
+              updatedAt: now,
+            } as Person);
+          if (!byBridgePerson) db.persons.unshift(person);
+          const party = getOrCreatePartyForPerson(db, person);
+          upsertRole(db, { clientId: client.id, partyId: party.id, role: 'SECRETARY', createdIso: `${now.slice(0, 10)}T00:00:00.000Z` });
+        } else {
+          const secretaryRaw = (payload as any).secretary;
+          const secretaryDraft = secretaryRaw && typeof secretaryRaw === 'object' ? (secretaryRaw as Record<string, unknown>) : null;
+          if (secretaryDraft) {
+            const person = getOrCreatePersonFromDraft(db, secretaryDraft);
+            if (person) {
+              const party = getOrCreatePartyForPerson(db, person);
+              upsertRole(db, { clientId: client.id, partyId: party.id, role: 'SECRETARY', createdIso: `${now.slice(0, 10)}T00:00:00.000Z` });
+            }
+          }
+        }
+
+        patchCompanyId = client.id;
+        patchCompanyName = client.name;
+      }
+    } else if (prev.type === 'TRANSFER_COMPANY_SECRETARY') {
+      const payload = prev.payload ?? {};
+      const clientId = String(prev.companyId ?? (payload as any).companyId ?? '').trim();
+      if (!clientId) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const client = db.clients.find((c) => c.id === clientId && !c.deletedAt) ?? null;
+      if (!client) return { ok: false as const, error: 'NOT_FOUND' as const };
+      const effectiveDate = String((payload as any).effectiveDate ?? '').trim() || now.slice(0, 10);
+      const newSecretaryName = String((payload as any).newSecretaryName ?? '').trim();
+      if (!newSecretaryName) return { ok: false as const, error: 'INVALID_INPUT' as const };
+      const newSecretaryEmail = typeof (payload as any).newSecretaryEmail === 'string' ? String((payload as any).newSecretaryEmail).trim() || undefined : undefined;
+
+      for (let i = 0; i < db.clientPartyRoles.length; i += 1) {
+        const role = db.clientPartyRoles[i];
+        if (role.clientId !== clientId) continue;
+        if (role.role !== 'SECRETARY') continue;
+        if (role.resignationDate) continue;
+        db.clientPartyRoles[i] = { ...role, resignationDate: effectiveDate, updatedAt: now };
+      }
+
+      const person: Person = { id: newId('per'), fullName: newSecretaryName, email: newSecretaryEmail, createdAt: now, updatedAt: now };
+      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: newSecretaryName, personId: person.id, createdAt: now, updatedAt: now };
+      const role: ClientPartyRole = {
+        id: newId('cpr'),
+        clientId,
+        partyId: party.id,
+        role: 'SECRETARY',
+        appointmentDate: effectiveDate,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.persons.unshift(person);
+      db.parties.unshift(party);
+      db.clientPartyRoles.unshift(role);
+
+      patchCompanyId = clientId;
+      patchCompanyName = client.name;
+    }
+  }
+
+  const next: IncorporationApplication = {
+    ...prev,
+    status: input.toStatus,
+    companyId: patchCompanyId,
+    companyName: patchCompanyName,
+    updatedAt: now,
+    submittedAt: input.toStatus === 'SUBMITTED' ? (prev.submittedAt ?? now) : prev.submittedAt,
+    decidedAt: input.decided ? now : prev.decidedAt,
+    decidedByUserId: input.decided ? input.actor.id : prev.decidedByUserId,
+    decisionNote: input.decided ? input.note : prev.decisionNote,
+  };
+  list[idx] = next;
+  db.incorporationApplications = list;
+
+  const ev: IncorporationApplicationEvent = {
+    id: newId('incev'),
+    applicationId: input.applicationId,
+    fromStatus: prev.status,
+    toStatus: input.toStatus,
+    note: input.note,
+    actorUserId: input.actor.id,
+    actorName: input.actor.name,
+    actorRole: input.actor.role,
+    createdAt: now,
+  };
+  db.incorporationApplicationEvents.unshift(ev);
+
+  await writeDb(db);
+  return { ok: true as const, application: next };
+}
+
 export async function addIncorporationApplicationFile(input: {
   applicationId: string;
   fileName: string;
