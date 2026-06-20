@@ -221,7 +221,18 @@ export default function IncorporationApplicationDetailClient(props: Props) {
         />
       )}
 
-      <IncorporationMaterialsSection files={files} uploading={uploading} onUpload={(fl) => void onUpload(fl)} />
+      <IncorporationMaterialsSection
+        files={files}
+        uploading={uploading}
+        onUpload={(fl) => void onUpload(fl)}
+        showRegisterCompanyRequirements={app.type === 'REGISTER_COMPANY'}
+        hasCorporateShareholder={
+          app.type === 'REGISTER_COMPANY' &&
+          Array.isArray((app.payload as { shareholders?: Array<{ kind?: string }> } | null)?.shareholders)
+            ? (app.payload as { shareholders?: Array<{ kind?: string }> }).shareholders!.some((s) => s?.kind === 'COMPANY')
+            : false
+        }
+      />
 
       <IncorporationTimelineSection events={events} busy={busy} canReview={props.canReview} onSetStatus={(s) => void setStatus(s)} />
     </div>

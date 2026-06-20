@@ -325,6 +325,17 @@ export default function RegisterCompanyStep3(props: {
           onToggle={() => setOpen((p) => ({ ...p, files: !p.files }))}
         >
           <div className="mt-3">
+            <div className="rounded-lg border border-black/5 bg-black/[0.02] p-3 text-sm text-black/70">
+              <div className="font-medium text-black">Required documents</div>
+              <ul className="mt-2 list-disc pl-5 space-y-1">
+                <li>Shareholders: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+                <li>Directors: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+                <li>Secretary: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+                {d.step2.shareholders.some((s) => s.kind === 'COMPANY') ? (
+                  <li>Corporate shareholder: Certificate of Incorporation, Constitution, Register of Shareholder, Register of Director, Certificate of Incumbency</li>
+                ) : null}
+              </ul>
+            </div>
             <input type="file" multiple onChange={(e) => onChangeFiles(Array.from(e.target.files ?? []))} className="block w-full text-sm" />
             {props.files?.length ? <div className="mt-2 text-xs text-black/50">{props.files.map((f) => f.name).join(', ')}</div> : null}
           </div>

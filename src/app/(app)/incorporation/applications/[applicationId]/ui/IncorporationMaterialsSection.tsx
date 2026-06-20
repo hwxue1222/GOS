@@ -13,6 +13,8 @@ export default function IncorporationMaterialsSection(props: {
   files: FileRow[];
   uploading: boolean;
   onUpload: (files: FileList | null) => void;
+  showRegisterCompanyRequirements?: boolean;
+  hasCorporateShareholder?: boolean;
 }) {
   return (
     <div id="documents" className="rounded-xl bg-white border border-black/5 p-4">
@@ -26,6 +28,21 @@ export default function IncorporationMaterialsSection(props: {
           <input type="file" className="hidden" multiple onChange={(e) => props.onUpload(e.target.files)} />
         </label>
       </div>
+
+      {props.showRegisterCompanyRequirements ? (
+        <div className="mt-3 rounded-lg border border-black/5 bg-black/[0.02] p-3 text-sm text-black/70">
+          <div className="font-medium text-black">Required documents</div>
+          <ul className="mt-2 list-disc pl-5 space-y-1">
+            <li>Shareholders: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+            <li>Directors: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+            <li>Secretary: ID + Residential address proof (bank statement, telephone bill, utility bill, tenancy agreement) issued within the last 3 months</li>
+            {props.hasCorporateShareholder ? (
+              <li>Corporate shareholder: Certificate of Incorporation, Constitution, Register of Shareholder, Register of Director, Certificate of Incumbency</li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="text-left text-black/60">
@@ -62,4 +79,3 @@ export default function IncorporationMaterialsSection(props: {
     </div>
   );
 }
-
