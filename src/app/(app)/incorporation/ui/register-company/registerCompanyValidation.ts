@@ -14,6 +14,15 @@ function normalizeText(v: string) {
   return v.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+function isSingaporeDirector(d: PersonDraft) {
+  const nat = normalizeText(d.nationality);
+  if (nat === 'sg') return true;
+  if (nat === 'singapore' || nat === 'singaporean') return true;
+  if (nat === 'singapore pr' || nat === 'singapore permanent resident') return true;
+  if (nat === 'singapore ep' || nat === 'employment pass') return true;
+  return false;
+}
+
 export function validatePerson(p: PersonDraft) {
   const errors: string[] = [];
   if (!p.fullName.trim()) errors.push('Full name is required.');
@@ -83,6 +92,9 @@ export function validateStep2(draft: RegisterCompanyDraft) {
   }
   if (!draft.step2.directors.length) e.push('At least 1 director is required.');
   for (const d of draft.step2.directors) e.push(...validatePerson(d));
+  if (draft.step2.directors.length && !draft.step2.useByBridgeNomineeDirector && !draft.step2.directors.some((d) => isSingaporeDirector(d))) {
+    e.push('At least 1 director must be Singapore / Singapore PR / Singapore EP.');
+  }
   if (!draft.step2.rorcControllers.length) e.push('At least 1 RORC controller is required.');
   for (const c of draft.step2.rorcControllers) {
     e.push(...validatePerson(c.person));

@@ -129,7 +129,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
 
               <div className="mt-4">
                 {sh.kind === 'PERSON' ? (
-                  <PersonFields value={sh.person} onChange={(p) => updateShareholder(idx, { ...sh, person: p })} showUnlock />
+                  <PersonFields value={sh.person} onChange={(p) => updateShareholder(idx, { ...sh, person: p })} />
                 ) : (
                   <div className="space-y-4">
                     <CompanyFields value={sh.company} onChange={(c) => updateShareholder(idx, { ...sh, company: c })} />
@@ -209,7 +209,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
                 </button>
               </div>
               <div className="mt-4">
-                <PersonFields value={d} onChange={(p) => updateDirector(idx, p)} showUnlock />
+                <PersonFields value={d} onChange={(p) => updateDirector(idx, p)} />
               </div>
             </div>
           ))}
@@ -260,7 +260,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
                   />
                 </label>
                 <div className="mt-4">
-                  <PersonFields value={c.person} onChange={(p) => updateController(idx, { ...c, person: p })} showUnlock />
+                  <PersonFields value={c.person} onChange={(p) => updateController(idx, { ...c, person: p })} />
                 </div>
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
             />
             To use BBY company secretary
           </label>
-          {!v.useByBridgeCompanySecretary ? <PersonFields value={v.secretary} onChange={(p) => set({ secretary: p })} showUnlock /> : null}
+          {!v.useByBridgeCompanySecretary ? <PersonFields value={v.secretary} onChange={(p) => set({ secretary: p })} /> : null}
         </div>
       </RegisterCompanyCard>
     </div>
