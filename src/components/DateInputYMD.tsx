@@ -1,13 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const weekdayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const;
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
-
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
-}
 
 function isValidYmd(v: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
@@ -58,6 +54,7 @@ export function DateInputYMD(props: {
   placeholder?: string;
 }) {
   const { value, onChange, disabled, min, max, className, inputClassName, placeholder } = props;
+  const hintId = useId();
   const [draft, setDraft] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'day' | 'month' | 'year'>('day');
@@ -178,8 +175,14 @@ export function DateInputYMD(props: {
         inputMode="numeric"
         placeholder={placeholder ?? 'YYYY-MM-DD'}
         className={['w-full pr-10', inputClassName].filter(Boolean).join(' ')}
-        aria-description={constraintText}
+        aria-describedby={constraintText ? hintId : undefined}
       />
+
+      {constraintText ? (
+        <div id={hintId} className="sr-only">
+          {constraintText}
+        </div>
+      ) : null}
 
       <button
         type="button"

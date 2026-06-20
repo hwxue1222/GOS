@@ -296,10 +296,6 @@ export default function RegisterCompanyWizardClient(props: Props) {
   function onSubmit() {
     setShowValidation(true);
     if (allErrors.length) return;
-    if (props.mode === 'create' && files.length === 0) {
-      setError('Please upload required materials before submitting.');
-      return;
-    }
     void save(true);
   }
 

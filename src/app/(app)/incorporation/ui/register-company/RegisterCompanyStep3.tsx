@@ -351,7 +351,7 @@ export default function RegisterCompanyStep3(props: {
           <label className="flex items-start gap-2 text-sm text-black/80">
             <input type="checkbox" checked={v.confirmInfoAccurate} onChange={(e) => set({ confirmInfoAccurate: e.target.checked })} className="mt-1 h-4 w-4" />
             <span>
-              All the information I filled are true and correct, and I have not concealed anything. if there is any false or concealment statement, I'm
+              All the information I filled are true and correct, and I have not concealed anything. if there is any false or concealment statement, I&apos;m
               willing to take full responsibility.
             </span>
           </label>
