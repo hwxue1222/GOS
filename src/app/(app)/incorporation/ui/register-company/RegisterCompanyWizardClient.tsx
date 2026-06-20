@@ -231,7 +231,7 @@ export default function RegisterCompanyWizardClient(props: Props) {
         try {
           window.localStorage.removeItem(storageKey);
         } catch {}
-        router.push(`/incorporation/applications/${encodeURIComponent(id)}`);
+        router.push('/');
         router.refresh();
         return;
       }

@@ -1,5 +1,4 @@
 import AppTopNav from '@/components/AppTopNav';
-import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { getIncorporationApplicationDetail, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -102,9 +101,6 @@ export default async function IncorporationApplicationDetailPage({
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-xl font-semibold">Incorporation</h1>
-            <Link href="/corporate-secretary/applications" className="text-sm text-[#2f7bdc] hover:underline">
-              Applications
-            </Link>
           </div>
           <div className="mt-4">
             <IncorporationApplicationDetailClient
@@ -120,4 +116,3 @@ export default async function IncorporationApplicationDetailPage({
     </div>
   );
 }
-
