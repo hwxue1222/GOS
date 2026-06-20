@@ -733,7 +733,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                   <div className="rounded-lg border border-black/10 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs font-semibold text-black/70">Services provided（服务内容）</div>
+                      <div className="text-xs font-semibold text-black/70">I. Services provided（服务内容）</div>
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -799,7 +799,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Party B obligations（乙方义务）</div>
+                    <div className="text-xs font-semibold text-black/70">II. Party B obligations（乙方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -816,7 +816,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Party A obligations（甲方义务）</div>
+                    <div className="text-xs font-semibold text-black/70">III. Party A obligations（甲方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -939,7 +939,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Force majeure（不可抗力）</div>
+                    <div className="text-xs font-semibold text-black/70">VI. Force majeure（不可抗力）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -954,7 +954,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Breach（违约责任）</div>
+                    <div className="text-xs font-semibold text-black/70">VII. Breach（违约责任）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -969,7 +969,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Effectiveness（生效条款）</div>
+                    <div className="text-xs font-semibold text-black/70">VIII. Effectiveness（生效条款）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -984,7 +984,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Governing law & dispute resolution（法律及争议解决）</div>
+                    <div className="text-xs font-semibold text-black/70">IX. Governing law & dispute resolution（法律及争议解决）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
