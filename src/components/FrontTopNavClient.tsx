@@ -110,7 +110,7 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <div className="h-8 w-8 rounded-md bg-[#c62828]/10 text-[#c62828] flex items-center justify-center font-semibold">B</div>
-            <div className="hidden sm:block text-sm font-semibold text-black">Corporate Portal</div>
+            <div className="hidden sm:block text-sm font-semibold text-black">BBY Secretary Service Portal</div>
           </Link>
 
           <nav className="flex items-center gap-1">
