@@ -8,8 +8,8 @@ export default async function HomePage() {
   const isFrontDomain = host === 'bby.today' || host.endsWith('.bby.today');
 
   const user = await getCurrentUser();
+  if (isFrontDomain) redirect('/portal');
   if (!user) redirect('/login');
   if (user.role === 'client') redirect('/dashboard');
-  if (isFrontDomain) redirect('/login');
   redirect('/jobs');
 }
