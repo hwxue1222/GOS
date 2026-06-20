@@ -259,6 +259,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       setDocumentId(String(j.documentId));
       setDocumentSha(String(j.documentSha256 ?? ''));
+      if (j?.contract?.contractNo) setContractNo(String(j.contract.contractNo));
     } finally {
       setRendering(false);
     }
