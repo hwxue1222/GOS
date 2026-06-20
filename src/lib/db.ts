@@ -12912,3 +12912,14 @@ export async function findIncorporationApplicationFileById(fileId: string) {
   const db = await readDb();
   return (db.incorporationApplicationFiles ?? []).find((f) => f.id === fileId) ?? null;
 }
+
+export async function deleteIncorporationApplicationFile(fileId: string) {
+  const db = await readDb();
+  const list = db.incorporationApplicationFiles ?? [];
+  const idx = list.findIndex((f) => f.id === fileId);
+  if (idx < 0) return null;
+  const removed = list[idx];
+  db.incorporationApplicationFiles = list.filter((f) => f.id !== fileId);
+  await writeDb(db);
+  return removed;
+}

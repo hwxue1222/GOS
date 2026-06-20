@@ -231,6 +231,7 @@ export default function IncorporationApplicationDetailClient(props: Props) {
       )}
 
       <IncorporationMaterialsSection
+        applicationId={app.id}
         files={files}
         uploading={uploading}
         onUpload={(fl) => void onUpload(fl)}

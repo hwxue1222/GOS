@@ -1,5 +1,7 @@
 'use client';
 
+import DeleteActionClient from '@/components/DeleteActionClient';
+
 type FileRow = {
   id: string;
   fileName: string;
@@ -10,6 +12,7 @@ type FileRow = {
 };
 
 export default function IncorporationMaterialsSection(props: {
+  applicationId: string;
   files: FileRow[];
   uploading: boolean;
   onUpload: (files: FileList | null) => void;
@@ -60,9 +63,15 @@ export default function IncorporationMaterialsSection(props: {
                 <td className="px-3 py-2">{f.uploadedByName}</td>
                 <td className="px-3 py-2">{f.uploadedAt.slice(0, 19).replace('T', ' ')}</td>
                 <td className="px-3 py-2">
-                  <a href={`/api/incorporation/files/${encodeURIComponent(f.id)}/download`} className="text-[#2f7bdc] hover:underline">
-                    Download
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <a href={`/api/incorporation/files/${encodeURIComponent(f.id)}/download`} className="text-[#2f7bdc] hover:underline">
+                      Download
+                    </a>
+                    <DeleteActionClient
+                      deleteUrl={`/api/incorporation/applications/${encodeURIComponent(props.applicationId)}/files/${encodeURIComponent(f.id)}`}
+                      confirmText="Delete this file?"
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
