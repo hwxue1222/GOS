@@ -40,6 +40,13 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     }
   }
 
+  if (html.includes('data-partyb-signature="1"')) {
+    const v = String(map.partyB_signature_url ?? '').trim();
+    if (!v) {
+      html = html.replace(/<img[^>]*data-partyb-signature="1"[^>]*>\s*/g, '');
+    }
+  }
+
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
       /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
@@ -961,6 +968,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                     ))}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Party B signature URL（乙方签名链接）</div>
+                    <input
+                      value={(fields as any).partyB_signature_url ?? ''}
+                      onChange={(e) => setFields((prev) => ({ ...prev, partyB_signature_url: e.target.value }))}
+                      placeholder="https://.../signature.png"
+                      className="mt-2 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                    />
+                    <div className="mt-1 text-xs text-black/50">填直链图片URL（建议透明PNG）。留空则Party B横线不显示签名图。</div>
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">

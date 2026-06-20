@@ -2651,5 +2651,12 @@ export function renderContractHtml(input: {
       );
     }
   }
+
+  if (html.includes('data-partyb-signature="1"')) {
+    const url = String((input.fields ?? {}).partyB_signature_url ?? '').trim();
+    if (!url) {
+      html = html.replace(/<img[^>]*data-partyb-signature="1"[^>]*>\s*/g, '');
+    }
+  }
   return html;
 }
