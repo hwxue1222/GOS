@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V28 = 'contracts.templates.v28';
+const SEED_KEY_CONTRACTS_TEMPLATES_V29 = 'contracts.templates.v29';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,24 +298,29 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV28(db: Db) {
+function seedContractsTemplatesV29(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V28] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V29] && templates.length > 0) return false;
 
   const now = nowIso();
 
 
   const targetIdx = templates.findIndex((t) =>
-    ['Basic Service Contract', 'Corporate Service Agreement', '公司秘书服务协议 / Service Agreement'].includes(String(t.name ?? '').trim()),
+    [
+      'Basic Service Contract',
+      'Corporate Service Agreement',
+      '公司秘书服务协议 / Service Agreement',
+      '公司秘书服务协议 / Secretary Service Agreement',
+    ].includes(String(t.name ?? '').trim()),
   );
 
   const tpl: ContractTemplate = {
     id: targetIdx >= 0 ? templates[targetIdx].id : newId('ctp'),
-    name: '公司秘书服务协议 / Service Agreement',
+    name: '公司秘书服务协议 / Secretary Service Agreement',
     engine: 'HTML',
     placeholders: [
       { key: 'partyA_name', label: '甲方（公司名称） / Party A (Company Name)', required: true },
@@ -330,7 +335,7 @@ function seedContractsTemplatesV28(db: Db) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Service Agreement</title>
+    <title>Secretary Service Agreement</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
       :root {
@@ -404,7 +409,7 @@ function seedContractsTemplatesV28(db: Db) {
         </div>
 
         <div class="title">公司秘书服务协议</div>
-        <div class="subtitle">Service Agreement</div>
+        <div class="subtitle">Secretary Service Agreement</div>
         <div class="divider"></div>
 
         <div class="parties">
@@ -1101,7 +1106,7 @@ function seedContractsTemplatesV28(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V28] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V29] = true;
   return changed;
 }
 
@@ -6272,7 +6277,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV28(db)) changed = true;
+  if (seedContractsTemplatesV29(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
