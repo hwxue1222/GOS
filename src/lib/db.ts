@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V47 = 'contracts.templates.v47';
+const SEED_KEY_CONTRACTS_TEMPLATES_V48 = 'contracts.templates.v48';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV47(db: Db) {
+function seedContractsTemplatesV48(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V47] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V48] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -757,8 +757,8 @@ function seedContractsTemplatesV47(db: Db) {
         <div class="divider"></div>
 
         <div class="parties">
-          <div class="row"><div class="k">Party A</div><div class="v">{{partyA_name}}</div></div>
-          <div class="row"><div class="k">UEN / Registration No. / ID（注册号/证件号）</div><div class="v">{{partyA_uen}}</div></div>
+        <div class="row"><div class="k">{{partyA_label}}</div><div class="v">{{partyA_name}}</div></div>
+        <div class="row"><div class="k">{{partyA_id_label}}</div><div class="v">{{partyA_uen}}</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">{{partyA_address}}</div></div>
           <div class="row"><div class="k">Contact（电话）</div><div class="v">{{partyA_contact}}</div></div>
           <div class="row"><div class="k">Email（邮箱）</div><div class="v">{{partyA_email}}</div></div>
@@ -1389,7 +1389,7 @@ function seedContractsTemplatesV47(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V47] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V48] = true;
   return changed;
 }
 
@@ -6560,7 +6560,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV47(db)) changed = true;
+  if (seedContractsTemplatesV48(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

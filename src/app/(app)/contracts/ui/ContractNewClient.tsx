@@ -212,11 +212,18 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
+    const partyAEntityType =
+      String((fields as any).partyA_entity_type ?? '').trim().toLowerCase() === 'individual' ? 'individual' : 'company';
+    const partyALabel =
+      partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
+    const partyAIdLabel = partyAEntityType === 'individual' ? 'ID（证件号）' : 'UEN / Registration No.（注册号）';
     return renderPreview(tpl.templateHtml, {
       contract_no: contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,
       generated_date: String((fields as any).generated_date ?? '').trim() || new Date().toISOString().slice(0, 10),
+      partyA_label: partyALabel,
+      partyA_id_label: partyAIdLabel,
       partyA_name: clientName,
       partyA_email: clientEmail,
       ...fields,

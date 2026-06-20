@@ -2604,6 +2604,17 @@ export function renderContractHtml(input: {
   clientEmail: string;
   fields: Record<string, string>;
 }) {
+  const partyAEntityType = String((input.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual'
+    ? 'individual'
+    : 'company';
+
+  const partyALabel =
+    partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
+  const partyAIdLabel =
+    partyAEntityType === 'individual'
+      ? 'ID（证件号）'
+      : 'UEN / Registration No.（注册号）';
+
   const signerEmail =
     String((input.fields ?? {}).signer_email ?? '').trim() ||
     String((input.fields ?? {}).partyA_email ?? '').trim() ||
@@ -2614,6 +2625,8 @@ export function renderContractHtml(input: {
     client_name: input.clientName,
     client_email: input.clientEmail,
     signer_email: signerEmail,
+    partyA_label: partyALabel,
+    partyA_id_label: partyAIdLabel,
     ...(input.fields ?? {}),
   };
 

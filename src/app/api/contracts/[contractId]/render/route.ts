@@ -37,12 +37,23 @@ export async function POST(_: Request, { params }: { params: Promise<{ contractI
 
   const generatedDate = new Date().toISOString().slice(0, 10);
 
+  const partyAEntityType =
+    String((contract.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual' ? 'individual' : 'company';
+  const partyALabel =
+    partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
+  const partyAIdLabel = partyAEntityType === 'individual' ? 'ID（证件号）' : 'UEN / Registration No.（注册号）';
+
   const html = renderContractHtml({
     templateHtml: tpl.templateHtml,
     contractNo: String(contractNo || contract.contractNo || ''),
     clientName: contract.clientName,
     clientEmail: contract.clientEmail,
-    fields: { ...(contract.fields ?? {}), generated_date: generatedDate },
+    fields: {
+      ...(contract.fields ?? {}),
+      generated_date: generatedDate,
+      partyA_label: partyALabel,
+      partyA_id_label: partyAIdLabel,
+    },
   });
 
   const title = `Contract ${String(contractNo || contract.contractNo || '-') } - ${contract.clientName}`;
