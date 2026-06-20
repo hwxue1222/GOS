@@ -102,39 +102,53 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
     setOpen(false);
   }
 
+  const isSearching = open && query.trim().length > 0;
+
   return (
     <label className="text-sm">
       <div className="text-black/60">{label}</div>
       <div className="mt-1 relative">
         <input
-          value={open ? query : selectedLabel}
+          value={isSearching ? query : selectedLabel}
           onChange={(e) => {
             const v = e.target.value;
+            if (shownValue && !open) return;
             setQuery(v);
-            if (!v.trim() && shownValue) {
-              clearSelection();
-              return;
-            }
             if (!v.trim()) {
               setItems([]);
-              setOpen(true);
+              setOpen(false);
               return;
             }
+            setOpen(true);
             void tryAutoSelect(v).then((picked) => {
               if (!picked) scheduleSearch(v);
             });
           }}
           onFocus={() => {
             if (disabled) return;
+            if (shownValue) {
+              setOpen(false);
+              setQuery('');
+              setItems([]);
+              return;
+            }
             setOpen(true);
-            if (!query.trim() && selectedLabel) setQuery('');
           }}
           onBlur={() => {
             window.setTimeout(() => setOpen(false), 150);
           }}
+          onKeyDown={(e) => {
+            if (!shownValue) return;
+            if (disabled) return;
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+              e.preventDefault();
+              clearSelection();
+            }
+          }}
           disabled={disabled}
           placeholder={t('ssic.placeholder')}
           className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5 pr-10"
+          readOnly={!!shownValue && !open}
         />
 
         {shownValue && !disabled ? (
@@ -150,7 +164,7 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
           </button>
         ) : null}
 
-        {open && !disabled ? (
+        {isSearching && !disabled ? (
           <div className="absolute z-20 mt-1 w-full rounded-lg border border-black/10 bg-white shadow-sm max-h-64 overflow-auto">
             {filtered.length ? (
               filtered.map((it) => (
