@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -78,8 +78,22 @@ export default function RegisterCompanyWizardClient(props: Props) {
   );
 
   function patchStep(stepNo: 1 | 2 | 3) {
+    if (stepNo === 3) {
+      setShowValidation(true);
+      if (step2Errors.length) {
+        setPersisted({ ...persisted, step: 2 });
+        return;
+      }
+    }
     setPersisted({ ...persisted, step: stepNo });
   }
+
+  useEffect(() => {
+    if (step === 3 && step2Errors.length) {
+      setShowValidation(true);
+      setPersisted((prev) => ({ ...prev, step: 2 }));
+    }
+  }, [step, step2Errors.length]);
 
   function setDraft(next: RegisterCompanyDraft) {
     setPersisted({ ...persisted, draft: next });
