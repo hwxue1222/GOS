@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V45 = 'contracts.templates.v45';
+const SEED_KEY_CONTRACTS_TEMPLATES_V46 = 'contracts.templates.v46';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV45(db: Db) {
+function seedContractsTemplatesV46(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V45] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V46] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -333,7 +333,6 @@ function seedContractsTemplatesV45(db: Db) {
       { key: 'signer_title', label: 'Signer title（签署人职位）', required: true },
       { key: 'signer_date', label: 'Signer date (YYYY-MM-DD)（签署日期YYYY-MM-DD）', required: true },
       { key: 'signer_email', label: 'Signing email（签署邮箱）', required: true },
-      { key: 'partyB_signature_url', label: 'Party B signature URL（乙方签名链接）', required: false },
     ],
     templateHtml: `<!doctype html>
 <html>
@@ -540,7 +539,7 @@ function seedContractsTemplatesV45(db: Db) {
           </div>
           <div class="sigbox">
             <div class="h">乙方（签字） / Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
-            <div class="sigline"><img class="bby-signature" data-partyb-signature="1" src="{{partyB_signature_url}}" alt="Party B signature" /></div>
+            <div class="sigline"><img class="bby-signature" src="/contracts/sign-xhw-transparent.png" alt="Party B signature" /></div>
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">姓名 / Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">职位 / Title:</div><div class="sigvalue">Director</div></div>
@@ -657,7 +656,6 @@ function seedContractsTemplatesV45(db: Db) {
       { key: 'pay_swift_code', label: 'Swift Code（国际汇款银行码）', required: true },
       { key: 'pay_bank_account_number', label: 'Bank account number (SGD)（银行账号-新币）', required: true },
       { key: 'pay_bank_address', label: 'Bank address（银行地址）', required: true },
-      { key: 'partyB_signature_url', label: 'Party B signature URL（乙方签名链接）', required: false },
       { key: 'refund_1', label: 'Refund policy (1)（退费规定1）', required: true },
       { key: 'refund_2', label: 'Refund policy (2)（退费规定2）', required: true },
       { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
@@ -871,7 +869,7 @@ function seedContractsTemplatesV45(db: Db) {
           </div>
           <div class="sigbox">
             <div class="h">Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
-            <div class="sigline"><img class="bby-signature" data-partyb-signature="1" src="{{partyB_signature_url}}" alt="Party B signature" /></div>
+            <div class="sigline"><img class="bby-signature" src="/contracts/sign-xhw-transparent.png" alt="Party B signature" /></div>
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">Title:</div><div class="sigvalue">Director</div></div>
@@ -1391,7 +1389,7 @@ function seedContractsTemplatesV45(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V45] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V46] = true;
   return changed;
 }
 
@@ -6562,7 +6560,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV45(db)) changed = true;
+  if (seedContractsTemplatesV46(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
