@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 
+import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
+
 import type { CompanyDraft } from '@/app/(app)/incorporation/ui/register-company/registerCompanyDraft';
 
 export default function CompanyFields(props: { value: CompanyDraft; onChange: (next: CompanyDraft) => void }) {
@@ -83,12 +85,15 @@ export default function CompanyFields(props: { value: CompanyDraft; onChange: (n
       </label>
       <label className="text-sm">
         <div className="text-black/60">Country Of Incorporation</div>
-        <input
-          value={v.countryOfIncorporation}
-          onChange={(e) => set({ countryOfIncorporation: e.target.value })}
-          disabled={v.lockedFromLookup}
-          className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 disabled:bg-black/5"
-        />
+        <div className="mt-1">
+          <CountryOfIncorporationSelect
+            value={v.countryOfIncorporation}
+            onChange={(next) => set({ countryOfIncorporation: next })}
+            disabled={v.lockedFromLookup}
+            placeholder="Select"
+            className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:bg-black/5"
+          />
+        </div>
       </label>
       <label className="text-sm">
         <div className="text-black/60">
@@ -121,13 +126,6 @@ export default function CompanyFields(props: { value: CompanyDraft; onChange: (n
           className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 disabled:bg-black/5"
         />
       </label>
-      {v.lockedFromLookup ? (
-        <div className="sm:col-span-2">
-          <button type="button" onClick={() => set({ lockedFromLookup: false })} className="text-sm text-[#2f7bdc] hover:underline">
-            Unlock fields
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
