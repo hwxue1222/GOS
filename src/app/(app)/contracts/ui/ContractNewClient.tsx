@@ -160,7 +160,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
-    const ignoreKeys = new Set(['signer_email', 'contract_no', 'client_name', 'client_email']);
+    const ignoreKeys = new Set(['contract_no', 'client_name', 'client_email']);
     const required = (tpl.placeholders ?? []).filter((p) => p.required && !ignoreKeys.has(p.key));
     const missing = required.filter((p) => !String((fields as any)?.[p.key] ?? '').trim());
     return missing.map((p) => ({ key: p.key, label: p.label }));
@@ -506,15 +506,24 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
               </div>
 
+              <div className="md:col-span-1">
+                <div className="text-xs font-medium text-black/60">签署日期 / Signer date</div>
+                <DateInputYMD
+                  value={fields.signer_date ?? ''}
+                  onChange={(next) => setFields((prev) => ({ ...prev, signer_date: next }))}
+                  inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <div className="text-xs font-medium text-black/60">签署邮箱 / Signing email</div>
                 <input
                   value={fields.signer_email ?? ''}
                   onChange={(e) => setFields((prev) => ({ ...prev, signer_email: e.target.value }))}
-                  placeholder="(Optional) 留空则使用上面的 Email"
+                  placeholder="email@example.com"
                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
-                <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP，可能与甲方联系邮箱不同。</div>
+                <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP。</div>
               </div>
               </div>
             </div>

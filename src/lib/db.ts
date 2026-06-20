@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V29 = 'contracts.templates.v29';
+const SEED_KEY_CONTRACTS_TEMPLATES_V30 = 'contracts.templates.v30';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV29(db: Db) {
+function seedContractsTemplatesV30(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V29] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V30] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -329,6 +329,10 @@ function seedContractsTemplatesV29(db: Db) {
       { key: 'partyA_contact', label: '联系电话 / Contact Number', required: true },
       { key: 'partyA_email', label: '电邮地址 / Email', required: true },
       { key: 'date', label: '日期(YYYY-MM-DD) / Date (YYYY-MM-DD)', required: true },
+      { key: 'signer_full_name', label: '签署人姓名 / Signer name', required: true },
+      { key: 'signer_title', label: '签署人职位 / Signer title', required: true },
+      { key: 'signer_date', label: '签署日期(YYYY-MM-DD) / Signer date (YYYY-MM-DD)', required: true },
+      { key: 'signer_email', label: '签署邮箱 / Signing email', required: true },
     ],
     templateHtml: `<!doctype html>
 <html>
@@ -393,6 +397,12 @@ function seedContractsTemplatesV29(db: Db) {
       .sigbox .h { font-weight: 800; }
       .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
       .sigmeta { margin-top: 8px; font-size: 11px; color: var(--muted); }
+      .sigrow { display: grid; grid-template-columns: 86px 1fr; gap: 8px; margin-top: 6px; align-items: start; }
+      .siglabel { color: var(--text); font-weight: 700; }
+      .sigvalue { color: var(--text); }
+      .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
+      .name-line .signer { position: absolute; inset: 0; display: block; }
+      .name-text { margin-top: 4px; color: var(--text); }
       .signer { display: inline-block; }
     </style>
   </head>
@@ -521,10 +531,24 @@ function seedContractsTemplatesV29(db: Db) {
             <div class="h">甲方（签字） / Party A</div>
             <div class="sigline"></div>
             <div class="sigmeta">
-              <div><b>姓名 / Name:</b> <span data-signer-full-name="{{signer_email}}">{{signer_full_name}}</span></div>
-              <div style="margin-top:4px;"><b>职位 / Title:</b> <span data-signer-title="{{signer_email}}">{{signer_title}}</span></div>
-              <div style="margin-top:4px;"><b>时间 / Date:</b> <span data-signer-signed-at="{{signer_email}}"></span></div>
-              <div style="margin-top:6px;"><span class="signer" data-signer="{{signer_email}}"></span></div>
+              <div class="sigrow">
+                <div class="siglabel">姓名 / Name:</div>
+                <div class="sigvalue">
+                  <div class="name-line">
+                    <span class="signer" data-signer="{{signer_email}}"></span>
+                  </div>
+                  <div class="name-text" data-signer-full-name="{{signer_email}}">{{signer_full_name}}</div>
+                </div>
+              </div>
+              <div class="sigrow">
+                <div class="siglabel">职位 / Title:</div>
+                <div class="sigvalue" data-signer-title="{{signer_email}}">{{signer_title}}</div>
+              </div>
+              <div class="sigrow">
+                <div class="siglabel">时间 / Date:</div>
+                <div class="sigvalue">{{signer_date}}</div>
+                <span style="display:none" data-signer-signed-at="{{signer_email}}"></span>
+              </div>
             </div>
           </div>
           <div class="sigbox">
@@ -1106,7 +1130,7 @@ function seedContractsTemplatesV29(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V29] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V30] = true;
   return changed;
 }
 
@@ -6277,7 +6301,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV29(db)) changed = true;
+  if (seedContractsTemplatesV30(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
