@@ -612,6 +612,7 @@ function seedContractsTemplatesV28(db: Db) {
     placeholders: [
       { key: 'company', label: 'Company', required: true },
       { key: 'agreement_date', label: 'Agreement date (YYYY-MM-DD)', required: true },
+      { key: 'annual_fee', label: 'Annual fee (e.g. S$5,000)', required: true },
       { key: 'company_auth_name', label: 'Company signatory name', required: true },
       { key: 'company_auth_nric', label: 'Company signatory NRIC/Passport number', required: true },
       { key: 'company_auth_designation', label: 'Company signatory designation', required: true },
@@ -622,7 +623,6 @@ function seedContractsTemplatesV28(db: Db) {
       { key: 'principal_auth_date', label: 'Principal signatory date (YYYY-MM-DD)', required: true },
       { key: 'company_signatory_email', label: 'Company signatory email', required: true },
       { key: 'principal_signatory_email', label: 'Principal signatory email', required: true },
-      { key: 'annual_fee', label: 'Annual fee (e.g. S$5,000)', required: true },
     ],
     templateHtml: `<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>

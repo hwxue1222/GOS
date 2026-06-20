@@ -548,7 +548,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                 if (!isNomineeTemplate) return ps.map(renderInput);
 
-                const companyPs = ps.filter((p) => p.key === 'company' || p.key === 'agreement_date' || p.key.startsWith('company_'));
+                const companyPs = ps.filter(
+                  (p) => p.key === 'company' || p.key === 'agreement_date' || p.key === 'annual_fee' || p.key.startsWith('company_'),
+                );
                 const principalPs = ps.filter((p) => p.key.startsWith('principal_'));
 
                 return (
@@ -609,7 +611,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             <div className="px-4 py-3 border-b border-black/5">
               <div className="text-sm font-semibold">Preview</div>
               <div className="text-xs text-black/60 mt-1">
-                {contractNo ? `Contract No: ${contractNo}` : 'Contract No will be generated after save'}
+                {contractNo ? `Contract No: ${contractNo}` : 'Contract No will be generated after Generate'}
               </div>
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
