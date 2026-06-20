@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V34 = 'contracts.templates.v34';
+const SEED_KEY_CONTRACTS_TEMPLATES_V35 = 'contracts.templates.v35';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV34(db: Db) {
+function seedContractsTemplatesV35(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V34] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V35] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -655,7 +655,17 @@ function seedContractsTemplatesV34(db: Db) {
       { key: 'service_body_3', label: 'Services provided (3) body（服务(3)正文）', required: false },
       { key: 'service_title_4', label: 'Services provided (4) title（服务(4)标题）', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body（服务(4)正文）', required: false },
-      { key: 'fee_standard_1', label: 'Fee standard (1)（收费标准1）', required: true },
+      { key: 'fee_1_item_1', label: 'Fees (1) item 1（收费标准1-1）', required: true },
+      { key: 'fee_1_item_2', label: 'Fees (1) item 2（收费标准1-2）', required: true },
+      { key: 'fee_2', label: 'Fees (2)（收费标准2）', required: true },
+      { key: 'fee_3', label: 'Fees (3)（收费标准3）', required: true },
+      { key: 'fee_4', label: 'Fees (4)（收费标准4）', required: true },
+      { key: 'pay_beneficiary_name', label: "Beneficiary's Name（收款人名称）", required: true },
+      { key: 'pay_beneficiary_address', label: "Beneficiary's address（收款人地址）", required: true },
+      { key: 'pay_bank_name', label: 'Bank Name（银行名称）', required: true },
+      { key: 'pay_swift_code', label: 'Swift Code（国际汇款银行码）', required: true },
+      { key: 'pay_bank_account_number', label: 'Bank account number (SGD)（银行账号-新币）', required: true },
+      { key: 'pay_bank_address', label: 'Bank address（银行地址）', required: true },
       { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
       { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: true },
       { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: true },
@@ -806,7 +816,20 @@ function seedContractsTemplatesV34(db: Db) {
 
         <div class="section">
           <div class="section-title">IV. FEES</div>
-          <div class="p"><b>1.</b> {{fee_standard_1}}</div>
+          <div class="p"><b>1.</b> Party B's fee standard is as follows:（乙方收费标准如下：）</div>
+          <div class="p" style="padding-left:14px;">○ {{fee_1_item_1}}</div>
+          <div class="p" style="padding-left:14px;">○ {{fee_1_item_2}}</div>
+          <div class="p"><b>2.</b> {{fee_2}}</div>
+          <div class="p"><b>3.</b> {{fee_3}}</div>
+          <div class="p"><b>4.</b> {{fee_4}}</div>
+
+          <div class="p" style="margin-top:10px;"><b>Payment details:</b></div>
+          <div class="p"><b>Beneficiary's Name（收款人名称）：</b> {{pay_beneficiary_name}}</div>
+          <div class="p"><b>Beneficiary's address（收款人地址）：</b> {{pay_beneficiary_address}}</div>
+          <div class="p"><b>Bank Name（银行名称）：</b> {{pay_bank_name}}</div>
+          <div class="p"><b>Swift Code（国际汇款银行码）：</b> {{pay_swift_code}}</div>
+          <div class="p"><b>Bank account number (SGD)（银行账号-新币）：</b> {{pay_bank_account_number}}</div>
+          <div class="p"><b>Bank address（银行地址）：</b> {{pay_bank_address}}</div>
         </div>
 
         <div class="section">
@@ -1378,7 +1401,7 @@ function seedContractsTemplatesV34(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V34] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V35] = true;
   return changed;
 }
 
@@ -6549,7 +6572,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV34(db)) changed = true;
+  if (seedContractsTemplatesV35(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

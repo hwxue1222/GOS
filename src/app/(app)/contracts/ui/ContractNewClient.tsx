@@ -248,12 +248,31 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           '• Prepare AGM and minutes and submit annual return\n\n' +
           'Extra charges may apply for special transactions.';
       }
-      if (!String(next.fee_standard_1 ?? '').trim()) {
-        next.fee_standard_1 =
-          'The fee standard is as follows:\n\n' +
-          '• Corporate secretary fee (one-time)\n' +
-          '• Local nominee director fee (per year)\n\n' +
-          'Any additional services will be charged separately as agreed by both parties.';
+      if (!String(next.fee_1_item_1 ?? '').trim()) {
+        next.fee_1_item_1 = 'Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））';
+      }
+      if (!String(next.fee_1_item_2 ?? '').trim()) {
+        next.fee_1_item_2 = 'Local nominee director fee (per year)（本地挂名董事费（一年））';
+      }
+      if (!String(next.fee_2 ?? '').trim()) {
+        next.fee_2 = 'The final invoice amount agreed by both parties shall prevail. Other services (if any) are listed in Appendix 1.（以双方协商同意的最终发票金额为准。其他服务，请附附录一。）';
+      }
+      if (!String(next.fee_3 ?? '').trim()) {
+        next.fee_3 = 'Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应服务的发票，甲方支付10日内付款。）';
+      }
+      if (!String(next.fee_4 ?? '').trim()) {
+        next.fee_4 = 'Payment method is as follows:（付款方式如下：）';
+      }
+
+      if (!String(next.pay_beneficiary_name ?? '').trim()) next.pay_beneficiary_name = 'BBY.SG PTE LTD';
+      if (!String(next.pay_beneficiary_address ?? '').trim()) {
+        next.pay_beneficiary_address = '10 Anson Road #10-13A International Plaza, Singapore 079903';
+      }
+      if (!String(next.pay_bank_name ?? '').trim()) next.pay_bank_name = 'Maybank Singapore';
+      if (!String(next.pay_swift_code ?? '').trim()) next.pay_swift_code = 'MBBESGS2';
+      if (!String(next.pay_bank_account_number ?? '').trim()) next.pay_bank_account_number = '04011569555';
+      if (!String(next.pay_bank_address ?? '').trim()) {
+        next.pay_bank_address = '2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907';
       }
 
       if (!String(next.partyB_obligation_1 ?? '').trim()) {
@@ -801,13 +820,109 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Fee standard (1)（收费标准1） *</div>
-                    <textarea
-                      value={fields.fee_standard_1 ?? ''}
-                      onChange={(e) => setFields((prev) => ({ ...prev, fee_standard_1: e.target.value }))}
-                      rows={6}
-                      className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                    />
+                    <div className="text-xs font-semibold text-black/70">IV. Fees（四，收费标准）</div>
+
+                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Item 1 *</div>
+                        <input
+                          value={fields.fee_1_item_1 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_1_item_1: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Item 2 *</div>
+                        <input
+                          value={fields.fee_1_item_2 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_1_item_2: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-3">
+                      <div>
+                        <div className="text-xs font-medium text-black/60">2. *</div>
+                        <textarea
+                          value={fields.fee_2 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-black/60">3. *</div>
+                        <textarea
+                          value={fields.fee_3 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-black/60">4. *</div>
+                        <textarea
+                          value={fields.fee_4 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 text-xs font-medium text-black/60">Payment details（收款信息）</div>
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Beneficiary's Name（收款人名称） *</div>
+                        <input
+                          value={fields.pay_beneficiary_name ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_name: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Bank Name（银行名称） *</div>
+                        <input
+                          value={fields.pay_bank_name ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_name: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="text-xs font-medium text-black/60">Beneficiary's address（收款人地址） *</div>
+                        <input
+                          value={fields.pay_beneficiary_address ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_address: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Swift Code（国际汇款银行码） *</div>
+                        <input
+                          value={fields.pay_swift_code ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_swift_code: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">Bank account number (SGD)（银行账号-新币） *</div>
+                        <input
+                          value={fields.pay_bank_account_number ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_account_number: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="text-xs font-medium text-black/60">Bank address（银行地址） *</div>
+                        <input
+                          value={fields.pay_bank_address ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_address: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
