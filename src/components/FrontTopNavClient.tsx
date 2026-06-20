@@ -207,12 +207,6 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
               </Link>
             </Dropdown>
 
-            <Link
-              href="/user-guide"
-              className="px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap hover:shadow-sm text-black/70 hover:text-black hover:bg-black/5"
-            >
-              User Guide
-            </Link>
           </nav>
         </div>
 

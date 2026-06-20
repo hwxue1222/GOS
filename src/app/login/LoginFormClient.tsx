@@ -118,7 +118,13 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
               ? '请使用公司账号登录前台（Portal）'
               : error === 'PLEASE_USE_STAFF_ACCOUNT'
                 ? '请使用员工账号登录后台（Admin）'
-                : error}
+                : error === 'INVALID_LOGIN'
+                  ? '邮箱或密码错误 / Invalid email or password'
+                  : error === 'INVALID_INPUT'
+                    ? '请填写邮箱与密码 / Please enter email and password'
+                    : error === 'SERVER_ERROR'
+                      ? '系统错误，请稍后再试 / Server error, please try again'
+                      : error}
           </div>
         ) : null}
 
@@ -133,7 +139,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
           <button
             type="button"
             onClick={() => router.push(mode === 'portal' ? '/portal/forgot-password' : '/admin/forgot-password')}
-            className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white underline underline-offset-4"
+            className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white hover:underline underline-offset-4"
           >
             Forgot password? / 忘记密码
           </button>

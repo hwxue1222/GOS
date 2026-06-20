@@ -115,6 +115,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
   >(null);
   const [open, setOpen] = useState<Record<string, boolean>>({
     step1: true,
+    step2: true,
     shareholders: true,
     directors: false,
     rorc: false,
@@ -354,6 +355,27 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           ) : (
             <div className="mt-3 text-sm text-black/40">No data</div>
           )}
+        </AccordionItem>
+
+        <AccordionItem
+          title="Step 2 - Personal information"
+          open={!!open.step2}
+          onToggle={() => setOpen((p) => ({ ...p, step2: !p.step2 }))}
+          right={
+            props.canEdit && props.status === 'SUBMITTED' ? (
+              <ActionButton
+                label="Edit"
+                icon="edit"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditing({ step: 2 });
+                }}
+              />
+            ) : null
+          }
+        >
+          <div className="mt-2 text-sm text-black/60">Includes: Shareholders, Directors, RORC Controllers, Secretary.</div>
         </AccordionItem>
 
         <AccordionItem
