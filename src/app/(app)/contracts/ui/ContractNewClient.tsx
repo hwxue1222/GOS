@@ -166,7 +166,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const previewHtml = useMemo(() => {
     if (!tpl) return '';
     return renderPreview(tpl.templateHtml, {
-      contract_no: contractNo || 'BBY-YYYYMM-001-0',
+      contract_no: contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,
       partyA_name: clientName,

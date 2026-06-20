@@ -7863,15 +7863,27 @@ export async function updateDocumentHtml(input: { documentId: string; title?: st
 }
 
 function parseContractNoSeq(contractNo: string) {
-  const m = String(contractNo ?? '')
-    .trim()
-    .match(/^BBY-(\d{4})(?:-(\d{2})|(\d{2}))-(\d{3})-(\d+)$/);
-  if (!m) return null;
-  const month = m[2] ?? m[3];
-  if (!month) return null;
-  const seq = Number(m[4]);
+  const s = String(contractNo ?? '').trim();
+
+  const m1 = s.match(/^BBY(\d{4})(\d{2})(\d{3})([A-Za-z0-9]+)$/);
+  if (m1) {
+    const seq = Number(m1[3]);
+    if (!Number.isFinite(seq) || seq <= 0) return null;
+    return { year: m1[1], month: m1[2], seq };
+  }
+
+  const m2 = s.match(/^BBY-(\d{4})-(\d{2})-(\d{3})-(\d+)$/);
+  if (m2) {
+    const seq = Number(m2[3]);
+    if (!Number.isFinite(seq) || seq <= 0) return null;
+    return { year: m2[1], month: m2[2], seq };
+  }
+
+  const m3 = s.match(/^BBY-(\d{4})(\d{2})-(\d{3})-(\d+)$/);
+  if (!m3) return null;
+  const seq = Number(m3[3]);
   if (!Number.isFinite(seq) || seq <= 0) return null;
-  return { year: m[1], month, seq };
+  return { year: m3[1], month: m3[2], seq };
 }
 
 export function nextContractNo(db: Db, now: Date) {
@@ -7887,8 +7899,8 @@ export function nextContractNo(db: Db, now: Date) {
   }
   const nextSeq = maxSeq + 1;
   const seqStr = String(nextSeq).padStart(3, '0');
-  const rnd = String(randomInt(0, 10));
-  return `BBY-${year}${month}-${seqStr}-${rnd}`;
+  const rnd = String.fromCharCode(65 + randomInt(0, 26));
+  return `BBY${year}${month}${seqStr}${rnd}`;
 }
 
 export async function listContractTemplates() {
