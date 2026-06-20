@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V35 = 'contracts.templates.v35';
+const SEED_KEY_CONTRACTS_TEMPLATES_V36 = 'contracts.templates.v36';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV35(db: Db) {
+function seedContractsTemplatesV36(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V35] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V36] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -760,7 +760,7 @@ function seedContractsTemplatesV35(db: Db) {
         </div>
 
         <div class="title">{{agreement_title}}</div>
-        <div class="subtitle">Professional Service Agreement</div>
+        <div class="subtitle">Professional Service Agreement（专业服务协议）</div>
         <div class="divider"></div>
 
         <div class="parties">
@@ -776,10 +776,10 @@ function seedContractsTemplatesV35(db: Db) {
           <div class="row"><div class="k">Email（邮箱）</div><div class="v">Luke@bby.sg</div></div>
         </div>
 
-        <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.</div>
+        <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.<br />为维护合同当事的合法权益，并依据新加坡共和国相关法律法规，甲乙双方就乙方向甲方提供专业服务事项达成如下协议条款。</div>
 
         <div class="section">
-          <div class="section-title">I. SERVICES PROVIDED</div>
+          <div class="section-title">I. SERVICES PROVIDED（服务内容）</div>
           <div class="p">Party B agrees to provide the following professional services to Party A:</div>
 
           <div class="svc-item" data-svc-item="1">
@@ -801,21 +801,21 @@ function seedContractsTemplatesV35(db: Db) {
         </div>
 
         <div class="section">
-          <div class="section-title">II. PARTY B OBLIGATIONS</div>
+          <div class="section-title">II. PARTY B OBLIGATIONS（乙方义务）</div>
           <div class="p"><b>1.</b> {{partyB_obligation_1}}</div>
           <div class="p"><b>2.</b> {{partyB_obligation_2}}</div>
           <div class="p"><b>3.</b> {{partyB_obligation_3}}</div>
         </div>
 
         <div class="section">
-          <div class="section-title">III. PARTY A OBLIGATIONS</div>
+          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>
           <div class="p"><b>1.</b> {{partyA_obligation_1}}</div>
           <div class="p"><b>2.</b> {{partyA_obligation_2}}</div>
           <div class="p"><b>3.</b> {{partyA_obligation_3}}</div>
         </div>
 
         <div class="section">
-          <div class="section-title">IV. FEES</div>
+          <div class="section-title">IV. FEES（收费标准）</div>
           <div class="p"><b>1.</b> Party B's fee standard is as follows:（乙方收费标准如下：）</div>
           <div class="p" style="padding-left:14px;">○ {{fee_1_item_1}}</div>
           <div class="p" style="padding-left:14px;">○ {{fee_1_item_2}}</div>
@@ -833,27 +833,27 @@ function seedContractsTemplatesV35(db: Db) {
         </div>
 
         <div class="section">
-          <div class="section-title">VI. FORCE MAJEURE</div>
+          <div class="section-title">VI. FORCE MAJEURE（不可抗力）</div>
           <div class="p"><b>1.</b> {{force_majeure_1}}</div>
           <div class="p"><b>2.</b> {{force_majeure_2}}</div>
           <div class="p"><b>3.</b> {{force_majeure_3}}</div>
         </div>
 
         <div class="section">
-          <div class="section-title">VII. BREACH</div>
+          <div class="section-title">VII. BREACH（违约责任）</div>
           <div class="p"><b>1.</b> {{breach_1}}</div>
           <div class="p"><b>2.</b> {{breach_2}}</div>
         </div>
 
         <div class="section">
-          <div class="section-title">VIII. EFFECTIVENESS</div>
+          <div class="section-title">VIII. EFFECTIVENESS（生效条款）</div>
           <div class="p"><b>1.</b> {{effective_1}}</div>
           <div class="p"><b>2.</b> {{effective_2}}</div>
           <div class="p"><b>3.</b> {{effective_3}}</div>
         </div>
 
         <div class="section">
-          <div class="section-title">IX. GOVERNING LAW AND DISPUTE RESOLUTION</div>
+          <div class="section-title">IX. GOVERNING LAW AND DISPUTE RESOLUTION（适用法律及争议解决）</div>
           <div class="p"><b>1.</b> {{law_1}}</div>
           <div class="p"><b>2.</b> {{law_2}}</div>
         </div>
@@ -1401,7 +1401,7 @@ function seedContractsTemplatesV35(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V35] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V36] = true;
   return changed;
 }
 
@@ -6572,7 +6572,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV35(db)) changed = true;
+  if (seedContractsTemplatesV36(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

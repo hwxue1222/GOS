@@ -239,14 +239,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
       if (!String(next.service_body_1 ?? '').trim()) {
         next.service_body_1 =
-          'Corporate secretary services are included as below:\n\n' +
-          '• Maintain various registers\n' +
-          '• Appointment of local nominee director\n' +
-          '• Update of changes filed with ACRA\n' +
-          '• Provision of registered office address\n' +
-          '• Prepare resolutions and ACRA filings\n' +
-          '• Prepare AGM and minutes and submit annual return\n\n' +
-          'Extra charges may apply for special transactions.';
+          'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
+          '• Maintain various registers（维护各类公司登记册）\n' +
+          '• Appointment of local nominee director（任命本地挂名董事）\n' +
+          '• Update of changes filed with ACRA（更新公司信息并向ACRA备案）\n' +
+          '• Provision of registered office address（提供公司注册地址/办公地址）\n' +
+          '• Prepare resolutions and ACRA filings（准备公司决议文件并办理ACRA申报）\n' +
+          '• Prepare AGM and minutes and submit annual return（准备年股东大会文件和年度申报）\n\n' +
+          'Extra charges may apply for special transactions.（特殊事项可能产生额外费用。）';
       }
       if (!String(next.fee_1_item_1 ?? '').trim()) {
         next.fee_1_item_1 = 'Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））';
@@ -276,65 +276,65 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
 
       if (!String(next.partyB_obligation_1 ?? '').trim()) {
-        next.partyB_obligation_1 = 'Party B shall provide the required services in accordance with Party A\'s requirements.';
+        next.partyB_obligation_1 = 'Party B shall provide the required services in accordance with Party A\'s requirements.（乙方按照甲方要求提供所需服务。）';
       }
       if (!String(next.partyB_obligation_2 ?? '').trim()) {
         next.partyB_obligation_2 =
-          'Party B shall arrange for a local nominee director and comply with the relevant requirements of the Government of Singapore.';
+          'Party B shall arrange for a local nominee director and comply with the relevant requirements of the Government of Singapore.（乙方负责安排本地挂名董事，并符合新加坡政府相关要求。）';
       }
       if (!String(next.partyB_obligation_3 ?? '').trim()) {
-        next.partyB_obligation_3 = 'Party B shall provide Party A with a registered address in Singapore.';
+        next.partyB_obligation_3 = 'Party B shall provide Party A with a registered address in Singapore.（乙方向甲方提供新加坡公司注册地址。）';
       }
 
       if (!String(next.partyA_obligation_1 ?? '').trim()) {
         next.partyA_obligation_1 =
-          'Party A shall truthfully provide background information and supporting materials of the ultimate beneficial owner / actual controller, and confirm that there are no political exposure or prohibited risks.';
+          'Party A shall truthfully provide background information and supporting materials of the ultimate beneficial owner / actual controller, and confirm that there are no political exposure or prohibited risks.（甲方如实提供公司实际控制人的背景调查资料，并确认不存在政治风险或禁止性风险。）';
       }
       if (!String(next.partyA_obligation_2 ?? '').trim()) {
-        next.partyA_obligation_2 = 'Party A shall comply with the laws and regulations of Singapore and operate the business in good faith.';
+        next.partyA_obligation_2 = 'Party A shall comply with the laws and regulations of Singapore and operate the business in good faith.（甲方遵守所在国及新加坡法律法规，合法经营。）';
       }
       if (!String(next.partyA_obligation_3 ?? '').trim()) {
         next.partyA_obligation_3 =
-          'Party A shall ensure that its business activities in its home country and in Singapore do not involve money laundering, terrorist financing or other illegal activities.';
+          'Party A shall ensure that its business activities in its home country and in Singapore do not involve money laundering, terrorist financing or other illegal activities.（甲方在所在国和新加坡的经营活动不得涉及洗钱、资助恐怖组织等违法行为。）';
       }
 
       if (!String(next.force_majeure_1 ?? '').trim()) {
         next.force_majeure_1 =
-          'Force majeure refers to unforeseeable, unavoidable and insurmountable objective circumstances, such as major natural disasters, epidemics, war, riots, snowstorms, strikes, etc., as well as policy changes and changes in regulatory requirements beyond the control of both parties.';
+          'Force majeure refers to unforeseeable, unavoidable and insurmountable objective circumstances, such as major natural disasters, epidemics, war, riots, snowstorms, strikes, etc., as well as policy changes and changes in regulatory requirements beyond the control of both parties.（不可抗力指不能预见、不能避免且不能克服的客观情况，包括重大自然灾害、瘟疫、战争、骚乱、暴风雪、罢工等，以及双方控制范围之外的政策变更和监管要求变化等。）';
       }
       if (!String(next.force_majeure_2 ?? '').trim()) {
         next.force_majeure_2 =
-          'A party affected by force majeure shall promptly notify the other party, explaining the reason, nature and expected duration of the force majeure event and its impact on performance, and shall take reasonable measures during the event to mitigate the impact. The parties shall use best efforts to perform obligations not affected by force majeure.';
+          'A party affected by force majeure shall promptly notify the other party, explaining the reason, nature and expected duration of the force majeure event and its impact on performance, and shall take reasonable measures during the event to mitigate the impact. The parties shall use best efforts to perform obligations not affected by force majeure.（一方因不可抗力不能履约的，应及时通知对方并说明原因、性质、预计持续时间及影响，并采取必要措施减少影响；双方应尽力履行除受不可抗力影响部分以外的其他义务。）';
       }
       if (!String(next.force_majeure_3 ?? '').trim()) {
         next.force_majeure_3 =
-          'During the force majeure period, the parties shall share the relevant losses and expenses fairly. After the force majeure is lifted, the parties shall resume performance of this Agreement as soon as practicable.';
+          'During the force majeure period, the parties shall share the relevant losses and expenses fairly. After the force majeure is lifted, the parties shall resume performance of this Agreement as soon as practicable.（不可抗力期间双方按公平原则分担相关损失和费用；不可抗力解除后，应尽快恢复合同履行。）';
       }
 
       if (!String(next.breach_1 ?? '').trim()) {
-        next.breach_1 = 'Both parties shall strictly perform all terms of this Agreement. Any breach by either party shall bear corresponding liability for breach.';
+        next.breach_1 = 'Both parties shall strictly perform all terms of this Agreement. Any breach by either party shall bear corresponding liability for breach.（双方应严格履行本合同全部条款，任何一方违约应承担相应的违约责任。）';
       }
       if (!String(next.breach_2 ?? '').trim()) {
         next.breach_2 =
-          'Any materials, drafts, templates or services provided by Party A to Party B for the purpose of this Agreement are non-refundable, and Party B shall not be liable. If Party A causes losses to Party B, Party A shall compensate Party B for all losses and expenses incurred as a result.';
+          'Any materials, drafts, templates or services provided by Party A to Party B for the purpose of this Agreement are non-refundable, and Party B shall not be liable. If Party A causes losses to Party B, Party A shall compensate Party B for all losses and expenses incurred as a result.（甲方为实现合同目的向乙方提供的材料、样板/模板或相关服务费用如不可退还，乙方不承担责任；如因此造成乙方损失，甲方应赔偿乙方因此产生的一切损失/费用。）';
       }
 
       if (!String(next.effective_1 ?? '').trim()) {
-        next.effective_1 = 'This Agreement shall take effect from the date of signature by both Party A and Party B. Unless terminated earlier in accordance with this Agreement, the term shall be 24 months.';
+        next.effective_1 = 'This Agreement shall take effect from the date of signature by both Party A and Party B. Unless terminated earlier in accordance with this Agreement, the term shall be 24 months.（本合同自乙方及甲方签署之日起生效，除非依本合同规定提前终止，本合同有效期为24个月。）';
       }
       if (!String(next.effective_2 ?? '').trim()) {
-        next.effective_2 = 'If no written termination notice is given one month before expiry, this Agreement shall renew automatically.';
+        next.effective_2 = 'If no written termination notice is given one month before expiry, this Agreement shall renew automatically.（双方提前一个月书面解约，否则到期自动延期。）';
       }
       if (!String(next.effective_3 ?? '').trim()) {
-        next.effective_3 = 'This Agreement is executed in two (2) originals, one for each party, and both originals have equal legal effect.';
+        next.effective_3 = 'This Agreement is executed in two (2) originals, one for each party, and both originals have equal legal effect.（本合同一式两份，甲方一份、乙方一份，具有同等效力。）';
       }
 
       if (!String(next.law_1 ?? '').trim()) {
-        next.law_1 = 'The interpretation, termination and dispute resolution of this Agreement shall be governed by the laws of the Republic of Singapore.';
+        next.law_1 = 'The interpretation, termination and dispute resolution of this Agreement shall be governed by the laws of the Republic of Singapore.（本合同的解释、解除及争议解决适用新加坡共和国相关法律。）';
       }
       if (!String(next.law_2 ?? '').trim()) {
         next.law_2 =
-          'If the matter cannot be resolved by mutual consultation, it shall be submitted to arbitration in Singapore and the arbitral award shall be final and binding.';
+          'If the matter cannot be resolved by mutual consultation, it shall be submitted to arbitration in Singapore and the arbitral award shall be final and binding.（协商不成的，提交新加坡仲裁并作出最终裁决。）';
       }
 
       if (!String(next.signer_date ?? '').trim()) next.signer_date = String(next.date ?? '').trim() || new Date().toISOString().slice(0, 10);
