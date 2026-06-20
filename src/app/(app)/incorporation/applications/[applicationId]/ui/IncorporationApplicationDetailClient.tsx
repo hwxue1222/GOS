@@ -189,8 +189,11 @@ export default function IncorporationApplicationDetailClient(props: Props) {
           <button
             type="button"
             onClick={() => router.push(props.meRole === 'client' ? '/dashboard' : '/jobs')}
-            className="text-sm text-[#2f7bdc] hover:underline"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white border border-black/10 px-3 py-1.5 text-sm font-medium text-black/70 hover:bg-black/[0.02]"
           >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="fill-current text-black/60">
+              <path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H20a1 1 0 1 1 0 2h-9.59l4.3 4.3a1 1 0 1 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.41 0Z" />
+            </svg>
             Back
           </button>
         </div>

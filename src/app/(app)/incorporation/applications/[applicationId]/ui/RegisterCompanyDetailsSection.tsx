@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 
 import RegisterCompanyWizardClient from '@/app/(app)/incorporation/ui/register-company/RegisterCompanyWizardClient';
 import type { RegisterCompanyDraft } from '@/app/(app)/incorporation/ui/register-company/registerCompanyDraft';
@@ -22,6 +22,27 @@ function InfoRow(props: { label: string; value: string }) {
       <div className="text-black/50">{props.label}</div>
       <div className="mt-1 font-medium whitespace-pre-wrap">{props.value || '-'}</div>
     </div>
+  );
+}
+
+function ActionButton(props: { label: string; onClick: (e: MouseEvent<HTMLButtonElement>) => void; icon?: 'back' | 'edit' }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-black/10 px-2.5 py-1 text-xs font-medium text-black/70 hover:bg-black/[0.02]"
+    >
+      {props.icon === 'back' ? (
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" className="fill-current text-black/60">
+          <path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H20a1 1 0 1 1 0 2h-9.59l4.3 4.3a1 1 0 1 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.41 0Z" />
+        </svg>
+      ) : props.icon === 'edit' ? (
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" className="fill-current text-black/60">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" />
+        </svg>
+      ) : null}
+      <span>{props.label}</span>
+    </button>
   );
 }
 
@@ -112,9 +133,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
       <div className="rounded-xl bg-white border border-black/5 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold">Edit</div>
-          <button type="button" onClick={() => setEditing(null)} className="text-sm text-[#2f7bdc] hover:underline">
-            Back
-          </button>
+          <ActionButton label="Back" icon="back" onClick={() => setEditing(null)} />
         </div>
         <div className="mt-4">
           <RegisterCompanyWizardClient
@@ -158,17 +177,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 1 });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
@@ -190,17 +207,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, shareholders: !p.shareholders }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 2, focus: 'shareholders' });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
@@ -240,17 +255,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, directors: !p.directors }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 2, focus: 'directors' });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
@@ -275,17 +288,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, rorc: !p.rorc }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 2, focus: 'rorc' });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
@@ -310,17 +321,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 2, focus: 'secretary' });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
@@ -353,17 +362,15 @@ export default function RegisterCompanyDetailsSection(props: Props) {
           onToggle={() => setOpen((p) => ({ ...p, confirm: !p.confirm }))}
           right={
             props.canEdit && props.status === 'SUBMITTED' ? (
-              <button
-                type="button"
+              <ActionButton
+                label="Edit"
+                icon="edit"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setEditing({ step: 3, focus: 'confirm' });
                 }}
-                className="text-sm text-[#2f7bdc] hover:underline"
-              >
-                Edit
-              </button>
+              />
             ) : null
           }
         >
