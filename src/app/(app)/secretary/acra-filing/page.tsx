@@ -177,7 +177,7 @@ export default async function SecretaryAcraFilingPage() {
           </div>
 
           <div className="mt-8">
-            <div className="text-sm font-semibold">Incorporation</div>
+            <div className="text-sm font-semibold">Incorporation of Company</div>
             <div className="mt-3">
               <SecretaryIncorporationReviewClient rows={incRows} />
             </div>

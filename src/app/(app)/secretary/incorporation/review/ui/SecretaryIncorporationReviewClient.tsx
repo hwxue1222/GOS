@@ -94,7 +94,7 @@ export default function SecretaryIncorporationReviewClient({ rows }: { rows: Rev
                         onClick={() => void decide(r, 'COMPLETED')}
                         className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                       >
-                        Complete
+                        Approve
                       </button>
                       <button
                         disabled={busyId === r.applicationId}
@@ -121,4 +121,3 @@ export default function SecretaryIncorporationReviewClient({ rows }: { rows: Rev
     </div>
   );
 }
-
