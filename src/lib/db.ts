@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V40 = 'contracts.templates.v40';
+const SEED_KEY_CONTRACTS_TEMPLATES_V41 = 'contracts.templates.v41';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV40(db: Db) {
+function seedContractsTemplatesV41(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V40] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V41] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -403,7 +403,7 @@ function seedContractsTemplatesV40(db: Db) {
       .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
       .name-line .signer { position: absolute; inset: 0; display: block; }
       .name-text { margin-top: 4px; color: var(--text); }
-      .bby-signature { position: absolute; left: 6px; bottom: -2px; font-family: ui-serif, serif; font-size: 14px; font-weight: 600; letter-spacing: 0.2px; transform: rotate(-2deg); }
+      .bby-signature { position: absolute; left: 6px; bottom: -10px; height: 30px; width: auto; }
       .signer { display: inline-block; }
     </style>
   </head>
@@ -539,7 +539,7 @@ function seedContractsTemplatesV40(db: Db) {
           </div>
           <div class="sigbox">
             <div class="h">乙方（签字） / Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
-            <div class="sigline"><span class="bby-signature">XUE HONGWEI</span></div>
+            <div class="sigline"><img class="bby-signature" src="/contracts/sign-hw.png" alt="XUE HONGWEI signature" /></div>
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">姓名 / Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">职位 / Title:</div><div class="sigvalue">Director</div></div>
@@ -736,7 +736,7 @@ function seedContractsTemplatesV40(db: Db) {
       .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
       .name-line .signer { position: absolute; inset: 0; display: block; }
       .name-text { margin-top: 4px; color: var(--text); }
-      .bby-signature { position: absolute; left: 6px; bottom: -2px; font-family: ui-serif, serif; font-size: 14px; font-weight: 600; letter-spacing: 0.2px; transform: rotate(-2deg); }
+      .bby-signature { position: absolute; left: 6px; bottom: -10px; height: 30px; width: auto; }
       .signer { display: inline-block; }
     </style>
   </head>
@@ -869,7 +869,7 @@ function seedContractsTemplatesV40(db: Db) {
           </div>
           <div class="sigbox">
             <div class="h">Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
-            <div class="sigline"><span class="bby-signature">XUE HONGWEI</span></div>
+            <div class="sigline"><img class="bby-signature" src="/contracts/sign-hw.png" alt="XUE HONGWEI signature" /></div>
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">Title:</div><div class="sigvalue">Director</div></div>
@@ -1389,7 +1389,7 @@ function seedContractsTemplatesV40(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V40] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V41] = true;
   return changed;
 }
 
@@ -6560,7 +6560,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV40(db)) changed = true;
+  if (seedContractsTemplatesV41(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
