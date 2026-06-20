@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V38 = 'contracts.templates.v38';
+const SEED_KEY_CONTRACTS_TEMPLATES_V39 = 'contracts.templates.v39';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV38(db: Db) {
+function seedContractsTemplatesV39(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V38] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V39] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -395,7 +395,7 @@ function seedContractsTemplatesV38(db: Db) {
       .sig { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
       .sigbox .h { font-weight: 800; }
-      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
+      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; position: relative; }
       .sigmeta { margin-top: 8px; font-size: 11px; color: var(--muted); }
       .sigrow { display: grid; grid-template-columns: 86px 1fr; gap: 8px; margin-top: 6px; align-items: start; }
       .siglabel { color: var(--text); font-weight: 700; }
@@ -403,6 +403,7 @@ function seedContractsTemplatesV38(db: Db) {
       .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
       .name-line .signer { position: absolute; inset: 0; display: block; }
       .name-text { margin-top: 4px; color: var(--text); }
+      .bby-signature { position: absolute; left: 6px; bottom: -2px; font-family: ui-serif, serif; font-size: 14px; font-weight: 600; letter-spacing: 0.2px; transform: rotate(-2deg); }
       .signer { display: inline-block; }
     </style>
   </head>
@@ -552,9 +553,13 @@ function seedContractsTemplatesV38(db: Db) {
             </div>
           </div>
           <div class="sigbox">
-            <div class="h">乙方（签字） / Party B</div>
-            <div class="sigline"></div>
-            <div class="sigmeta">BBY.SG PTE LTD</div>
+            <div class="h">乙方（签字） / Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
+            <div class="sigline"><span class="bby-signature">XUE HONGWEI</span></div>
+            <div class="sigmeta">
+              <div class="sigrow"><div class="siglabel">姓名 / Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
+              <div class="sigrow"><div class="siglabel">职位 / Title:</div><div class="sigvalue">Director</div></div>
+              <div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{generated_date}}</div></div>
+            </div>
           </div>
         </div>
 
@@ -738,7 +743,7 @@ function seedContractsTemplatesV38(db: Db) {
       .sig { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
       .sigbox .h { font-weight: 800; }
-      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
+      .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; position: relative; }
       .sigmeta { margin-top: 8px; font-size: 11px; color: var(--muted); }
       .sigrow { display: grid; grid-template-columns: 86px 1fr; gap: 8px; margin-top: 6px; align-items: start; }
       .siglabel { color: var(--text); font-weight: 700; }
@@ -746,6 +751,7 @@ function seedContractsTemplatesV38(db: Db) {
       .name-line { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
       .name-line .signer { position: absolute; inset: 0; display: block; }
       .name-text { margin-top: 4px; color: var(--text); }
+      .bby-signature { position: absolute; left: 6px; bottom: -2px; font-family: ui-serif, serif; font-size: 14px; font-weight: 600; letter-spacing: 0.2px; transform: rotate(-2deg); }
       .signer { display: inline-block; }
     </style>
   </head>
@@ -892,9 +898,13 @@ function seedContractsTemplatesV38(db: Db) {
             </div>
           </div>
           <div class="sigbox">
-            <div class="h">Party B</div>
-            <div class="sigline"></div>
-            <div class="sigmeta">BBY.SG PTE LTD</div>
+            <div class="h">Party B&nbsp;&nbsp;BBY.SG PTE LTD</div>
+            <div class="sigline"><span class="bby-signature">XUE HONGWEI</span></div>
+            <div class="sigmeta">
+              <div class="sigrow"><div class="siglabel">Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
+              <div class="sigrow"><div class="siglabel">Title:</div><div class="sigvalue">Director</div></div>
+              <div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{generated_date}}</div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1409,7 +1419,7 @@ function seedContractsTemplatesV38(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V38] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V39] = true;
   return changed;
 }
 
@@ -6580,7 +6590,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV38(db)) changed = true;
+  if (seedContractsTemplatesV39(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

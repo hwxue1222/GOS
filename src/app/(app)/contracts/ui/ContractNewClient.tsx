@@ -210,6 +210,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       contract_no: contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,
+      generated_date: String((fields as any).generated_date ?? '').trim() || new Date().toISOString().slice(0, 10),
       partyA_name: clientName,
       partyA_email: clientEmail,
       ...fields,

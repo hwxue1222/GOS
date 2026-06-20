@@ -35,12 +35,14 @@ export async function POST(_: Request, { params }: { params: Promise<{ contractI
     if (updated) contract = updated;
   }
 
+  const generatedDate = new Date().toISOString().slice(0, 10);
+
   const html = renderContractHtml({
     templateHtml: tpl.templateHtml,
     contractNo: String(contractNo || contract.contractNo || ''),
     clientName: contract.clientName,
     clientEmail: contract.clientEmail,
-    fields: contract.fields ?? {},
+    fields: { ...(contract.fields ?? {}), generated_date: generatedDate },
   });
 
   const title = `Contract ${String(contractNo || contract.contractNo || '-') } - ${contract.clientName}`;
