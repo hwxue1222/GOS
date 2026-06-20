@@ -4,8 +4,10 @@ import { getCurrentUser } from '@/lib/auth';
 
 export default async function HomePage() {
   const h = await headers();
-  const host = String(h.get('x-forwarded-host') ?? h.get('host') ?? '').toLowerCase();
-  const isFrontDomain = host === 'bby.today' || host.endsWith('.bby.today');
+  const rawHost = String(h.get('x-forwarded-host') ?? h.get('host') ?? '').toLowerCase();
+  const firstHost = rawHost.split(',')[0]?.trim() ?? '';
+  const hostNoPort = firstHost.replace(/^https?:\/\//, '').split('/')[0]?.split(':')[0]?.trim() ?? '';
+  const isFrontDomain = hostNoPort === 'bby.today' || hostNoPort.endsWith('.bby.today');
 
   const user = await getCurrentUser();
   if (isFrontDomain) redirect('/portal');

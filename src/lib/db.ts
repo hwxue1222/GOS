@@ -97,6 +97,7 @@ function emptyDb(): Db {
   return {
     users: [],
     sessions: [],
+    passwordResets: [],
     clients: [],
     invoices: [],
     invoiceEmailHistories: [],

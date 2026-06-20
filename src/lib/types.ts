@@ -682,9 +682,19 @@ export type JobTask = {
   createdAt: string;
 };
 
+export type PasswordResetToken = {
+  id: string;
+  email: string;
+  otpHash: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt?: string;
+};
+
 export type Db = {
   users: User[];
   sessions: Session[];
+  passwordResets?: PasswordResetToken[];
   clients: Client[];
   invoices: Invoice[];
   invoiceEmailHistories: InvoiceEmailHistory[];

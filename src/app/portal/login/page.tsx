@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import LoginFormClient from '@/app/login/LoginFormClient';
 
 export const metadata = {
-  title: 'BBY.SG Corporate Secretary Service Portal',
+  title: 'BBY Corporate secretary service portal',
 };
 
 export default function PortalLoginPage() {
@@ -12,7 +12,7 @@ export default function PortalLoginPage() {
     >
       <LoginFormClient
         mode="portal"
-        title="BBY.SG Corporate Secretary Service Portal"
+        title="BBY Corporate secretary service portal"
         subtitle="请使用你的公司账号登录"
         defaultFrom="/dashboard"
       />
