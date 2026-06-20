@@ -94,6 +94,14 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
     }
   }
 
+  function clearSelection() {
+    onChange(undefined);
+    setSelectedLabel('');
+    setQuery('');
+    setItems([]);
+    setOpen(false);
+  }
+
   return (
     <label className="text-sm">
       <div className="text-black/60">{label}</div>
@@ -103,6 +111,10 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
           onChange={(e) => {
             const v = e.target.value;
             setQuery(v);
+            if (!v.trim() && shownValue) {
+              clearSelection();
+              return;
+            }
             if (!v.trim()) {
               setItems([]);
               setOpen(true);
@@ -122,8 +134,21 @@ export default function SsicCombobox({ label, value, disabled, onChange, exclude
           }}
           disabled={disabled}
           placeholder={t('ssic.placeholder')}
-          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
+          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5 pr-10"
         />
+
+        {shownValue && !disabled ? (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => clearSelection()}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/70"
+            aria-label="Clear"
+            title="Clear"
+          >
+            ×
+          </button>
+        ) : null}
 
         {open && !disabled ? (
           <div className="absolute z-20 mt-1 w-full rounded-lg border border-black/10 bg-white shadow-sm max-h-64 overflow-auto">

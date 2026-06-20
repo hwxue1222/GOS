@@ -519,7 +519,7 @@ export default function ChangeSecretaryClient() {
             ) : null}
 
             {!editing && useByBridgeSecretary ? (
-              <div className="mt-2 text-xs text-black/50">ByBridge company secretary: Xue Hongwei (NRIC No. S7864540G)</div>
+              <div className="mt-2 text-xs text-black/50">BBY company secretary: Xue Hongwei (NRIC No. S7864540G)</div>
             ) : null}
 
             {editing ? (
@@ -844,7 +844,7 @@ export default function ChangeSecretaryClient() {
               }}
               className="h-4 w-4"
             />
-            To use ByBridge company secretary
+            To use BBY company secretary
           </label>
 
           <button

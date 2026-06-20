@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
-import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { DateInputYMD } from '@/components/DateInputYMD';
 
 export default function AgmClient() {
+  const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
@@ -24,6 +24,7 @@ export default function AgmClient() {
   const [meetingTime, setMeetingTime] = useState('10:00');
   const [fiscalYearReport, setFiscalYearReport] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
+  const prevManualVenueRef = useRef<string>('');
   const [chairman, setChairman] = useState('');
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | 'AUDITED' | ''>('');
@@ -40,10 +41,9 @@ export default function AgmClient() {
 
   useEffect(() => {
     if (!useByBridgeAddress) return;
-    const issuer = getInvoiceIssuerConfig('BYBRIDGE');
-    const addr = String(issuer.addressLine ?? '').trim();
-    if (addr) setMeetingVenue(addr);
-  }, [useByBridgeAddress]);
+    if (meetingVenue.trim() && meetingVenue.trim() !== bbyRegisteredOfficeAddress) prevManualVenueRef.current = meetingVenue;
+    setMeetingVenue(bbyRegisteredOfficeAddress);
+  }, [bbyRegisteredOfficeAddress, meetingVenue, useByBridgeAddress]);
 
   async function onSubmit() {
     setSubmitError(null);
@@ -215,8 +215,9 @@ export default function AgmClient() {
             <textarea
               value={meetingVenue}
               onChange={(e) => setMeetingVenue(e.target.value)}
+              disabled={useByBridgeAddress}
               rows={3}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
             />
           </label>
 
@@ -224,9 +225,19 @@ export default function AgmClient() {
             <input
               type="checkbox"
               checked={useByBridgeAddress}
-              onChange={(e) => setUseByBridgeAddress(e.target.checked)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                if (checked) {
+                  if (meetingVenue.trim() && meetingVenue.trim() !== bbyRegisteredOfficeAddress) prevManualVenueRef.current = meetingVenue;
+                  setUseByBridgeAddress(true);
+                  setMeetingVenue(bbyRegisteredOfficeAddress);
+                } else {
+                  setUseByBridgeAddress(false);
+                  if (meetingVenue.trim() === bbyRegisteredOfficeAddress) setMeetingVenue(prevManualVenueRef.current || '');
+                }
+              }}
             />
-            To use ByBridge registered office address
+            To use BBY registered office address
           </label>
 
           <button

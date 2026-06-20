@@ -165,7 +165,7 @@ export default async function DirectorChangeApplicationDetailPage({
                 <div className="text-black/50">Remove directors</div>
                 <div className="mt-1 text-black/80">{removeNames}</div>
               </div>
-              {r.useByBridgeNomineeDirector ? <div className="text-xs text-black/50">Includes ByBridge nominee director service</div> : null}
+              {r.useByBridgeNomineeDirector ? <div className="text-xs text-black/50">Includes BBY nominee director service</div> : null}
             </div>
           </SectionCard>
           {r.message?.trim() ? (

@@ -2046,7 +2046,7 @@ That the business activities of the Company are changed from:
     lines.push(`2. Chairman: ${chairman}.`);
     lines.push(`3. Meeting time: ${startDate}.`);
     lines.push(`4. Meeting venue: ${meetingVenue}.`);
-    lines.push(`5. Use ByBridge registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
+    lines.push(`5. Use BBY registered office address: ${useRegisteredOffice ? 'Yes' : 'No'}.`);
   } else if (input.type === 'TRANSFER_COMPANY_SECRETARY') {
     const effectiveDate = String(p.effectiveDate ?? '').trim() || '-';
     const newSecretaryName = String(p.newSecretaryName ?? '').trim() || '-';

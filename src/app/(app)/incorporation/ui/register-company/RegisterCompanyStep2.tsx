@@ -11,9 +11,27 @@ import { emptyPerson, emptyShareholder } from '@/app/(app)/incorporation/ui/regi
 
 type Step2 = RegisterCompanyDraft['step2'];
 
-export default function RegisterCompanyStep2(props: { value: Step2; onChange: (next: Step2) => void }) {
+function parsePositiveInt(v: string) {
+  const s = String(v ?? '').trim();
+  if (!/^\d+$/.test(s)) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+function formatSharePct(part: number | null, total: number | null) {
+  if (!part || !total) return null;
+  const pct = (part / total) * 100;
+  if (!Number.isFinite(pct)) return null;
+  if (pct === 0) return '0%';
+  if (pct >= 99.995) return '100%';
+  return `${pct.toFixed(pct < 1 ? 2 : 1)}%`;
+}
+
+export default function RegisterCompanyStep2(props: { value: Step2; totalShares?: string; onChange: (next: Step2) => void }) {
   const v = props.value;
   const set = (patch: Partial<Step2>) => props.onChange({ ...v, ...patch });
+  const totalShares = parsePositiveInt(props.totalShares ?? '');
 
   function updateShareholder(idx: number, next: ShareholderDraft) {
     const list = v.shareholders.slice();
@@ -95,6 +113,10 @@ export default function RegisterCompanyStep2(props: { value: Step2; onChange: (n
                 <label className="text-sm">
                   <div className="text-black/60">
                     <span className="text-red-600">*</span> Number Of Shares Held
+                    {(() => {
+                      const pct = formatSharePct(parsePositiveInt(sh.shares), totalShares);
+                      return pct ? <span className="ml-2 text-xs text-black/40">({pct} of total)</span> : null;
+                    })()}
                   </div>
                   <input
                     value={sh.shares}
@@ -201,7 +223,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; onChange: (n
                 onChange={(e) => set({ useByBridgeNomineeDirector: e.target.checked })}
                 className="h-4 w-4"
               />
-              To use ByBridge nominee director service
+              To use BBY nominee director service
             </label>
           </div>
         </div>
@@ -255,7 +277,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; onChange: (n
               onChange={(e) => set({ useByBridgeCompanySecretary: e.target.checked })}
               className="h-4 w-4"
             />
-            To use ByBridge company secretary
+            To use BBY company secretary
           </label>
           {!v.useByBridgeCompanySecretary ? <PersonFields value={v.secretary} onChange={(p) => set({ secretary: p })} showUnlock /> : null}
         </div>

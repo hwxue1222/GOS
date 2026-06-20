@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import type { Currency } from '@/lib/types';
 import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
 
@@ -31,8 +33,10 @@ export default function RegisterCompanyStep1(props: {
     useByBridgeRegisteredOfficeAddress: boolean;
   }) => void;
 }) {
+  const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const v = props.value;
   const set = (patch: Partial<typeof v>) => props.onChange({ ...v, ...patch });
+  const prevManualAddressRef = useRef<string>('');
   const suffixOptions = ['Pte Ltd', 'Ltd', 'LLP', 'LP', 'Sole Proprietorship'];
   const currencyOptions: Array<{ label: string; value: Currency }> = [
     { label: 'Singapore Dollar(s$) S$', value: 'SGD' },
@@ -40,6 +44,18 @@ export default function RegisterCompanyStep1(props: {
     { label: 'Chinese Yuan(¥) CNY', value: 'CNY' },
     { label: 'Malaysian Ringgit(RM) MYR', value: 'MYR' },
   ];
+
+  useEffect(() => {
+    if (v.ssicPrimaryCode && v.ssicSecondaryCode && v.ssicPrimaryCode === v.ssicSecondaryCode) {
+      props.onChange({ ...v, ssicSecondaryCode: '' });
+    }
+  }, [props, v, v.ssicPrimaryCode, v.ssicSecondaryCode]);
+
+  useEffect(() => {
+    if (v.useByBridgeRegisteredOfficeAddress && v.address.trim() !== bbyRegisteredOfficeAddress) {
+      props.onChange({ ...v, address: bbyRegisteredOfficeAddress });
+    }
+  }, [bbyRegisteredOfficeAddress, props, v, v.address, v.useByBridgeRegisteredOfficeAddress]);
 
   return (
     <div className="space-y-4">
@@ -138,7 +154,11 @@ export default function RegisterCompanyStep1(props: {
           <SsicCombobox
             label="Activity 1"
             value={v.ssicPrimaryCode || undefined}
-            onChange={(code) => set({ ssicPrimaryCode: code ?? '' })}
+            onChange={(code) => {
+              const nextPrimary = code ?? '';
+              const nextSecondary = nextPrimary && nextPrimary === v.ssicSecondaryCode ? '' : v.ssicSecondaryCode;
+              set({ ssicPrimaryCode: nextPrimary, ssicSecondaryCode: nextSecondary });
+            }}
           />
         </div>
 
@@ -147,7 +167,10 @@ export default function RegisterCompanyStep1(props: {
             label="Activity 2"
             value={v.ssicSecondaryCode || undefined}
             excludeCode={v.ssicPrimaryCode || undefined}
-            onChange={(code) => set({ ssicSecondaryCode: code ?? '' })}
+            onChange={(code) => {
+              const next = code ?? '';
+              set({ ssicSecondaryCode: next && next === v.ssicPrimaryCode ? '' : next });
+            }}
           />
         </div>
 
@@ -158,7 +181,8 @@ export default function RegisterCompanyStep1(props: {
           <textarea
             value={v.address}
             onChange={(e) => set({ address: e.target.value })}
-            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 min-h-[96px]"
+            disabled={v.useByBridgeRegisteredOfficeAddress}
+            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 min-h-[96px] disabled:bg-black/5"
             placeholder="Singapore Address"
           />
         </label>
@@ -167,13 +191,21 @@ export default function RegisterCompanyStep1(props: {
           <input
             type="checkbox"
             checked={v.useByBridgeRegisteredOfficeAddress}
-            onChange={(e) => set({ useByBridgeRegisteredOfficeAddress: e.target.checked })}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              if (checked) {
+                if (v.address.trim() && v.address.trim() !== bbyRegisteredOfficeAddress) prevManualAddressRef.current = v.address;
+                set({ useByBridgeRegisteredOfficeAddress: true, address: bbyRegisteredOfficeAddress });
+              } else {
+                const restore = prevManualAddressRef.current || '';
+                set({ useByBridgeRegisteredOfficeAddress: false, address: v.address.trim() === bbyRegisteredOfficeAddress ? restore : v.address });
+              }
+            }}
             className="h-4 w-4"
           />
-          <span className="text-black/70">To use ByBridge registered office address</span>
+          <span className="text-black/70">To use BBY registered office address</span>
         </label>
       </div>
     </div>
   );
 }
-

@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
-import { getInvoiceIssuerConfig } from '@/lib/invoice';
 
 export default function ChangeAddressClient() {
+  const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
   const { companyId, client, loading, error, closeHref } = useCompanyContext();
-  const bybridgeAddress = useMemo(() => getInvoiceIssuerConfig('BYBRIDGE').addressLine ?? '', []);
+  const prevManualAddressRef = useRef<string>('');
 
   const [newAddress, setNewAddress] = useState('');
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
@@ -69,8 +69,9 @@ export default function ChangeAddressClient() {
             <textarea
               value={newAddress}
               onChange={(e) => setNewAddress(e.target.value)}
+              disabled={useByBridgeAddress}
               rows={5}
-              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
             />
           </label>
 
@@ -80,12 +81,18 @@ export default function ChangeAddressClient() {
               checked={useByBridgeAddress}
               onChange={(e) => {
                 const checked = e.target.checked;
-                setUseByBridgeAddress(checked);
-                if (checked) setNewAddress(bybridgeAddress);
+                if (checked) {
+                  if (newAddress.trim() && newAddress.trim() !== bbyRegisteredOfficeAddress) prevManualAddressRef.current = newAddress;
+                  setUseByBridgeAddress(true);
+                  setNewAddress(bbyRegisteredOfficeAddress);
+                } else {
+                  setUseByBridgeAddress(false);
+                  if (newAddress.trim() === bbyRegisteredOfficeAddress) setNewAddress(prevManualAddressRef.current || '');
+                }
               }}
               className="h-4 w-4"
             />
-            To use ByBridge registered office address
+            To use BBY registered office address
           </label>
 
           <button
@@ -100,4 +107,3 @@ export default function ChangeAddressClient() {
     </ModalShell>
   );
 }
-

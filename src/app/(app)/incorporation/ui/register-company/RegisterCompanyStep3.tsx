@@ -152,7 +152,7 @@ export default function RegisterCompanyStep3(props: {
             <div className="mt-1 font-medium whitespace-pre-wrap">{d.step1.address || '-'}</div>
           </div>
           <div>
-            <div className="text-black/50">Use ByBridge registered office</div>
+            <div className="text-black/50">Use BBY registered office</div>
             <div className="mt-1 font-medium">{d.step1.useByBridgeRegisteredOfficeAddress ? 'Yes' : 'No'}</div>
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function RegisterCompanyStep3(props: {
         onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}
       >
         {secretary.useByBridge || !secretary.person ? (
-          <div className="mt-3 text-sm text-black/70">ByBridge company secretary</div>
+          <div className="mt-3 text-sm text-black/70">BBY company secretary</div>
         ) : (
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>

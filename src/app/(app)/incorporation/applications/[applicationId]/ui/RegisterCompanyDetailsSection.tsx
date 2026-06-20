@@ -154,7 +154,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
             <InfoRow label="Activity 1" value={normalized.step1.ssicPrimaryCode} />
             <InfoRow label="Activity 2" value={normalized.step1.ssicSecondaryCode} />
             <InfoRow label="Company Address" value={normalized.step1.address} />
-            <InfoRow label="Use ByBridge registered office" value={normalized.step1.useByBridgeRegisteredOfficeAddress ? 'Yes' : 'No'} />
+            <InfoRow label="Use BBY registered office" value={normalized.step1.useByBridgeRegisteredOfficeAddress ? 'Yes' : 'No'} />
           </div>
         </AccordionItem>
 
@@ -227,7 +227,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
 
         <AccordionItem title="Secretary" open={!!open.secretary} onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}>
           {normalized.step2.useByBridgeCompanySecretary ? (
-            <div className="mt-3 text-sm text-black/70">ByBridge company secretary</div>
+            <div className="mt-3 text-sm text-black/70">BBY company secretary</div>
           ) : secretary ? (
             <PeopleList
               title="Secretary"

@@ -10,6 +10,10 @@ function isPositiveIntString(v: string) {
   return Number(v) > 0;
 }
 
+function normalizeText(v: string) {
+  return v.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 export function validatePerson(p: PersonDraft) {
   const errors: string[] = [];
   if (!p.fullName.trim()) errors.push('Full name is required.');
@@ -45,11 +49,17 @@ export function validateStep1(draft: RegisterCompanyDraft) {
   const e: string[] = [];
   if (!draft.step1.companyName.trim()) e.push('Company is required.');
   if (!draft.step1.alternativeName.trim()) e.push('Alternative Name is required.');
+  if (
+    draft.step1.companyName.trim() &&
+    draft.step1.alternativeName.trim() &&
+    normalizeText(draft.step1.companyName) === normalizeText(draft.step1.alternativeName)
+  ) {
+    e.push('Alternative Name cannot be the same as Company.');
+  }
   if (!draft.step1.paidUpCapitalAmount.trim() || !/^\d+(?:\.\d+)?$/.test(draft.step1.paidUpCapitalAmount.trim())) {
     e.push('Registered Share Capital is required.');
   }
   if (!draft.step1.totalShares.trim() || !/^\d+$/.test(draft.step1.totalShares.trim())) e.push('Total Number Of Shares is required.');
-  if (!draft.step1.ssicPrimaryCode.trim()) e.push('Activity 1 is required.');
   if (draft.step1.ssicSecondaryCode.trim() && draft.step1.ssicSecondaryCode.trim() === draft.step1.ssicPrimaryCode.trim()) {
     e.push('Activity 2 cannot be the same as Activity 1.');
   }

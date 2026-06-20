@@ -371,7 +371,7 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
           <div className="mt-2 text-xs text-black/50">Saved new director: {addDirectors.map((s) => s.fullName.trim()).filter(Boolean).join(', ') || '-'}</div>
         ) : null}
         {!editing && useByBridgeNomineeDirector ? (
-          <div className="mt-2 text-xs text-black/50">ByBridge nominee director: Xue Hongwei (NRIC No. S7864540G)</div>
+          <div className="mt-2 text-xs text-black/50">BBY nominee director: Xue Hongwei (NRIC No. S7864540G)</div>
         ) : null}
 
         <label className="mt-3 flex items-center gap-2 text-sm">
@@ -384,7 +384,7 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
             }}
             className="h-4 w-4"
           />
-          To use ByBridge nominee director service
+          To use BBY nominee director service
         </label>
 
         {editing ? (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
@@ -718,7 +718,7 @@ export default function ChangeDirectorClient(props: {
             }}
             className="h-4 w-4"
           />
-          To use ByBridge nominee director service
+          To use BBY nominee director service
         </label>
 
         {editing ? (

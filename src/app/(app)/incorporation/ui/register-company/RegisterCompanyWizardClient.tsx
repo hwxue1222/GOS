@@ -327,7 +327,7 @@ export default function RegisterCompanyWizardClient(props: Props) {
         {step === 1 ? (
           <RegisterCompanyStep1 value={draft.step1} onChange={(next) => setDraft({ ...draft, step1: next })} />
         ) : step === 2 ? (
-          <RegisterCompanyStep2 value={draft.step2} onChange={(next) => setDraft({ ...draft, step2: next })} />
+          <RegisterCompanyStep2 value={draft.step2} totalShares={draft.step1.totalShares} onChange={(next) => setDraft({ ...draft, step2: next })} />
         ) : (
           <RegisterCompanyStep3
             draft={draft}

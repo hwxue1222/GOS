@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
 import { DateInputYMD } from '@/components/DateInputYMD';
-import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { formatDateDMY } from '@/lib/date';
 
 type CorporateRepresentativeDraft = {
@@ -20,9 +19,10 @@ type CorporateRepresentativeDraft = {
 };
 
 export default function ChangeCompanyNameClient() {
+  const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
-  const bybridgeAddress = useMemo(() => getInvoiceIssuerConfig('BYBRIDGE').addressLine ?? '', []);
+  const prevManualMeetingVenueRef = useRef<string>('');
 
   const [newCompanyName, setNewCompanyName] = useState('');
   const [chairman, setChairman] = useState('');
@@ -416,7 +416,8 @@ export default function ChangeCompanyNameClient() {
               <input
                 value={meetingVenue}
                 onChange={(e) => setMeetingVenue(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                disabled={useByBridgeAddress}
+                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
               />
             </label>
           </div>
@@ -427,12 +428,18 @@ export default function ChangeCompanyNameClient() {
               checked={useByBridgeAddress}
               onChange={(e) => {
                 const checked = e.target.checked;
-                setUseByBridgeAddress(checked);
-                if (checked) setMeetingVenue(bybridgeAddress);
+                if (checked) {
+                  if (meetingVenue.trim() && meetingVenue.trim() !== bbyRegisteredOfficeAddress) prevManualMeetingVenueRef.current = meetingVenue;
+                  setUseByBridgeAddress(true);
+                  setMeetingVenue(bbyRegisteredOfficeAddress);
+                } else {
+                  setUseByBridgeAddress(false);
+                  if (meetingVenue.trim() === bbyRegisteredOfficeAddress) setMeetingVenue(prevManualMeetingVenueRef.current || '');
+                }
               }}
               className="h-4 w-4"
             />
-            To use ByBridge registered office address
+            To use BBY registered office address
           </label>
 
           <button
