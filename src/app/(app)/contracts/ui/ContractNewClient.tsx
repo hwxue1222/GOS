@@ -52,6 +52,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     date: new Date().toISOString().slice(0, 10),
   });
 
+  const [annualFeeCurrency, setAnnualFeeCurrency] = useState<'SGD' | 'USD' | 'RMB'>('SGD');
+  const [annualFeeAmount, setAnnualFeeAmount] = useState('');
+
   const [contractId, setContractId] = useState<string>('');
   const [contractNo, setContractNo] = useState<string>('');
   const [documentId, setDocumentId] = useState<string>('');
@@ -177,6 +180,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
   const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
+
+  useEffect(() => {
+    if (!isNomineeTemplate) return;
+    const raw = String((fields as any).annual_fee ?? '').trim();
+    if (!raw) return;
+
+    const m = raw.match(/^(SGD|USD|RMB)\s+(.*)$/i);
+    if (m) {
+      const nextCurrency = m[1].toUpperCase() as 'SGD' | 'USD' | 'RMB';
+      const nextAmount = String(m[2] ?? '').trim();
+      setAnnualFeeCurrency(nextCurrency);
+      setAnnualFeeAmount(nextAmount);
+      return;
+    }
+
+    const sgdLike = raw.startsWith('S$') || raw.startsWith('$');
+    if (sgdLike) {
+      setAnnualFeeCurrency('SGD');
+      setAnnualFeeAmount(raw.replace(/^S\$\s*/, '').replace(/^\$\s*/, '').trim());
+    } else {
+      setAnnualFeeAmount(raw);
+    }
+  }, [isNomineeTemplate, (fields as any).annual_fee]);
 
 
   async function saveDraft() {
@@ -526,6 +552,44 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           onChange={(next) => setFields((prev) => ({ ...prev, [p.key]: next }))}
                           inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                         />
+                      </div>
+                    );
+                  }
+
+                  if (isNomineeTemplate && p.key === 'annual_fee') {
+                    return (
+                      <div key={p.key} className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">
+                          {p.label}
+                          {p.required ? ' *' : ''}
+                        </div>
+                        <div className="mt-1 grid grid-cols-12 gap-2">
+                          <select
+                            value={annualFeeCurrency}
+                            onChange={(e) => {
+                              const nextCurrency = e.target.value as 'SGD' | 'USD' | 'RMB';
+                              setAnnualFeeCurrency(nextCurrency);
+                              const next = `${nextCurrency} ${annualFeeAmount}`.trim();
+                              setFields((prev) => ({ ...prev, annual_fee: next }));
+                            }}
+                            className="col-span-4 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm"
+                          >
+                            <option value="SGD">SGD</option>
+                            <option value="USD">USD</option>
+                            <option value="RMB">RMB</option>
+                          </select>
+                          <input
+                            value={annualFeeAmount}
+                            onChange={(e) => {
+                              const nextAmount = e.target.value;
+                              setAnnualFeeAmount(nextAmount);
+                              const next = `${annualFeeCurrency} ${nextAmount}`.trim();
+                              setFields((prev) => ({ ...prev, annual_fee: next }));
+                            }}
+                            placeholder="e.g. 5,000"
+                            className="col-span-8 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                        </div>
                       </div>
                     );
                   }
