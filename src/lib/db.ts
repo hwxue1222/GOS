@@ -12893,6 +12893,21 @@ export async function addIncorporationApplicationFile(input: {
   return f;
 }
 
+export async function deleteIncorporationApplication(applicationId: string) {
+  const db = await readDb();
+  const apps = db.incorporationApplications ?? [];
+  const idx = apps.findIndex((a) => a.id === applicationId);
+  if (idx < 0) return null;
+  const removed = apps[idx];
+
+  db.incorporationApplications = apps.filter((a) => a.id !== applicationId);
+  db.incorporationApplicationEvents = (db.incorporationApplicationEvents ?? []).filter((e) => e.applicationId !== applicationId);
+  db.incorporationApplicationFiles = (db.incorporationApplicationFiles ?? []).filter((f) => f.applicationId !== applicationId);
+
+  await writeDb(db);
+  return removed;
+}
+
 export async function findIncorporationApplicationFileById(fileId: string) {
   const db = await readDb();
   return (db.incorporationApplicationFiles ?? []).find((f) => f.id === fileId) ?? null;

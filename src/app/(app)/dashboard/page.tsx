@@ -129,6 +129,12 @@ export default async function DashboardPage() {
                               <Link href={detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
                                 Details
                               </Link>
+                              {me.role === 'client' && r.status === 'SUBMITTED' ? (
+                                <DeleteActionClient
+                                  deleteUrl={`/api/incorporation/applications/${encodeURIComponent(r.sourceId)}`}
+                                  confirmText="Delete this submitted application? This cannot be undone."
+                                />
+                              ) : null}
                             </div>
                           </td>
                         </tr>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getIncorporationApplicationDetail, readDb, updateIncorporationApplication } from '@/lib/db';
+import { deleteIncorporationApplication, getIncorporationApplicationDetail, readDb, updateIncorporationApplication } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
@@ -84,3 +84,23 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ applicationId
   return NextResponse.json({ ok: true, application: next });
 }
 
+export async function DELETE(_req: Request, ctx: { params: Promise<{ applicationId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  const { applicationId } = await ctx.params;
+
+  const detail = await getIncorporationApplicationDetail(applicationId);
+  if (!detail) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  const app = detail.application;
+
+  if (user.role === 'client') {
+    if (app.createdByUserId !== user.id) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    if (app.status !== 'SUBMITTED') return NextResponse.json({ ok: false, error: 'LOCKED' }, { status: 400 });
+  } else {
+    if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const removed = await deleteIncorporationApplication(applicationId);
+  if (!removed) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
