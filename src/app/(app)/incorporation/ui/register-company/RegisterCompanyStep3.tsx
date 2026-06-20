@@ -339,11 +339,19 @@ export default function RegisterCompanyStep3(props: {
         <div className="mt-3 space-y-2">
           <label className="flex items-start gap-2 text-sm text-black/80">
             <input type="checkbox" checked={v.confirmInfoAccurate} onChange={(e) => set({ confirmInfoAccurate: e.target.checked })} className="mt-1 h-4 w-4" />
-            <span>I confirm all the information I filled are true and correct, and I have not concealed anything.</span>
+            <span>
+              All the information I filled are true and correct, and I have not concealed anything. if there is any false or concealment statement, I'm
+              willing to take full responsibility.
+            </span>
           </label>
           <label className="flex items-start gap-2 text-sm text-black/80">
             <input type="checkbox" checked={v.confirmAuthorizedToSubmit} onChange={(e) => set({ confirmAuthorizedToSubmit: e.target.checked })} className="mt-1 h-4 w-4" />
-            <span>I confirm I am an authorized representative of the company and authorized to submit this application.</span>
+            <span>
+              As an authorized representative of the company, I have read BBY consultancy KYC questionnaire (Click to download) Statement that it believes
+              that there is no violation of any of its provision and that is has no relations or business dealings with prohibited countries and
+              organizations, The actual controllers, Shareholders and directors of the company and their direct relatives are not politically exposed
+              persons or persons subject to political risks impact
+            </span>
           </label>
         </div>
       </AccordionItem>
