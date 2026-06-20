@@ -643,6 +643,10 @@ export type IncorporationApplicationFile = {
   uploadedByUserId: string;
   uploadedByName: string;
   uploadedAt: string;
+  emailStatus?: 'SENT' | 'FAILED';
+  emailedTo?: string;
+  emailedAt?: string;
+  emailError?: string;
 };
 
 export type JobStatus = 'Pending' | 'Processing' | 'Complete';

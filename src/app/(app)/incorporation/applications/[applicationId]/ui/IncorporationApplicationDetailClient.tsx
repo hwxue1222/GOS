@@ -39,6 +39,8 @@ type FileRow = {
   size: number;
   uploadedByName: string;
   uploadedAt: string;
+  emailStatus?: 'SENT' | 'FAILED' | 'SENDING';
+  emailedAt?: string;
 };
 
 type Props = {
@@ -87,7 +89,18 @@ export default function IncorporationApplicationDetailClient(props: Props) {
     }
     setApp(j.application);
     setEvents(Array.isArray(j.events) ? j.events : []);
-    const safeFiles = Array.isArray(j.files) ? j.files.map((f) => ({ id: f.id, fileName: f.fileName, mimeType: f.mimeType, size: f.size, uploadedByName: f.uploadedByName, uploadedAt: f.uploadedAt })) : [];
+    const safeFiles = Array.isArray(j.files)
+      ? j.files.map((f) => ({
+          id: f.id,
+          fileName: f.fileName,
+          mimeType: f.mimeType,
+          size: f.size,
+          uploadedByName: f.uploadedByName,
+          uploadedAt: f.uploadedAt,
+          emailStatus: (f as unknown as { emailStatus?: FileRow['emailStatus'] }).emailStatus,
+          emailedAt: (f as unknown as { emailedAt?: string }).emailedAt,
+        }))
+      : [];
     setFiles(safeFiles);
   }
 
@@ -153,24 +166,42 @@ export default function IncorporationApplicationDetailClient(props: Props) {
     if (!selected?.length) return;
     setError(null);
     setUploading(true);
+
+    const nowIso = new Date().toISOString();
+    const placeholders = Array.from(selected).map((f, idx) => ({
+      id: `local-${Date.now()}-${idx}`,
+      fileName: f.name,
+      mimeType: f.type || 'application/octet-stream',
+      size: f.size,
+      uploadedByName: 'You',
+      uploadedAt: nowIso,
+      emailStatus: 'SENDING' as const,
+      emailedAt: undefined,
+    }));
+    setFiles((prev) => [...placeholders, ...prev]);
+
     try {
+      const payloadFiles: Array<{ fileName: string; mimeType: string; dataBase64: string }> = [];
       for (const f of Array.from(selected)) {
         const buf = await f.arrayBuffer();
-        const dataBase64 = bytesToBase64(buf);
-        const res = await fetch(`/api/incorporation/applications/${encodeURIComponent(app.id)}/files`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ fileName: f.name, mimeType: f.type || 'application/octet-stream', dataBase64 }),
-        }).catch(() => null);
-        const j = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-        if (!res?.ok || !j?.ok) {
-          setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
-          return;
-        }
+        payloadFiles.push({ fileName: f.name, mimeType: f.type || 'application/octet-stream', dataBase64: bytesToBase64(buf) });
       }
+
+      const res = await fetch(`/api/incorporation/applications/${encodeURIComponent(app.id)}/files/email-to-bby`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ files: payloadFiles }),
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string; emailOk?: boolean } | null;
+      if (!res?.ok || !j?.ok) {
+        setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      if (j?.emailOk === false) setError(j?.error ?? 'EMAIL_SEND_FAILED');
       await refresh();
     } finally {
       setUploading(false);
+      setFiles((prev) => prev.filter((x) => !x.id.startsWith('local-')));
     }
   }
 

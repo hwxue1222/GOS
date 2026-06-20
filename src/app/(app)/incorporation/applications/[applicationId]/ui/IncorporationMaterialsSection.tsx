@@ -9,6 +9,8 @@ type FileRow = {
   size: number;
   uploadedByName: string;
   uploadedAt: string;
+  emailStatus?: 'SENT' | 'FAILED' | 'SENDING';
+  emailedAt?: string;
 };
 
 export default function IncorporationMaterialsSection(props: {
@@ -27,7 +29,7 @@ export default function IncorporationMaterialsSection(props: {
           <div className="mt-0.5 text-xs text-black/50">Uploaded files</div>
         </div>
         <label className="rounded-md bg-[#14b8a6] text-white px-4 py-2 text-sm font-medium cursor-pointer">
-          {props.uploading ? 'Uploading...' : 'Upload'}
+          {props.uploading ? 'Sending...' : 'Email to BBY'}
           <input type="file" className="hidden" multiple onChange={(e) => props.onUpload(e.target.files)} />
         </label>
       </div>
@@ -53,6 +55,7 @@ export default function IncorporationMaterialsSection(props: {
               <th className="px-3 py-2 font-medium">File</th>
               <th className="px-3 py-2 font-medium">Uploaded by</th>
               <th className="px-3 py-2 font-medium">Time</th>
+              <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium">Operate</th>
             </tr>
           </thead>
@@ -62,6 +65,17 @@ export default function IncorporationMaterialsSection(props: {
                 <td className="px-3 py-2">{f.fileName}</td>
                 <td className="px-3 py-2">{f.uploadedByName}</td>
                 <td className="px-3 py-2">{f.uploadedAt.slice(0, 19).replace('T', ' ')}</td>
+                <td className="px-3 py-2">
+                  {f.emailStatus === 'SENT' ? (
+                    <span className="text-xs font-medium text-[#16a34a]">Sent / 已发送</span>
+                  ) : f.emailStatus === 'FAILED' ? (
+                    <span className="text-xs font-medium text-red-600">Failed / 发送失败</span>
+                  ) : f.emailStatus === 'SENDING' ? (
+                    <span className="text-xs font-medium text-black/50">Sending...</span>
+                  ) : (
+                    <span className="text-xs text-black/40">-</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-3">
                     <a href={`/api/incorporation/files/${encodeURIComponent(f.id)}/download`} className="text-[#2f7bdc] hover:underline">
@@ -77,7 +91,7 @@ export default function IncorporationMaterialsSection(props: {
             ))}
             {props.files.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-black/40">
+                <td colSpan={5} className="px-3 py-8 text-center text-black/40">
                   No files
                 </td>
               </tr>

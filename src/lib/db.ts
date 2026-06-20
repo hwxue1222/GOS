@@ -12873,6 +12873,10 @@ export async function addIncorporationApplicationFile(input: {
   size: number;
   dataBase64: string;
   uploadedBy: { id: string; name: string };
+  emailStatus?: 'SENT' | 'FAILED';
+  emailedTo?: string;
+  emailedAt?: string;
+  emailError?: string;
 }) {
   const db = await readDb();
   if (!db.incorporationApplicationFiles) db.incorporationApplicationFiles = [];
@@ -12887,10 +12891,27 @@ export async function addIncorporationApplicationFile(input: {
     uploadedByUserId: input.uploadedBy.id,
     uploadedByName: input.uploadedBy.name,
     uploadedAt: now,
+    emailStatus: input.emailStatus,
+    emailedTo: input.emailedTo,
+    emailedAt: input.emailedAt,
+    emailError: input.emailError,
   };
   db.incorporationApplicationFiles.unshift(f);
   await writeDb(db);
   return f;
+}
+
+export async function updateIncorporationApplicationFile(fileId: string, patch: Partial<IncorporationApplicationFile>) {
+  const db = await readDb();
+  const list = db.incorporationApplicationFiles ?? [];
+  const idx = list.findIndex((f) => f.id === fileId);
+  if (idx < 0) return null;
+  const prev = list[idx];
+  const next: IncorporationApplicationFile = { ...prev, ...patch, id: prev.id, applicationId: prev.applicationId };
+  list[idx] = next;
+  db.incorporationApplicationFiles = list;
+  await writeDb(db);
+  return next;
 }
 
 export async function deleteIncorporationApplication(applicationId: string) {

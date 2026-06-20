@@ -92,6 +92,8 @@ export default async function IncorporationApplicationDetailPage({
     size: f.size,
     uploadedByName: f.uploadedByName,
     uploadedAt: f.uploadedAt,
+    emailStatus: f.emailStatus,
+    emailedAt: f.emailedAt,
   }));
 
   return (
