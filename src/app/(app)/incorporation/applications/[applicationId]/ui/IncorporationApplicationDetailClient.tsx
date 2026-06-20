@@ -186,7 +186,11 @@ export default function IncorporationApplicationDetailClient(props: Props) {
             <div className="text-lg font-semibold">{typeLabel}</div>
             <div className="mt-1 text-sm text-black/60">Application ID: {app.id}</div>
           </div>
-          <button type="button" onClick={() => router.push('/')} className="text-sm text-[#2f7bdc] hover:underline">
+          <button
+            type="button"
+            onClick={() => router.push(props.meRole === 'client' ? '/dashboard' : '/jobs')}
+            className="text-sm text-[#2f7bdc] hover:underline"
+          >
             Back
           </button>
         </div>

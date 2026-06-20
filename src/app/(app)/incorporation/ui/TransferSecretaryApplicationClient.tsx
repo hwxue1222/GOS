@@ -74,7 +74,7 @@ export default function TransferSecretaryApplicationClient(props: Props) {
       }
       const id = j.application.id;
       if (files.length) await uploadFiles(id);
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     } catch (e) {
       setError((e as Error).message || 'CREATE_FAILED');

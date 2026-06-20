@@ -232,7 +232,7 @@ export default function RegisterCompanyWizardClient(props: Props) {
         try {
           window.localStorage.removeItem(storageKey);
         } catch {}
-        router.push('/');
+        router.push('/dashboard');
         router.refresh();
         return;
       }
