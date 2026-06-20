@@ -6,8 +6,6 @@ import {
   findContractById,
   listContractTemplates,
   createDocument,
-  nextContractNo,
-  readDb,
   updateContract,
 } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -56,10 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
 
   let contractNo = String(contract.contractNo ?? '').trim();
   if (!contractNo) {
-    const db = await readDb();
-    contractNo = nextContractNo(db, contract.createdAt ? new Date(contract.createdAt) : new Date());
-    const updated = await updateContract(contractId, { contractNo });
-    if (updated) contract = updated;
+    return NextResponse.json({ ok: false, error: 'CONTRACT_NOT_GENERATED' }, { status: 409 });
   }
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 

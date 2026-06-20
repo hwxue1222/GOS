@@ -31,10 +31,10 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     html = html.replace(
       /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
       (_, a: string, ws: string, b: string) => {
-        if (ws.includes('<p class="p4"><br></p>') || ws.includes('<p class="p3"><br></p>') || ws.includes('<p class="p10"><br></p>')) {
+        if (ws.includes('<p class="p10"><br></p>') || ws.includes('<p class="p4"><br></p>') || ws.includes('<p class="p3"><br></p>')) {
           return a + ws + b;
         }
-        return `${a}\n<p class="p4"><br></p>\n${b}`;
+        return `${a}\n<p class="p10"><br></p>\n${b}`;
       },
     );
   }
@@ -293,7 +293,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+        if (j?.error === 'CONTRACT_NOT_GENERATED') {
+          setErrorDetail('请先点击 Generate 生成合同（生成合同编号和文档）后再发送签署。');
+        } else {
+          setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+        }
         return;
       }
       setPacketId(String(j.packetId));

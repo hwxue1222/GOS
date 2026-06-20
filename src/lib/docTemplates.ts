@@ -2631,10 +2631,10 @@ export function renderContractHtml(input: {
     html = html.replace(
       /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
       (_, a: string, ws: string, b: string) => {
-        if (ws.includes('<p class="p4"><br></p>') || ws.includes('<p class="p3"><br></p>') || ws.includes('<p class="p10"><br></p>')) {
+        if (ws.includes('<p class="p10"><br></p>') || ws.includes('<p class="p4"><br></p>') || ws.includes('<p class="p3"><br></p>')) {
           return a + ws + b;
         }
-        return `${a}\n<p class="p4"><br></p>\n${b}`;
+        return `${a}\n<p class="p10"><br></p>\n${b}`;
       },
     );
   }
