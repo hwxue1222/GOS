@@ -767,16 +767,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Fee standard (1)（收费标准1） *</div>
-                    <textarea
-                      value={fields.fee_standard_1 ?? ''}
-                      onChange={(e) => setFields((prev) => ({ ...prev, fee_standard_1: e.target.value }))}
-                      rows={6}
-                      className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                    />
-                  </div>
-
-                  <div className="rounded-lg border border-black/10 p-3">
                     <div className="text-xs font-semibold text-black/70">Party B obligations（乙方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
@@ -808,6 +798,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                     ))}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Fee standard (1)（收费标准1） *</div>
+                    <textarea
+                      value={fields.fee_standard_1 ?? ''}
+                      onChange={(e) => setFields((prev) => ({ ...prev, fee_standard_1: e.target.value }))}
+                      rows={6}
+                      className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                    />
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">

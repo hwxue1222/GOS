@@ -791,11 +791,6 @@ function seedContractsTemplatesV34(db: Db) {
         </div>
 
         <div class="section">
-          <div class="section-title">IV. FEES</div>
-          <div class="p"><b>1.</b> {{fee_standard_1}}</div>
-        </div>
-
-        <div class="section">
           <div class="section-title">II. PARTY B OBLIGATIONS</div>
           <div class="p"><b>1.</b> {{partyB_obligation_1}}</div>
           <div class="p"><b>2.</b> {{partyB_obligation_2}}</div>
@@ -807,6 +802,11 @@ function seedContractsTemplatesV34(db: Db) {
           <div class="p"><b>1.</b> {{partyA_obligation_1}}</div>
           <div class="p"><b>2.</b> {{partyA_obligation_2}}</div>
           <div class="p"><b>3.</b> {{partyA_obligation_3}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">IV. FEES</div>
+          <div class="p"><b>1.</b> {{fee_standard_1}}</div>
         </div>
 
         <div class="section">
