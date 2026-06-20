@@ -10,7 +10,7 @@ export default async function HomePage() {
   const isFrontDomain = hostNoPort === 'bby.today' || hostNoPort === 'www.bby.today' || hostNoPort.endsWith('.bby.today');
 
   const user = await getCurrentUser();
-  if (isFrontDomain) redirect('/portal');
+  if (isFrontDomain) redirect('/portal/login');
   if (!user) redirect('/login');
   if (user.role === 'client') redirect('/dashboard');
   redirect('/jobs');
