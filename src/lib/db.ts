@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V27 = 'contracts.templates.v27';
+const SEED_KEY_CONTRACTS_TEMPLATES_V28 = 'contracts.templates.v28';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV27(db: Db) {
+function seedContractsTemplatesV28(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V27] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V28] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -622,6 +622,7 @@ function seedContractsTemplatesV27(db: Db) {
       { key: 'principal_auth_date', label: 'Principal signatory date (YYYY-MM-DD)', required: true },
       { key: 'company_signatory_email', label: 'Company signatory email', required: true },
       { key: 'principal_signatory_email', label: 'Principal signatory email', required: true },
+      { key: 'annual_fee', label: 'Annual fee (e.g. S$5,000)', required: true },
     ],
     templateHtml: `<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
@@ -789,7 +790,7 @@ function seedContractsTemplatesV27(db: Db) {
 <p class="p3"><br></p>
 <p class="p3">4. ANNUAL FEE<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
-<p class="p6">The <span class="s3"><b>annual fee</b></span> for provision of the Nominee Services by BBY is either <span class="s3"><b>S$5,000</b></span>(ex-GST) per annum or any part thereof for providing the Nominee Director Services (hereinafter referred to as “Annual Fee”). This Annual Fee does not include any out-of-pocket expenses incurred by BBY and its Nominee Director incurred on behalf of the Principal’s or Company's account. The first year’s fee shall cover a period of twelve (12) months and be payable at the time of appointment and thereafter, the annual fee will be billed in advance and are due and payable when rendered. Our fees and out-of-pocket charges described above do not include the Goods and Services Tax (“GST”). The GST, withholding taxes or other applicable taxes, if applicable, will be included in our invoices as a separate item and charged at the rate applicable under the relevant legislation. You will be responsible for the whole of our fees, charges and other expenses in respect of all matters relating to this engagement. BBY shall not be required to refund any amount of fees for any fraction of days remaining in a year upon termination.<span class="Apple-converted-space"> </span></p>
+<p class="p6">The <span class="s3"><b>annual fee</b></span> for provision of the Nominee Services by BBY is either <span class="s3"><b>{{annual_fee}}</b></span>(ex-GST) per annum or any part thereof for providing the Nominee Director Services (hereinafter referred to as “Annual Fee”). This Annual Fee does not include any out-of-pocket expenses incurred by BBY and its Nominee Director incurred on behalf of the Principal’s or Company's account. The first year’s fee shall cover a period of twelve (12) months and be payable at the time of appointment and thereafter, the annual fee will be billed in advance and are due and payable when rendered. Our fees and out-of-pocket charges described above do not include the Goods and Services Tax (“GST”). The GST, withholding taxes or other applicable taxes, if applicable, will be included in our invoices as a separate item and charged at the rate applicable under the relevant legislation. You will be responsible for the whole of our fees, charges and other expenses in respect of all matters relating to this engagement. BBY shall not be required to refund any amount of fees for any fraction of days remaining in a year upon termination.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p10"><br></p>
 <p class="p3"><br></p>
@@ -905,7 +906,7 @@ function seedContractsTemplatesV27(db: Db) {
 <p class="p14">369977 Singapore<span class="Apple-converted-space"> </span></p>
 <p class="p14">Luke@bby.sg</p>
 <p class="p4"><br></p>
-<p class="p3">Or to such other address, or the designated person to whom Notice should be addressed, at any time by giving the appropriate Notice in sufficient time not less than five (5) working days before the change/s become effective to the other party in accordance with the provisions of this Clause 13 hereof.<span class="Apple-converted-space"> </span></p>
+<p class="p9">Or to such other address, or the designated person to whom Notice should be addressed, at any time by giving the appropriate Notice in sufficient time not less than five (5) working days before the change/s become effective to the other party in accordance with the provisions of this Clause 13 hereof.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
 <p class="p9">12.2 When Notice is Served<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
@@ -1100,7 +1101,7 @@ function seedContractsTemplatesV27(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V27] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V28] = true;
   return changed;
 }
 
@@ -6271,7 +6272,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV27(db)) changed = true;
+  if (seedContractsTemplatesV28(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
