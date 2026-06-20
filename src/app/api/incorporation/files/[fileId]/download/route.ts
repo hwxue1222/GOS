@@ -40,6 +40,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ fileId: string
 
   const f = await findIncorporationApplicationFileById(fileId);
   if (!f) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!f.dataBase64) return NextResponse.json({ ok: false, error: 'FILE_NOT_STORED' }, { status: 404 });
   const detail = await getIncorporationApplicationDetail(f.applicationId);
   if (!detail) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   const app = detail.application;
@@ -65,4 +66,3 @@ export async function GET(_req: Request, ctx: { params: Promise<{ fileId: string
     },
   });
 }
-

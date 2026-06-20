@@ -12871,7 +12871,7 @@ export async function addIncorporationApplicationFile(input: {
   fileName: string;
   mimeType: string;
   size: number;
-  dataBase64: string;
+  dataBase64?: string;
   uploadedBy: { id: string; name: string };
   emailStatus?: 'SENT' | 'FAILED';
   emailedTo?: string;
@@ -12887,7 +12887,7 @@ export async function addIncorporationApplicationFile(input: {
     fileName: input.fileName,
     mimeType: input.mimeType,
     size: input.size,
-    dataBase64: input.dataBase64,
+    dataBase64: input.dataBase64 ?? '',
     uploadedByUserId: input.uploadedBy.id,
     uploadedByName: input.uploadedBy.name,
     uploadedAt: now,

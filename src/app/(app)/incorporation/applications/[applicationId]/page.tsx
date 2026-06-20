@@ -94,6 +94,7 @@ export default async function IncorporationApplicationDetailPage({
     uploadedAt: f.uploadedAt,
     emailStatus: f.emailStatus,
     emailedAt: f.emailedAt,
+    canDownload: !!f.dataBase64,
   }));
 
   return (

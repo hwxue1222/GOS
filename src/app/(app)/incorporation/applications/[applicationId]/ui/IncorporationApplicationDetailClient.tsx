@@ -41,6 +41,7 @@ type FileRow = {
   uploadedAt: string;
   emailStatus?: 'SENT' | 'FAILED' | 'SENDING';
   emailedAt?: string;
+  canDownload?: boolean;
 };
 
 type Props = {
@@ -99,6 +100,7 @@ export default function IncorporationApplicationDetailClient(props: Props) {
           uploadedAt: f.uploadedAt,
           emailStatus: (f as unknown as { emailStatus?: FileRow['emailStatus'] }).emailStatus,
           emailedAt: (f as unknown as { emailedAt?: string }).emailedAt,
+          canDownload: !!(f as unknown as { dataBase64?: string }).dataBase64,
         }))
       : [];
     setFiles(safeFiles);

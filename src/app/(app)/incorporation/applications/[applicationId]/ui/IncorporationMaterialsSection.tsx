@@ -11,6 +11,7 @@ type FileRow = {
   uploadedAt: string;
   emailStatus?: 'SENT' | 'FAILED' | 'SENDING';
   emailedAt?: string;
+  canDownload?: boolean;
 };
 
 export default function IncorporationMaterialsSection(props: {
@@ -78,9 +79,13 @@ export default function IncorporationMaterialsSection(props: {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-3">
-                    <a href={`/api/incorporation/files/${encodeURIComponent(f.id)}/download`} className="text-[#2f7bdc] hover:underline">
-                      Download
-                    </a>
+                    {f.canDownload ? (
+                      <a href={`/api/incorporation/files/${encodeURIComponent(f.id)}/download`} className="text-[#2f7bdc] hover:underline">
+                        Download
+                      </a>
+                    ) : (
+                      <span className="text-xs text-black/40">Not stored</span>
+                    )}
                     <DeleteActionClient
                       deleteUrl={`/api/incorporation/applications/${encodeURIComponent(props.applicationId)}/files/${encodeURIComponent(f.id)}`}
                       confirmText="Delete this file?"

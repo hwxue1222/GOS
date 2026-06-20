@@ -100,7 +100,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
       fileName: f.fileName,
       mimeType: f.mimeType,
       size,
-      dataBase64: f.dataBase64,
+      dataBase64: '',
       uploadedBy: { id: user.id, name: user.name },
     });
     created.push({
@@ -158,4 +158,3 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
 
   return NextResponse.json({ ok: true, emailOk: emailRes.ok, error: emailRes.ok ? undefined : emailRes.error });
 }
-
