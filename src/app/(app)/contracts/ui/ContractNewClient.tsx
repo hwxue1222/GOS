@@ -45,13 +45,21 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const templates = initialTemplates;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? '');
-  const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
-
   const templateIdFromUrl = useMemo(() => {
     const v = String(searchParams?.get('templateId') ?? '').trim();
     return v;
   }, [searchParams]);
+
+  const [templateId, setTemplateId] = useState<string>(() => {
+    if (templateIdFromUrl && templates.some((t) => t.id === templateIdFromUrl)) return templateIdFromUrl;
+    try {
+      if (typeof window === 'undefined') return templates[0]?.id ?? '';
+      const stored = String(window.localStorage.getItem('contracts.new.templateId') ?? '').trim();
+      if (stored && templates.some((t) => t.id === stored)) return stored;
+    } catch {}
+    return templates[0]?.id ?? '';
+  });
+  const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
 
   const [fields, setFields] = useState<Record<string, string>>({
     date: new Date().toISOString().slice(0, 10),
@@ -107,33 +115,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   useEffect(() => {
     if (editContractId) return;
-    if (templateIdFromUrl && templates.some((t) => t.id === templateIdFromUrl)) {
-      setTemplateId(templateIdFromUrl);
-      return;
-    }
-    try {
-      const stored = String(window.localStorage.getItem('contracts.new.templateId') ?? '').trim();
-      if (stored && templates.some((t) => t.id === stored)) {
-        setTemplateId(stored);
-      }
-    } catch {}
-  }, [editContractId, templateIdFromUrl, templates]);
-
-  useEffect(() => {
-    if (editContractId) return;
     if (!templateId) return;
     try {
       window.localStorage.setItem('contracts.new.templateId', templateId);
     } catch {}
-
-    const current = String(searchParams?.get('templateId') ?? '').trim();
-    if (current === templateId) return;
-    try {
-      const sp = new URLSearchParams(searchParams?.toString() ?? '');
-      sp.set('templateId', templateId);
-      router.replace(`/contracts/new?${sp.toString()}`);
-    } catch {}
-  }, [editContractId, router, searchParams, templateId]);
+  }, [editContractId, templateId]);
 
   useEffect(() => {
     let cancelled = false;
