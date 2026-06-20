@@ -38,11 +38,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ application
   const { applicationId, fileId } = await ctx.params;
 
   const f = await findIncorporationApplicationFileById(fileId);
-  if (!f) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-  if (f.applicationId !== applicationId) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!f) return NextResponse.json({ ok: true });
+  if (f.applicationId !== applicationId) return NextResponse.json({ ok: true });
 
   const detail = await getIncorporationApplicationDetail(applicationId);
-  if (!detail) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!detail) return NextResponse.json({ ok: true });
   const app = detail.application;
 
   if (user.role === 'client') {
@@ -55,7 +55,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ application
   }
 
   const removed = await deleteIncorporationApplicationFile(fileId);
-  if (!removed) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (!removed) return NextResponse.json({ ok: true });
   return NextResponse.json({ ok: true });
 }
-
