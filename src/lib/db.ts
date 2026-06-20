@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V31 = 'contracts.templates.v31';
+const SEED_KEY_CONTRACTS_TEMPLATES_V33 = 'contracts.templates.v33';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV31(db: Db) {
+function seedContractsTemplatesV33(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V31] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V33] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -646,11 +646,26 @@ function seedContractsTemplatesV31(db: Db) {
       { key: 'partyA_address', label: 'Party A address', required: true },
       { key: 'partyA_contact', label: 'Party A contact number', required: true },
       { key: 'partyA_email', label: 'Party A email', required: true },
-      { key: 'service_item_1', label: 'Services provided (1)', required: true },
-      { key: 'service_item_2', label: 'Services provided (2)', required: false },
-      { key: 'service_item_3', label: 'Services provided (3)', required: false },
-      { key: 'service_item_4', label: 'Services provided (4)', required: false },
-      { key: 'fee_item_1', label: 'Fee standard (1)', required: true },
+      { key: 'service_count', label: 'Services count', required: true },
+      { key: 'service_title_1', label: 'Services provided (1) title', required: true },
+      { key: 'service_body_1', label: 'Services provided (1) body', required: true },
+      { key: 'service_title_2', label: 'Services provided (2) title', required: false },
+      { key: 'service_body_2', label: 'Services provided (2) body', required: false },
+      { key: 'service_title_3', label: 'Services provided (3) title', required: false },
+      { key: 'service_body_3', label: 'Services provided (3) body', required: false },
+      { key: 'service_title_4', label: 'Services provided (4) title', required: false },
+      { key: 'service_body_4', label: 'Services provided (4) body', required: false },
+      { key: 'fee_standard_1', label: 'Fee standard (1)', required: true },
+      { key: 'force_majeure_1', label: 'Force majeure (1)', required: true },
+      { key: 'force_majeure_2', label: 'Force majeure (2)', required: true },
+      { key: 'force_majeure_3', label: 'Force majeure (3)', required: true },
+      { key: 'breach_1', label: 'Breach (1)', required: true },
+      { key: 'breach_2', label: 'Breach (2)', required: true },
+      { key: 'effective_1', label: 'Effectiveness (1)', required: true },
+      { key: 'effective_2', label: 'Effectiveness (2)', required: true },
+      { key: 'effective_3', label: 'Effectiveness (3)', required: true },
+      { key: 'law_1', label: 'Governing law & disputes (1)', required: true },
+      { key: 'law_2', label: 'Governing law & disputes (2)', required: true },
       { key: 'signer_full_name', label: 'Signer name', required: true },
       { key: 'signer_title', label: 'Signer title', required: true },
       { key: 'signer_date', label: 'Signer date (YYYY-MM-DD)', required: true },
@@ -664,35 +679,49 @@ function seedContractsTemplatesV31(db: Db) {
     <!-- TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT -->
     <title>{{agreement_title}}</title>
     <style>
-      :root { --text:#111; --muted:#4b5563; --line:rgba(17,24,39,0.18); }
+      :root { --text: #111; --muted: #4b5563; --line: rgba(17, 24, 39, 0.18); }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
-      body { color: var(--text); font-family: "Times New Roman", ui-serif, serif; line-height: 1.55; font-size: 12px; background: #f3f4f6; }
+      body { color: var(--text); font-family: "Times New Roman", ui-serif, serif; line-height: 1.55; font-size: 12px; background: #f3f4f6; overflow-x: hidden; }
       .sheet { padding: 18px 12px; counter-reset: page; }
       .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
       .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
-      @media print { body { background: #fff; } .sheet { padding: 0; } .page { margin: 0; box-shadow: none; } }
+      @media (max-width: 720px) { .page { padding: 22px 16px; } .logo { height: 38px; } }
+      @media print { body { background: #fff; } .sheet { padding: 0; } .page { margin: 0; box-shadow: none; padding: 36px 42px; } .page + .page { break-before: page; } .page::after { content: none; } }
 
-      .title { text-align: center; font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
-      .subtitle { text-align: center; color: var(--muted); font-size: 11px; margin-top: 4px; }
-      .meta { margin-top: 10px; color: var(--muted); font-size: 11px; }
-      .hr { border-top: 1px solid var(--line); margin: 14px 0; }
+      .header { display: flex; align-items: flex-start; justify-content: center; gap: 16px; }
+      .logo { height: 44px; width: auto; object-fit: contain; }
+      .meta-row { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 11px; color: var(--muted); text-align: right; }
+      .meta-row b { color: var(--text); font-weight: 700; }
+      .meta-row span { white-space: nowrap; color: var(--text); }
+      .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
+      .subtitle { margin-top: 2px; text-align: center; font-size: 14px; font-weight: 700; }
+      .divider { margin-top: 14px; height: 1px; background: var(--line); }
+
+      .parties { margin-top: 14px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+      .parties .row { display: grid; grid-template-columns: 120px 1fr; }
+      .parties .row + .row { border-top: 1px solid var(--line); }
+      .parties .k { padding: 8px 10px; background: rgba(17, 24, 39, 0.03); font-weight: 700; }
+      .parties .v { padding: 8px 10px; }
 
       .h2 { font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
-      .p { margin: 6px 0; }
-      .kv { margin: 4px 0; }
-      .kv b { display: inline-block; min-width: 160px; }
+      .p { margin: 6px 0; color: var(--text); }
 
-      ol.services { margin: 6px 0 0 0; padding-left: 0; list-style: none; }
-      ol.services li { display: grid; grid-template-columns: 46px 1fr; gap: 8px; margin: 6px 0; }
-      .svc-no { font-weight: 700; }
-      .svc-text { }
+      .section { margin-top: 14px; }
+      .section-title { font-weight: 800; font-size: 12px; margin-top: 12px; }
+      .note { margin-top: 6px; font-size: 11px; color: var(--muted); }
 
-      .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+      .svc-item { margin-top: 10px; }
+      .svc-head { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: baseline; }
+      .svc-no { font-weight: 800; }
+      .svc-title { font-weight: 800; }
+      .svc-body { margin-top: 6px; padding-left: 54px; }
+
+      .sig { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
       .sigbox .h { font-weight: 800; }
       .sigline { margin-top: 18px; border-bottom: 1px solid var(--line); height: 18px; }
-      .sigmeta { margin-top: 10px; font-size: 11px; color: var(--muted); }
+      .sigmeta { margin-top: 8px; font-size: 11px; color: var(--muted); }
       .sigrow { display: grid; grid-template-columns: 86px 1fr; gap: 8px; margin-top: 6px; align-items: start; }
       .siglabel { color: var(--text); font-weight: 700; }
       .sigvalue { color: var(--text); }
@@ -705,41 +734,86 @@ function seedContractsTemplatesV31(db: Db) {
   <body>
     <div class="sheet">
       <div class="page">
+        <div class="header">
+          <img class="logo" src="/contracts/image2.png" alt="BBY" />
+        </div>
+
+        <div class="meta-row">
+          <div><b>Contract No:</b> <span>{{contract_no}}</span></div>
+          <div><b>Date:</b> <span>{{date}}</span></div>
+        </div>
+
         <div class="title">{{agreement_title}}</div>
         <div class="subtitle">Professional Service Agreement</div>
-        <div class="meta">Contract No: {{contract_no}} &nbsp;&nbsp; Date: {{date}}</div>
-        <div class="hr"></div>
+        <div class="divider"></div>
 
-        <div class="h2">1. Parties</div>
-        <div class="p">This Professional Service Agreement (the "Agreement") is entered into between:</div>
-        <div class="p">
-          <div class="kv"><b>Party A (Company)</b> {{partyA_name}}</div>
-          <div class="kv"><b>UEN / Registration No.</b> {{partyA_uen}}</div>
-          <div class="kv"><b>Address</b> {{partyA_address}}</div>
-          <div class="kv"><b>Contact Number</b> {{partyA_contact}}</div>
-          <div class="kv"><b>Email</b> {{partyA_email}}</div>
+        <div class="parties">
+          <div class="row"><div class="k">Party A</div><div class="v">{{partyA_name}}</div></div>
+          <div class="row"><div class="k">UEN / 注册号</div><div class="v">{{partyA_uen}}</div></div>
+          <div class="row"><div class="k">Address / 地址</div><div class="v">{{partyA_address}}</div></div>
+          <div class="row"><div class="k">Contact / 电话</div><div class="v">{{partyA_contact}}</div></div>
+          <div class="row"><div class="k">Email / 邮箱</div><div class="v">{{partyA_email}}</div></div>
+          <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
+          <div class="row"><div class="k">UEN / 注册号</div><div class="v">201608450W</div></div>
+          <div class="row"><div class="k">Address / 地址</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
+          <div class="row"><div class="k">Contact / 电话</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
+          <div class="row"><div class="k">Email / 邮箱</div><div class="v">Luke@bby.sg</div></div>
         </div>
-        <div class="p">
-          <div class="kv"><b>Party B</b> BBY.SG PTE LTD</div>
+
+        <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.</div>
+
+        <div class="section">
+          <div class="section-title">I. SERVICES PROVIDED</div>
+          <div class="p">Party B agrees to provide the following professional services to Party A:</div>
+
+          <div class="svc-item" data-svc-item="1">
+            <div class="svc-head"><span class="svc-no">(1)</span><span class="svc-title">{{service_title_1}}</span></div>
+            <div class="svc-body">{{service_body_1}}</div>
+          </div>
+          <div class="svc-item" data-svc-item="2">
+            <div class="svc-head"><span class="svc-no">(2)</span><span class="svc-title">{{service_title_2}}</span></div>
+            <div class="svc-body">{{service_body_2}}</div>
+          </div>
+          <div class="svc-item" data-svc-item="3">
+            <div class="svc-head"><span class="svc-no">(3)</span><span class="svc-title">{{service_title_3}}</span></div>
+            <div class="svc-body">{{service_body_3}}</div>
+          </div>
+          <div class="svc-item" data-svc-item="4">
+            <div class="svc-head"><span class="svc-no">(4)</span><span class="svc-title">{{service_title_4}}</span></div>
+            <div class="svc-body">{{service_body_4}}</div>
+          </div>
         </div>
 
-        <div class="h2">2. Services Provided</div>
-        <div class="p">Party B agrees to provide the following professional services to Party A:</div>
-        <ol class="services">
-          <li data-svc-item="1"><span class="svc-no">(1)</span><span class="svc-text">{{service_item_1}}</span></li>
-          <li data-svc-item="2"><span class="svc-no">(2)</span><span class="svc-text">{{service_item_2}}</span></li>
-          <li data-svc-item="3"><span class="svc-no">(3)</span><span class="svc-text">{{service_item_3}}</span></li>
-          <li data-svc-item="4"><span class="svc-no">(4)</span><span class="svc-text">{{service_item_4}}</span></li>
-        </ol>
+        <div class="section">
+          <div class="section-title">IV. FEES</div>
+          <div class="p"><b>1.</b> {{fee_standard_1}}</div>
+        </div>
 
-        <div class="h2">3. Fees</div>
-        <div class="p">The fees and billing terms are as follows:</div>
-        <div class="p"><b>(1)</b> {{fee_item_1}}</div>
-        <div class="p">All fees are exclusive of taxes unless stated otherwise.</div>
+        <div class="section">
+          <div class="section-title">VI. FORCE MAJEURE</div>
+          <div class="p"><b>1.</b> {{force_majeure_1}}</div>
+          <div class="p"><b>2.</b> {{force_majeure_2}}</div>
+          <div class="p"><b>3.</b> {{force_majeure_3}}</div>
+        </div>
 
-        <div class="h2">4. General Terms</div>
-        <div class="p">This Agreement constitutes the entire agreement between the parties and supersedes all prior discussions. Any amendment must be in writing and signed by both parties.</div>
-        <div class="p">This Agreement shall be governed by the laws of Singapore.</div>
+        <div class="section">
+          <div class="section-title">VII. BREACH</div>
+          <div class="p"><b>1.</b> {{breach_1}}</div>
+          <div class="p"><b>2.</b> {{breach_2}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">VIII. EFFECTIVENESS</div>
+          <div class="p"><b>1.</b> {{effective_1}}</div>
+          <div class="p"><b>2.</b> {{effective_2}}</div>
+          <div class="p"><b>3.</b> {{effective_3}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">IX. GOVERNING LAW AND DISPUTE RESOLUTION</div>
+          <div class="p"><b>1.</b> {{law_1}}</div>
+          <div class="p"><b>2.</b> {{law_2}}</div>
+        </div>
 
         <div class="sig">
           <div class="sigbox">
@@ -1284,7 +1358,7 @@ function seedContractsTemplatesV31(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V31] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V33] = true;
   return changed;
 }
 
@@ -6455,7 +6529,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV31(db)) changed = true;
+  if (seedContractsTemplatesV33(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

@@ -214,6 +214,66 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
+      if (!String(next.service_count ?? '').trim()) next.service_count = '2';
+      if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
+      if (!String(next.service_body_1 ?? '').trim()) {
+        next.service_body_1 =
+          'Corporate secretary services are included as below:\n\n' +
+          '• Maintain various registers\n' +
+          '• Appointment of local nominee director\n' +
+          '• Update of changes filed with ACRA\n' +
+          '• Provision of registered office address\n' +
+          '• Prepare resolutions and ACRA filings\n' +
+          '• Prepare AGM and minutes and submit annual return\n\n' +
+          'Extra charges may apply for special transactions.';
+      }
+      if (!String(next.fee_standard_1 ?? '').trim()) {
+        next.fee_standard_1 =
+          'The fee standard is as follows:\n\n' +
+          '• Corporate secretary fee (one-time)\n' +
+          '• Local nominee director fee (per year)\n\n' +
+          'Any additional services will be charged separately as agreed by both parties.';
+      }
+
+      if (!String(next.force_majeure_1 ?? '').trim()) {
+        next.force_majeure_1 =
+          'Force majeure refers to unforeseeable, unavoidable and insurmountable objective circumstances, such as major natural disasters, epidemics, war, riots, snowstorms, strikes, etc., as well as policy changes and changes in regulatory requirements beyond the control of both parties.';
+      }
+      if (!String(next.force_majeure_2 ?? '').trim()) {
+        next.force_majeure_2 =
+          'A party affected by force majeure shall promptly notify the other party, explaining the reason, nature and expected duration of the force majeure event and its impact on performance, and shall take reasonable measures during the event to mitigate the impact. The parties shall use best efforts to perform obligations not affected by force majeure.';
+      }
+      if (!String(next.force_majeure_3 ?? '').trim()) {
+        next.force_majeure_3 =
+          'During the force majeure period, the parties shall share the relevant losses and expenses fairly. After the force majeure is lifted, the parties shall resume performance of this Agreement as soon as practicable.';
+      }
+
+      if (!String(next.breach_1 ?? '').trim()) {
+        next.breach_1 = 'Both parties shall strictly perform all terms of this Agreement. Any breach by either party shall bear corresponding liability for breach.';
+      }
+      if (!String(next.breach_2 ?? '').trim()) {
+        next.breach_2 =
+          'Any materials, drafts, templates or services provided by Party A to Party B for the purpose of this Agreement are non-refundable, and Party B shall not be liable. If Party A causes losses to Party B, Party A shall compensate Party B for all losses and expenses incurred as a result.';
+      }
+
+      if (!String(next.effective_1 ?? '').trim()) {
+        next.effective_1 = 'This Agreement shall take effect from the date of signature by both Party A and Party B. Unless terminated earlier in accordance with this Agreement, the term shall be 24 months.';
+      }
+      if (!String(next.effective_2 ?? '').trim()) {
+        next.effective_2 = 'If no written termination notice is given one month before expiry, this Agreement shall renew automatically.';
+      }
+      if (!String(next.effective_3 ?? '').trim()) {
+        next.effective_3 = 'This Agreement is executed in two (2) originals, one for each party, and both originals have equal legal effect.';
+      }
+
+      if (!String(next.law_1 ?? '').trim()) {
+        next.law_1 = 'The interpretation, termination and dispute resolution of this Agreement shall be governed by the laws of the Republic of Singapore.';
+      }
+      if (!String(next.law_2 ?? '').trim()) {
+        next.law_2 =
+          'If the matter cannot be resolved by mutual consultation, it shall be submitted to arbitration in Singapore and the arbitral award shall be final and binding.';
+      }
+
       if (!String(next.signer_date ?? '').trim()) next.signer_date = String(next.date ?? '').trim() || new Date().toISOString().slice(0, 10);
       if (!String(next.signer_email ?? '').trim()) {
         const pe = String(next.partyA_email ?? '').trim();
@@ -573,110 +633,272 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
           <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
             <div className="text-sm font-semibold">Fields</div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(() => {
-                const ps = (tpl?.placeholders ?? []).filter(
-                  (p) =>
-                    !p.key.startsWith('partyA_') &&
-                    !p.key.startsWith('signer_') &&
-                    p.key !== 'client_name' &&
-                    p.key !== 'client_email',
-                );
-
-                const renderInput = (p: { key: string; label: string; required?: boolean }) => {
-                  const isDateField =
-                    /\bYYYY-MM-DD\b/i.test(p.label) ||
-                    p.key === 'date' ||
-                    p.key === 'dated' ||
-                    p.key === 'agreement_date' ||
-                    p.key.endsWith('_date');
-
-                  if (isDateField) {
-                    return (
-                      <div key={p.key} className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">
-                          {p.label}
-                          {p.required ? ' *' : ''}
-                        </div>
-                        <DateInputYMD
-                          value={fields[p.key] ?? ''}
-                          onChange={(next) => setFields((prev) => ({ ...prev, [p.key]: next }))}
-                          inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    );
-                  }
-
-                  if (isNomineeTemplate && p.key === 'annual_fee') {
-                    return (
-                      <div key={p.key} className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">
-                          {p.label}
-                          {p.required ? ' *' : ''}
-                        </div>
-                        <div className="mt-1 grid grid-cols-12 gap-2">
-                          <select
-                            value={annualFeeCurrency}
-                            onChange={(e) => {
-                              const nextCurrency = e.target.value as 'SGD' | 'USD' | 'RMB';
-                              setAnnualFeeCurrency(nextCurrency);
-                              const next = `${nextCurrency} ${annualFeeAmount}`.trim();
-                              setFields((prev) => ({ ...prev, annual_fee: next }));
-                            }}
-                            className="col-span-4 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm"
-                          >
-                            <option value="SGD">SGD</option>
-                            <option value="USD">USD</option>
-                            <option value="RMB">RMB</option>
-                          </select>
-                          <input
-                            value={annualFeeAmount}
-                            onChange={(e) => {
-                              const nextAmount = e.target.value;
-                              setAnnualFeeAmount(nextAmount);
-                              const next = `${annualFeeCurrency} ${nextAmount}`.trim();
-                              setFields((prev) => ({ ...prev, annual_fee: next }));
-                            }}
-                            placeholder="e.g. 5,000"
-                            className="col-span-8 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                  <div key={p.key} className="md:col-span-1">
-                    <div className="text-xs font-medium text-black/60">
-                      {p.label}
-                      {p.required ? ' *' : ''}
+            <div className="mt-3">
+              {isProfessionalTemplate ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-1">
+                      <div className="text-xs font-medium text-black/60">Agreement title *</div>
+                      <input
+                        value={fields.agreement_title ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, agreement_title: e.target.value }))}
+                        className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      value={fields[p.key] ?? ''}
-                      onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
-                      className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                    <div className="md:col-span-1">
+                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD) *</div>
+                      <DateInputYMD
+                        value={fields.date ?? ''}
+                        onChange={(next) => setFields((prev) => ({ ...prev, date: next }))}
+                        inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-semibold text-black/70">Services provided</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '2') || 2));
+                              const nextCount = Math.min(4, cur + 1);
+                              return { ...prev, service_count: String(nextCount) };
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '2') || 2));
+                              const nextCount = Math.max(1, cur - 1);
+                              const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= 4; i++) {
+                                delete (next as any)[`service_title_${i}`];
+                                delete (next as any)[`service_body_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          − Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {Array.from({ length: Math.max(1, Math.min(4, Number(fields.service_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
+                      (n) => (
+                        <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">({n}) Title{n === 1 ? ' *' : ''}</div>
+                            <input
+                              value={(fields as any)[`service_title_${n}`] ?? ''}
+                              onChange={(e) =>
+                                setFields((prev) => ({ ...prev, [`service_title_${n}`]: e.target.value }))
+                              }
+                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                          <div className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                            <textarea
+                              value={(fields as any)[`service_body_${n}`] ?? ''}
+                              onChange={(e) =>
+                                setFields((prev) => ({ ...prev, [`service_body_${n}`]: e.target.value }))
+                              }
+                              rows={5}
+                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Fee standard (1) *</div>
+                    <textarea
+                      value={fields.fee_standard_1 ?? ''}
+                      onChange={(e) => setFields((prev) => ({ ...prev, fee_standard_1: e.target.value }))}
+                      rows={6}
+                      className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                     />
                   </div>
-                  );
-                };
 
-                if (!isNomineeTemplate) return ps.map(renderInput);
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Force majeure</div>
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`force_majeure_${n}`] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`force_majeure_${n}`]: e.target.value }))}
+                          rows={3}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
+                  </div>
 
-                const companyPs = ps.filter(
-                  (p) => p.key === 'company' || p.key === 'agreement_date' || p.key === 'annual_fee' || p.key.startsWith('company_'),
-                );
-                const principalPs = ps.filter((p) => p.key.startsWith('principal_'));
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Breach</div>
+                    {[1, 2].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`breach_${n}`] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`breach_${n}`]: e.target.value }))}
+                          rows={3}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
+                  </div>
 
-                return (
-                  <>
-                    <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-1">Company</div>
-                    {companyPs.map(renderInput)}
-                    <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-2">Principal</div>
-                    {principalPs.map(renderInput)}
-                  </>
-                );
-              })()}
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Effectiveness</div>
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`effective_${n}`] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`effective_${n}`]: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="text-xs font-semibold text-black/70">Governing law & dispute resolution</div>
+                    {[1, 2].map((n) => (
+                      <div key={n} className="mt-3">
+                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <textarea
+                          value={(fields as any)[`law_${n}`] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`law_${n}`]: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(() => {
+                    const ps = (tpl?.placeholders ?? []).filter(
+                      (p) =>
+                        !p.key.startsWith('partyA_') &&
+                        !p.key.startsWith('signer_') &&
+                        p.key !== 'client_name' &&
+                        p.key !== 'client_email',
+                    );
+
+                    const renderInput = (p: { key: string; label: string; required?: boolean }) => {
+                      const isDateField =
+                        /\bYYYY-MM-DD\b/i.test(p.label) ||
+                        p.key === 'date' ||
+                        p.key === 'dated' ||
+                        p.key === 'agreement_date' ||
+                        p.key.endsWith('_date');
+
+                      if (isDateField) {
+                        return (
+                          <div key={p.key} className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">
+                              {p.label}
+                              {p.required ? ' *' : ''}
+                            </div>
+                            <DateInputYMD
+                              value={fields[p.key] ?? ''}
+                              onChange={(next) => setFields((prev) => ({ ...prev, [p.key]: next }))}
+                              inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        );
+                      }
+
+                      if (isNomineeTemplate && p.key === 'annual_fee') {
+                        return (
+                          <div key={p.key} className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">
+                              {p.label}
+                              {p.required ? ' *' : ''}
+                            </div>
+                            <div className="mt-1 grid grid-cols-12 gap-2">
+                              <select
+                                value={annualFeeCurrency}
+                                onChange={(e) => {
+                                  const nextCurrency = e.target.value as 'SGD' | 'USD' | 'RMB';
+                                  setAnnualFeeCurrency(nextCurrency);
+                                  const next = `${nextCurrency} ${annualFeeAmount}`.trim();
+                                  setFields((prev) => ({ ...prev, annual_fee: next }));
+                                }}
+                                className="col-span-4 h-10 w-full rounded-lg border border-black/10 bg-white px-3 text-sm"
+                              >
+                                <option value="SGD">SGD</option>
+                                <option value="USD">USD</option>
+                                <option value="RMB">RMB</option>
+                              </select>
+                              <input
+                                value={annualFeeAmount}
+                                onChange={(e) => {
+                                  const nextAmount = e.target.value;
+                                  setAnnualFeeAmount(nextAmount);
+                                  const next = `${annualFeeCurrency} ${nextAmount}`.trim();
+                                  setFields((prev) => ({ ...prev, annual_fee: next }));
+                                }}
+                                placeholder="e.g. 5,000"
+                                className="col-span-8 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                      <div key={p.key} className="md:col-span-1">
+                        <div className="text-xs font-medium text-black/60">
+                          {p.label}
+                          {p.required ? ' *' : ''}
+                        </div>
+                        <input
+                          type="text"
+                          value={fields[p.key] ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      );
+                    };
+
+                    if (!isNomineeTemplate) return ps.map(renderInput);
+
+                    const companyPs = ps.filter(
+                      (p) => p.key === 'company' || p.key === 'agreement_date' || p.key === 'annual_fee' || p.key.startsWith('company_'),
+                    );
+                    const principalPs = ps.filter((p) => p.key.startsWith('principal_'));
+
+                    return (
+                      <>
+                        <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-1">Company</div>
+                        {companyPs.map(renderInput)}
+                        <div className="md:col-span-2 text-xs font-semibold text-black/70 mt-2">Principal</div>
+                        {principalPs.map(renderInput)}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
 
