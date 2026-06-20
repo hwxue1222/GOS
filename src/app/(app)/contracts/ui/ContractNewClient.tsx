@@ -696,7 +696,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Agreement title *</div>
+                      <div className="text-xs font-medium text-black/60">Agreement title（协议标题） *</div>
                       <input
                         value={fields.agreement_title ?? ''}
                         onChange={(e) => setFields((prev) => ({ ...prev, agreement_title: e.target.value }))}
@@ -704,7 +704,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD) *</div>
+                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期） *</div>
                       <DateInputYMD
                         value={fields.date ?? ''}
                         onChange={(next) => setFields((prev) => ({ ...prev, date: next }))}
@@ -715,7 +715,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                   <div className="rounded-lg border border-black/10 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs font-semibold text-black/70">Services provided</div>
+                      <div className="text-xs font-semibold text-black/70">Services provided（服务内容）</div>
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -781,7 +781,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Fee standard (1) *</div>
+                    <div className="text-xs font-semibold text-black/70">Fee standard (1)（收费标准1） *</div>
                     <textarea
                       value={fields.fee_standard_1 ?? ''}
                       onChange={(e) => setFields((prev) => ({ ...prev, fee_standard_1: e.target.value }))}
@@ -791,7 +791,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Party B obligations</div>
+                    <div className="text-xs font-semibold text-black/70">Party B obligations（乙方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -808,7 +808,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Party A obligations</div>
+                    <div className="text-xs font-semibold text-black/70">Party A obligations（甲方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -825,7 +825,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Force majeure</div>
+                    <div className="text-xs font-semibold text-black/70">Force majeure（不可抗力）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -840,7 +840,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Breach</div>
+                    <div className="text-xs font-semibold text-black/70">Breach（违约责任）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -855,7 +855,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Effectiveness</div>
+                    <div className="text-xs font-semibold text-black/70">Effectiveness（生效条款）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
@@ -870,7 +870,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">Governing law & dispute resolution</div>
+                    <div className="text-xs font-semibold text-black/70">Governing law & dispute resolution（法律及争议解决）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}) *</div>
