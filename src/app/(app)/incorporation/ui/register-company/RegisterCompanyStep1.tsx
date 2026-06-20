@@ -57,6 +57,15 @@ export default function RegisterCompanyStep1(props: {
     }
   }, [bbyRegisteredOfficeAddress, props, v, v.address, v.useByBridgeRegisteredOfficeAddress]);
 
+  async function openBizFileSearch(query: string) {
+    const q = query.trim();
+    if (!q) return;
+    try {
+      await navigator.clipboard.writeText(q);
+    } catch {}
+    window.open('https://www.bizfile.gov.sg/buy-info/search/results', '_blank', 'noopener,noreferrer');
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -83,6 +92,13 @@ export default function RegisterCompanyStep1(props: {
               ))}
             </select>
           </div>
+          <button
+            type="button"
+            onClick={() => void openBizFileSearch(v.companyName)}
+            className="mt-2 text-xs text-[#2f7bdc] hover:underline"
+          >
+            Search on BizFile (copies name)
+          </button>
         </label>
 
         <label className="text-sm">
@@ -108,6 +124,13 @@ export default function RegisterCompanyStep1(props: {
               ))}
             </select>
           </div>
+          <button
+            type="button"
+            onClick={() => void openBizFileSearch(v.alternativeName)}
+            className="mt-2 text-xs text-[#2f7bdc] hover:underline"
+          >
+            Search on BizFile (copies name)
+          </button>
         </label>
 
         <label className="text-sm">
