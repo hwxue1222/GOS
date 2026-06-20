@@ -13111,40 +13111,104 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
       }
     } else if (prev.type === 'TRANSFER_COMPANY_SECRETARY') {
       const payload = prev.payload ?? {};
-      const clientId = String(prev.companyId ?? (payload as any).companyId ?? '').trim();
-      if (!clientId) return { ok: false as const, error: 'INVALID_INPUT' as const };
-      const client = db.clients.find((c) => c.id === clientId && !c.deletedAt) ?? null;
-      if (!client) return { ok: false as const, error: 'NOT_FOUND' as const };
+      const regNo = String((payload as any).companyRegistrationNo ?? '').trim();
+      const companyName = String(prev.companyName ?? (payload as any).companyName ?? '').trim();
+
+      const clientFromId = prev.companyId ? db.clients.find((c) => c.id === prev.companyId && !c.deletedAt) ?? null : null;
+      const clientFromReg = !clientFromId && regNo ? db.clients.find((c) => !c.deletedAt && String(c.companyRegistrationNo ?? '').trim() === regNo) ?? null : null;
+      const client = clientFromId ?? clientFromReg;
+
       const effectiveDate = String((payload as any).effectiveDate ?? '').trim() || now.slice(0, 10);
-      const newSecretaryName = String((payload as any).newSecretaryName ?? '').trim();
-      if (!newSecretaryName) return { ok: false as const, error: 'INVALID_INPUT' as const };
-      const newSecretaryEmail = typeof (payload as any).newSecretaryEmail === 'string' ? String((payload as any).newSecretaryEmail).trim() || undefined : undefined;
+      const useByBridge = Boolean((payload as any).useByBridgeCompanySecretary);
+      const secretaryRaw = (payload as any).secretary;
+      const secretaryDraft = secretaryRaw && typeof secretaryRaw === 'object' ? (secretaryRaw as Record<string, unknown>) : null;
+
+      if (!client && (!companyName || !regNo)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+      const paidUpCurrency = String((payload as any).paidUpCapitalCurrency ?? '').trim().toUpperCase();
+      const paidUpAmountRaw = String((payload as any).paidUpCapitalAmount ?? '').trim();
+      const paidUpAmount = paidUpAmountRaw ? Number(paidUpAmountRaw) : undefined;
+      const totalShares = typeof (payload as any).totalShares === 'number' ? (payload as any).totalShares : undefined;
+      const ssicPrimaryCode = typeof (payload as any).ssicPrimaryCode === 'string' ? (payload as any).ssicPrimaryCode.trim() || undefined : undefined;
+      const ssicSecondaryCode = typeof (payload as any).ssicSecondaryCode === 'string' ? (payload as any).ssicSecondaryCode.trim() || undefined : undefined;
+      const address = typeof (payload as any).address === 'string' ? (payload as any).address.trim() || undefined : undefined;
+
+      const targetClient: Client =
+        client ??
+        ({
+          id: newId('cli'),
+          code: nextScCode(db),
+          name: companyName,
+          companyRegistrationNo: regNo,
+          address,
+          ssicPrimaryCode,
+          ssicSecondaryCode,
+          paidUpCapitalCurrency: paidUpCurrency === 'SGD' || paidUpCurrency === 'USD' || paidUpCurrency === 'MYR' || paidUpCurrency === 'CNY' ? (paidUpCurrency as any) : undefined,
+          paidUpCapitalAmount: typeof paidUpAmount === 'number' && Number.isFinite(paidUpAmount) ? paidUpAmount : undefined,
+          totalShares: typeof totalShares === 'number' && Number.isFinite(totalShares) ? totalShares : undefined,
+          registeredOfficeAddress: address,
+          tags: ['transfer-secretary'],
+          createdAt: now,
+        } as Client);
+
+      if (!client) {
+        db.clients.unshift(targetClient);
+      } else {
+        const idxClient = db.clients.findIndex((c) => c.id === targetClient.id);
+        if (idxClient >= 0) {
+          db.clients[idxClient] = {
+            ...db.clients[idxClient],
+            name: companyName || db.clients[idxClient].name,
+            companyRegistrationNo: regNo || db.clients[idxClient].companyRegistrationNo,
+            address: address ?? db.clients[idxClient].address,
+            ssicPrimaryCode: ssicPrimaryCode ?? db.clients[idxClient].ssicPrimaryCode,
+            ssicSecondaryCode: ssicSecondaryCode ?? db.clients[idxClient].ssicSecondaryCode,
+            paidUpCapitalCurrency:
+              (targetClient as any).paidUpCapitalCurrency ?? (db.clients[idxClient] as any).paidUpCapitalCurrency,
+            paidUpCapitalAmount: (targetClient as any).paidUpCapitalAmount ?? (db.clients[idxClient] as any).paidUpCapitalAmount,
+            totalShares: (targetClient as any).totalShares ?? (db.clients[idxClient] as any).totalShares,
+            registeredOfficeAddress: address ?? db.clients[idxClient].registeredOfficeAddress,
+          };
+        }
+      }
 
       for (let i = 0; i < db.clientPartyRoles.length; i += 1) {
         const role = db.clientPartyRoles[i];
-        if (role.clientId !== clientId) continue;
+        if (role.clientId !== targetClient.id) continue;
         if (role.role !== 'SECRETARY') continue;
         if (role.resignationDate) continue;
         db.clientPartyRoles[i] = { ...role, resignationDate: effectiveDate, updatedAt: now };
       }
 
-      const person: Person = { id: newId('per'), fullName: newSecretaryName, email: newSecretaryEmail, createdAt: now, updatedAt: now };
-      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: newSecretaryName, personId: person.id, createdAt: now, updatedAt: now };
-      const role: ClientPartyRole = {
-        id: newId('cpr'),
-        clientId,
-        partyId: party.id,
-        role: 'SECRETARY',
-        appointmentDate: effectiveDate,
-        createdAt: now,
-        updatedAt: now,
-      };
-      db.persons.unshift(person);
-      db.parties.unshift(party);
-      db.clientPartyRoles.unshift(role);
+      if (useByBridge) {
+        const byBridgeIdNoKey = 's7864540g';
+        const byBridgePerson = db.persons.find((p) => !p.deletedAt && normalizeIdNoKey(p.idNo) === byBridgeIdNoKey) ?? null;
+        const person: Person =
+          byBridgePerson ??
+          ({
+            id: newId('per'),
+            fullName: 'BBY Company Secretary',
+            email: 'Luke@bby.sg',
+            idType: 'NRIC',
+            idNo: 'S7864540G',
+            nationality: 'Singapore',
+            address,
+            createdAt: now,
+            updatedAt: now,
+          } as Person);
+        if (!byBridgePerson) db.persons.unshift(person);
+        const party = getOrCreatePartyForPerson(db, person);
+        upsertRole(db, { clientId: targetClient.id, partyId: party.id, role: 'SECRETARY', createdIso: `${effectiveDate}T00:00:00.000Z` });
+      } else {
+        if (!secretaryDraft) return { ok: false as const, error: 'INVALID_INPUT' as const };
+        const person = getOrCreatePersonFromDraft(db, secretaryDraft);
+        if (!person) return { ok: false as const, error: 'INVALID_INPUT' as const };
+        const party = getOrCreatePartyForPerson(db, person);
+        upsertRole(db, { clientId: targetClient.id, partyId: party.id, role: 'SECRETARY', createdIso: `${effectiveDate}T00:00:00.000Z` });
+      }
 
-      patchCompanyId = clientId;
-      patchCompanyName = client.name;
+      patchCompanyId = targetClient.id;
+      patchCompanyName = targetClient.name;
     }
   }
 

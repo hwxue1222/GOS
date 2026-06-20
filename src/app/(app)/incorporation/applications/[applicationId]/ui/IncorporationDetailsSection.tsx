@@ -42,8 +42,8 @@ export default function IncorporationDetailsSection(props: {
         </div>
         {app.type === 'TRANSFER_COMPANY_SECRETARY' ? (
           <div>
-            <div className="text-black/50">Effective date</div>
-            <div className="mt-1 font-medium">{String(payload.effectiveDate ?? '-')}</div>
+            <div className="text-black/50">Register Number</div>
+            <div className="mt-1 font-medium">{String(payload.companyRegistrationNo ?? '-')}</div>
           </div>
         ) : (
           <div>
@@ -54,12 +54,20 @@ export default function IncorporationDetailsSection(props: {
         {app.type === 'TRANSFER_COMPANY_SECRETARY' ? (
           <>
             <div>
-              <div className="text-black/50">New secretary</div>
-              <div className="mt-1 font-medium">{String(payload.newSecretaryName ?? '-')}</div>
+              <div className="text-black/50">Secretary</div>
+              <div className="mt-1 font-medium">
+                {payload.useByBridgeCompanySecretary
+                  ? 'BBY company secretary'
+                  : String((payload.secretary as any)?.fullName ?? (payload.secretary as any)?.person?.fullName ?? '-')}
+              </div>
             </div>
             <div>
-              <div className="text-black/50">New secretary email</div>
-              <div className="mt-1 font-medium">{String(payload.newSecretaryEmail ?? '-')}</div>
+              <div className="text-black/50">Secretary email</div>
+              <div className="mt-1 font-medium">
+                {payload.useByBridgeCompanySecretary
+                  ? 'Luke@bby.sg'
+                  : String((payload.secretary as any)?.email ?? (payload.secretary as any)?.person?.email ?? '-')}
+              </div>
             </div>
           </>
         ) : (
@@ -97,4 +105,3 @@ export default function IncorporationDetailsSection(props: {
     </div>
   );
 }
-

@@ -62,9 +62,9 @@ export default function CompanyFields(props: { value: CompanyDraft; onChange: (n
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <label className="text-sm">
-        <div className="text-black/60">
-          <span className="text-red-600">*</span> Company Name
-        </div>
+      <div className="text-black/60">
+        <span className="text-red-600">*</span> Proposed Company Name
+      </div>
         <input
           value={v.companyName}
           onChange={(e) => set({ companyName: e.target.value })}

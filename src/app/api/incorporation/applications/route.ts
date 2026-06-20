@@ -88,16 +88,20 @@ export async function POST(req: Request) {
   let normalizedCompanyId: string | undefined;
   let normalizedCompanyName: string | undefined;
   if (type === 'TRANSFER_COMPANY_SECRETARY') {
-    if (!companyId) return NextResponse.json({ ok: false, error: 'MISSING_COMPANY' }, { status: 400 });
-    const db = await readDb();
-    const client = db.clients.find((c) => c.id === companyId) ?? null;
-    if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-    if (user.role === 'client') {
-      const allowed = await getAllowedClientIdsForClientEmail(user.email);
-      if (!allowed.has(companyId)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    if (companyId) {
+      const db = await readDb();
+      const client = db.clients.find((c) => c.id === companyId) ?? null;
+      if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+      if (user.role === 'client') {
+        const allowed = await getAllowedClientIdsForClientEmail(user.email);
+        if (!allowed.has(companyId)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+      }
+      normalizedCompanyId = companyId;
+      normalizedCompanyName = client.name;
+    } else {
+      normalizedCompanyName = companyName || (typeof payload.companyName === 'string' ? payload.companyName : undefined);
+      if (!normalizedCompanyName) return NextResponse.json({ ok: false, error: 'MISSING_COMPANY_NAME' }, { status: 400 });
     }
-    normalizedCompanyId = companyId;
-    normalizedCompanyName = client.name;
   } else {
     normalizedCompanyName = companyName || (typeof payload.companyName === 'string' ? payload.companyName : undefined);
   }
