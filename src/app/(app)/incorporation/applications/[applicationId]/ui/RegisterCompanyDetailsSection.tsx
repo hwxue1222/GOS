@@ -145,7 +145,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
       </div>
 
       <div className="mt-4 space-y-3">
-        <AccordionItem title="Step 1 - Basic informations" open={!!open.step1} onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}>
+        <AccordionItem title="Step 1 - Basic information" open={!!open.step1} onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <InfoRow label="Company" value={companyNameFull} />
             <InfoRow label="Alternative Name" value={joinCompanyName(normalized.step1.alternativeName, normalized.step1.alternativeSuffix)} />

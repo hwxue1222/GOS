@@ -118,7 +118,7 @@ export default function RegisterCompanyStep3(props: {
       </div>
 
       <AccordionItem
-        title="Step 1 - Basic informations"
+        title="Step 1 - Basic information"
         open={!!open.step1}
         onToggle={() => setOpen((p) => ({ ...p, step1: !p.step1 }))}
       >

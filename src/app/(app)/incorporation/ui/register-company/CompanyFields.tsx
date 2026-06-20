@@ -6,7 +6,7 @@ import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSel
 
 import type { CompanyDraft } from '@/app/(app)/incorporation/ui/register-company/registerCompanyDraft';
 
-export default function CompanyFields(props: { value: CompanyDraft; onChange: (next: CompanyDraft) => void }) {
+export default function CompanyFields(props: { value: CompanyDraft; onChange: (next: CompanyDraft) => void; hidePhone?: boolean }) {
   const v = props.value;
   const set = (patch: Partial<CompanyDraft>) => props.onChange({ ...v, ...patch });
 
@@ -117,15 +117,17 @@ export default function CompanyFields(props: { value: CompanyDraft; onChange: (n
           className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 min-h-[84px] disabled:bg-black/5"
         />
       </label>
-      <label className="text-sm sm:col-span-2">
-        <div className="text-black/60">Phone</div>
-        <input
-          value={v.phone}
-          onChange={(e) => set({ phone: e.target.value })}
-          disabled={v.lockedFromLookup}
-          className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 disabled:bg-black/5"
-        />
-      </label>
+      {props.hidePhone ? null : (
+        <label className="text-sm sm:col-span-2">
+          <div className="text-black/60">Phone</div>
+          <input
+            value={v.phone}
+            onChange={(e) => set({ phone: e.target.value })}
+            disabled={v.lockedFromLookup}
+            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2 disabled:bg-black/5"
+          />
+        </label>
+      )}
     </div>
   );
 }

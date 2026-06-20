@@ -43,14 +43,6 @@ export function validateShareholder(sh: ShareholderDraft) {
   if (!sh.company.registrationNo.trim()) e.push('Shareholder registration no is required.');
   if (!sh.company.address.trim()) e.push('Shareholder address is required.');
   if (!sh.company.email.trim() || !isEmail(sh.company.email)) e.push('Valid shareholder email is required.');
-  if (!sh.contacts.corporateRepresentativeName.trim()) e.push('Corporate representative name is required.');
-  if (!sh.contacts.corporateRepresentativeEmail.trim() || !isEmail(sh.contacts.corporateRepresentativeEmail)) {
-    e.push('Valid corporate representative email is required.');
-  }
-  if (!sh.contacts.directorSignerName.trim()) e.push('Director/Secretary name is required.');
-  if (!sh.contacts.directorSignerEmail.trim() || !isEmail(sh.contacts.directorSignerEmail)) {
-    e.push('Valid director/secretary email is required.');
-  }
   return e;
 }
 

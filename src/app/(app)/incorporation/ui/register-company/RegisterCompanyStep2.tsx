@@ -132,52 +132,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
                   <PersonFields value={sh.person} onChange={(p) => updateShareholder(idx, { ...sh, person: p })} />
                 ) : (
                   <div className="space-y-4">
-                    <CompanyFields value={sh.company} onChange={(c) => updateShareholder(idx, { ...sh, company: c })} />
-                    <div className="rounded-xl border border-black/10 p-4">
-                      <div className="text-sm font-semibold">Contacts</div>
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="text-sm">
-                          <div className="text-black/60">
-                            <span className="text-red-600">*</span> Corporate Representative Full Name
-                          </div>
-                          <input
-                            value={sh.contacts.corporateRepresentativeName}
-                            onChange={(e) => updateShareholder(idx, { ...sh, contacts: { ...sh.contacts, corporateRepresentativeName: e.target.value } })}
-                            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-black/60">
-                            <span className="text-red-600">*</span> Corporate Representative Email
-                          </div>
-                          <input
-                            value={sh.contacts.corporateRepresentativeEmail}
-                            onChange={(e) => updateShareholder(idx, { ...sh, contacts: { ...sh.contacts, corporateRepresentativeEmail: e.target.value } })}
-                            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-black/60">
-                            <span className="text-red-600">*</span> Director/Secretary Full Name
-                          </div>
-                          <input
-                            value={sh.contacts.directorSignerName}
-                            onChange={(e) => updateShareholder(idx, { ...sh, contacts: { ...sh.contacts, directorSignerName: e.target.value } })}
-                            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-                          />
-                        </label>
-                        <label className="text-sm">
-                          <div className="text-black/60">
-                            <span className="text-red-600">*</span> Director/Secretary Email
-                          </div>
-                          <input
-                            value={sh.contacts.directorSignerEmail}
-                            onChange={(e) => updateShareholder(idx, { ...sh, contacts: { ...sh.contacts, directorSignerEmail: e.target.value } })}
-                            className="mt-1 w-full rounded-md border border-black/10 px-3 py-2"
-                          />
-                        </label>
-                      </div>
-                    </div>
+                    <CompanyFields value={sh.company} onChange={(c) => updateShareholder(idx, { ...sh, company: c })} hidePhone />
                   </div>
                 )}
               </div>
@@ -187,7 +142,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
       </RegisterCompanyCard>
 
       <RegisterCompanyCard
-        title="Director Informations"
+        title="Director information"
         right={
           <button type="button" onClick={copyShareholdersToDirectors} className="text-sm text-black/70 hover:underline">
             Copy Shareholders
@@ -230,7 +185,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
       </RegisterCompanyCard>
 
       <RegisterCompanyCard
-        title="RORC Controller Informations"
+        title="RORC Controller information"
         right={<SectionActionButton label="Add Controller" onClick={() => set({ rorcControllers: [...v.rorcControllers, { id: emptyPerson().id, person: emptyPerson(), initiationAt: '' }] })} />}
       >
         <div className="space-y-4">
@@ -268,7 +223,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
         </div>
       </RegisterCompanyCard>
 
-      <RegisterCompanyCard title="Secretary Informations">
+      <RegisterCompanyCard title="Secretary information">
         <div className="space-y-4">
           <label className="flex items-center gap-2 text-sm text-black/70">
             <input

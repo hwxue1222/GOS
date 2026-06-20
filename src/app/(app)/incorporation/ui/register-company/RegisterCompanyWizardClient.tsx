@@ -141,15 +141,8 @@ export default function RegisterCompanyWizardClient(props: Props) {
             countryOfIncorporation: sh.company.countryOfIncorporation.trim() || undefined,
             address: sh.company.address.trim() || undefined,
             email: sh.company.email.trim() || undefined,
-            phone: sh.company.phone.trim() || undefined,
             clientId: sh.company.clientId,
             lockedFromLookup: sh.company.lockedFromLookup,
-          },
-          contacts: {
-            corporateRepresentativeName: sh.contacts.corporateRepresentativeName.trim() || undefined,
-            corporateRepresentativeEmail: sh.contacts.corporateRepresentativeEmail.trim() || undefined,
-            directorSignerName: sh.contacts.directorSignerName.trim() || undefined,
-            directorSignerEmail: sh.contacts.directorSignerEmail.trim() || undefined,
           },
         };
       }),
@@ -295,7 +288,7 @@ export default function RegisterCompanyWizardClient(props: Props) {
     void save(true);
   }
 
-  const stepLabels = ['Basic informations', 'Personal information', 'Information confirmed'] as const;
+  const stepLabels = ['Basic information', 'Personal information', 'Information confirmed'] as const;
   const stepHasErrors = {
     1: step1Errors.length > 0,
     2: step2Errors.length > 0,
