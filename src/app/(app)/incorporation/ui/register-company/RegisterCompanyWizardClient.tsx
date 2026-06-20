@@ -306,11 +306,6 @@ export default function RegisterCompanyWizardClient(props: Props) {
   }
 
   const stepLabels = ['Basic information', 'Personal information', 'Information confirmed'] as const;
-  const stepHasErrors = {
-    1: step1Errors.length > 0,
-    2: step2Errors.length > 0,
-    3: step3Errors.length > 0,
-  };
 
   return (
     <div className="space-y-4">
@@ -337,7 +332,6 @@ export default function RegisterCompanyWizardClient(props: Props) {
                   {done ? '✓' : String(n)}
                 </span>
                 <span className={active ? 'text-sm font-medium text-black' : 'text-sm text-black/50'}>{label}</span>
-                {stepHasErrors[n] ? <span className="ml-1 inline-flex h-2 w-2 rounded-full bg-red-500" /> : null}
                 {idx < stepLabels.length - 1 ? <span className="mx-2 h-px w-8 bg-black/10" /> : null}
               </button>
             );
