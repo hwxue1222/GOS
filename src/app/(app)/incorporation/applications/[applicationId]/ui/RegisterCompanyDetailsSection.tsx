@@ -202,7 +202,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
         </AccordionItem>
 
         <AccordionItem
-          title={`Shareholders (${shareholders.length})`}
+          title={`Step 2 - Shareholders (${shareholders.length})`}
           open={!!open.shareholders}
           onToggle={() => setOpen((p) => ({ ...p, shareholders: !p.shareholders }))}
           right={
@@ -250,7 +250,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
         </AccordionItem>
 
         <AccordionItem
-          title={`Directors (${directors.length})`}
+          title={`Step 2 - Directors (${directors.length})`}
           open={!!open.directors}
           onToggle={() => setOpen((p) => ({ ...p, directors: !p.directors }))}
           right={
@@ -283,7 +283,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
         </AccordionItem>
 
         <AccordionItem
-          title={`RORC Controllers (${rorc.length})`}
+          title={`Step 2 - RORC Controllers (${rorc.length})`}
           open={!!open.rorc}
           onToggle={() => setOpen((p) => ({ ...p, rorc: !p.rorc }))}
           right={
@@ -316,7 +316,7 @@ export default function RegisterCompanyDetailsSection(props: Props) {
         </AccordionItem>
 
         <AccordionItem
-          title="Secretary"
+          title="Step 2 - Secretary"
           open={!!open.secretary}
           onToggle={() => setOpen((p) => ({ ...p, secretary: !p.secretary }))}
           right={
