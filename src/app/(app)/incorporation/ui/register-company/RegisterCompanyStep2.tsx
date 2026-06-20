@@ -62,7 +62,7 @@ export default function RegisterCompanyStep2(props: { value: Step2; totalShares?
   return (
     <div className="space-y-4">
       <RegisterCompanyCard
-        title="Shareholders Informations"
+        title="Shareholder information"
         right={<SectionActionButton label="Add Shareholder" onClick={() => set({ shareholders: [...v.shareholders, emptyShareholder()] })} />}
       >
         <div className="space-y-4">
