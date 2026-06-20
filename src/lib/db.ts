@@ -171,7 +171,7 @@ const SEED_KEY_CLIENT_CODE_MIGRATION_V7 = 'clients.codeMigration.v7';
 const SEED_KEY_CLIENT_CODE_MIGRATION_V8 = 'clients.codeMigration.v8';
 const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
-const SEED_KEY_CONTRACTS_TEMPLATES_V36 = 'contracts.templates.v36';
+const SEED_KEY_CONTRACTS_TEMPLATES_V37 = 'contracts.templates.v37';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -298,13 +298,13 @@ function seedContractsModuleV1(db: Db) {
   return changed;
 }
 
-function seedContractsTemplatesV36(db: Db) {
+function seedContractsTemplatesV37(db: Db) {
   if (!db.seed) db.seed = {};
   let changed = false;
   if (ensureContractsCollections(db)) changed = true;
 
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
-  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V36] && templates.length > 0) return false;
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V37] && templates.length > 0) return false;
 
   const now = nowIso();
 
@@ -785,19 +785,19 @@ function seedContractsTemplatesV36(db: Db) {
           <div class="svc-item" data-svc-item="1">
             <div class="svc-head"><span class="svc-no">(1)</span><span class="svc-title">{{service_title_1}}</span></div>
             <div class="svc-body">{{service_body_1}}</div>
-          </div>
+          </div><!-- END_SVC_1 -->
           <div class="svc-item" data-svc-item="2">
             <div class="svc-head"><span class="svc-no">(2)</span><span class="svc-title">{{service_title_2}}</span></div>
             <div class="svc-body">{{service_body_2}}</div>
-          </div>
+          </div><!-- END_SVC_2 -->
           <div class="svc-item" data-svc-item="3">
             <div class="svc-head"><span class="svc-no">(3)</span><span class="svc-title">{{service_title_3}}</span></div>
             <div class="svc-body">{{service_body_3}}</div>
-          </div>
+          </div><!-- END_SVC_3 -->
           <div class="svc-item" data-svc-item="4">
             <div class="svc-head"><span class="svc-no">(4)</span><span class="svc-title">{{service_title_4}}</span></div>
             <div class="svc-body">{{service_body_4}}</div>
-          </div>
+          </div><!-- END_SVC_4 -->
         </div>
 
         <div class="section">
@@ -1401,7 +1401,7 @@ function seedContractsTemplatesV36(db: Db) {
   }
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
 
-  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V36] = true;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V37] = true;
   return changed;
 }
 
@@ -6572,7 +6572,7 @@ export async function readDb(): Promise<Db> {
   if (inferMissingPersonIdTypesFromIdNo(db)) changed = true;
   if (ensureOwnerHasSecretaryPermission(db)) changed = true;
   if (seedContractsModuleV1(db)) changed = true;
-  if (seedContractsTemplatesV36(db)) changed = true;
+  if (seedContractsTemplatesV37(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

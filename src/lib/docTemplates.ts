@@ -2640,23 +2640,16 @@ export function renderContractHtml(input: {
   }
 
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
-    const serviceValues = [1, 2, 3, 4].map((n) => {
-      const title = String((input.fields ?? {})[`service_title_${n}`] ?? '').trim();
-      const body = String((input.fields ?? {})[`service_body_${n}`] ?? '').trim();
-      return title || body;
-    });
-
-    for (let n = 1; n <= 4; n++) {
-      if (serviceValues[n - 1]) continue;
-      html = html.replace(new RegExp(`<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<\\/div>\\s*`, 'g'), '');
+    const count = Math.max(1, Math.min(4, Number((input.fields ?? {}).service_count ?? '1') || 1));
+    for (let n = count + 1; n <= 4; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
     }
-
-    let nextNo = 1;
-    html = html.replace(/<div\s+class="svc-item"\s+data-svc-item="\d+">[\s\S]*?<\/div>/g, (block) => {
-      const updated = block.replace(/<span class="svc-no">\(\d+\)<\/span>/, `<span class="svc-no">(${nextNo})</span>`);
-      nextNo += 1;
-      return updated;
-    });
   }
   return html;
 }

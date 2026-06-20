@@ -27,6 +27,19 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 
+  if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
+    const count = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
+    for (let n = count + 1; n <= 4; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+  }
+
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
       /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,
@@ -235,7 +248,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
-      if (!String(next.service_count ?? '').trim()) next.service_count = '2';
+      if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
       if (!String(next.service_body_1 ?? '').trim()) {
         next.service_body_1 =
