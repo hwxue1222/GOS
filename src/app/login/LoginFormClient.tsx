@@ -121,7 +121,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
             onChange={(e) => setAccount(e.target.value)}
             className="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none"
             placeholder={mode === 'portal' ? 'Email' : 'Name or email'}
-            autoComplete="username"
+            autoComplete={mode === 'admin' ? 'off' : 'username'}
           />
         </label>
 
@@ -133,7 +133,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
             className="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none"
             placeholder="••••••"
             type="password"
-            autoComplete="current-password"
+            autoComplete={mode === 'admin' ? 'new-password' : 'current-password'}
           />
         </label>
 
