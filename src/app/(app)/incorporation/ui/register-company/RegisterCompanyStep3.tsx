@@ -124,7 +124,7 @@ export default function RegisterCompanyStep3(props: {
       >
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <div className="text-black/50">Company</div>
+            <div className="text-black/50">Proposed Company Name</div>
             <div className="mt-1 font-medium">{props.companyNameFull || '-'}</div>
           </div>
           <div>

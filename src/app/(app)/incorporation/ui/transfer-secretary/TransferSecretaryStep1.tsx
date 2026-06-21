@@ -60,7 +60,7 @@ export default function TransferSecretaryStep1(props: {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="text-sm">
           <div className="text-black/60">
-            <span className="text-red-600">*</span> Company
+            <span className="text-red-600">*</span> Proposed Company Name
           </div>
           <div className="mt-1 flex gap-2">
             <input
@@ -192,4 +192,3 @@ export default function TransferSecretaryStep1(props: {
     </div>
   );
 }
-
