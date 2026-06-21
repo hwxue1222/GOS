@@ -248,9 +248,7 @@ export default function ProxyShellClient(props: {
                                 ? 'text-red-600'
                                 : r.status === 'NEED_MORE_INFO'
                                   ? 'text-[#d97706]'
-                                  : r.status === 'SIGNING'
-                                    ? 'text-[#0ea5e9]'
-                                    : 'text-[#16a34a]'
+                                  : 'text-[#16a34a]'
                             }
                           >
                             {r.status}
