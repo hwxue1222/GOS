@@ -360,8 +360,7 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
             <div className="text-sm font-medium">Roles</div>
             <div className="mt-2 flex flex-wrap gap-4 text-sm">
               {(() => {
-                const roles: Role[] = ['staff'];
-                if (meRole === 'owner') roles.unshift('manager');
+                const roles: Role[] = meRole === 'owner' ? ['owner', 'manager', 'staff'] : ['staff'];
                 if (mode === 'edit' && form.role === 'manager' && !roles.includes('manager')) roles.unshift('manager');
                 if (mode === 'edit' && form.role === 'owner' && !roles.includes('owner')) roles.unshift('owner');
                 return roles;
