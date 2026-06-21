@@ -59,6 +59,7 @@ export default function RegisterCompanyWizardClient(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [proxyCompanyId, setProxyCompanyId] = useState('');
 
   const draft = persisted.draft;
   const step = persisted.step;
@@ -71,6 +72,11 @@ export default function RegisterCompanyWizardClient(props: Props) {
     didApplyInitialStepRef.current = true;
     setPersisted((prev) => ({ ...prev, step: props.initialStep! }));
   }, [props.initialStep, props.mode, setPersisted]);
+
+  useEffect(() => {
+    const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+    setProxyCompanyId(pid);
+  }, []);
 
   const step1Errors = useMemo(() => validateStep1(draft), [draft]);
   const step2Errors = useMemo(() => validateStep2(draft), [draft]);
@@ -311,32 +317,47 @@ export default function RegisterCompanyWizardClient(props: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white border border-black/5 p-4">
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {stepLabels.map((label, idx) => {
-            const n = (idx + 1) as 1 | 2 | 3;
-            const active = step === n;
-            const done = step > n;
-            const clickable = n <= step;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => (clickable ? patchStep(n) : null)}
-                className={'flex items-center gap-2 whitespace-nowrap ' + (clickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}
-              >
-                <span
-                  className={
-                    'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ' +
-                    (done ? 'bg-[#2f7bdc] text-white' : active ? 'bg-[#2f7bdc] text-white' : 'bg-black/10 text-black/60')
-                  }
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {stepLabels.map((label, idx) => {
+              const n = (idx + 1) as 1 | 2 | 3;
+              const active = step === n;
+              const done = step > n;
+              const clickable = n <= step;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => (clickable ? patchStep(n) : null)}
+                  className={'flex items-center gap-2 whitespace-nowrap ' + (clickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}
                 >
-                  {done ? '✓' : String(n)}
-                </span>
-                <span className={active ? 'text-sm font-medium text-black' : 'text-sm text-black/50'}>{label}</span>
-                {idx < stepLabels.length - 1 ? <span className="mx-2 h-px w-8 bg-black/10" /> : null}
-              </button>
-            );
-          })}
+                  <span
+                    className={
+                      'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ' +
+                      (done ? 'bg-[#2f7bdc] text-white' : active ? 'bg-[#2f7bdc] text-white' : 'bg-black/10 text-black/60')
+                    }
+                  >
+                    {done ? '✓' : String(n)}
+                  </span>
+                  <span className={active ? 'text-sm font-medium text-black' : 'text-sm text-black/50'}>{label}</span>
+                  {idx < stepLabels.length - 1 ? <span className="mx-2 h-px w-8 bg-black/10" /> : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {proxyCompanyId ? (
+            <button
+              type="button"
+              onClick={() => {
+                router.push(`/proxy/${encodeURIComponent(proxyCompanyId)}`);
+                router.refresh();
+              }}
+              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-2 text-sm font-medium"
+            >
+              Back
+            </button>
+          ) : null}
         </div>
       </div>
 
