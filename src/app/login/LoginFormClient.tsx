@@ -115,12 +115,12 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
         {subtitle.trim() ? <p className="text-sm opacity-70 mt-1">{subtitle}</p> : null}
 
         <label className="block mt-6 text-sm">
-          <div className="opacity-80">{mode === 'portal' ? 'Email' : 'Account'}</div>
+          <div className="opacity-80">{mode === 'portal' ? 'Email' : '用户名'}</div>
           <input
             value={account}
             onChange={(e) => setAccount(e.target.value)}
             className="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none"
-            placeholder={mode === 'portal' ? 'Email' : 'Name or email'}
+            placeholder={mode === 'portal' ? 'Email' : '用户名或邮箱'}
             autoComplete={mode === 'admin' ? 'off' : 'username'}
           />
         </label>
