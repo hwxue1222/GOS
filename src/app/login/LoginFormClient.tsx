@@ -87,7 +87,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <form onSubmit={onSubmit} className="w-full max-w-sm rounded-xl border border-black/10 dark:border-white/10 p-6">
         <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="text-sm opacity-70 mt-1">{subtitle}</p>
+        {subtitle.trim() ? <p className="text-sm opacity-70 mt-1">{subtitle}</p> : null}
 
         <label className="block mt-6 text-sm">
           <div className="opacity-80">{mode === 'portal' ? 'Email' : 'Account'}</div>

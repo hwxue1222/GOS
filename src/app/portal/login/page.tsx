@@ -13,7 +13,7 @@ export default function PortalLoginPage() {
       <LoginFormClient
         mode="portal"
         title="BBY Corporate secretary service portal"
-        subtitle="请使用你的公司账号登录"
+        subtitle=""
         defaultFrom="/dashboard"
       />
     </Suspense>
