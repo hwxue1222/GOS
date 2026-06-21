@@ -8,7 +8,6 @@ import TransferSecretaryApplicationClient from '@/app/(app)/incorporation/ui/Tra
 export default async function Page() {
   const user = await getCurrentUser();
   if (!user) redirect('/portal/login');
-  if (user.role !== 'client') redirect('/jobs');
 
   return (
     <div className="min-h-screen flex flex-col">
