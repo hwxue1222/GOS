@@ -62,7 +62,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
   const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
-  const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
+  const portalUsers = (db as unknown as { portalUsers?: Array<{ email: string }> }).portalUsers ?? [];
+  const userByEmail = new Map((portalUsers as any[]).map((u) => [String(u.email ?? '').trim().toLowerCase(), u]));
 
   const rows = db.clientPartyRoles
     .filter((r) => r.clientId === clientId)
