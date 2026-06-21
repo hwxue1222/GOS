@@ -22,16 +22,6 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function waitForSession(maxMs = 2500) {
-    const start = Date.now();
-    while (Date.now() - start < maxMs) {
-      const res = await fetch('/api/me', { cache: 'no-store' }).catch(() => null);
-      if (res?.ok) return true;
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    return false;
-  }
-
   function clearPortalLocalDrafts() {
     try {
       const keys: string[] = [];
@@ -82,25 +72,35 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
         setError(j?.error ?? `HTTP_${res.status}`);
         return;
       }
-      await waitForSession();
-      const me = await fetch('/api/me', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      const role = me?.user?.role as string | undefined;
-      if (mode === 'portal' && role !== 'client') {
+
+      const j = (await res.json().catch(() => null)) as { role?: string } | null;
+      let role = j?.role;
+      if (!role) {
+        const me = await fetch('/api/me', { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null);
+        role = me?.user?.role as string | undefined;
+      }
+
+      if (mode === 'portal' && role && role !== 'client') {
         await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
         setError('PLEASE_USE_COMPANY_ACCOUNT');
         return;
       }
+
       if (mode === 'admin' && role === 'client') {
         await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
         setError('PLEASE_USE_STAFF_ACCOUNT');
         return;
       }
+
       if (mode === 'portal') {
         clearPortalLocalDrafts();
         router.replace('/portal/companies');
-      } else {
-        router.replace(role === 'client' ? '/dashboard' : from);
+        return;
       }
+
+      router.replace(from);
     } catch {
       setError('NETWORK_ERROR');
     } finally {

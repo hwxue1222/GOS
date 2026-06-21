@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       await touchPersonLastLoginDateByPortalUserId(user.id).catch(() => null);
       await touchPersonLastLoginDateByEmail(user.email).catch(() => null);
 
-      const res = NextResponse.json({ ok: true });
+      const res = NextResponse.json({ ok: true, role: 'client' });
       res.cookies.set(PORTAL_SESSION_COOKIE, session.token, {
         httpOnly: true,
         sameSite: 'lax',
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
     const session = await createSession(user.id);
 
-    const res = NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true, role: user.role });
     res.cookies.set(ADMIN_SESSION_COOKIE, session.token, {
       httpOnly: true,
       sameSite: 'lax',
