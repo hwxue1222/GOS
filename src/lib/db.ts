@@ -6575,10 +6575,6 @@ export async function readDb(): Promise<Db> {
     changed = true;
   }
   if (Array.isArray((db as unknown as { reservedNames?: unknown }).reservedNames)) {
-    const legacy = (db as unknown as { reservedNames?: string[] }).reservedNames ?? [];
-    const admin = (db as unknown as { reservedAdminNames?: string[] }).reservedAdminNames ?? [];
-    const merged = [...admin, ...legacy].map((s) => String(s ?? '').trim().toLowerCase()).filter(Boolean);
-    (db as unknown as { reservedAdminNames?: string[] }).reservedAdminNames = Array.from(new Set(merged));
     changed = true;
   }
 
@@ -6639,8 +6635,7 @@ export async function readDb(): Promise<Db> {
       passwordHash: lukePasswordHash,
       createdAt: nowIso(),
     };
-    const adminNames = Array.isArray((db as any).reservedAdminNames) ? (db as any).reservedAdminNames : [];
-    db = { ...db, users: [luke], reservedAdminNames: Array.from(new Set([...adminNames, 'luke'])) } as any;
+    db = { ...db, users: [luke] } as any;
     changed = true;
   }
 
@@ -6810,11 +6805,9 @@ export async function createUser(input: {
   password: string;
 }) {
   const db = await readDb();
-  const nameKey = input.name.trim().toLowerCase();
-  const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
   const emailTaken = db.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase());
   if (emailTaken) return { ok: false as const, error: 'EMAIL_TAKEN' as const };
-  const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase()) || reserved.has(nameKey);
+  const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase());
   if (nameTaken) return { ok: false as const, error: 'NAME_TAKEN' as const };
   const user: User = {
     id: newId('usr'),
@@ -6827,10 +6820,6 @@ export async function createUser(input: {
     createdAt: nowIso(),
   };
   db.users.unshift(user);
-  if (nameKey) {
-    reserved.add(nameKey);
-    (db as any).reservedAdminNames = [...reserved];
-  }
   await writeDb(db);
   return { ok: true as const, user };
 }
@@ -6844,7 +6833,6 @@ export async function updateUser(
   if (idx < 0) return { ok: false, error: 'NOT_FOUND' };
   const current = db.users[idx];
   const nextNameKey = typeof patch.name === 'string' ? patch.name.trim().toLowerCase() : current.name.trim().toLowerCase();
-  const currentNameKey = current.name.trim().toLowerCase();
 
   if (typeof patch.email === 'string') {
     const emailKey = patch.email.trim().toLowerCase();
@@ -6854,18 +6842,10 @@ export async function updateUser(
   if (typeof patch.name === 'string') {
     const inUseByOther = db.users.some((u) => u.id !== userId && u.name.trim().toLowerCase() === nextNameKey);
     if (inUseByOther) return { ok: false, error: 'NAME_TAKEN' };
-    const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
-    if (nextNameKey && nextNameKey !== currentNameKey && reserved.has(nextNameKey)) {
-      return { ok: false, error: 'NAME_TAKEN' };
-    }
   }
 
   const next: User = { ...current, ...patch };
   db.users[idx] = next;
-  const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
-  if (currentNameKey) reserved.add(currentNameKey);
-  if (nextNameKey) reserved.add(nextNameKey);
-  (db as any).reservedAdminNames = [...reserved];
   await writeDb(db);
   return { ok: true, user: next };
 }
@@ -6897,13 +6877,8 @@ export async function updatePortalUser(
   }
   if (typeof patch.name === 'string') {
     const nameKey = nextName.toLowerCase();
-    const reserved = new Set(((db as any).reservedPortalNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
     const inUseByOther = list.some((u: any) => String(u.id) !== userId && String(u.name ?? '').trim().toLowerCase() === nameKey);
-    if (inUseByOther || reserved.has(nameKey)) return { ok: false, error: 'NAME_TAKEN' };
-    if (nameKey) {
-      reserved.add(nameKey);
-      (db as any).reservedPortalNames = [...reserved];
-    }
+    if (inUseByOther) return { ok: false, error: 'NAME_TAKEN' };
   }
   const next = { ...current, name: nextName || current.name, email: nextEmail || current.email };
   list[idx] = next;
@@ -6972,6 +6947,11 @@ export async function deleteUserIfNoOverdueTasks(input: { userId: string }) {
   }
 
   db.sessions = db.sessions.filter((s) => s.userId !== input.userId);
+  const key = String(user.name ?? '').trim().toLowerCase();
+  if (key) {
+    const current = Array.isArray((db as any).reservedAdminNames) ? ((db as any).reservedAdminNames as any[]) : [];
+    (db as any).reservedAdminNames = current.filter((x) => String(x ?? '').trim().toLowerCase() !== key);
+  }
   db.users.splice(idx, 1);
   await writeDb(db);
   return { ok: true as const, user };
@@ -8252,11 +8232,10 @@ export async function createClientLoginForPerson(input: { personId: string }) {
   const existing = (portalUsers as any[]).find((u) => String(u.email ?? '').trim().toLowerCase() === email.toLowerCase()) ?? null;
   if (existing) return { ok: true as const, user: existing, tempPassword: null as string | null };
   const baseName = person.fullName.trim() || email;
-  const reserved = new Set(((db as any).reservedPortalNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
   const taken = new Set((portalUsers as any[]).map((u) => String(u.name ?? '').trim().toLowerCase()));
   let name = baseName;
   let idx = 1;
-  while (!name.trim() || taken.has(name.trim().toLowerCase()) || reserved.has(name.trim().toLowerCase())) {
+  while (!name.trim() || taken.has(name.trim().toLowerCase())) {
     idx++;
     name = `${baseName} ${idx}`;
   }
@@ -8270,8 +8249,6 @@ export async function createClientLoginForPerson(input: { personId: string }) {
     createdAt: nowIso(),
   };
   (portalUsers as any[]).unshift(user);
-  reserved.add(name.trim().toLowerCase());
-  (db as any).reservedPortalNames = [...reserved];
   (db as any).portalUsers = portalUsers;
   await writeDb(db);
   return { ok: true as const, user, tempPassword };
