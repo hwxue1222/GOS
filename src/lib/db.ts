@@ -2032,25 +2032,48 @@ function inferMissingPersonIdTypesFromIdNo(db: Db) {
 
 
 function normalizeDb(parsed: Db): Db {
-  const keyOfName = (name: string) => name.trim().toLowerCase();
   const users = (parsed.users ?? []).map((u) => ({
     ...u,
     position: (u as User).position,
     permissions: (u as User).permissions,
   }));
 
-  const reservedFromDb = Array.isArray((parsed as unknown as { reservedNames?: unknown }).reservedNames)
-    ? ((parsed as unknown as { reservedNames?: string[] }).reservedNames ?? [])
+  const portalUsers = Array.isArray((parsed as unknown as { portalUsers?: unknown }).portalUsers)
+    ? (((parsed as unknown as { portalUsers?: any[] }).portalUsers ?? []) as any[]).map((u) => ({
+        id: String(u?.id ?? ''),
+        role: 'client' as const,
+        name: String(u?.name ?? ''),
+        email: String(u?.email ?? ''),
+        passwordHash: String(u?.passwordHash ?? ''),
+        createdAt: String(u?.createdAt ?? nowIso()),
+      }))
     : [];
-  const reservedSet = new Set<string>();
-  for (const rn of reservedFromDb) {
-    const k = keyOfName(rn ?? '');
-    if (k) reservedSet.add(k);
-  }
-  for (const u of users) {
-    const k = keyOfName(u.name);
-    if (k) reservedSet.add(k);
-  }
+
+  const portalSessions = Array.isArray((parsed as unknown as { portalSessions?: unknown }).portalSessions)
+    ? (((parsed as unknown as { portalSessions?: Session[] }).portalSessions ?? []) as Session[])
+    : [];
+
+  const passwordResets = Array.isArray((parsed as unknown as { passwordResets?: unknown }).passwordResets)
+    ? (((parsed as unknown as { passwordResets?: any[] }).passwordResets ?? []) as any[])
+    : [];
+
+  const reservedNames = Array.isArray((parsed as unknown as { reservedNames?: unknown }).reservedNames)
+    ? (((parsed as unknown as { reservedNames?: string[] }).reservedNames ?? []) as string[])
+        .map((x) => String(x ?? '').trim())
+        .filter(Boolean)
+    : [];
+
+  const reservedAdminNames = Array.isArray((parsed as unknown as { reservedAdminNames?: unknown }).reservedAdminNames)
+    ? (((parsed as unknown as { reservedAdminNames?: string[] }).reservedAdminNames ?? []) as string[])
+        .map((x) => String(x ?? '').trim())
+        .filter(Boolean)
+    : [];
+
+  const reservedPortalNames = Array.isArray((parsed as unknown as { reservedPortalNames?: unknown }).reservedPortalNames)
+    ? (((parsed as unknown as { reservedPortalNames?: string[] }).reservedPortalNames ?? []) as string[])
+        .map((x) => String(x ?? '').trim())
+        .filter(Boolean)
+    : [];
   const clients = (parsed.clients ?? []).map((c) => ({
     ...c,
     tags: (c as Client).tags ?? [],
@@ -2525,6 +2548,9 @@ function normalizeDb(parsed: Db): Db {
   return {
     users,
     sessions: parsed.sessions ?? [],
+    portalUsers,
+    portalSessions,
+    passwordResets,
     clients,
     contractTemplates,
     contracts,
@@ -2550,7 +2576,9 @@ function normalizeDb(parsed: Db): Db {
     jobs,
     tasks: tasks as unknown as JobTask[],
     auditLogs,
-    reservedNames: [...reservedSet],
+    reservedNames,
+    reservedAdminNames,
+    reservedPortalNames,
     seed:
       typeof (parsed as unknown as { seed?: unknown }).seed === 'object' && (parsed as unknown as { seed?: unknown }).seed
         ? ((parsed as unknown as { seed?: Record<string, boolean> }).seed ?? {})
