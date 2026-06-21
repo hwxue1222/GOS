@@ -95,27 +95,29 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
     }
   }
 
+  const homeHref = currentCompanyId ? `/portal/companies/${encodeURIComponent(currentCompanyId)}` : '/portal/companies';
+
   function goCompanyService(service: 'director' | 'share_transfer') {
     if (!currentCompanyId) return;
     if (service === 'director') {
       router.push(`/corporate-secretary/applications/new/director-change?companyId=${encodeURIComponent(currentCompanyId)}`);
       return;
     }
-    router.push(`/secretary/share-transfers?clientId=${encodeURIComponent(currentCompanyId)}`);
+    router.push(`/corporate-secretary/share-transfer?companyId=${encodeURIComponent(currentCompanyId)}`);
   }
 
   return (
     <header className="bg-white border-b border-black/5">
       <div className="h-14 px-4 flex items-center justify-between gap-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 min-w-0">
-          <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+          <Link href={homeHref} className="flex items-center gap-2 shrink-0">
             <div className="h-8 w-8 rounded-md bg-[#c62828]/10 text-[#c62828] flex items-center justify-center font-semibold">B</div>
             <div className="hidden sm:block text-sm font-semibold text-black">BBY Secretary Service Portal</div>
           </Link>
 
           <nav className="flex items-center gap-1">
             <Link
-              href="/dashboard"
+              href={homeHref}
               className={[
                 'px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap hover:shadow-sm',
                 active === 'dashboard' ? 'text-black' : 'text-black/70 hover:text-black hover:bg-black/5',

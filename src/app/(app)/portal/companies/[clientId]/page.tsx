@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
-import AppTopNav from '@/components/AppTopNav';
+import FrontTopNavClient from '@/components/FrontTopNavClient';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import ssic from '@/data/ssic.json';
@@ -74,14 +75,35 @@ function SsicValue({ code }: { code?: string }) {
 export default async function PortalCompanyDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
   const me = await getCurrentUser();
   if (!me) return null;
+  if (me.role !== 'client') redirect('/portal/login');
 
   const { clientId } = await params;
   const db = await readDb();
+
+  const emailKey = me.email.trim().toLowerCase();
+  const partyByIdForAccess = new Map(db.parties.map((p) => [p.id, p]));
+  const personByIdForAccess = new Map(db.persons.map((p) => [p.id, p]));
+  const allowedCompanyIds = new Set<string>();
+  for (const r of db.clientPartyRoles) {
+    if (!isActiveDirector(r)) continue;
+    const party = partyByIdForAccess.get(r.partyId);
+    if (!party || party.type !== 'PERSON' || !party.personId) continue;
+    const person = personByIdForAccess.get(party.personId);
+    if (!person) continue;
+    if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+    allowedCompanyIds.add(r.clientId);
+  }
+
+  const companies = db.clients
+    .filter((c) => !c.deletedAt)
+    .filter((c) => allowedCompanyIds.has(c.id))
+    .map((c) => ({ id: c.id, name: c.name, code: c.code, isStruckOff: (c as any).isStruckOff }))
+    .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
   const client = db.clients.find((c) => c.id === clientId && !c.deletedAt) ?? null;
   if (!client) {
     return (
       <div className="min-h-screen flex flex-col">
-        <AppTopNav active="dashboard" />
+        <FrontTopNavClient active="dashboard" user={{ id: me.id, name: me.name, email: me.email, role: me.role }} companies={companies} />
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">NOT_FOUND</div>
@@ -94,7 +116,7 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
   if (!canAccessClient(db, me, clientId)) {
     return (
       <div className="min-h-screen flex flex-col">
-        <AppTopNav active="dashboard" />
+        <FrontTopNavClient active="dashboard" user={{ id: me.id, name: me.name, email: me.email, role: me.role }} companies={companies} />
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-red-600">FORBIDDEN</div>
@@ -134,7 +156,7 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AppTopNav active="dashboard" />
+      <FrontTopNavClient active="dashboard" user={{ id: me.id, name: me.name, email: me.email, role: me.role }} companies={companies} />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="text-sm text-[#2f7bdc]">

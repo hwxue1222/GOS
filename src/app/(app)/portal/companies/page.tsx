@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import AppTopNav from '@/components/AppTopNav';
+import FrontTopNavClient from '@/components/FrontTopNavClient';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 
@@ -14,18 +14,7 @@ export default async function PortalCompaniesIndexPage() {
 
   const db = await readDb();
   if (me.role !== 'client') {
-    const first = db.clients.find((c) => !c.deletedAt) ?? null;
-    if (first) redirect(`/portal/companies/${encodeURIComponent(first.id)}`);
-    return (
-      <div className="min-h-screen flex flex-col">
-        <AppTopNav active="dashboard" />
-        <div className="flex-1">
-          <div className="max-w-6xl mx-auto px-4 py-6">
-            <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">NO_COMPANIES</div>
-          </div>
-        </div>
-      </div>
-    );
+    redirect('/portal/login');
   }
 
   const emailKey = me.email.trim().toLowerCase();
@@ -51,7 +40,11 @@ export default async function PortalCompaniesIndexPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AppTopNav active="dashboard" />
+      <FrontTopNavClient
+        active="dashboard"
+        user={{ id: me.id, name: me.name, email: me.email, role: me.role }}
+        companies={[]}
+      />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="rounded-xl bg-white border border-black/5 p-6 text-sm text-black/60">NO_COMPANIES</div>
