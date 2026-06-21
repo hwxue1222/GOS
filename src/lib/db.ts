@@ -8230,7 +8230,14 @@ export async function createClientLoginForPerson(input: { personId: string }) {
   if (!person || !email) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const portalUsers = (db as unknown as { portalUsers?: any[] }).portalUsers ?? [];
   const existing = (portalUsers as any[]).find((u) => String(u.email ?? '').trim().toLowerCase() === email.toLowerCase()) ?? null;
-  if (existing) return { ok: true as const, user: existing, tempPassword: null as string | null };
+  if (existing) {
+    const tempPassword = makeTempPassword();
+    const idx = (portalUsers as any[]).findIndex((u) => String(u.id) === String(existing.id));
+    if (idx >= 0) (portalUsers as any[])[idx] = { ...(portalUsers as any[])[idx], passwordHash: await hashPassword(tempPassword) };
+    (db as any).portalUsers = portalUsers;
+    await writeDb(db);
+    return { ok: true as const, user: (portalUsers as any[])[idx] ?? existing, tempPassword };
+  }
   const baseName = person.fullName.trim() || email;
   const taken = new Set((portalUsers as any[]).map((u) => String(u.name ?? '').trim().toLowerCase()));
   let name = baseName;
