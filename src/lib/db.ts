@@ -10331,6 +10331,27 @@ export async function deleteCompanyUpdateRequest(input: { requestId: string; del
   return { ok: true as const, request: r };
 }
 
+export async function deleteRejectedCompanyUpdateRequest(input: { requestId: string }) {
+  const db = await readDb();
+  const list = getCompanyUpdateRequestList(db);
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
+  list.splice(idx, 1);
+  (db as unknown as { companyUpdateRequests?: CompanyUpdateRequest[] }).companyUpdateRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
 export async function deleteDirectorChangeRequest(input: { requestId: string; deletedByUserId: string }) {
   const db = await readDb();
   const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
@@ -10342,6 +10363,29 @@ export async function deleteDirectorChangeRequest(input: { requestId: string; de
   const r = list[idx];
   if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
   if (r.status === 'REJECTED' || r.status === 'APPROVED') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
+  list.splice(idx, 1);
+  (db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
+export async function deleteRejectedDirectorChangeRequest(input: { requestId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { directorChangeRequests?: unknown }).directorChangeRequests)
+    ? (((db as unknown as { directorChangeRequests?: DirectorChangeRequest[] }).directorChangeRequests ?? []) as DirectorChangeRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const packets = db.signaturePackets.filter((p) => p.relatedType === 'DIRECTOR_CHANGE' && p.relatedId === r.id);
   if (packets.length) {
@@ -10374,6 +10418,29 @@ export async function deleteRorcDeclarationRequest(input: { requestId: string; d
   return { ok: true as const, request: r };
 }
 
+export async function deleteRejectedRorcDeclarationRequest(input: { requestId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { rorcDeclarationRequests?: unknown }).rorcDeclarationRequests)
+    ? (((db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests ?? []) as RorcDeclarationRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'RORC_DECLARATION' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
+  list.splice(idx, 1);
+  (db as unknown as { rorcDeclarationRequests?: RorcDeclarationRequest[] }).rorcDeclarationRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
 export async function deleteAnnualGeneralMeetingRequest(input: { requestId: string; deletedByUserId: string }) {
   const db = await readDb();
   const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
@@ -10393,6 +10460,29 @@ export async function deleteAnnualGeneralMeetingRequest(input: { requestId: stri
   return { ok: true as const, request: r };
 }
 
+export async function deleteRejectedAnnualGeneralMeetingRequest(input: { requestId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)
+    ? (((db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests ?? []) as AnnualGeneralMeetingRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.status !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'ANNUAL_GENERAL_MEETING' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
+  list.splice(idx, 1);
+  (db as unknown as { annualGeneralMeetingRequests?: AnnualGeneralMeetingRequest[] }).annualGeneralMeetingRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
 export async function deleteShareTransfer(input: { transferId: string }) {
   const db = await readDb();
   const idx = db.shareTransfers.findIndex((t) => t.id === input.transferId);
@@ -10401,6 +10491,29 @@ export async function deleteShareTransfer(input: { transferId: string }) {
 
   const st = String((t as any).status ?? '');
   if (st === 'APPROVED' || st === 'REJECTED' || st === 'APPLIED') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
+  for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  if (Array.isArray((t as any).blockingRdrIds)) {
+    for (const id of (t as any).blockingRdrIds as string[]) {
+      deleteSignaturePacketCascade(db, id);
+    }
+  }
+
+  db.shareTransfers.splice(idx, 1);
+  db.auditLogs = (db.auditLogs ?? []).filter((a) => !(a.entityType === 'share_transfer' && a.entityId === t.id));
+  await writeDb(db);
+  return { ok: true as const, transfer: t };
+}
+
+export async function deleteRejectedShareTransfer(input: { transferId: string }) {
+  const db = await readDb();
+  const idx = db.shareTransfers.findIndex((t) => t.id === input.transferId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const t = db.shareTransfers[idx];
+
+  const st = String((t as any).status ?? '');
+  if (st !== 'REJECTED') return { ok: false as const, error: 'INVALID_STATE' as const };
 
   const packets = db.signaturePackets.filter((p) => p.relatedType === 'SHARE_TRANSFER' && p.relatedId === t.id);
   for (const p of packets) deleteSignaturePacketCascade(db, p.id);

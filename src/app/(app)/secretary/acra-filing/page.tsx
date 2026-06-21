@@ -93,6 +93,7 @@ export default async function SecretaryAcraFilingPage() {
             typeLabel: 'Change of Director',
             detailsHref: `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`,
             decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}/decision`,
+            deleteUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}`,
           };
         }
         if (r.type === 'RORC_DECLARATION') {
@@ -101,6 +102,7 @@ export default async function SecretaryAcraFilingPage() {
             typeLabel: 'Declaration of Company Controller (RORC)',
             detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`,
             decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/rorc-declaration-requests/${encodeURIComponent(r.source.id)}/decision`,
+            deleteUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/rorc-declaration-requests/${encodeURIComponent(r.source.id)}`,
           };
         }
         if (r.type === 'ANNUAL_GENERAL_MEETING') {
@@ -109,6 +111,7 @@ export default async function SecretaryAcraFilingPage() {
             typeLabel: 'Annual General Meeting',
             detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`,
             decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}/decision`,
+            deleteUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}`,
           };
         }
         if (r.type === 'SHARE_TRANSFER') {
@@ -117,6 +120,7 @@ export default async function SecretaryAcraFilingPage() {
             typeLabel: 'Transfer of Shares',
             detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
             decisionUrl: `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}/decision`,
+            deleteUrl: `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}`,
           };
         }
         return {
@@ -124,6 +128,7 @@ export default async function SecretaryAcraFilingPage() {
           typeLabel: labelForCompanyUpdateType(r.type),
           detailsHref: `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`,
           decisionUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/company-update-requests/${encodeURIComponent(r.source.id)}/decision`,
+          deleteUrl: `/api/secretary/companies/${encodeURIComponent(r.companyId)}/company-update-requests/${encodeURIComponent(r.source.id)}`,
         };
       })();
 
@@ -137,6 +142,7 @@ export default async function SecretaryAcraFilingPage() {
         status: r.status,
         detailsHref: map.detailsHref,
         decisionUrl: map.decisionUrl,
+        deleteUrl: map.deleteUrl,
       };
     })
     .sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));

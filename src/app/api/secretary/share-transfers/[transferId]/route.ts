@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { deleteShareTransfer, readDb } from '@/lib/db';
+import { deleteRejectedShareTransfer, deleteShareTransfer, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveDirector(r: { role: string; resignationDate?: string }) {
@@ -39,6 +39,12 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ transferId:
     if (!hasPermission(user, 'secretary', 'update')) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
+    const st = String((t as any).status ?? '');
+    if (st === 'REJECTED') {
+      const r = await deleteRejectedShareTransfer({ transferId });
+      if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+      return NextResponse.json({ ok: true });
+    }
   } else {
     if (!(await canAccessClientAsDirector(user, t.clientId))) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
@@ -49,4 +55,3 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ transferId:
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
-

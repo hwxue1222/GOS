@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { appendAuditLog, deleteDirectorChangeRequest, readDb } from '@/lib/db';
+import { appendAuditLog, deleteDirectorChangeRequest, deleteRejectedDirectorChangeRequest, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
@@ -37,21 +37,35 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ clientId: s
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
-  if (user.role !== 'client') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (user.role === 'client') {
+    if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    const r = await deleteDirectorChangeRequest({ requestId, deletedByUserId: user.id });
+    if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'secretary',
+      action: 'delete_director_change_request',
+      entityType: 'director_change_request',
+      entityId: requestId,
+      summary: `Delete director change request: ${requestId}`,
+    });
+    return NextResponse.json({ ok: true });
+  }
 
-  const r = await deleteDirectorChangeRequest({ requestId, deletedByUserId: user.id });
+  if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const r = await deleteRejectedDirectorChangeRequest({ requestId });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
   await appendAuditLog({
     actorUserId: user.id,
     actorName: user.name,
     actorRole: user.role,
     area: 'secretary',
-    action: 'delete_director_change_request',
+    action: 'delete_rejected_director_change_request',
     entityType: 'director_change_request',
     entityId: requestId,
-    summary: `Delete director change request: ${requestId}`,
+    summary: `Delete rejected director change request: ${requestId}`,
   });
   return NextResponse.json({ ok: true });
 }
-

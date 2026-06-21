@@ -14,6 +14,7 @@ export type ReviewRow = {
   status: string;
   detailsHref: string;
   decisionUrl: string;
+  deleteUrl?: string;
 };
 
 function ellipsizeId(id: string) {
@@ -38,6 +39,27 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ decision, note }),
       }).catch(() => null);
+      const j = await res?.json().catch(() => null);
+      if (!res?.ok) {
+        setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(row: ReviewRow) {
+    if (busyId) return;
+    if (row.status !== 'REJECTED') return;
+    if (!row.deleteUrl) return;
+    const ok = window.confirm(`Delete rejected application ${row.id}?`);
+    if (!ok) return;
+    setError(null);
+    setBusyId(row.id);
+    try {
+      const res = await fetch(row.deleteUrl, { method: 'DELETE' }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok) {
         setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
@@ -86,7 +108,15 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                     >
                       Details
                     </Link>
-                    {r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
+                    {r.status === 'REJECTED' ? (
+                      <button
+                        disabled={!!busyId}
+                        onClick={() => void remove(r)}
+                        className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    ) : r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
                       <>
                         <button
                           disabled={!!busyId}

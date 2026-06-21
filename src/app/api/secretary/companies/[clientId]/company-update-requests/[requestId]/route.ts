@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { appendAuditLog, deleteCompanyUpdateRequest, readDb } from '@/lib/db';
+import { appendAuditLog, deleteCompanyUpdateRequest, deleteRejectedCompanyUpdateRequest, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
@@ -59,6 +59,18 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ clientId: s
   if (!hasPermission(user, 'secretary', 'update')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
-  return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-}
 
+  const r = await deleteRejectedCompanyUpdateRequest({ requestId });
+  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'delete_rejected_company_update_request',
+    entityType: 'company_update_request',
+    entityId: requestId,
+    summary: `Delete rejected company update request: ${requestId}`,
+  });
+  return NextResponse.json({ ok: true });
+}
