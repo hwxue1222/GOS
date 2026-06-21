@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import type { Browser } from 'puppeteer-core';
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
@@ -147,9 +145,6 @@ function parseMatchesFromText(text: string) {
 }
 
 export async function GET(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-
   const url = new URL(req.url);
   const name = (url.searchParams.get('name') ?? '').trim();
   const debug = url.searchParams.get('debug') === '1';
@@ -157,20 +152,39 @@ export async function GET(req: Request) {
 
   const searchUrl = `https://www.sgpbusiness.com/search/${encodeURIComponent(name)}`;
 
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  page.setDefaultNavigationTimeout(25_000);
+  let page: Awaited<ReturnType<Browser['newPage']>> | null = null;
   try {
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    page.setDefaultNavigationTimeout(25_000);
+
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
     await new Promise((r) => setTimeout(r, 2500));
     const bodyText = await page.evaluate(() => document.body?.innerText ?? '');
-    if (/just a moment/i.test(bodyText) || /checking your browser/i.test(bodyText)) {
+    const low = bodyText.toLowerCase();
+    if (
+      /just a moment/i.test(bodyText) ||
+      /checking your browser/i.test(bodyText) ||
+      low.includes('cloudflare') ||
+      low.includes('challenges.cloudflare.com')
+    ) {
       return NextResponse.json({ ok: true, available: null, reason: 'BLOCKED', searchUrl });
     }
 
-    const matches = parseMatchesFromText(bodyText);
+    const matchesRaw = parseMatchesFromText(bodyText);
+    const matches = matchesRaw
+      .map((m) => ({ ...m, key: normalizeName(m.name) }))
+      .filter((m) => {
+        if (!m.key) return false;
+        if (m.key.includes('search results')) return false;
+        return true;
+      });
+
+    if (matches.length === 0) {
+      return NextResponse.json({ ok: true, available: null, reason: 'UNPARSABLE', searchUrl });
+    }
     const targetKey = normalizeName(name);
-    const conflict = matches.find((m) => normalizeName(m.name) === targetKey) ?? null;
+    const conflict = matches.find((m) => m.key === targetKey) ?? null;
 
     return NextResponse.json({
       ok: true,
@@ -181,13 +195,13 @@ export async function GET(req: Request) {
         ? {
             targetKey,
             parsedCount: matches.length,
-            sample: matches.slice(0, 5),
+            sample: matches.slice(0, 5).map((m) => ({ name: m.name, operatingStatus: m.operatingStatus, key: m.key })),
           }
         : undefined,
     });
   } catch (e) {
     return NextResponse.json({ ok: true, available: null, reason: (e as Error).message || 'ERROR', searchUrl });
   } finally {
-    await page.close().catch(() => null);
+    await page?.close().catch(() => null);
   }
 }
