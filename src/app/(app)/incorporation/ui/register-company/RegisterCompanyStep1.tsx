@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { Currency } from '@/lib/types';
 import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicCombobox';
@@ -37,6 +37,9 @@ export default function RegisterCompanyStep1(props: {
   const v = props.value;
   const set = (patch: Partial<typeof v>) => props.onChange({ ...v, ...patch });
   const prevManualAddressRef = useRef<string>('');
+  const [checking, setChecking] = useState<'company' | 'alternative' | null>(null);
+  const [companyCheck, setCompanyCheck] = useState<{ available: boolean | null; searchUrl?: string } | null>(null);
+  const [alternativeCheck, setAlternativeCheck] = useState<{ available: boolean | null; searchUrl?: string } | null>(null);
   const suffixOptions = ['Pte Ltd', 'Ltd', 'LLP', 'LP', 'Sole Proprietorship'];
   const currencyOptions: Array<{ label: string; value: Currency }> = [
     { label: 'Singapore Dollar(s$) S$', value: 'SGD' },
@@ -57,13 +60,46 @@ export default function RegisterCompanyStep1(props: {
     }
   }, [bbyRegisteredOfficeAddress, props, v, v.address, v.useByBridgeRegisteredOfficeAddress]);
 
-  async function openBizFileSearch(query: string) {
-    const q = query.trim();
-    if (!q) return;
+  async function checkAvailability(kind: 'company' | 'alternative') {
+    const base = kind === 'company' ? v.companyName : v.alternativeName;
+    const suffix = kind === 'company' ? v.companySuffix : v.alternativeSuffix;
+    const full = `${base} ${suffix}`.trim();
+    if (!base.trim()) return;
+
+    setChecking(kind);
+    if (kind === 'company') setCompanyCheck(null);
+    if (kind === 'alternative') setAlternativeCheck(null);
     try {
-      await navigator.clipboard.writeText(q);
-    } catch {}
-    window.open('https://www.bizfile.gov.sg/buy-info/search/results', '_blank', 'noopener,noreferrer');
+      const res = await fetch(`/api/incorporation/name-availability?name=${encodeURIComponent(full)}`, { cache: 'no-store' }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as
+        | { ok?: boolean; available?: boolean | null; searchUrl?: string }
+        | null;
+      const out = { available: j?.available ?? null, searchUrl: j?.searchUrl };
+      if (kind === 'company') setCompanyCheck(out);
+      if (kind === 'alternative') setAlternativeCheck(out);
+    } finally {
+      setChecking((p) => (p === kind ? null : p));
+    }
+  }
+
+  function renderAvailabilityBadge(r: { available: boolean | null; searchUrl?: string } | null): ReactNode {
+    if (!r) return null;
+    if (r.available === true) return <div className="mt-2 text-xs font-medium text-[#16a34a]">● available for incorporation</div>;
+    if (r.available === false) return <div className="mt-2 text-xs font-medium text-red-600">● not available</div>;
+    return (
+      <div className="mt-2 text-xs text-black/60">
+        Unable to check.{
+          r.searchUrl ? (
+            <>
+              {' '}
+              <a href={r.searchUrl} target="_blank" rel="noreferrer" className="text-[#2f7bdc] hover:underline">
+                Open search
+              </a>
+            </>
+          ) : null
+        }
+      </div>
+    );
   }
 
   return (
@@ -94,11 +130,13 @@ export default function RegisterCompanyStep1(props: {
           </div>
           <button
             type="button"
-            onClick={() => void openBizFileSearch(v.companyName)}
-            className="mt-2 text-xs text-[#2f7bdc] hover:underline"
+            disabled={checking === 'company'}
+            onClick={() => void checkAvailability('company')}
+            className="mt-2 inline-flex items-center gap-2 rounded-md bg-white border border-black/10 px-3 py-1.5 text-xs font-medium text-black/70 hover:bg-black/[0.02] disabled:opacity-60"
           >
-            Search on BizFile (copies name)
+            {checking === 'company' ? 'Checking...' : 'Check name availability'}
           </button>
+          {renderAvailabilityBadge(companyCheck)}
         </label>
 
         <label className="text-sm">
@@ -126,11 +164,13 @@ export default function RegisterCompanyStep1(props: {
           </div>
           <button
             type="button"
-            onClick={() => void openBizFileSearch(v.alternativeName)}
-            className="mt-2 text-xs text-[#2f7bdc] hover:underline"
+            disabled={checking === 'alternative'}
+            onClick={() => void checkAvailability('alternative')}
+            className="mt-2 inline-flex items-center gap-2 rounded-md bg-white border border-black/10 px-3 py-1.5 text-xs font-medium text-black/70 hover:bg-black/[0.02] disabled:opacity-60"
           >
-            Search on BizFile (copies name)
+            {checking === 'alternative' ? 'Checking...' : 'Check name availability'}
           </button>
+          {renderAvailabilityBadge(alternativeCheck)}
         </label>
 
         <label className="text-sm">
