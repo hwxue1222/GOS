@@ -14,6 +14,16 @@ function isHttpsRequest(req: Request) {
   return proto === 'https';
 }
 
+function clearCookie(res: NextResponse, name: string, req: Request) {
+  res.cookies.set(name, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isHttpsRequest(req),
+    path: '/',
+    expires: new Date(0),
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => null)) as
@@ -45,6 +55,7 @@ export async function POST(req: Request) {
         path: '/',
         expires: new Date(session.expiresAt),
       });
+      clearCookie(res, ADMIN_SESSION_COOKIE, req);
       return res;
     }
 
@@ -63,6 +74,7 @@ export async function POST(req: Request) {
       secure: isHttpsRequest(req),
       path: '/',
     });
+    clearCookie(res, PORTAL_SESSION_COOKIE, req);
     return res;
   } catch {
     return NextResponse.json({ ok: false, error: 'SERVER_ERROR' }, { status: 500 });
