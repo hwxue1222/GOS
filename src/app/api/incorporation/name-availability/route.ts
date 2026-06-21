@@ -87,6 +87,31 @@ function parseMatchesFromText(text: string) {
     .filter(Boolean);
 
   const out: Array<{ name: string; operatingStatus: string }> = [];
+
+  const isNoise = (s: string) => {
+    const low = s.toLowerCase();
+    return (
+      low.includes('search results') ||
+      low.includes('disclaimer') ||
+      low.includes('singapore business directory') ||
+      low.includes('filter to only show') ||
+      low.startsWith('uen') ||
+      low.startsWith('address')
+    );
+  };
+
+  const pickNameBefore = (i: number) => {
+    for (let j = i - 1; j >= Math.max(0, i - 12); j -= 1) {
+      const cand = lines[j];
+      if (cand.length < 3 || cand.length > 140) continue;
+      if (isNoise(cand)) continue;
+      if (/\b(live company|operating status)\b/i.test(cand)) continue;
+      if (/^\w+:\s*/.test(cand) && !/\b(pte|ltd|llp|lp)\b/i.test(cand)) continue;
+      return cand;
+    }
+    return '';
+  };
+
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     const low = line.toLowerCase();
@@ -95,20 +120,15 @@ function parseMatchesFromText(text: string) {
     const status = lines[i + 1] ?? line;
     if (!/\blive company\b/i.test(status)) continue;
 
-    let name = '';
-    for (let j = i - 1; j >= Math.max(0, i - 12); j -= 1) {
-      const cand = lines[j];
-      if (cand.length < 3 || cand.length > 120) continue;
-      if (/search results/i.test(cand)) continue;
-      if (/disclaimer/i.test(cand)) continue;
-      if (/singapore business directory/i.test(cand)) continue;
-      if (/operating status/i.test(cand)) continue;
-      if (/^uen\b/i.test(cand.toLowerCase())) continue;
-      if (/^address\b/i.test(cand.toLowerCase())) continue;
-      name = cand;
-      break;
-    }
+    const name = pickNameBefore(i);
     if (name) out.push({ name, operatingStatus: status });
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!/\blive company\b/i.test(line)) continue;
+    const name = pickNameBefore(i);
+    if (name) out.push({ name, operatingStatus: line });
   }
 
   return out;
@@ -120,6 +140,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const name = (url.searchParams.get('name') ?? '').trim();
+  const debug = url.searchParams.get('debug') === '1';
   if (name.length < 2 || name.length > 120) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   const searchUrl = `https://www.sgpbusiness.com/search/${encodeURIComponent(name)}`;
@@ -144,6 +165,13 @@ export async function GET(req: Request) {
       available: conflict ? false : true,
       conflict: conflict ? { name: conflict.name, operatingStatus: conflict.operatingStatus } : null,
       searchUrl,
+      debug: debug
+        ? {
+            targetKey,
+            parsedCount: matches.length,
+            sample: matches.slice(0, 5),
+          }
+        : undefined,
     });
   } catch (e) {
     return NextResponse.json({ ok: true, available: null, reason: (e as Error).message || 'ERROR', searchUrl });
