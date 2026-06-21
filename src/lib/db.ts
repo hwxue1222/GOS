@@ -6914,6 +6914,16 @@ export async function updatePortalUser(
   const next = { ...current, name: nextName || current.name, email: nextEmail || current.email };
   list[idx] = next;
   (db as any).portalUsers = list;
+
+  if (typeof patch.email === 'string') {
+    const pidx = db.persons.findIndex((p) => String((p as Person).portalUserId ?? '') === userId);
+    if (pidx >= 0) {
+      const now = nowIso();
+      const prev = db.persons[pidx];
+      db.persons[pidx] = { ...prev, email: next.email, updatedAt: now };
+    }
+  }
+
   await writeDb(db);
   return { ok: true, user: next };
 }
@@ -8235,6 +8245,19 @@ export async function touchPersonLastLoginDateByEmail(email: string) {
   return { ok: true as const };
 }
 
+export async function touchPersonLastLoginDateByPortalUserId(portalUserId: string) {
+  const id = portalUserId.trim();
+  if (!id) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const db = await readDb();
+  const idx = db.persons.findIndex((p) => String((p as Person).portalUserId ?? '') === id);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+  const now = nowIso();
+  const prev = db.persons[idx];
+  db.persons[idx] = { ...prev, lastLoginDate: now, updatedAt: now };
+  await writeDb(db);
+  return { ok: true as const };
+}
+
 export async function setClientPasswordForPerson(input: { personId: string; newPassword: string }) {
   const personId = input.personId.trim();
   const newPassword = input.newPassword;
@@ -8265,6 +8288,12 @@ export async function createClientLoginForPerson(input: { personId: string }) {
     const tempPassword = makeTempPassword();
     const idx = (portalUsers as any[]).findIndex((u) => String(u.id) === String(existing.id));
     if (idx >= 0) (portalUsers as any[])[idx] = { ...(portalUsers as any[])[idx], passwordHash: await hashPassword(tempPassword) };
+    const pidx = db.persons.findIndex((p) => p.id === input.personId);
+    if (pidx >= 0) {
+      const now = nowIso();
+      const prev = db.persons[pidx];
+      db.persons[pidx] = { ...prev, portalUserId: String(existing.id), updatedAt: now };
+    }
     (db as any).portalUsers = portalUsers;
     await writeDb(db);
     return { ok: true as const, user: (portalUsers as any[])[idx] ?? existing, tempPassword };
@@ -8287,6 +8316,14 @@ export async function createClientLoginForPerson(input: { personId: string }) {
     createdAt: nowIso(),
   };
   (portalUsers as any[]).unshift(user);
+  {
+    const pidx = db.persons.findIndex((p) => p.id === input.personId);
+    if (pidx >= 0) {
+      const now = nowIso();
+      const prev = db.persons[pidx];
+      db.persons[pidx] = { ...prev, portalUserId: String(user.id), updatedAt: now };
+    }
+  }
   (db as any).portalUsers = portalUsers;
   await writeDb(db);
   return { ok: true as const, user, tempPassword };

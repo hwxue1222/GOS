@@ -168,6 +168,7 @@ export type Person = {
   fullName: string;
   email?: string;
   phone?: string;
+  portalUserId?: string;
   idType?: PersonIdType;
   idNo?: string;
   nationality?: string;

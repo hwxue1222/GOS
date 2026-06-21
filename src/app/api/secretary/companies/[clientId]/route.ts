@@ -66,6 +66,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   const externalCompanyById = new Map((db.externalCompanies ?? []).map((c) => [c.id, c]));
   const portalUsers = (db as unknown as { portalUsers?: Array<{ email: string }> }).portalUsers ?? [];
   const userByEmail = new Map((portalUsers as any[]).map((u) => [String(u.email ?? '').trim().toLowerCase(), u]));
+  const userById = new Map((portalUsers as any[]).map((u) => [String(u.id ?? ''), u]));
 
   const rows = db.clientPartyRoles
     .filter((r) => r.clientId === clientId)
@@ -76,8 +77,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
       if (party.type === 'PERSON' && party.personId) {
         const person = personById.get(party.personId);
         if (!person) return null;
-        const emailKey = (person.email ?? '').trim().toLowerCase();
-        const loginUser = emailKey ? userByEmail.get(emailKey) ?? null : null;
+        const loginUser =
+          person.portalUserId
+            ? userById.get(String(person.portalUserId)) ?? null
+            : (() => {
+                const emailKey = (person.email ?? '').trim().toLowerCase();
+                return emailKey ? userByEmail.get(emailKey) ?? null : null;
+              })();
         return { role: r, entity: { type: 'PERSON', person: { ...person, hasLogin: !!loginUser } } };
       }
       if (party.type === 'COMPANY' && party.clientId) {

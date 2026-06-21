@@ -5,6 +5,7 @@ import {
   findPortalUserByEmail,
   findUserByEmailOrName,
   touchPersonLastLoginDateByEmail,
+  touchPersonLastLoginDateByPortalUserId,
 } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 import { ADMIN_SESSION_COOKIE, PORTAL_SESSION_COOKIE } from '@/lib/auth';
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
       if (!ok) return NextResponse.json({ ok: false, error: 'INVALID_LOGIN' }, { status: 401 });
 
       const session = await createPortalSession(user.id);
+      await touchPersonLastLoginDateByPortalUserId(user.id).catch(() => null);
       await touchPersonLastLoginDateByEmail(user.email).catch(() => null);
 
       const res = NextResponse.json({ ok: true });
