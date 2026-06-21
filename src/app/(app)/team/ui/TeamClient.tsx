@@ -30,6 +30,11 @@ const PERMISSION_TABLE: Array<{
   actions: PermissionAction[];
 }> = [
   {
+    module: 'proxy',
+    label: 'Client Portal (Proxy)',
+    actions: ['viewAssigned', 'viewAll'],
+  },
+  {
     module: 'secretary',
     label: 'Secretary',
     actions: ['viewAssigned', 'viewAll', 'create', 'update'],
@@ -64,6 +69,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
       clients: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
       secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
+      proxy: { viewAssigned: true, viewAll: true },
     };
   }
   if (role === 'manager') {
@@ -73,6 +79,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
       clients: { viewAssigned: true, viewAll: true, create: true, update: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
       secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
+      proxy: { viewAssigned: true, viewAll: true },
     };
   }
   return {
@@ -81,6 +88,7 @@ function defaultPermissionsForRole(role: Role): Permissions {
     clients: { viewAssigned: true },
     staffs: {},
     secretary: {},
+    proxy: {},
   };
 }
 
@@ -262,6 +270,33 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
     }
   }
 
+  async function remove() {
+    setError(null);
+    if (!selected) return;
+    if (selected.tasksOverdue > 0) {
+      setError('HAS_OVERDUE_TASKS');
+      return;
+    }
+    const ok = window.confirm(`Delete staff ${selected.name}?`);
+    if (!ok) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(selected.id)}`, { method: 'DELETE' }).catch(() => null);
+      const j = await res?.json().catch(() => null);
+      if (!res?.ok) {
+        setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== selected.id));
+      const next = users.filter((u) => u.id !== selected.id)[0] ?? null;
+      if (next) startEdit(next.id);
+      else startCreate();
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="flex-1">
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -401,6 +436,21 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
           />
           <button className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium">Find</button>
         </div>
+
+        {mode === 'edit' && selected && (meRole === 'owner' || meRole === 'manager') ? (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-black/50">
+              Staff can be deleted only when tasks overdue is 0.
+            </div>
+            <button
+              disabled={saving || selected.tasksOverdue > 0 || selected.role === 'owner'}
+              onClick={remove}
+              className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              Delete staff
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-3 rounded-xl bg-white border border-black/5 overflow-x-auto">
           <table className="min-w-full text-sm">

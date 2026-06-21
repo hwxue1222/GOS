@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import UserMenuClient from '@/components/UserMenuClient';
-import { canManageTeam } from '@/lib/permissions';
+import { canManageTeam, hasPermission } from '@/lib/permissions';
 import LanguageToggleClient from '@/components/LanguageToggleClient';
 import { tServer } from '@/lib/i18n';
 import { getLangFromCookies } from '@/lib/i18n.server';
@@ -16,6 +16,7 @@ type Props = {
     | 'reports'
     | 'secretary'
     | 'contracts'
+    | 'proxy'
     | 'dashboard'
     | 'incorporation'
     | 'corporate-secretary';
@@ -98,6 +99,11 @@ export default async function AppTopNav({ active }: Props) {
             <NavLink href="/clients" active={active === 'clients'}>
               {tServer(lang, 'nav.clients')}
             </NavLink>
+            {hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned') ? (
+              <NavLink href="/proxy" active={active === 'proxy'}>
+                {tServer(lang, 'nav.proxy')}
+              </NavLink>
+            ) : null}
             <NavLink href="/invoices" active={active === 'invoices'}>
               {tServer(lang, 'nav.invoices')}
             </NavLink>

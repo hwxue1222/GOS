@@ -13,7 +13,16 @@ export type PermissionAction =
   | 'import'
   | 'assignTemplate';
 
-export type PermissionModule = 'jobs' | 'tasks' | 'clients' | 'staffs' | 'invoices' | 'secretary' | 'people' | 'contracts';
+export type PermissionModule =
+  | 'jobs'
+  | 'tasks'
+  | 'clients'
+  | 'staffs'
+  | 'invoices'
+  | 'secretary'
+  | 'people'
+  | 'contracts'
+  | 'proxy';
 
 export type Permissions = Partial<Record<PermissionModule, Partial<Record<PermissionAction, boolean>>>>;
 
@@ -162,7 +171,7 @@ export type Person = {
   deletedAt?: string;
 };
 
-export type AuditArea = 'jobs' | 'clients' | 'invoices' | 'secretary' | 'members';
+export type AuditArea = 'jobs' | 'clients' | 'invoices' | 'secretary' | 'members' | 'proxy';
 
 export type AuditLog = {
   id: string;
@@ -175,6 +184,7 @@ export type AuditLog = {
   entityType?: string;
   entityId?: string;
   summary: string;
+  meta?: Record<string, unknown>;
 };
 
 export type PartyType = 'PERSON' | 'COMPANY';

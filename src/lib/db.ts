@@ -2451,6 +2451,10 @@ function normalizeDb(parsed: Db): Db {
           entityType: typeof (l as AuditLog).entityType === 'string' ? (l as AuditLog).entityType : undefined,
           entityId: typeof (l as AuditLog).entityId === 'string' ? (l as AuditLog).entityId : undefined,
           summary: String((l as AuditLog).summary ?? ''),
+          meta:
+            typeof (l as AuditLog).meta === 'object' && (l as AuditLog).meta
+              ? ((l as AuditLog).meta as Record<string, unknown>)
+              : undefined,
         }))
         .filter((l) => !!l.id && !!l.createdAt && !!l.area && !!l.action && !!l.summary)
         .slice(-5000)
@@ -6625,6 +6629,7 @@ export async function appendAuditLog(entry: Omit<AuditLog, 'id' | 'createdAt'> &
     entityType: entry.entityType,
     entityId: entry.entityId,
     summary: entry.summary,
+    meta: typeof entry.meta === 'object' && entry.meta ? entry.meta : undefined,
   };
   const prev = Array.isArray((db as unknown as { auditLogs?: unknown }).auditLogs) ? ((db as unknown as { auditLogs?: AuditLog[] }).auditLogs ?? []) : [];
   const next = [...prev, log];
@@ -6790,6 +6795,55 @@ export async function setUserPassword(userId: string, newPassword: string) {
 export async function listUsers() {
   const db = await readDb();
   return db.users;
+}
+
+export async function deleteUserIfNoOverdueTasks(input: { userId: string }) {
+  const db = await readDb();
+  const idx = db.users.findIndex((u) => u.id === input.userId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const nowTime = Date.now();
+  let overdueCount = 0;
+  for (const j of db.jobs) {
+    if (j.deletedAt) continue;
+    const jobDueTime = j.dueDate ? new Date(j.dueDate).getTime() : NaN;
+    const jobStaffId = j.staffUserId;
+    for (const t of db.tasks.filter((x) => x.jobId === j.id)) {
+      if (t.status !== 'Todo') continue;
+      const assigneeId = t.assigneeUserId ?? jobStaffId;
+      if (assigneeId !== input.userId) continue;
+      const dueIso = t.dueDate ?? j.dueDate;
+      if (!dueIso) continue;
+      const dueTime = new Date(dueIso).getTime();
+      if (Number.isNaN(dueTime)) continue;
+      if (dueTime < nowTime) overdueCount += 1;
+    }
+    if (Number.isNaN(jobDueTime)) continue;
+  }
+
+  if (overdueCount > 0) return { ok: false as const, error: 'HAS_OVERDUE_TASKS' as const, overdueCount };
+
+  const user = db.users[idx];
+
+  for (let i = 0; i < db.jobs.length; i += 1) {
+    const j = db.jobs[i];
+    if (j.managerUserId === input.userId) db.jobs[i] = { ...j, managerUserId: undefined };
+    else if (j.staffUserId === input.userId) db.jobs[i] = { ...j, staffUserId: undefined };
+    else if ((j as unknown as { createdByUserId?: string }).createdByUserId === input.userId)
+      db.jobs[i] = { ...j, createdByUserId: undefined } as typeof j;
+  }
+
+  for (let i = 0; i < db.tasks.length; i += 1) {
+    const t = db.tasks[i];
+    if (t.assigneeUserId === input.userId) db.tasks[i] = { ...t, assigneeUserId: undefined };
+    else if ((t as unknown as { createdByUserId?: string }).createdByUserId === input.userId)
+      db.tasks[i] = { ...t, createdByUserId: undefined } as typeof t;
+  }
+
+  db.sessions = db.sessions.filter((s) => s.userId !== input.userId);
+  db.users.splice(idx, 1);
+  await writeDb(db);
+  return { ok: true as const, user };
 }
 
 export async function createClient(input: {

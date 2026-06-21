@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findUserByEmail, updateUser } from '@/lib/db';
+import { deleteUserIfNoOverdueTasks, findUserByEmail, findUserById, updateUser } from '@/lib/db';
 import type { Permissions, Role } from '@/lib/types';
 import { hasPermission } from '@/lib/permissions';
 
@@ -62,4 +62,24 @@ export async function PATCH(
       permissions: updated.user.permissions,
     },
   });
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ userId: string }> }) {
+  const me = await getCurrentUser();
+  if (!me) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(me, 'staffs', 'trash')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const { userId } = await params;
+  if (!userId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (userId === me.id) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  const target = await findUserById(userId);
+  if (!target) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (target.role === 'owner') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+
+  const r = await deleteUserIfNoOverdueTasks({ userId });
+  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  return NextResponse.json({ ok: true });
 }
