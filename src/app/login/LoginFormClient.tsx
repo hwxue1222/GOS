@@ -32,12 +32,36 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
     return false;
   }
 
+  function clearPortalLocalDrafts() {
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < window.localStorage.length; i += 1) {
+        const k = window.localStorage.key(i);
+        if (k) keys.push(k);
+      }
+      for (const k of keys) {
+        if (
+          k === 'gos.currentCompanyId' ||
+          k === 'gos.proxyCompanyId' ||
+          k === 'gos.proxyCompanyName' ||
+          k === 'gos.proxyCompanyCode' ||
+          k.startsWith('gos.inc.') ||
+          k.startsWith('gos.secretary.shareTransfers.')
+        ) {
+          window.localStorage.removeItem(k);
+        }
+      }
+    } catch {
+      return;
+    }
+  }
+
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (!j?.ok) return;
-        if (mode === 'portal') router.replace('/dashboard');
+        if (mode === 'portal') router.replace('/portal/companies');
         else router.replace('/jobs');
       })
       .catch(() => {});
@@ -72,7 +96,8 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
         return;
       }
       if (mode === 'portal') {
-        router.replace(role === 'client' ? from : '/jobs');
+        clearPortalLocalDrafts();
+        router.replace('/portal/companies');
       } else {
         router.replace(role === 'client' ? '/dashboard' : from);
       }

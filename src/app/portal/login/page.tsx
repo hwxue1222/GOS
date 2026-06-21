@@ -14,7 +14,7 @@ export default function PortalLoginPage() {
         mode="portal"
         title="BBY Corporate secretary service portal"
         subtitle=""
-        defaultFrom="/dashboard"
+        defaultFrom="/portal/companies"
       />
     </Suspense>
   );
