@@ -7,17 +7,47 @@ import { getCurrentUser } from '@/lib/auth';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-function stripLegalSuffix(input: string) {
-  return input.replace(/\b(Pte\s+Ltd|Ltd|LLP|LP)\b\.?\s*$/i, '').trim();
-}
-
 function normalizeName(input: string) {
-  const s = stripLegalSuffix(String(input ?? ''))
-    .replaceAll(/[^a-zA-Z0-9]+/g, ' ')
-    .replaceAll(/\s+/g, ' ')
+  const tokens = String(input ?? '')
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, ' ')
     .trim()
-    .toLowerCase();
-  return s;
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const endsWith = (suffix: string[]) => {
+    if (tokens.length < suffix.length) return false;
+    for (let i = 0; i < suffix.length; i += 1) {
+      if (tokens[tokens.length - suffix.length + i] !== suffix[i]) return false;
+    }
+    return true;
+  };
+
+  const popN = (n: number) => {
+    for (let i = 0; i < n; i += 1) tokens.pop();
+  };
+
+  while (true) {
+    if (endsWith(['pte', 'ltd'])) {
+      popN(2);
+      continue;
+    }
+    if (endsWith(['ltd'])) {
+      popN(1);
+      continue;
+    }
+    if (endsWith(['llp'])) {
+      popN(1);
+      continue;
+    }
+    if (endsWith(['lp'])) {
+      popN(1);
+      continue;
+    }
+    break;
+  }
+
+  return tokens.join(' ');
 }
 
 async function getBrowser() {
