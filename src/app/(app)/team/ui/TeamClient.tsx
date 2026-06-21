@@ -14,7 +14,7 @@ type StaffRow = {
   tasksOverdue: number;
 };
 
-type Props = { initialUsers: StaffRow[]; meRole: Role };
+type Props = { initialUsers: StaffRow[]; meRole: Role; canDeleteStaff: boolean };
 
 type FormState = {
   name: string;
@@ -121,7 +121,7 @@ function staffToForm(u: StaffRow): FormState {
   };
 }
 
-export default function TeamClient({ initialUsers, meRole }: Props) {
+export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Props) {
   const router = useRouter();
   const [users, setUsers] = useState<StaffRow[]>(initialUsers);
   const [search, setSearch] = useState('');
@@ -270,27 +270,28 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
     }
   }
 
-  async function remove() {
+  async function remove(user: StaffRow) {
     setError(null);
-    if (!selected) return;
-    if (selected.tasksOverdue > 0) {
+    if (user.tasksOverdue > 0) {
       setError('HAS_OVERDUE_TASKS');
       return;
     }
-    const ok = window.confirm(`Delete staff ${selected.name}?`);
+    const ok = window.confirm(`Delete staff ${user.name}?`);
     if (!ok) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(selected.id)}`, { method: 'DELETE' }).catch(() => null);
+      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}`, { method: 'DELETE' }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok) {
         setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
-      setUsers((prev) => prev.filter((u) => u.id !== selected.id));
-      const next = users.filter((u) => u.id !== selected.id)[0] ?? null;
-      if (next) startEdit(next.id);
-      else startCreate();
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      if (selectedId === user.id) {
+        const next = users.filter((u) => u.id !== user.id)[0] ?? null;
+        if (next) startEdit(next.id);
+        else startCreate();
+      }
       router.refresh();
     } finally {
       setSaving(false);
@@ -437,21 +438,6 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
           <button className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium">Find</button>
         </div>
 
-        {mode === 'edit' && selected && (meRole === 'owner' || meRole === 'manager') ? (
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-black/50">
-              Staff can be deleted only when tasks overdue is 0.
-            </div>
-            <button
-              disabled={saving || selected.tasksOverdue > 0 || selected.role === 'owner'}
-              onClick={remove}
-              className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-2 text-sm font-medium disabled:opacity-60"
-            >
-              Delete staff
-            </button>
-          </div>
-        ) : null}
-
         <div className="mt-3 rounded-xl bg-white border border-black/5 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-black/60">
@@ -461,6 +447,7 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
                 <th className="px-4 py-3 font-medium">Position</th>
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Tasks overdue</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -494,11 +481,27 @@ export default function TeamClient({ initialUsers, meRole }: Props) {
                       <span className="text-black/40">0</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {canDeleteStaff ? (
+                      <button
+                        disabled={saving || u.tasksOverdue > 0 || u.role === 'owner'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void remove(u);
+                        }}
+                        className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    ) : (
+                      <span className="text-black/30">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-black/50">
+                  <td colSpan={6} className="px-4 py-10 text-center text-black/50">
                     No staff
                   </td>
                 </tr>

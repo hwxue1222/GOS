@@ -88,11 +88,11 @@ export default async function AppTopNav({ active }: Props) {
   return (
     <header className="bg-[#23323d] text-white">
       <div className="h-14 px-4 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="h-9 w-9 rounded-md bg-white/10 flex items-center justify-center font-semibold">
             G
           </div>
-          <nav className="flex items-center gap-1 ml-2">
+          <nav className="flex items-center gap-1 ml-2 min-w-0 overflow-x-auto whitespace-nowrap">
             <NavLink href="/jobs" active={active === 'jobs'}>
               {tServer(lang, 'nav.jobs')}
             </NavLink>

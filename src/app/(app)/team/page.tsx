@@ -8,6 +8,7 @@ export default async function TeamPage() {
   const me = await getCurrentUser();
   if (!me) return null;
   const allowed = hasPermission(me, 'staffs', 'viewAll');
+  const canDeleteStaff = hasPermission(me, 'staffs', 'trash');
   const users = allowed ? await listUsers() : [];
   const safeUsers = users.map((u) => ({
     id: u.id,
@@ -23,7 +24,7 @@ export default async function TeamPage() {
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="jobs" />
       {allowed ? (
-        <TeamClient initialUsers={staffRows} meRole={me.role} />
+        <TeamClient initialUsers={staffRows} meRole={me.role} canDeleteStaff={canDeleteStaff} />
       ) : (
         <div className="flex-1">
           <div className="max-w-6xl mx-auto px-4 py-6">
