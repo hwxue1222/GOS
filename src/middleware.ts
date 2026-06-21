@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/admin/login', '/portal/login', '/sign', '/p'];
+const publicPaths = ['/', '/login', '/admin/login', '/portal/login', '/sign', '/p'];
 
 function loginPathFor(pathname: string) {
   if (
