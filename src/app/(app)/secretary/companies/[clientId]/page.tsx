@@ -69,7 +69,9 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
-  const userByEmail = new Map(db.users.map((u) => [u.email.trim().toLowerCase(), u]));
+  const portalUsers = (db as unknown as { portalUsers?: Array<{ id: string; email: string }> }).portalUsers ?? [];
+  const userByEmail = new Map((portalUsers as any[]).map((u) => [String(u.email ?? '').trim().toLowerCase(), u]));
+  const userById = new Map((portalUsers as any[]).map((u) => [String(u.id ?? ''), u]));
 
   const rows = db.clientPartyRoles
     .filter((r) => r.clientId === clientId)
@@ -80,8 +82,13 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
       if (party.type === 'PERSON' && party.personId) {
         const person = personById.get(party.personId);
         if (!person) return null;
-        const emailKey = (person.email ?? '').trim().toLowerCase();
-        const loginUser = emailKey ? userByEmail.get(emailKey) ?? null : null;
+        const loginUser =
+          (person as any).portalUserId
+            ? userById.get(String((person as any).portalUserId)) ?? null
+            : (() => {
+                const emailKey = (person.email ?? '').trim().toLowerCase();
+                return emailKey ? userByEmail.get(emailKey) ?? null : null;
+              })();
         return { role: r, entity: { type: 'PERSON', person: { id: person.id, fullName: person.fullName, email: person.email, phone: person.phone, hasLogin: !!loginUser } } };
       }
       if (party.type === 'COMPANY' && party.clientId) {

@@ -2229,11 +2229,14 @@ function normalizeDb(parsed: Db): Db {
     fullName: (p as Person).fullName,
     email: (p as Person).email,
     phone: (p as Person).phone,
+    portalUserId: (p as Person).portalUserId,
     idType: (p as Person).idType,
     idNo: (p as Person).idNo,
     nationality: (p as Person).nationality,
     dob: (p as Person).dob,
     address: (p as Person).address,
+    memberSince: (p as Person).memberSince,
+    lastLoginDate: (p as Person).lastLoginDate,
     updatedAt: (p as Person).updatedAt ?? (p as Person).createdAt,
     deletedAt: (p as Person).deletedAt,
   }));
@@ -6619,6 +6622,26 @@ export async function readDb(): Promise<Db> {
     (db as unknown as { portalUsers?: any[] }).portalUsers = portalUsers;
     (db as unknown as { portalSessions?: any[] }).portalSessions = portalSessions;
     changed = true;
+  }
+
+  if (Array.isArray((db as unknown as { portalUsers?: any[] }).portalUsers) && Array.isArray(db.persons)) {
+    const byEmail = new Map(
+      ((db as unknown as { portalUsers?: any[] }).portalUsers ?? []).map((u: any) => [String(u?.email ?? '').trim().toLowerCase(), String(u?.id ?? '')]),
+    );
+    const now = nowIso();
+    let patchedAny = false;
+    for (let i = 0; i < db.persons.length; i++) {
+      const p = db.persons[i] as Person;
+      if (p.deletedAt) continue;
+      if (p.portalUserId) continue;
+      const key = String(p.email ?? '').trim().toLowerCase();
+      if (!key) continue;
+      const pid = byEmail.get(key);
+      if (!pid) continue;
+      db.persons[i] = { ...p, portalUserId: pid, updatedAt: now };
+      patchedAny = true;
+    }
+    if (patchedAny) changed = true;
   }
 
   if (migrateClientCodesV1(db)) changed = true;
