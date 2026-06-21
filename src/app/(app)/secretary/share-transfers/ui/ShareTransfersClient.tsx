@@ -168,7 +168,7 @@ export default function ShareTransfersClient(props: {
 }) {
   const { initialClients, initialTransfers, initialClientId } = props;
 
-  const [clients] = useState<ClientLite[]>(initialClients);
+  const [clients, setClients] = useState<ClientLite[]>(initialClients);
   const [transfers, setTransfers] = useState<ShareTransfer[]>(initialTransfers);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -518,8 +518,20 @@ export default function ShareTransfersClient(props: {
   async function refresh() {
     const res = await fetch('/api/secretary/share-transfers', { headers: proxyHeaders });
     const j = await res.json().catch(() => null);
-    if (res.ok && Array.isArray(j?.transfers)) setTransfers(j.transfers);
+    if (!res.ok) return;
+    if (Array.isArray(j?.clients)) {
+      const nextClients = (j.clients as any[])
+        .map((c) => ({ id: String(c?.id ?? '').trim(), code: String(c?.code ?? '').trim(), name: String(c?.name ?? '').trim() }))
+        .filter((c) => !!c.id);
+      setClients(nextClients);
+    }
+    if (Array.isArray(j?.transfers)) setTransfers(j.transfers);
   }
+
+  useEffect(() => {
+    if (initialTransfers.length) return;
+    void refresh();
+  }, []);
 
   function validateDraft(d: ShareTransferDraft, index: number) {
     if (!selectedClientId) return `Transfer #${index + 1}: INVALID_COMPANY`;

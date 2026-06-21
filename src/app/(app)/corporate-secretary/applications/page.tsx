@@ -201,15 +201,20 @@ export default async function CorporateSecretaryApplicationsPage({
                 New AGM
               </Link>
               <Link
-                href={filterCompanyId ? `/secretary/share-transfers?clientId=${encodeURIComponent(filterCompanyId)}` : '/secretary/share-transfers'}
+                href={
+                  (() => {
+                    const cid = filterCompanyId || companies[0]?.id || '';
+                    return cid ? `/corporate-secretary/share-transfer?companyId=${encodeURIComponent(cid)}` : '/corporate-secretary/applications';
+                  })()
+                }
                 className={actionBtnSecondary}
               >
                 New Share Transfer
               </Link>
-              <Link href="/incorporation/register" className={actionBtnSecondary}>
+              <Link href="/corporate-secretary/incorporation/register" className={actionBtnSecondary}>
                 New Register
               </Link>
-              <Link href="/incorporation/transfer-secretary" className={actionBtnSecondary}>
+              <Link href="/corporate-secretary/incorporation/transfer-secretary" className={actionBtnSecondary}>
                 New Transfer Secretary
               </Link>
             </div>

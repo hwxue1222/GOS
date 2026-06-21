@@ -15,10 +15,23 @@ type ParsedHash = {
 
 function parseHash(hash: string): ParsedHash | null {
   const parts = hash.split('$');
-  if (parts.length !== 3) return null;
   if (parts[0] !== 'scrypt') return null;
-  const salt = Buffer.from(parts[1] ?? '', 'base64');
-  const derivedKey = Buffer.from(parts[2] ?? '', 'base64');
+
+  let saltPart = '';
+  let derivedPart = '';
+
+  if (parts.length === 3) {
+    saltPart = parts[1] ?? '';
+    derivedPart = parts[2] ?? '';
+  } else if (parts.length === 5 && parts[1] === '' && parts[3] === '') {
+    saltPart = parts[2] ?? '';
+    derivedPart = parts[4] ?? '';
+  } else {
+    return null;
+  }
+
+  const salt = Buffer.from(saltPart, 'base64');
+  const derivedKey = Buffer.from(derivedPart, 'base64');
   if (!salt.length || !derivedKey.length) return null;
   return { salt, derivedKey };
 }

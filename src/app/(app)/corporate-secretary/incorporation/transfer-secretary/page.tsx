@@ -10,13 +10,12 @@ export default async function ProxyTransferSecretaryModalPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AppTopNav active="proxy" />
+      <AppTopNav active="corporate-secretary" />
       <div className="flex-1 relative">
-        <ModalShell title="Transfer of Company Secretary" closeHref="/dashboard">
+        <ModalShell title="Transfer of Company Secretary" closeHref="/corporate-secretary/applications">
           <TransferSecretaryWizardClient mode="create" />
         </ModalShell>
       </div>
     </div>
   );
 }
-

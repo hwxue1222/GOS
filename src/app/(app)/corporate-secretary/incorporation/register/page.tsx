@@ -10,13 +10,12 @@ export default async function ProxyRegisterCompanyModalPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AppTopNav active="proxy" />
+      <AppTopNav active="corporate-secretary" />
       <div className="flex-1 relative">
-        <ModalShell title="Register Company" closeHref="/dashboard">
+        <ModalShell title="Register Company" closeHref="/corporate-secretary/applications">
           <RegisterCompanyApplicationClient />
         </ModalShell>
       </div>
     </div>
   );
 }
-
