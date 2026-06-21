@@ -7,7 +7,7 @@ import { DateInputYMD } from '@/components/DateInputYMD';
 type CompanyOption = { id: string; name: string };
 
 type Props = {
-  companies: CompanyOption[];
+  companies?: CompanyOption[];
   defaultCompanyId?: string;
 };
 
@@ -20,7 +20,8 @@ function bytesToBase64(bytes: ArrayBuffer) {
 
 export default function TransferSecretaryApplicationClient(props: Props) {
   const router = useRouter();
-  const [companyId, setCompanyId] = useState(props.defaultCompanyId ?? props.companies[0]?.id ?? '');
+  const companies = props.companies ?? [];
+  const [companyId, setCompanyId] = useState(props.defaultCompanyId ?? companies[0]?.id ?? '');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [newSecretaryName, setNewSecretaryName] = useState('');
   const [newSecretaryEmail, setNewSecretaryEmail] = useState('');
@@ -30,7 +31,7 @@ export default function TransferSecretaryApplicationClient(props: Props) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const companyName = useMemo(() => props.companies.find((c) => c.id === companyId)?.name ?? '', [companyId, props.companies]);
+  const companyName = useMemo(() => companies.find((c) => c.id === companyId)?.name ?? '', [companies, companyId]);
   const canSubmit = useMemo(() => !!companyId && newSecretaryName.trim().length > 0, [companyId, newSecretaryName]);
 
   async function uploadFiles(applicationId: string) {
@@ -94,7 +95,8 @@ export default function TransferSecretaryApplicationClient(props: Props) {
             onChange={(e) => setCompanyId(e.target.value)}
             className="mt-1 w-full rounded-md border border-black/10 bg-white px-3 py-2"
           >
-            {props.companies.map((c) => (
+            {companies.length === 0 ? <option value="">No companies</option> : null}
+            {companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
