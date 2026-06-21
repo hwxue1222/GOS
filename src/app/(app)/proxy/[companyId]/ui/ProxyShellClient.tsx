@@ -46,16 +46,6 @@ export default function ProxyShellClient(props: {
     }
   }
 
-  async function switchCompany() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await postAudit({ action: 'switch', companyId: props.company.id, proxyMeta: { route: `/proxy/${props.company.id}` } });
-    } finally {
-      router.push('/proxy');
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="mt-4 rounded-xl bg-white border border-black/5">
@@ -67,13 +57,6 @@ export default function ProxyShellClient(props: {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            disabled={busy}
-            onClick={() => void switchCompany()}
-            className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:opacity-60"
-          >
-            切换公司
-          </button>
           <button
             disabled={busy}
             onClick={() => void exit()}
