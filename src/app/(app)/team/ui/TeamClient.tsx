@@ -225,7 +225,7 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
             name: form.name,
             email: form.email,
             position: form.position || undefined,
-            role: meRole === 'owner' ? form.role : 'staff',
+            role: meRole === 'owner' && form.role !== 'owner' ? form.role : 'staff',
             permissions: form.permissions,
           }),
         });
@@ -249,7 +249,7 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
             name: form.name,
             email: form.email,
             position: form.position || undefined,
-            role: meRole === 'owner' ? form.role : undefined,
+            role: meRole === 'owner' && form.role !== 'owner' ? form.role : undefined,
             permissions: form.permissions,
           }),
         });
@@ -359,15 +359,19 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
           <div className="mt-4">
             <div className="text-sm font-medium">Roles</div>
             <div className="mt-2 flex flex-wrap gap-4 text-sm">
-              {(['owner', 'manager', 'staff'] as const)
-                .filter((r) => meRole === 'owner' || r === 'staff' || (mode === 'edit' && form.role === r))
-                .map((r) => (
+              {(() => {
+                const roles: Role[] = ['staff'];
+                if (meRole === 'owner') roles.unshift('manager');
+                if (mode === 'edit' && form.role === 'manager' && !roles.includes('manager')) roles.unshift('manager');
+                if (mode === 'edit' && form.role === 'owner' && !roles.includes('owner')) roles.unshift('owner');
+                return roles;
+              })().map((r) => (
                 <label key={r} className="inline-flex items-center gap-2">
                   <input
                     type="radio"
                     name="role"
                     checked={form.role === r}
-                    disabled={meRole !== 'owner'}
+                    disabled={meRole !== 'owner' || r === 'owner'}
                     onChange={() =>
                       setForm((v) => ({
                         ...v,
