@@ -88,6 +88,17 @@ function parseMatchesFromText(text: string) {
 
   const out: Array<{ name: string; operatingStatus: string }> = [];
 
+  const extractNameFromLiveLine = (line: string) => {
+    const m = line.match(/^(.*)\bLive Company\b/i);
+    if (!m) return '';
+    let left = m[1].trim();
+    if (!left) return '';
+    left = left.replace(/\bUEN\b.*$/i, '').trim();
+    const tokens = left.split(/\s+/).filter(Boolean);
+    if (tokens.length >= 2 && /^[A-Z]{1,3}$/.test(tokens[0])) tokens.shift();
+    return tokens.join(' ').trim();
+  };
+
   const isNoise = (s: string) => {
     const low = s.toLowerCase();
     return (
@@ -127,7 +138,8 @@ function parseMatchesFromText(text: string) {
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (!/\blive company\b/i.test(line)) continue;
-    const name = pickNameBefore(i);
+    const fromSameLine = extractNameFromLiveLine(line);
+    const name = fromSameLine || pickNameBefore(i);
     if (name) out.push({ name, operatingStatus: line });
   }
 

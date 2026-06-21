@@ -70,7 +70,7 @@ export default function RegisterCompanyStep1(props: {
     if (kind === 'company') setCompanyCheck(null);
     if (kind === 'alternative') setAlternativeCheck(null);
     try {
-      const res = await fetch(`/api/incorporation/name-availability?name=${encodeURIComponent(full)}`, { cache: 'no-store' }).catch(() => null);
+      const res = await fetch(`/api/incorporation/name-availability?name=${encodeURIComponent(full)}&t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as
         | { ok?: boolean; available?: boolean | null; searchUrl?: string }
         | null;
