@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/', '/login', '/admin/login', '/portal/login', '/sign', '/p'];
+const publicPaths = ['/login', '/admin/login', '/portal/login', '/sign', '/p'];
 
 function loginPathFor(pathname: string) {
   if (
@@ -22,6 +22,11 @@ function loginPathFor(pathname: string) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  const rawHost = String(req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').toLowerCase();
+  const firstHost = rawHost.split(',')[0]?.trim() ?? '';
+  const hostNoPort = firstHost.replace(/^https?:\/\//, '').split('/')[0]?.split(':')[0]?.trim() ?? '';
+  const isFrontDomain = hostNoPort === 'bby.today' || hostNoPort === 'www.bby.today' || hostNoPort.endsWith('.bby.today');
+
   if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname === '/favicon.ico') {
     return NextResponse.next();
   }
@@ -36,7 +41,11 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('gos_session')?.value;
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = loginPathFor(pathname);
+    if (pathname === '/') {
+      url.pathname = isFrontDomain ? '/portal/login' : '/login';
+    } else {
+      url.pathname = isFrontDomain ? '/portal/login' : loginPathFor(pathname);
+    }
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
