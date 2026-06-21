@@ -30,6 +30,11 @@ const PERMISSION_TABLE: Array<{
   actions: PermissionAction[];
 }> = [
   {
+    module: 'invoices',
+    label: 'Invoices',
+    actions: ['viewAll', 'create', 'update', 'markPaid', 'trash'],
+  },
+  {
     module: 'proxy',
     label: 'Client Portal (Proxy)',
     actions: ['viewAssigned', 'viewAll'],
@@ -37,6 +42,16 @@ const PERMISSION_TABLE: Array<{
   {
     module: 'secretary',
     label: 'Secretary',
+    actions: ['viewAssigned', 'viewAll', 'create', 'update'],
+  },
+  {
+    module: 'people',
+    label: 'People',
+    actions: ['viewAssigned', 'viewAll', 'create', 'update', 'import'],
+  },
+  {
+    module: 'contracts',
+    label: 'Contracts',
     actions: ['viewAssigned', 'viewAll', 'create', 'update'],
   },
   {
@@ -68,7 +83,10 @@ function defaultPermissionsForRole(role: Role): Permissions {
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true, trash: true },
       clients: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true, trash: true },
+      invoices: { viewAll: true, create: true, update: true, markPaid: true, trash: true },
       secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
+      people: { viewAssigned: true, viewAll: true, create: true, update: true, import: true },
+      contracts: { viewAssigned: true, viewAll: true, create: true, update: true },
       proxy: { viewAssigned: true, viewAll: true },
     };
   }
@@ -78,7 +96,10 @@ function defaultPermissionsForRole(role: Role): Permissions {
       tasks: { viewAssigned: true, viewAll: true, create: true, update: true, complete: true },
       clients: { viewAssigned: true, viewAll: true, create: true, update: true },
       staffs: { viewAssigned: true, viewAll: true, create: true, update: true },
+      invoices: { viewAll: true, create: true, update: true, markPaid: true },
       secretary: { viewAssigned: true, viewAll: true, create: true, update: true },
+      people: { viewAssigned: true, viewAll: true, create: true, update: true, import: true },
+      contracts: { viewAssigned: true, viewAll: true, create: true, update: true },
       proxy: { viewAssigned: true, viewAll: true },
     };
   }
@@ -87,7 +108,10 @@ function defaultPermissionsForRole(role: Role): Permissions {
     tasks: { viewAssigned: true, complete: true },
     clients: { viewAssigned: true },
     staffs: {},
+    invoices: {},
     secretary: {},
+    people: {},
+    contracts: {},
     proxy: {},
   };
 }
@@ -149,7 +173,8 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
   }, [search, users]);
 
   const actionColumns = useMemo(
-    () => ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate'] as PermissionAction[],
+    () =>
+      ['viewAssigned', 'viewAll', 'create', 'update', 'trash', 'complete', 'duplicate', 'markPaid', 'archive', 'import', 'assignTemplate'] as PermissionAction[],
     [],
   );
 
@@ -162,8 +187,14 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
       trash: 'delete',
       complete: 'complete',
       duplicate: 'duplicate',
+      markPaid: 'mark paid',
+      archive: 'archive',
+      import: 'import',
+      assignTemplate: 'assign template',
     } as Partial<Record<PermissionAction, string>>;
   }, []);
+
+  const isOwnerForm = form.role === 'owner';
 
   useEffect(() => {
     let cancelled = false;
@@ -408,7 +439,8 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
                           {row.actions.includes(a) ? (
                             <input
                               type="checkbox"
-                              checked={getPermission(form.permissions, row.module, a)}
+                              checked={isOwnerForm ? true : getPermission(form.permissions, row.module, a)}
+                              disabled={isOwnerForm}
                               onChange={(e) =>
                                 setForm((v) => ({
                                   ...v,
