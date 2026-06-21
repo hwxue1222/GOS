@@ -7515,6 +7515,154 @@ export async function deletePerson(personId: string) {
   return db.persons[idx];
 }
 
+function normalizePersonNameKey(s: string) {
+  return String(s ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizePersonEmailKey(s?: string) {
+  return String(s ?? '').trim().toLowerCase();
+}
+
+function normalizePersonIdNoKey(s?: string) {
+  return String(s ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
+
+function personSignalsMatchScore(p: Person, input: Pick<Person, 'fullName' | 'email' | 'idType' | 'idNo'>) {
+  let score = 0;
+  const inName = normalizePersonNameKey(input.fullName);
+  const inEmail = normalizePersonEmailKey(input.email);
+  const inIdNo = normalizePersonIdNoKey(input.idNo);
+  if (inName && normalizePersonNameKey(p.fullName) === inName) score += 1;
+  if (inEmail && normalizePersonEmailKey(p.email) === inEmail) score += 1;
+  if (inIdNo) {
+    const pIdNo = normalizePersonIdNoKey(p.idNo);
+    if (pIdNo && pIdNo === inIdNo) {
+      const a = (p.idType ?? '').trim();
+      const b = (input.idType ?? '').trim();
+      if (!a || !b || a === b) score += 1;
+    }
+  }
+  return score;
+}
+
+function findBestPersonBySignals(db: Db, input: Pick<Person, 'fullName' | 'email' | 'idType' | 'idNo'>) {
+  const emailKey = normalizePersonEmailKey(input.email);
+  if (emailKey) {
+    const hits = db.persons
+      .filter((p) => !(p as Person).deletedAt)
+      .filter((p) => normalizePersonEmailKey((p as Person).email) === emailKey) as Person[];
+    if (hits.length) {
+      return hits.sort((a, b) => String(b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.updatedAt ?? a.createdAt ?? '')))[0] ?? null;
+    }
+  }
+
+  const idNoKey = normalizePersonIdNoKey(input.idNo);
+  if (idNoKey) {
+    const inType = String(input.idType ?? '').trim();
+    const hits = db.persons
+      .filter((p) => !(p as Person).deletedAt)
+      .filter((p) => {
+        const pp = p as Person;
+        const pIdNo = normalizePersonIdNoKey(pp.idNo);
+        if (!pIdNo || pIdNo !== idNoKey) return false;
+        const pType = String(pp.idType ?? '').trim();
+        if (inType && pType && inType !== pType) return false;
+        return true;
+      }) as Person[];
+    if (hits.length) {
+      return hits.sort((a, b) => String(b.updatedAt ?? b.createdAt ?? '').localeCompare(String(a.updatedAt ?? a.createdAt ?? '')))[0] ?? null;
+    }
+  }
+
+  let best: Person | null = null;
+  let bestScore = 0;
+  for (const p of db.persons) {
+    if ((p as Person).deletedAt) continue;
+    const score = personSignalsMatchScore(p as Person, input);
+    if (score < 2) continue;
+    if (score > bestScore) {
+      best = p as Person;
+      bestScore = score;
+      continue;
+    }
+    if (score === bestScore && best) {
+      const a = String((p as Person).updatedAt ?? (p as Person).createdAt ?? '');
+      const b = String(best.updatedAt ?? best.createdAt ?? '');
+      if (a > b) best = p as Person;
+    }
+  }
+  return best;
+}
+
+function upsertPersonBySignals(
+  db: Db,
+  input: Pick<
+    Person,
+    'fullName' | 'email' | 'phone' | 'idType' | 'idNo' | 'nationality' | 'dob' | 'address' | 'memberSince' | 'lastLoginDate'
+  >,
+  now: string,
+) {
+  const hit = findBestPersonBySignals(db, input);
+  if (!hit) {
+    const person: Person = {
+      id: newId('per'),
+      fullName: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      idType: input.idType,
+      idNo: input.idNo,
+      nationality: input.nationality,
+      dob: input.dob,
+      address: input.address,
+      memberSince: input.memberSince,
+      lastLoginDate: input.lastLoginDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.persons.unshift(person);
+    return { person, created: true, updated: false };
+  }
+
+  const prev = hit;
+  const next: Person = {
+    ...prev,
+    email: prev.email ?? input.email,
+    phone: prev.phone ?? input.phone,
+    idType: prev.idType ?? input.idType,
+    idNo: prev.idNo ?? input.idNo,
+    nationality: prev.nationality ?? input.nationality,
+    dob: prev.dob ?? input.dob,
+    address: prev.address ?? input.address,
+    memberSince: prev.memberSince ?? input.memberSince,
+    lastLoginDate: prev.lastLoginDate ?? input.lastLoginDate,
+  };
+
+  const changed =
+    next.email !== prev.email ||
+    next.phone !== prev.phone ||
+    next.idType !== prev.idType ||
+    next.idNo !== prev.idNo ||
+    next.nationality !== prev.nationality ||
+    next.dob !== prev.dob ||
+    next.address !== prev.address ||
+    next.memberSince !== prev.memberSince ||
+    next.lastLoginDate !== prev.lastLoginDate;
+
+  if (changed) {
+    const idx = db.persons.findIndex((p) => (p as Person).id === prev.id);
+    const patched: Person = { ...next, updatedAt: now };
+    if (idx >= 0) db.persons[idx] = patched;
+    return { person: patched, created: false, updated: true };
+  }
+  return { person: prev, created: false, updated: false };
+}
+
 export async function createPerson(input: {
   fullName: string;
   email?: string;
@@ -7529,24 +7677,24 @@ export async function createPerson(input: {
 }) {
   const db = await readDb();
   const createdAt = nowIso();
-  const person: Person = {
-    id: newId('per'),
-    fullName: input.fullName,
-    email: input.email,
-    phone: input.phone,
-    idType: input.idType,
-    idNo: input.idNo,
-    nationality: input.nationality,
-    dob: input.dob,
-    address: input.address,
-    memberSince: input.memberSince,
-    lastLoginDate: input.lastLoginDate,
+  const r = upsertPersonBySignals(
+    db,
+    {
+      fullName: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      idType: input.idType,
+      idNo: input.idNo,
+      nationality: input.nationality,
+      dob: input.dob,
+      address: input.address,
+      memberSince: input.memberSince,
+      lastLoginDate: input.lastLoginDate,
+    },
     createdAt,
-    updatedAt: createdAt,
-  };
-  db.persons.unshift(person);
+  );
   await writeDb(db);
-  return person;
+  return r.person;
 }
 
 export async function updatePerson(
@@ -7900,49 +8048,29 @@ export async function importPersons(input: {
     .filter((x) => !!x.fullName);
 
   for (const row of normalized) {
-    const emailKey = row.email?.toLowerCase() ?? '';
-    const hit = emailKey ? db.persons.find((p) => (p.email ?? '').toLowerCase() === emailKey) ?? null : null;
-    if (hit) {
-      const next: Person = {
-        ...hit,
-        fullName: row.fullName || hit.fullName,
-        email: row.email ?? hit.email,
-        phone: row.phone ?? hit.phone,
-        idType: row.idType ?? hit.idType,
-        idNo: row.idNo ?? hit.idNo,
-        nationality: row.nationality ?? hit.nationality,
-        dob: row.dob ?? hit.dob,
-        address: row.address ?? hit.address,
-        memberSince: row.memberSince ?? hit.memberSince,
-        lastLoginDate: row.lastLoginDate ?? hit.lastLoginDate,
-        updatedAt: now,
-      };
-      const idx = db.persons.findIndex((p) => p.id === hit.id);
-      if (idx >= 0) db.persons[idx] = next;
-      updated++;
-      continue;
-    }
     if (!row.email && !row.phone && !row.idNo) {
       skipped++;
       continue;
     }
-    const person: Person = {
-      id: newId('per'),
-      fullName: row.fullName,
-      email: row.email,
-      phone: row.phone,
-      idType: row.idType,
-      idNo: row.idNo,
-      nationality: row.nationality,
-      dob: row.dob,
-      address: row.address,
-      memberSince: row.memberSince,
-      lastLoginDate: row.lastLoginDate,
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.persons.unshift(person);
-    created++;
+
+    const r = upsertPersonBySignals(
+      db,
+      {
+        fullName: row.fullName,
+        email: row.email,
+        phone: row.phone,
+        idType: row.idType,
+        idNo: row.idNo,
+        nationality: row.nationality,
+        dob: row.dob,
+        address: row.address,
+        memberSince: row.memberSince,
+        lastLoginDate: row.lastLoginDate,
+      },
+      now,
+    );
+    if (r.created) created++;
+    else if (r.updated) updated++;
   }
   await writeDb(db);
   return { ok: true as const, created, updated, skipped, total: normalized.length };
@@ -8803,29 +8931,46 @@ export async function createShareTransferRequest(input: {
     const fullName = fullNameRaw.trim();
     const email = emailRaw.trim();
     if (!fullName || !email) return null;
-    const person: Person = {
-      id: newId('per'),
-      fullName,
-      email,
-      phone: patch?.phone,
-      idType: patch?.idType as any,
-      idNo: patch?.idNo,
-      nationality: patch?.nationality,
-      dob: patch?.dob,
-      address: patch?.address,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const party: Party = {
-      id: newId('pty'),
-      type: 'PERSON',
-      displayName: fullName,
-      personId: person.id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.persons.unshift(person);
-    db.parties.unshift(party);
+    const r = upsertPersonBySignals(
+      db,
+      {
+        fullName,
+        email,
+        phone: patch?.phone,
+        idType: patch?.idType as any,
+        idNo: patch?.idNo,
+        nationality: patch?.nationality,
+        dob: patch?.dob,
+        address: patch?.address,
+        memberSince: undefined,
+        lastLoginDate: undefined,
+      },
+      now,
+    );
+    const person = r.person;
+
+    const existingParty = db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) ?? null;
+    const party: Party = existingParty
+      ? ((existingParty.displayName !== person.fullName
+          ? { ...existingParty, displayName: person.fullName, updatedAt: now }
+          : existingParty) as Party)
+      : ({
+          id: newId('pty'),
+          type: 'PERSON',
+          displayName: person.fullName,
+          personId: person.id,
+          createdAt: now,
+          updatedAt: now,
+        } as Party);
+    if (existingParty) {
+      if (party !== existingParty) {
+        const idx = db.parties.findIndex((p) => p.id === existingParty.id);
+        if (idx >= 0) db.parties[idx] = party;
+      }
+    } else {
+      db.parties.unshift(party);
+    }
+
     return { person, party };
   };
 
@@ -10298,20 +10443,27 @@ export async function decideDirectorChangeRequest(input: {
       const fullName = d.fullName.trim();
       if (!fullName) continue;
       const email = String(d.email ?? '').trim() || undefined;
-      const person: Person = {
-        id: newId('per'),
-        fullName,
-        email,
-        phone: typeof d.phone === 'string' ? d.phone.trim() || undefined : undefined,
-        idType: toPersonIdType(d.idTypeLabel),
-        idNo: typeof d.idNo === 'string' ? d.idNo.trim() || undefined : undefined,
-        nationality: typeof d.nationality === 'string' ? d.nationality.trim() || undefined : undefined,
-        dob: typeof d.dob === 'string' ? d.dob.trim() || undefined : undefined,
-        address: typeof d.address === 'string' ? d.address.trim() || undefined : undefined,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+      const personUpsert = upsertPersonBySignals(
+        db,
+        {
+          fullName,
+          email,
+          phone: typeof d.phone === 'string' ? d.phone.trim() || undefined : undefined,
+          idType: toPersonIdType(d.idTypeLabel),
+          idNo: typeof d.idNo === 'string' ? d.idNo.trim() || undefined : undefined,
+          nationality: typeof d.nationality === 'string' ? d.nationality.trim() || undefined : undefined,
+          dob: typeof d.dob === 'string' ? d.dob.trim() || undefined : undefined,
+          address: typeof d.address === 'string' ? d.address.trim() || undefined : undefined,
+          memberSince: undefined,
+          lastLoginDate: undefined,
+        },
+        now,
+      );
+      const person = personUpsert.person;
+      const party =
+        (db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) as Party | undefined) ??
+        ({ id: newId('pty'), type: 'PERSON', displayName: person.fullName, personId: person.id, createdAt: now, updatedAt: now } as Party);
+      if (!db.parties.some((p) => p.id === party.id)) db.parties.unshift(party);
       const role: ClientPartyRole = {
         id: newId('cpr'),
         clientId: r.clientId,
@@ -10321,8 +10473,6 @@ export async function decideDirectorChangeRequest(input: {
         createdAt: now,
         updatedAt: now,
       };
-      db.persons.unshift(person);
-      db.parties.unshift(party);
       db.clientPartyRoles.unshift(role);
     }
 
@@ -11388,8 +11538,27 @@ export async function decideCompanyUpdateRequest(input: {
       if (!fullName) continue;
       const email = typeof s.email === 'string' ? s.email.trim() || undefined : undefined;
       const phone = typeof s.phone === 'string' ? s.phone.trim() || undefined : undefined;
-      const person: Person = { id: newId('per'), fullName, email, phone, createdAt: now, updatedAt: now };
-      const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+      const personUpsert = upsertPersonBySignals(
+        db,
+        {
+          fullName,
+          email,
+          phone,
+          idType: undefined,
+          idNo: undefined,
+          nationality: undefined,
+          dob: undefined,
+          address: undefined,
+          memberSince: undefined,
+          lastLoginDate: undefined,
+        },
+        now,
+      );
+      const person = personUpsert.person;
+      const party =
+        (db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) as Party | undefined) ??
+        ({ id: newId('pty'), type: 'PERSON', displayName: person.fullName, personId: person.id, createdAt: now, updatedAt: now } as Party);
+      if (!db.parties.some((p) => p.id === party.id)) db.parties.unshift(party);
       const role: ClientPartyRole = {
         id: newId('cpr'),
         clientId: r.clientId,
@@ -11399,8 +11568,6 @@ export async function decideCompanyUpdateRequest(input: {
         createdAt: now,
         updatedAt: now,
       };
-      db.persons.unshift(person);
-      db.parties.unshift(party);
       db.clientPartyRoles.unshift(role);
     }
   } else if (r.type === 'TRANSFER_COMPANY_SECRETARY') {
@@ -11422,11 +11589,27 @@ export async function decideCompanyUpdateRequest(input: {
       db.clientPartyRoles[i] = { ...role, resignationDate: effectiveDate, updatedAt: now };
     }
 
-    const person: Person = { id: newId('per'), fullName: newSecretaryName, email: newSecretaryEmail, createdAt: now, updatedAt: now };
+    const personUpsert = upsertPersonBySignals(
+      db,
+      {
+        fullName: newSecretaryName,
+        email: newSecretaryEmail,
+        phone: undefined,
+        idType: undefined,
+        idNo: undefined,
+        nationality: undefined,
+        dob: undefined,
+        address: undefined,
+        memberSince: undefined,
+        lastLoginDate: undefined,
+      },
+      now,
+    );
+    const person = personUpsert.person;
     const party: Party = {
       id: newId('pty'),
       type: 'PERSON',
-      displayName: newSecretaryName,
+      displayName: person.fullName,
       personId: person.id,
       createdAt: now,
       updatedAt: now,
@@ -11440,7 +11623,6 @@ export async function decideCompanyUpdateRequest(input: {
       createdAt: now,
       updatedAt: now,
     };
-    db.persons.unshift(person);
     db.parties.unshift(party);
     db.clientPartyRoles.unshift(role);
   } else {
@@ -11952,8 +12134,27 @@ export async function decideRorcDeclarationRequest(input: {
     const fullName = String(r.controllerPerson?.fullName ?? '').trim();
     if (!fullName) return { ok: false as const, error: 'INVALID_INPUT' as const };
     const email = typeof r.controllerPerson?.email === 'string' ? r.controllerPerson.email.trim() || undefined : undefined;
-    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
-    const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+    const personUpsert = upsertPersonBySignals(
+      db,
+      {
+        fullName,
+        email,
+        phone: undefined,
+        idType: undefined,
+        idNo: undefined,
+        nationality: undefined,
+        dob: undefined,
+        address: undefined,
+        memberSince: undefined,
+        lastLoginDate: undefined,
+      },
+      now,
+    );
+    const person = personUpsert.person;
+    const party =
+      (db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) as Party | undefined) ??
+      ({ id: newId('pty'), type: 'PERSON', displayName: person.fullName, personId: person.id, createdAt: now, updatedAt: now } as Party);
+    if (!db.parties.some((p) => p.id === party.id)) db.parties.unshift(party);
     const role: ClientPartyRole = {
       id: newId('cpr'),
       clientId: r.clientId,
@@ -11963,8 +12164,6 @@ export async function decideRorcDeclarationRequest(input: {
       createdAt: now,
       updatedAt: now,
     };
-    db.persons.unshift(person);
-    db.parties.unshift(party);
     db.clientPartyRoles.unshift(role);
   }
 
@@ -12058,8 +12257,27 @@ export async function decideRorcDeclarationRequest(input: {
     const fullName = c.fullName.trim();
     if (!fullName) continue;
     const email = typeof c.email === 'string' ? c.email.trim() || undefined : undefined;
-    const person: Person = { id: newId('per'), fullName, email, createdAt: now, updatedAt: now };
-    const party: Party = { id: newId('pty'), type: 'PERSON', displayName: fullName, personId: person.id, createdAt: now, updatedAt: now };
+    const personUpsert = upsertPersonBySignals(
+      db,
+      {
+        fullName,
+        email,
+        phone: undefined,
+        idType: undefined,
+        idNo: undefined,
+        nationality: undefined,
+        dob: undefined,
+        address: undefined,
+        memberSince: undefined,
+        lastLoginDate: undefined,
+      },
+      now,
+    );
+    const person = personUpsert.person;
+    const party =
+      (db.parties.find((p) => p.type === 'PERSON' && p.personId === person.id) as Party | undefined) ??
+      ({ id: newId('pty'), type: 'PERSON', displayName: person.fullName, personId: person.id, createdAt: now, updatedAt: now } as Party);
+    if (!db.parties.some((p) => p.id === party.id)) db.parties.unshift(party);
     const role: ClientPartyRole = {
       id: newId('cpr'),
       clientId: r.clientId,
@@ -12069,8 +12287,6 @@ export async function decideRorcDeclarationRequest(input: {
       createdAt: now,
       updatedAt: now,
     };
-    db.persons.unshift(person);
-    db.parties.unshift(party);
     db.clientPartyRoles.unshift(role);
   }
 
