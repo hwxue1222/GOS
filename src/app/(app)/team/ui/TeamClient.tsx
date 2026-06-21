@@ -482,9 +482,9 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {canDeleteStaff ? (
+                    {canDeleteStaff && u.tasksOverdue === 0 && u.role !== 'owner' ? (
                       <button
-                        disabled={saving || u.tasksOverdue > 0 || u.role === 'owner'}
+                        disabled={saving}
                         onClick={(e) => {
                           e.stopPropagation();
                           void remove(u);
@@ -493,9 +493,7 @@ export default function TeamClient({ initialUsers, meRole, canDeleteStaff }: Pro
                       >
                         Delete
                       </button>
-                    ) : (
-                      <span className="text-black/30">-</span>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               ))}
