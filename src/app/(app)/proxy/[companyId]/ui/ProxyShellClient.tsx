@@ -38,14 +38,14 @@ export default function ProxyShellClient(props: { company: Company }) {
           <div className="text-sm font-semibold text-black">Incorporation of Company</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
-              href="/incorporation/register"
+              href="/corporate-secretary/incorporation/register"
               onClick={() => window.localStorage.setItem('gos.currentCompanyId', props.company.id)}
               className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
             >
               Register Company
             </Link>
             <Link
-              href="/incorporation/transfer-secretary"
+              href="/corporate-secretary/incorporation/transfer-secretary"
               onClick={() => window.localStorage.setItem('gos.currentCompanyId', props.company.id)}
               className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
             >
