@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import { createSession, findUserByEmailOrName, touchPersonLastLoginDateByEmail } from '@/lib/db';
+import {
+  createPortalSession,
+  createSession,
+  findPortalUserByEmail,
+  findUserByEmailOrName,
+  touchPersonLastLoginDateByEmail,
+} from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
-import { SESSION_COOKIE } from '@/lib/auth';
+import { ADMIN_SESSION_COOKIE, PORTAL_SESSION_COOKIE } from '@/lib/auth';
 
 function isHttpsRequest(req: Request) {
   const proto = (req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '')).split(',')[0]!.trim();
@@ -11,13 +17,35 @@ function isHttpsRequest(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => null)) as
-      | { email?: string; account?: string; password?: string }
+      | { email?: string; account?: string; password?: string; mode?: string }
       | null;
     const account = (body?.account ?? body?.email ?? '').trim();
     const password = body?.password ?? '';
+    const mode = String(body?.mode ?? '').trim();
 
     if (!account || !password) {
       return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+    }
+
+    if (mode === 'portal') {
+      const user = await findPortalUserByEmail(account);
+      if (!user) return NextResponse.json({ ok: false, error: 'INVALID_LOGIN' }, { status: 401 });
+
+      const ok = await verifyPassword(password, user.passwordHash);
+      if (!ok) return NextResponse.json({ ok: false, error: 'INVALID_LOGIN' }, { status: 401 });
+
+      const session = await createPortalSession(user.id);
+      await touchPersonLastLoginDateByEmail(user.email).catch(() => null);
+
+      const res = NextResponse.json({ ok: true });
+      res.cookies.set(PORTAL_SESSION_COOKIE, session.token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isHttpsRequest(req),
+        path: '/',
+        expires: new Date(session.expiresAt),
+      });
+      return res;
     }
 
     const user = await findUserByEmailOrName(account);
@@ -28,12 +56,8 @@ export async function POST(req: Request) {
 
     const session = await createSession(user.id);
 
-    if (user.role === 'client') {
-      await touchPersonLastLoginDateByEmail(user.email).catch(() => null);
-    }
-
     const res = NextResponse.json({ ok: true });
-    res.cookies.set(SESSION_COOKIE, session.token, {
+    res.cookies.set(ADMIN_SESSION_COOKIE, session.token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isHttpsRequest(req),

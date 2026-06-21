@@ -75,7 +75,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ account, password }),
+        body: JSON.stringify({ account, password, mode }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);

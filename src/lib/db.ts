@@ -97,6 +97,8 @@ function emptyDb(): Db {
   return {
     users: [],
     sessions: [],
+    portalUsers: [],
+    portalSessions: [],
     passwordResets: [],
     clients: [],
     invoices: [],
@@ -124,6 +126,8 @@ function emptyDb(): Db {
     tasks: [],
     auditLogs: [],
     reservedNames: [],
+    reservedAdminNames: [],
+    reservedPortalNames: [],
     seed: {},
   };
 }
@@ -6554,6 +6558,45 @@ export async function readDb(): Promise<Db> {
     let db = await readDbRaw();
   let changed = false;
 
+  if (!Array.isArray((db as unknown as { portalUsers?: unknown }).portalUsers)) {
+    (db as unknown as { portalUsers?: unknown }).portalUsers = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { portalSessions?: unknown }).portalSessions)) {
+    (db as unknown as { portalSessions?: unknown }).portalSessions = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { reservedAdminNames?: unknown }).reservedAdminNames)) {
+    (db as unknown as { reservedAdminNames?: unknown }).reservedAdminNames = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { reservedPortalNames?: unknown }).reservedPortalNames)) {
+    (db as unknown as { reservedPortalNames?: unknown }).reservedPortalNames = [];
+    changed = true;
+  }
+  if (Array.isArray((db as unknown as { reservedNames?: unknown }).reservedNames)) {
+    const legacy = (db as unknown as { reservedNames?: string[] }).reservedNames ?? [];
+    const admin = (db as unknown as { reservedAdminNames?: string[] }).reservedAdminNames ?? [];
+    const merged = [...admin, ...legacy].map((s) => String(s ?? '').trim().toLowerCase()).filter(Boolean);
+    (db as unknown as { reservedAdminNames?: string[] }).reservedAdminNames = Array.from(new Set(merged));
+    changed = true;
+  }
+
+  const portalUsers = (db as unknown as { portalUsers?: any[] }).portalUsers ?? [];
+  const portalSessions = (db as unknown as { portalSessions?: any[] }).portalSessions ?? [];
+  const clientUsers = db.users.filter((u) => u.role === 'client');
+  if (clientUsers.length) {
+    for (const u of clientUsers) {
+      portalUsers.push({ id: u.id, role: 'client', name: u.name, email: u.email, passwordHash: u.passwordHash, createdAt: u.createdAt });
+      for (const s of db.sessions.filter((x) => x.userId === u.id)) portalSessions.push(s);
+    }
+    db.users = db.users.filter((u) => u.role !== 'client');
+    db.sessions = db.sessions.filter((s) => !clientUsers.some((u) => u.id === s.userId));
+    (db as unknown as { portalUsers?: any[] }).portalUsers = portalUsers;
+    (db as unknown as { portalSessions?: any[] }).portalSessions = portalSessions;
+    changed = true;
+  }
+
   if (migrateClientCodesV1(db)) changed = true;
   if (migrateClientCodesV2(db)) changed = true;
   if (migrateClientCodesV3(db)) changed = true;
@@ -6596,7 +6639,8 @@ export async function readDb(): Promise<Db> {
       passwordHash: lukePasswordHash,
       createdAt: nowIso(),
     };
-    db = { ...db, users: [luke], reservedNames: ['luke'] };
+    const adminNames = Array.isArray((db as any).reservedAdminNames) ? (db as any).reservedAdminNames : [];
+    db = { ...db, users: [luke], reservedAdminNames: Array.from(new Set([...adminNames, 'luke'])) } as any;
     changed = true;
   }
 
@@ -6689,6 +6733,20 @@ export async function findUserById(id: string) {
   return db.users.find((u) => u.id === id) ?? null;
 }
 
+export async function findPortalUserByEmail(email: string) {
+  const db = await readDb();
+  const list = (db as unknown as { portalUsers?: Array<{ email: string }> }).portalUsers ?? [];
+  const needle = email.trim().toLowerCase();
+  if (!needle) return null;
+  return (list as any[]).find((u) => String(u.email ?? '').trim().toLowerCase() === needle) ?? null;
+}
+
+export async function findPortalUserById(id: string) {
+  const db = await readDb();
+  const list = (db as unknown as { portalUsers?: Array<{ id: string }> }).portalUsers ?? [];
+  return (list as any[]).find((u) => String(u.id ?? '') === id) ?? null;
+}
+
 export async function createSession(userId: string, ttlDays = 14) {
   const db = await readDb();
   const token = newId('sess');
@@ -6700,15 +6758,44 @@ export async function createSession(userId: string, ttlDays = 14) {
   return session;
 }
 
+export async function createPortalSession(userId: string, ttlDays = 14) {
+  const db = await readDb();
+  const token = newId('sess');
+  const createdAt = nowIso();
+  const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
+  const session: Session = { token, userId, expiresAt, createdAt };
+  const list = (db as unknown as { portalSessions?: Session[] }).portalSessions ?? [];
+  list.unshift(session);
+  (db as unknown as { portalSessions?: Session[] }).portalSessions = list;
+  await writeDb(db);
+  return session;
+}
+
 export async function deleteSession(token: string) {
   const db = await readDb();
   db.sessions = db.sessions.filter((s) => s.token !== token);
   await writeDb(db);
 }
 
+export async function deletePortalSession(token: string) {
+  const db = await readDb();
+  const list = (db as unknown as { portalSessions?: Session[] }).portalSessions ?? [];
+  (db as unknown as { portalSessions?: Session[] }).portalSessions = list.filter((s) => s.token !== token);
+  await writeDb(db);
+}
+
 export async function findSession(token: string) {
   const db = await readDb();
   const s = db.sessions.find((x) => x.token === token);
+  if (!s) return null;
+  if (new Date(s.expiresAt).getTime() <= Date.now()) return null;
+  return s;
+}
+
+export async function findPortalSession(token: string) {
+  const db = await readDb();
+  const list = (db as unknown as { portalSessions?: Session[] }).portalSessions ?? [];
+  const s = list.find((x) => x.token === token) ?? null;
   if (!s) return null;
   if (new Date(s.expiresAt).getTime() <= Date.now()) return null;
   return s;
@@ -6724,7 +6811,7 @@ export async function createUser(input: {
 }) {
   const db = await readDb();
   const nameKey = input.name.trim().toLowerCase();
-  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+  const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
   const emailTaken = db.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase());
   if (emailTaken) return { ok: false as const, error: 'EMAIL_TAKEN' as const };
   const nameTaken = db.users.some((u) => u.name.toLowerCase() === input.name.toLowerCase()) || reserved.has(nameKey);
@@ -6742,7 +6829,7 @@ export async function createUser(input: {
   db.users.unshift(user);
   if (nameKey) {
     reserved.add(nameKey);
-    db.reservedNames = [...reserved];
+    (db as any).reservedAdminNames = [...reserved];
   }
   await writeDb(db);
   return { ok: true as const, user };
@@ -6767,7 +6854,7 @@ export async function updateUser(
   if (typeof patch.name === 'string') {
     const inUseByOther = db.users.some((u) => u.id !== userId && u.name.trim().toLowerCase() === nextNameKey);
     if (inUseByOther) return { ok: false, error: 'NAME_TAKEN' };
-    const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+    const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
     if (nextNameKey && nextNameKey !== currentNameKey && reserved.has(nextNameKey)) {
       return { ok: false, error: 'NAME_TAKEN' };
     }
@@ -6775,10 +6862,10 @@ export async function updateUser(
 
   const next: User = { ...current, ...patch };
   db.users[idx] = next;
-  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+  const reserved = new Set(((db as any).reservedAdminNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
   if (currentNameKey) reserved.add(currentNameKey);
   if (nextNameKey) reserved.add(nextNameKey);
-  db.reservedNames = [...reserved];
+  (db as any).reservedAdminNames = [...reserved];
   await writeDb(db);
   return { ok: true, user: next };
 }
@@ -6790,6 +6877,50 @@ export async function setUserPassword(userId: string, newPassword: string) {
   db.users[idx] = { ...db.users[idx], passwordHash: await hashPassword(newPassword) };
   await writeDb(db);
   return db.users[idx];
+}
+
+export async function updatePortalUser(
+  userId: string,
+  patch: Partial<Pick<{ name: string; email: string }, 'name' | 'email'>>,
+): Promise<{ ok: true; user: any } | { ok: false; error: 'NOT_FOUND' | 'NAME_TAKEN' | 'EMAIL_TAKEN' }> {
+  const db = await readDb();
+  const list = (db as any).portalUsers ?? [];
+  const idx = list.findIndex((u: any) => String(u.id) === userId);
+  if (idx < 0) return { ok: false, error: 'NOT_FOUND' };
+  const current = list[idx];
+  const nextName = typeof patch.name === 'string' ? patch.name.trim() : String(current.name ?? '').trim();
+  const nextEmail = typeof patch.email === 'string' ? patch.email.trim() : String(current.email ?? '').trim();
+  if (typeof patch.email === 'string') {
+    const emailKey = nextEmail.toLowerCase();
+    const emailTaken = list.some((u: any) => String(u.id) !== userId && String(u.email ?? '').trim().toLowerCase() === emailKey);
+    if (emailTaken) return { ok: false, error: 'EMAIL_TAKEN' };
+  }
+  if (typeof patch.name === 'string') {
+    const nameKey = nextName.toLowerCase();
+    const reserved = new Set(((db as any).reservedPortalNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+    const inUseByOther = list.some((u: any) => String(u.id) !== userId && String(u.name ?? '').trim().toLowerCase() === nameKey);
+    if (inUseByOther || reserved.has(nameKey)) return { ok: false, error: 'NAME_TAKEN' };
+    if (nameKey) {
+      reserved.add(nameKey);
+      (db as any).reservedPortalNames = [...reserved];
+    }
+  }
+  const next = { ...current, name: nextName || current.name, email: nextEmail || current.email };
+  list[idx] = next;
+  (db as any).portalUsers = list;
+  await writeDb(db);
+  return { ok: true, user: next };
+}
+
+export async function setPortalUserPassword(userId: string, newPassword: string) {
+  const db = await readDb();
+  const list = (db as any).portalUsers ?? [];
+  const idx = list.findIndex((u: any) => String(u.id) === userId);
+  if (idx < 0) return null;
+  list[idx] = { ...list[idx], passwordHash: await hashPassword(newPassword) };
+  (db as any).portalUsers = list;
+  await writeDb(db);
+  return list[idx];
 }
 
 export async function listUsers() {
@@ -8102,9 +8233,13 @@ export async function setClientPasswordForPerson(input: { personId: string; newP
   const email = person?.email?.trim() ?? '';
   if (!person || !email) return { ok: false as const, error: 'NOT_FOUND' as const };
   if (!person.lastLoginDate) return { ok: false as const, error: 'NOT_LOGGED_IN' as const };
-  const user = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
-  if (!user || user.role !== 'client') return { ok: false as const, error: 'NO_LOGIN' as const };
-  await setUserPassword(user.id, newPassword);
+  const portalUsers = (db as unknown as { portalUsers?: Array<{ id: string; email: string; role: string }> }).portalUsers ?? [];
+  const user = (portalUsers as any[]).find((u) => String(u.email ?? '').trim().toLowerCase() === email.toLowerCase()) ?? null;
+  if (!user || String(user.role) !== 'client') return { ok: false as const, error: 'NO_LOGIN' as const };
+  const idx = (portalUsers as any[]).findIndex((u) => String(u.id) === String(user.id));
+  if (idx >= 0) (portalUsers as any[])[idx] = { ...(portalUsers as any[])[idx], passwordHash: await hashPassword(newPassword) };
+  (db as unknown as { portalUsers?: any[] }).portalUsers = portalUsers as any[];
+  await writeDb(db);
   return { ok: true as const };
 }
 
@@ -8113,11 +8248,12 @@ export async function createClientLoginForPerson(input: { personId: string }) {
   const person = db.persons.find((p) => p.id === input.personId) ?? null;
   const email = person?.email?.trim() ?? '';
   if (!person || !email) return { ok: false as const, error: 'INVALID_INPUT' as const };
-  const existing = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+  const portalUsers = (db as unknown as { portalUsers?: any[] }).portalUsers ?? [];
+  const existing = (portalUsers as any[]).find((u) => String(u.email ?? '').trim().toLowerCase() === email.toLowerCase()) ?? null;
   if (existing) return { ok: true as const, user: existing, tempPassword: null as string | null };
   const baseName = person.fullName.trim() || email;
-  const reserved = new Set((db.reservedNames ?? []).map((x) => (x ?? '').trim().toLowerCase()).filter(Boolean));
-  const taken = new Set(db.users.map((u) => u.name.trim().toLowerCase()));
+  const reserved = new Set(((db as any).reservedPortalNames ?? []).map((x: any) => (x ?? '').trim().toLowerCase()).filter(Boolean));
+  const taken = new Set((portalUsers as any[]).map((u) => String(u.name ?? '').trim().toLowerCase()));
   let name = baseName;
   let idx = 1;
   while (!name.trim() || taken.has(name.trim().toLowerCase()) || reserved.has(name.trim().toLowerCase())) {
@@ -8125,17 +8261,18 @@ export async function createClientLoginForPerson(input: { personId: string }) {
     name = `${baseName} ${idx}`;
   }
   const tempPassword = makeTempPassword();
-  const user: User = {
+  const user = {
     id: newId('usr'),
+    role: 'client',
     name,
     email,
-    role: 'client',
     passwordHash: await hashPassword(tempPassword),
     createdAt: nowIso(),
   };
-  db.users.unshift(user);
+  (portalUsers as any[]).unshift(user);
   reserved.add(name.trim().toLowerCase());
-  db.reservedNames = [...reserved];
+  (db as any).reservedPortalNames = [...reserved];
+  (db as any).portalUsers = portalUsers;
   await writeDb(db);
   return { ok: true as const, user, tempPassword };
 }

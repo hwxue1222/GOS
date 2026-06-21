@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { readDb, writeDb } from '@/lib/db';
+import { findPortalUserByEmail, readDb, writeDb } from '@/lib/db';
 import { newId } from '@/lib/id';
 import { hashPassword } from '@/lib/password';
 import { sendEmail } from '@/lib/email';
@@ -23,9 +23,8 @@ export async function POST(req: Request) {
   if (mode && mode !== 'portal') return NextResponse.json({ ok: false, error: 'INVALID_MODE' }, { status: 400 });
 
   const db = await readDb();
-  const user = db.users.find((u) => String(u.email ?? '').trim().toLowerCase() === email) ?? null;
-
-  if (!user || user.role !== 'client') {
+  const user = await findPortalUserByEmail(email);
+  if (!user) {
     return NextResponse.json({ ok: true });
   }
 
@@ -70,4 +69,3 @@ export async function POST(req: Request) {
   await writeDb({ ...(db as any), passwordResets: nextResets } as any);
   return NextResponse.json({ ok: true });
 }
-

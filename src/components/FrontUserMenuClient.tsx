@@ -47,7 +47,7 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
           <button
             onClick={() => {
               setOpen(false);
-              router.push('/profile');
+              router.push('/portal/profile');
             }}
             className="w-full text-left px-3 py-2 text-sm hover:bg-black/5"
           >

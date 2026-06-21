@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { readDb, writeDb } from '@/lib/db';
+import { findPortalUserByEmail, readDb, writeDb } from '@/lib/db';
 import { hashPassword, verifyPassword } from '@/lib/password';
 
 function isEmail(s: string) {
@@ -21,8 +21,8 @@ export async function POST(req: Request) {
   if (mode && mode !== 'portal') return NextResponse.json({ ok: false, error: 'INVALID_MODE' }, { status: 400 });
 
   const db = await readDb();
-  const user = db.users.find((u) => String(u.email ?? '').trim().toLowerCase() === email) ?? null;
-  if (!user || user.role !== 'client') return NextResponse.json({ ok: false, error: 'INVALID_ACCOUNT' }, { status: 400 });
+  const user = await findPortalUserByEmail(email);
+  if (!user) return NextResponse.json({ ok: false, error: 'INVALID_ACCOUNT' }, { status: 400 });
 
   const resets = Array.isArray((db as any).passwordResets) ? ((db as any).passwordResets as any[]) : [];
   const candidates = resets
@@ -38,22 +38,18 @@ export async function POST(req: Request) {
   const ok = await verifyPassword(code, String(token.otpHash ?? ''));
   if (!ok) return NextResponse.json({ ok: false, error: 'INVALID_CODE' }, { status: 400 });
 
-  const nextUsers = db.users.map((u) => {
-    if (u.id !== user.id) return u;
-    return { ...u, passwordHash: '' };
-  });
-
+  const portalUsers = (db as any).portalUsers ?? [];
   const nextHash = await hashPassword(password);
-  for (const u of nextUsers as any[]) {
-    if (u.id === user.id) u.passwordHash = nextHash;
-  }
+  const nextPortalUsers = (portalUsers as any[]).map((u) => {
+    if (String(u.id) !== String(user.id)) return u;
+    return { ...u, passwordHash: nextHash };
+  });
 
   const nextResets = resets.map((r) => {
     if (String(r.id ?? '') !== String(token.id ?? '')) return r;
     return { ...r, usedAt: new Date().toISOString() };
   });
 
-  await writeDb({ ...(db as any), users: nextUsers, passwordResets: nextResets } as any);
+  await writeDb({ ...(db as any), portalUsers: nextPortalUsers, passwordResets: nextResets } as any);
   return NextResponse.json({ ok: true });
 }
-

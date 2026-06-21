@@ -37,6 +37,15 @@ export type User = {
   createdAt: string;
 };
 
+export type PortalUser = {
+  id: string;
+  role: 'client';
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: string;
+};
+
 export type Session = {
   token: string;
   userId: string;
@@ -708,6 +717,8 @@ export type PasswordResetToken = {
 export type Db = {
   users: User[];
   sessions: Session[];
+  portalUsers?: PortalUser[];
+  portalSessions?: Session[];
   passwordResets?: PasswordResetToken[];
   clients: Client[];
   invoices: Invoice[];
@@ -735,5 +746,7 @@ export type Db = {
   tasks: JobTask[];
   auditLogs?: AuditLog[];
   reservedNames?: string[];
+  reservedAdminNames?: string[];
+  reservedPortalNames?: string[];
   seed?: Record<string, boolean>;
 };

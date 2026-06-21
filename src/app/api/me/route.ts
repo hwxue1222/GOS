@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { findUserByEmail, findUserById, setUserPassword, updateUser } from '@/lib/db';
+import {
+  findPortalUserByEmail,
+  findPortalUserById,
+  findUserByEmail,
+  findUserById,
+  setPortalUserPassword,
+  setUserPassword,
+  updatePortalUser,
+  updateUser,
+} from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
 
 export async function GET() {
@@ -30,12 +39,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   }
 
+  const isPortal = me.role === 'client';
   if (patch.email) {
-    const hit = await findUserByEmail(patch.email);
-    if (hit && hit.id !== me.id) return NextResponse.json({ ok: false, error: 'EMAIL_TAKEN' }, { status: 409 });
+    const hit = isPortal ? await findPortalUserByEmail(patch.email) : await findUserByEmail(patch.email);
+    if (hit && String(hit.id) !== me.id) return NextResponse.json({ ok: false, error: 'EMAIL_TAKEN' }, { status: 409 });
   }
 
-  const full = await findUserById(me.id);
+  const full = isPortal ? await findPortalUserById(me.id) : await findUserById(me.id);
   if (!full) return NextResponse.json({ ok: false }, { status: 401 });
 
   if (wantsPassword) {
@@ -50,18 +60,24 @@ export async function PATCH(req: Request) {
 
   let updatedUser = full;
   if (patch.name || patch.email) {
-    const u = await updateUser(me.id, patch);
+    const u = isPortal ? await updatePortalUser(me.id, patch) : await updateUser(me.id, patch);
     if (!u.ok) return NextResponse.json({ ok: false, error: u.error }, { status: 409 });
     updatedUser = u.user;
   }
   if (wantsPassword) {
-    const u = await setUserPassword(me.id, body!.newPassword!);
+    const u = isPortal ? await setPortalUserPassword(me.id, body!.newPassword!) : await setUserPassword(me.id, body!.newPassword!);
     if (!u) return NextResponse.json({ ok: false }, { status: 401 });
     updatedUser = u;
   }
 
   return NextResponse.json({
     ok: true,
-    user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role, permissions: updatedUser.permissions },
+    user: {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: isPortal ? 'client' : updatedUser.role,
+      permissions: isPortal ? undefined : updatedUser.permissions,
+    },
   });
 }

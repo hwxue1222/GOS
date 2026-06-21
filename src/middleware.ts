@@ -1,23 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/admin/login', '/portal/login', '/sign', '/p'];
+const ADMIN_SESSION_COOKIE = 'gos_session';
+const PORTAL_SESSION_COOKIE = 'gos_portal_session';
 
-function loginPathFor(pathname: string) {
-  if (
-    pathname === '/dashboard' ||
-    pathname.startsWith('/dashboard/') ||
-    pathname === '/incorporation' ||
-    pathname.startsWith('/incorporation/') ||
-    pathname === '/corporate-secretary' ||
-    pathname.startsWith('/corporate-secretary/') ||
-    pathname === '/portal' ||
-    pathname.startsWith('/portal/')
-  ) {
-    return '/portal/login';
-  }
-  return '/admin/login';
-}
+const publicPaths = ['/login', '/admin/login', '/portal/login', '/portal/forgot-password', '/sign', '/p'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -38,14 +25,10 @@ export function middleware(req: NextRequest) {
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isPublic) return NextResponse.next();
 
-  const token = req.cookies.get('gos_session')?.value;
+  const token = isFrontDomain ? req.cookies.get(PORTAL_SESSION_COOKIE)?.value : req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) {
     const url = req.nextUrl.clone();
-    if (pathname === '/') {
-      url.pathname = isFrontDomain ? '/portal/login' : '/login';
-    } else {
-      url.pathname = isFrontDomain ? '/portal/login' : loginPathFor(pathname);
-    }
+    url.pathname = isFrontDomain ? '/portal/login' : '/admin/login';
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
