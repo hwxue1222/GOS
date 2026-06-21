@@ -42,7 +42,7 @@ export default function RegisterCompanyStep1(props: {
   const [alternativeCheck, setAlternativeCheck] = useState<{ available: boolean | null; searchUrl?: string } | null>(null);
   const suffixOptions = ['Pte Ltd', 'Ltd', 'LLP', 'LP', 'Sole Proprietorship'];
   const currencyOptions: Array<{ label: string; value: Currency }> = [
-    { label: 'Singapore Dollar(s$) S$', value: 'SGD' },
+    { label: 'Singapore Dollar(S$) SGD', value: 'SGD' },
     { label: 'US Dollar($) USD', value: 'USD' },
     { label: 'Chinese Yuan(¥) CNY', value: 'CNY' },
     { label: 'Malaysian Ringgit(RM) MYR', value: 'MYR' },
