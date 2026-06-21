@@ -88,7 +88,7 @@ export default function RegisterCompanyStep1(props: {
     if (r.available === false) return <div className="mt-2 text-xs font-medium text-red-600">● not available</div>;
     const msg =
       r.reason === 'BLOCKED'
-        ? 'Unable to check automatically (blocked by SGPBusiness).'
+        ? 'Unable to check automatically (blocked by name search provider).'
         : r.reason === 'BROWSER_UNAVAILABLE'
           ? 'Unable to check automatically (name check not supported on this server).'
           : 'Unable to check.';
