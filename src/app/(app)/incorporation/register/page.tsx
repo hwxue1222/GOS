@@ -1,4 +1,5 @@
 import AppTopNav from '@/components/AppTopNav';
+import ProxyContextBlockClient from '@/components/ProxyContextBlockClient';
 import { getCurrentUser } from '@/lib/auth';
 import RegisterCompanyApplicationClient from '@/app/(app)/incorporation/ui/RegisterCompanyApplicationClient';
 
@@ -11,6 +12,7 @@ export default async function RegisterCompanyPage() {
       <AppTopNav active="incorporation" />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
+          <ProxyContextBlockClient />
           <h1 className="text-xl font-semibold">Register Company</h1>
           <div className="mt-4">
             <RegisterCompanyApplicationClient />

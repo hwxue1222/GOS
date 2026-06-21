@@ -212,7 +212,8 @@ export default function TransferSecretaryWizardClient(props: Props) {
         try {
           window.localStorage.removeItem(storageKey);
         } catch {}
-        router.push('/dashboard');
+        const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+        router.push(pid ? `/proxy/${encodeURIComponent(pid)}` : '/dashboard');
         router.refresh();
         return;
       }
@@ -367,4 +368,3 @@ export default function TransferSecretaryWizardClient(props: Props) {
     </div>
   );
 }
-

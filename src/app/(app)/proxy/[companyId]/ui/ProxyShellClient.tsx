@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+
+import ProxyContextBlockClient from '@/components/ProxyContextBlockClient';
 
 type Company = {
   id: string;
@@ -10,7 +11,7 @@ type Company = {
   name: string;
 };
 
-async function postAudit(input: { action: 'enter' | 'exit' | 'switch'; companyId: string; proxyMeta?: Record<string, unknown> }) {
+async function postAudit(input: { action: 'enter' | 'exit'; companyId: string; proxyMeta?: Record<string, unknown> }) {
   const res = await fetch('/api/proxy/audit', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -20,52 +21,17 @@ async function postAudit(input: { action: 'enter' | 'exit' | 'switch'; companyId
 }
 
 export default function ProxyShellClient(props: { company: Company }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
   useEffect(() => {
     window.localStorage.setItem('gos.currentCompanyId', props.company.id);
+    window.localStorage.setItem('gos.proxyCompanyId', props.company.id);
+    window.localStorage.setItem('gos.proxyCompanyName', props.company.name);
+    window.localStorage.setItem('gos.proxyCompanyCode', props.company.code);
     void postAudit({ action: 'enter', companyId: props.company.id, proxyMeta: { route: `/proxy/${props.company.id}` } });
-  }, [props.company.id]);
-
-  async function exit() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await postAudit({ action: 'exit', companyId: props.company.id, proxyMeta: { route: `/proxy/${props.company.id}` } });
-    } finally {
-      router.push('/proxy');
-      setBusy(false);
-    }
-  }
-
+  }, [props.company.code, props.company.id, props.company.name]);
 
   return (
     <div className="mt-4">
-      <div className="rounded-xl bg-white border border-black/5">
-        <div className="p-4 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div className="text-sm text-black/60">PROXY MODE · Acting as BBY.SG Pte Ltd</div>
-            <div className="mt-1 text-lg font-semibold">
-              {props.company.name} <span className="text-black/40 text-sm">({props.company.code})</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={busy}
-              onClick={() => void exit()}
-              className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-            >
-              退出 Proxy
-            </button>
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="rounded-lg bg-black/[0.02] border border-black/5 p-4 text-sm text-black/70">
-            你正在以 BBY.SG Pte Ltd 的身份代理进入该公司。下方为可复用的前台服务入口。
-          </div>
-        </div>
-      </div>
+      <ProxyContextBlockClient bootstrapCompany={props.company} />
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-xl border border-black/10 bg-white p-4">

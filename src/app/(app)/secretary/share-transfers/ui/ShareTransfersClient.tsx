@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DateInputYMD } from '@/components/DateInputYMD';
+import ProxyContextBlockClient from '@/components/ProxyContextBlockClient';
 import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
 import { formatDateDMY } from '@/lib/date';
 import { maskAddress, maskDob, maskEmail, maskName, maskNationality } from '@/lib/mask';
@@ -734,6 +735,7 @@ export default function ShareTransfersClient(props: {
   return (
     <div className="flex-1">
       <div className="max-w-6xl mx-auto px-4 py-6">
+        <ProxyContextBlockClient />
         <div className="rounded-xl bg-white border border-black/5 p-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div className="text-lg font-semibold">Share Transfers</div>

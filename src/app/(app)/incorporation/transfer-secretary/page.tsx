@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import AppTopNav from '@/components/AppTopNav';
+import ProxyContextBlockClient from '@/components/ProxyContextBlockClient';
 import { getCurrentUser } from '@/lib/auth';
 
 import TransferSecretaryApplicationClient from '@/app/(app)/incorporation/ui/TransferSecretaryApplicationClient';
@@ -14,6 +15,7 @@ export default async function Page() {
       <AppTopNav active="incorporation" />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
+          <ProxyContextBlockClient />
           <TransferSecretaryApplicationClient />
         </div>
       </div>

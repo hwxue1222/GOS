@@ -52,6 +52,7 @@ type CompanyLite = {
 
 export function useCompanyContext() {
   const [companyId, setCompanyId] = useState<string>('');
+  const [proxyCompanyId, setProxyCompanyId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CompanyApiResponse | null>(null);
@@ -59,6 +60,8 @@ export function useCompanyContext() {
   useEffect(() => {
     const id = window.localStorage.getItem('gos.currentCompanyId') ?? '';
     setCompanyId(id);
+    const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+    setProxyCompanyId(pid);
   }, []);
 
   useEffect(() => {
@@ -93,8 +96,9 @@ export function useCompanyContext() {
 
   const closeHref = useMemo(() => {
     if (!companyId) return '/dashboard';
+    if (proxyCompanyId && proxyCompanyId === companyId) return `/proxy/${encodeURIComponent(companyId)}`;
     return `/portal/companies/${encodeURIComponent(companyId)}`;
-  }, [companyId]);
+  }, [companyId, proxyCompanyId]);
 
   return { companyId, loading, error, client: data?.client ?? null, roles: data?.roles ?? null, closeHref };
 }
