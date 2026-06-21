@@ -6653,6 +6653,9 @@ export async function readDb(): Promise<Db> {
 
 export async function writeDb(db: Db) {
   await writeDbRaw(db);
+  const g = getGlobalDbCache();
+  g.__gosDbCache = { db, ts: Date.now() };
+  g.__gosDbCachePromise = undefined;
 }
 
 export async function appendAuditLog(entry: Omit<AuditLog, 'id' | 'createdAt'> & { createdAt?: string }) {

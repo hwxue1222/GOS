@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb, updateClient } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
+export const dynamic = 'force-dynamic';
+
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
   if (r.role === 'SHAREHOLDER' || r.role === 'RORC') return !r.toDate;
@@ -140,7 +142,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
       rorc: rorcLatest,
       secretaries: byRole('SECRETARY'),
     },
-  });
+  },
+  { headers: { 'cache-control': 'no-store' } });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: string }> }) {
