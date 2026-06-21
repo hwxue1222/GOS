@@ -143,7 +143,7 @@ export default async function SecretaryAcraFilingPage() {
 
   const incApps = await listIncorporationApplications();
   const incRows = incApps
-    .filter((a) => a.status === 'SUBMITTED' || a.status === 'PROCESSING' || a.status === 'NEED_MORE_INFO')
+    .filter((a) => a.status === 'SUBMITTED' || a.status === 'PROCESSING' || a.status === 'NEED_MORE_INFO' || a.status === 'REJECTED')
     .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt))
     .map((a) => ({
       applicationId: a.id,

@@ -100,6 +100,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ application
     if (app.status !== 'SUBMITTED') return NextResponse.json({ ok: false, error: 'LOCKED' }, { status: 400 });
   } else {
     if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    if (app.status !== 'REJECTED') return NextResponse.json({ ok: false, error: 'LOCKED' }, { status: 400 });
   }
 
   const removed = await deleteIncorporationApplication(applicationId);
