@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
 import I18nProviderClient from '@/components/I18nProviderClient';
+import WhatsappSupportButton from '@/components/WhatsappSupportButton';
 import { getLangFromCookies } from '@/lib/i18n.server';
 
 const geistSans = Geist({
@@ -42,7 +43,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
-        <I18nProviderClient initialLang={lang}>{children}</I18nProviderClient>
+        <I18nProviderClient initialLang={lang}>
+          {children}
+          <WhatsappSupportButton phoneE164="+6589926681" defaultMessage="Hi, I need help with GOS." />
+        </I18nProviderClient>
       </body>
     </html>
   );
