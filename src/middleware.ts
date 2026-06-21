@@ -9,6 +9,8 @@ const publicPaths = ['/login', '/admin/login', '/portal/login', '/portal/forgot-
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  const isAdminPath = pathname === '/admin' || pathname.startsWith('/admin/');
+
   const rawHost = String(req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').toLowerCase();
   const firstHost = rawHost.split(',')[0]?.trim() ?? '';
   const hostNoPort = firstHost.replace(/^https?:\/\//, '').split('/')[0]?.split(':')[0]?.trim() ?? '';
@@ -25,10 +27,11 @@ export function middleware(req: NextRequest) {
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isPublic) return NextResponse.next();
 
-  const token = isFrontDomain ? req.cookies.get(PORTAL_SESSION_COOKIE)?.value : req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const portalContext = isFrontDomain && !isAdminPath;
+  const token = portalContext ? req.cookies.get(PORTAL_SESSION_COOKIE)?.value : req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = isFrontDomain ? '/portal/login' : '/admin/login';
+    url.pathname = portalContext ? '/portal/login' : '/admin/login';
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
