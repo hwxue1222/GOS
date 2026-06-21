@@ -2,13 +2,21 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { appendAuditLog, readDb, resumeShareTransfer } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
+import { hasPermission } from '@/lib/permissions';
 
 export async function POST(req: Request, { params }: { params: Promise<{ transferId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role === 'staff') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const proxyCompanyId = (req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  if (user.role === 'staff' && !(canProxy && proxyCompanyId)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const { transferId } = await params;
+  if (user.role === 'staff') {
+    const db = await readDb();
+    const t = db.shareTransfers.find((x) => x.id === transferId) ?? null;
+    if (!t || t.clientId !== proxyCompanyId) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
   const r = await resumeShareTransfer(transferId);
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
 

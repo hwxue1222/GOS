@@ -32,10 +32,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
 
   const { clientId } = await ctx.params;
 
+  const proxyCompanyId = (_req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+
   if (user.role !== 'client') {
-    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
-      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-    }
+    const canViewSecretary = hasPermission(user, 'secretary', 'viewAll') || hasPermission(user, 'secretary', 'viewAssigned');
+    if (!canViewSecretary && !(user.role === 'staff' && canProxy)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  if (user.role === 'staff' && canProxy && proxyCompanyId && proxyCompanyId !== clientId) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
   if (!(await canAccessClientAsDirector(user, clientId))) {
@@ -57,4 +63,3 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
 
   return NextResponse.json({ ok: true, directors });
 }
-

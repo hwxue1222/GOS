@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DateInputYMD } from '@/components/DateInputYMD';
-import ProxyContextBlockClient from '@/components/ProxyContextBlockClient';
 import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
 import { formatDateDMY } from '@/lib/date';
 import { maskAddress, maskDob, maskEmail, maskName, maskNationality } from '@/lib/mask';
@@ -178,6 +177,19 @@ export default function ShareTransfersClient(props: {
 
   const lockedClientId = String(initialClientId ?? '').trim();
   const [drafts, setDrafts] = useState<ShareTransferDraft[]>(() => [makeDraft()]);
+
+  const proxyCompanyId = useMemo(() => {
+    try {
+      return (window.localStorage.getItem('gos.proxyCompanyId') ?? '').trim();
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const proxyHeaders = useMemo(() => {
+    if (!proxyCompanyId) return undefined;
+    return { 'x-gos-proxy-company-id': proxyCompanyId } as Record<string, string>;
+  }, [proxyCompanyId]);
 
   const patchDraft = (id: string, patch: Partial<ShareTransferDraft>) => {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
@@ -405,7 +417,7 @@ export default function ShareTransfersClient(props: {
       const clientId = d.newCompany.clientId.trim();
       if (!clientId) continue;
       if (directorsByClientId[clientId]) continue;
-      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store' })
+      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store', headers: proxyHeaders })
         .then((r) => r.json().catch(() => null))
         .then((j: any) => {
           const list = Array.isArray(j?.directors) ? (j.directors as any[]) : [];
@@ -426,7 +438,7 @@ export default function ShareTransfersClient(props: {
       const clientId = String(transferorClientId).trim();
       if (!clientId) continue;
       if (directorsByClientId[clientId]) continue;
-      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store' })
+      fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}/directors-lite`, { cache: 'no-store', headers: proxyHeaders })
         .then((r) => r.json().catch(() => null))
         .then((j: any) => {
           const list = Array.isArray(j?.directors) ? (j.directors as any[]) : [];
@@ -453,7 +465,7 @@ export default function ShareTransfersClient(props: {
       }
       setLoadingShareholders(true);
       try {
-        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}`, { cache: 'no-store' }).catch(() => null);
+        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(clientId)}`, { cache: 'no-store', headers: proxyHeaders }).catch(() => null);
         if (!res?.ok) {
           if (!ignore) setShareholders([]);
           return;
@@ -504,7 +516,7 @@ export default function ShareTransfersClient(props: {
   const filtered = visibleTransfers;
 
   async function refresh() {
-    const res = await fetch('/api/secretary/share-transfers');
+    const res = await fetch('/api/secretary/share-transfers', { headers: proxyHeaders });
     const j = await res.json().catch(() => null);
     if (res.ok && Array.isArray(j?.transfers)) setTransfers(j.transfers);
   }
@@ -595,7 +607,7 @@ export default function ShareTransfersClient(props: {
         const valueSgd = Number(d.valueSgd);
         const res = await fetch('/api/secretary/share-transfers', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...(proxyHeaders ?? {}) },
           body: JSON.stringify({
             clientId: selectedClientId,
             effectiveDate: d.effectiveDate,
@@ -717,7 +729,7 @@ export default function ShareTransfersClient(props: {
   async function resume(id: string) {
     setError(null);
     setInfo(null);
-    const res = await fetch(`/api/secretary/share-transfers/${id}/resume`, { method: 'POST' });
+    const res = await fetch(`/api/secretary/share-transfers/${id}/resume`, { method: 'POST', headers: proxyHeaders });
     const j = await res.json().catch(() => null);
     if (!res.ok) {
       setError(j?.error ?? `HTTP_${res.status}`);
@@ -735,7 +747,6 @@ export default function ShareTransfersClient(props: {
   return (
     <div className="flex-1">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <ProxyContextBlockClient />
         <div className="rounded-xl bg-white border border-black/5 p-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div className="text-lg font-semibold">Share Transfers</div>

@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { appendAuditLog, createShareTransferRequest, findClientById, listClients, listShareTransfers, readDb } from '@/lib/db';
 import { sendSigningInvite } from '@/lib/email';
+import { hasPermission } from '@/lib/permissions';
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role === 'staff') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const proxyCompanyId = (req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  if (user.role === 'staff' && !(canProxy && proxyCompanyId)) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
 
   const [clients, transfers] = await Promise.all([listClients(), listShareTransfers()]);
   if (user.role === 'client') {
@@ -30,6 +35,16 @@ export async function GET() {
       transfers: transfers.filter((t) => allowed.has(t.clientId)),
     });
   }
+  if (user.role === 'staff') {
+    const c = clients.find((x) => x.id === proxyCompanyId && !x.deletedAt) ?? null;
+    if (!c) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+    return NextResponse.json({
+      ok: true,
+      clients: [{ id: c.id, code: c.code, name: c.name }],
+      transfers: transfers.filter((t) => t.clientId === proxyCompanyId),
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     clients: clients.filter((c) => !c.deletedAt).map((c) => ({ id: c.id, code: c.code, name: c.name })),
@@ -40,7 +55,11 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (user.role === 'staff') return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const proxyCompanyId = (req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  if (user.role === 'staff' && !(canProxy && proxyCompanyId)) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
 
   const body = (await req.json().catch(() => null)) as
     | {
@@ -82,6 +101,9 @@ export async function POST(req: Request) {
     | null;
 
   const clientId = typeof body?.clientId === 'string' ? body.clientId : '';
+  if (user.role === 'staff' && proxyCompanyId !== clientId) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
 
   if (user.role === 'client') {
     const db = await readDb();
