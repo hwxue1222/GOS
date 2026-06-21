@@ -32,7 +32,7 @@ export default async function PortalProfilePage() {
     .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col text-black">
       <FrontTopNavClient active="dashboard" user={me} companies={companies} />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -43,4 +43,3 @@ export default async function PortalProfilePage() {
     </div>
   );
 }
-
