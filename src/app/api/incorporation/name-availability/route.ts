@@ -62,10 +62,23 @@ async function getBrowser() {
       const envPath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || process.env.CHROME_EXECUTABLE_PATH?.trim();
       const chromiumPath = await chromium.executablePath();
       const macCandidates = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium'];
+
+      const isRunnableFile = (p: string | null | undefined) => {
+        if (!p) return false;
+        try {
+          const st = fs.statSync(p);
+          return st.isFile();
+        } catch {
+          return false;
+        }
+      };
+
+      const platform = process.platform;
       const candidate =
-        (envPath && fs.existsSync(envPath) ? envPath : null) ||
-        (chromiumPath && fs.existsSync(chromiumPath) ? chromiumPath : null) ||
-        macCandidates.find((p) => fs.existsSync(p)) ||
+        (isRunnableFile(envPath) ? envPath! : null) ||
+        (platform === 'darwin' ? macCandidates.find((p) => isRunnableFile(p)) ?? null : null) ||
+        (platform !== 'darwin' && isRunnableFile(chromiumPath) ? chromiumPath : null) ||
+        (platform === 'darwin' && isRunnableFile(chromiumPath) ? chromiumPath : null) ||
         null;
       if (!candidate) throw new Error('CHROME_NOT_FOUND');
 
@@ -154,6 +167,31 @@ export async function GET(req: Request) {
 
   const searchUrl = `https://www.sgpbusiness.com/search/${encodeURIComponent(name)}`;
 
+  try {
+    const pre = await fetch(searchUrl, {
+      redirect: 'follow',
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      cache: 'no-store',
+    }).catch(() => null);
+
+    if (pre && (pre.status === 403 || pre.status === 429)) {
+      const t = await pre.text().catch(() => '');
+      const low = t.toLowerCase();
+      if (
+        low.includes('just a moment') ||
+        low.includes('checking your browser') ||
+        low.includes('challenges.cloudflare.com') ||
+        low.includes('cloudflare')
+      ) {
+        return NextResponse.json({ ok: true, available: null, reason: 'BLOCKED', searchUrl });
+      }
+    }
+  } catch {}
+
   let page: Awaited<ReturnType<Browser['newPage']>> | null = null;
   try {
     const browser = await getBrowser();
@@ -202,7 +240,12 @@ export async function GET(req: Request) {
         : undefined,
     });
   } catch (e) {
-    return NextResponse.json({ ok: true, available: null, reason: (e as Error).message || 'ERROR', searchUrl });
+    const msg = (e as Error).message || 'ERROR';
+    const mapped =
+      msg.includes('ENOEXEC') || msg.includes('EACCES') || msg.includes('CHROME_NOT_FOUND')
+        ? 'BROWSER_UNAVAILABLE'
+        : msg;
+    return NextResponse.json({ ok: true, available: null, reason: mapped, searchUrl });
   } finally {
     await page?.close().catch(() => null);
   }

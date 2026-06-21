@@ -38,8 +38,8 @@ export default function RegisterCompanyStep1(props: {
   const set = (patch: Partial<typeof v>) => props.onChange({ ...v, ...patch });
   const prevManualAddressRef = useRef<string>('');
   const [checking, setChecking] = useState<'company' | 'alternative' | null>(null);
-  const [companyCheck, setCompanyCheck] = useState<{ available: boolean | null; searchUrl?: string } | null>(null);
-  const [alternativeCheck, setAlternativeCheck] = useState<{ available: boolean | null; searchUrl?: string } | null>(null);
+  const [companyCheck, setCompanyCheck] = useState<{ available: boolean | null; searchUrl?: string; reason?: string } | null>(null);
+  const [alternativeCheck, setAlternativeCheck] = useState<{ available: boolean | null; searchUrl?: string; reason?: string } | null>(null);
   const suffixOptions = ['Pte Ltd', 'Ltd', 'LLP', 'LP', 'Sole Proprietorship'];
   const currencyOptions: Array<{ label: string; value: Currency }> = [
     { label: 'Singapore Dollar(S$) SGD', value: 'SGD' },
@@ -72,9 +72,9 @@ export default function RegisterCompanyStep1(props: {
     try {
       const res = await fetch(`/api/incorporation/name-availability?name=${encodeURIComponent(full)}&t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as
-        | { ok?: boolean; available?: boolean | null; searchUrl?: string }
+        | { ok?: boolean; available?: boolean | null; searchUrl?: string; reason?: string }
         | null;
-      const out = { available: j?.available ?? null, searchUrl: j?.searchUrl };
+      const out = { available: j?.available ?? null, searchUrl: j?.searchUrl, reason: j?.reason };
       if (kind === 'company') setCompanyCheck(out);
       if (kind === 'alternative') setAlternativeCheck(out);
     } finally {
@@ -82,13 +82,19 @@ export default function RegisterCompanyStep1(props: {
     }
   }
 
-  function renderAvailabilityBadge(r: { available: boolean | null; searchUrl?: string } | null): ReactNode {
+  function renderAvailabilityBadge(r: { available: boolean | null; searchUrl?: string; reason?: string } | null): ReactNode {
     if (!r) return null;
     if (r.available === true) return <div className="mt-2 text-xs font-medium text-[#16a34a]">● available for incorporation</div>;
     if (r.available === false) return <div className="mt-2 text-xs font-medium text-red-600">● not available</div>;
+    const msg =
+      r.reason === 'BLOCKED'
+        ? 'Unable to check automatically (blocked by SGPBusiness).'
+        : r.reason === 'BROWSER_UNAVAILABLE'
+          ? 'Unable to check automatically (name check not supported on this server).'
+          : 'Unable to check.';
     return (
       <div className="mt-2 text-xs text-black/60">
-        Unable to check.{
+        {msg}{
           r.searchUrl ? (
             <>
               {' '}
