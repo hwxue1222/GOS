@@ -2865,6 +2865,16 @@ function nextScCode(db: Db) {
   return `SC${String(max + 1).padStart(3, '0')}`;
 }
 
+function nextDaCode(db: Db) {
+  let max = 0;
+  for (const c of db.clients) {
+    const m = String(c.code ?? '').match(/^DA(\d{3})$/);
+    if (!m) continue;
+    max = Math.max(max, Number(m[1]));
+  }
+  return `DA${String(max + 1).padStart(3, '0')}`;
+}
+
 function computeShareAllocation(totalShares: number, names: string[]) {
   const counts = new Map<string, number>();
   const order: string[] = [];
@@ -12990,7 +13000,7 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
         patchCompanyId = existingClient.id;
         patchCompanyName = existingClient.name;
       } else {
-        const codeSeed = nextScCode(db);
+        const codeSeed = nextDaCode(db);
         const paidUpCurrency = String((payload as any).paidUpCapitalCurrency ?? '').trim().toUpperCase();
         const paidUpAmountRaw = String((payload as any).paidUpCapitalAmount ?? '').trim();
         const paidUpAmount = paidUpAmountRaw ? Number(paidUpAmountRaw) : undefined;
@@ -13043,7 +13053,7 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
               existing ??
               ({
                 id: newId('cli'),
-                code: nextScCode(db),
+                code: nextDaCode(db),
                 name: companyName2 || 'Corporate shareholder',
                 companyRegistrationNo: regNo,
                 address: address2,
@@ -13137,7 +13147,7 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
         client ??
         ({
           id: newId('cli'),
-          code: nextScCode(db),
+          code: nextDaCode(db),
           name: companyName,
           companyRegistrationNo: regNo,
           address,
