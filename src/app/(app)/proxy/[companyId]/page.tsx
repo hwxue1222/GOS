@@ -3,8 +3,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import ProxyShellClient from '@/app/(app)/proxy/[companyId]/ui/ProxyShellClient';
-import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
-import { buildIncorporationApplications } from '@/lib/incorporationApplications';
 
 export default async function ProxyCompanyShellPage({ params }: { params: Promise<{ companyId: string }> }) {
   const user = await getCurrentUser();
@@ -74,17 +72,13 @@ export default async function ProxyCompanyShellPage({ params }: { params: Promis
     }
   }
 
-  const allowedClientIds = new Set<string>([companyId]);
-  const csRows = buildSecretaryServiceApplications(db, allowedClientIds).slice(0, 10);
-  const incRows = buildIncorporationApplications(db, allowedClientIds, null).slice(0, 10);
-
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="proxy" />
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <h1 className="text-xl font-semibold">Client Portal (Proxy)</h1>
-          <ProxyShellClient company={{ id: company.id, code: company.code, name: company.name }} csRows={csRows} incRows={incRows} />
+          <ProxyShellClient company={{ id: company.id, code: company.code, name: company.name }} />
         </div>
       </div>
     </div>
