@@ -103,6 +103,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
     | null;
 
   const wantsStatusChange = typeof body?.status === 'string' && body.status !== current.status;
+  if (current.status === 'PAID' && body?.status === 'VOID') {
+    return NextResponse.json({ ok: false, error: 'PAID_LOCKED' }, { status: 400 });
+  }
   if (wantsStatusChange) {
     if (!hasPermission(user, 'invoices', 'markPaid')) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
@@ -273,6 +276,12 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ invoiceId: 
   }
 
   const { invoiceId } = await ctx.params;
+  const current = await findInvoiceById(invoiceId);
+  if (!current || current.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+  if (current.status === 'PAID') {
+    return NextResponse.json({ ok: false, error: 'PAID_LOCKED' }, { status: 400 });
+  }
+
   const invoice = await deleteInvoice(invoiceId);
   if (!invoice) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 

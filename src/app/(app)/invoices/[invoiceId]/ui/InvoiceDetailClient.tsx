@@ -524,7 +524,7 @@ export default function InvoiceDetailClient({
                 Mark Unpaid
               </button>
             )}
-            {invoice.status !== 'VOID' ? (
+            {invoice.status !== 'VOID' && invoice.status !== 'PAID' ? (
               <button
                 disabled={saving || !canEdit}
                 onClick={() => void saveInvoice({ status: 'VOID' })}
@@ -533,7 +533,7 @@ export default function InvoiceDetailClient({
                 Void
               </button>
             ) : null}
-            {canDelete ? (
+            {canDelete && invoice.status !== 'PAID' ? (
               <button
                 disabled={saving}
                 onClick={() => void deleteThis()}
