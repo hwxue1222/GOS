@@ -11,6 +11,26 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  function clearGosClientState() {
+    function clearStore(store: Storage) {
+      const keys: string[] = [];
+      for (let i = 0; i < store.length; i += 1) {
+        const k = store.key(i);
+        if (k) keys.push(k);
+      }
+      for (const k of keys) {
+        if (k.startsWith('gos.')) store.removeItem(k);
+      }
+    }
+
+    try {
+      clearStore(window.sessionStorage);
+    } catch {}
+    try {
+      clearStore(window.localStorage);
+    } catch {}
+  }
+
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!rootRef.current) return;
@@ -23,6 +43,7 @@ export default function FrontUserMenuClient(props: { user: { id: string; name: s
 
   async function signOut() {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    clearGosClientState();
     router.replace('/portal/login');
   }
 

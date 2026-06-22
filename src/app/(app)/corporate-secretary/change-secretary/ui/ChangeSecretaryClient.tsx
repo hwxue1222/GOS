@@ -291,7 +291,9 @@ export default function ChangeSecretaryClient() {
 
   useEffect(() => {
     if (!companyId) return;
-    const raw = window.localStorage.getItem(draftKey(companyId));
+    const rawSession = window.sessionStorage.getItem(draftKey(companyId));
+    const rawLocal = rawSession ? null : window.localStorage.getItem(draftKey(companyId));
+    const raw = rawSession ?? rawLocal;
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
@@ -302,7 +304,12 @@ export default function ChangeSecretaryClient() {
       if (typeof d.removeSecretaryRoleId === 'string') setRemoveSecretaryRoleId(d.removeSecretaryRoleId);
       if (typeof d.useByBridgeSecretary === 'boolean') setUseByBridgeSecretary(d.useByBridgeSecretary);
       if (Array.isArray(d.addSecretaries)) setAddSecretaries(d.addSecretaries);
+      if (rawLocal) {
+        window.sessionStorage.setItem(draftKey(companyId), rawLocal);
+        window.localStorage.removeItem(draftKey(companyId));
+      }
     } catch {
+      window.sessionStorage.removeItem(draftKey(companyId));
       window.localStorage.removeItem(draftKey(companyId));
     }
   }, [companyId]);
@@ -384,7 +391,7 @@ export default function ChangeSecretaryClient() {
 
     setSubmitting(true);
     try {
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         draftKey(companyId),
         JSON.stringify({
           removeSecretaryRoleId,
@@ -477,6 +484,7 @@ export default function ChangeSecretaryClient() {
         setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
+      window.sessionStorage.removeItem(draftKey(companyId));
       window.localStorage.removeItem(draftKey(companyId));
       router.push(`/corporate-secretary/applications/company-update/${encodeURIComponent(j.request.id)}`);
     } finally {

@@ -15,21 +15,47 @@ async function postAudit(input: { action: 'enter' | 'exit'; companyId: string; p
 }
 
 function readProxyCompanyFromStorage(): CompanyInfo | null {
-  const id = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
-  const name = window.localStorage.getItem('gos.proxyCompanyName') ?? '';
-  const code = window.localStorage.getItem('gos.proxyCompanyCode') ?? '';
+  const sessionId = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+  const localId = sessionId ? '' : window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+  const id = sessionId || localId;
+
+  const sessionName = window.sessionStorage.getItem('gos.proxyCompanyName') ?? '';
+  const localName = sessionName ? '' : window.localStorage.getItem('gos.proxyCompanyName') ?? '';
+  const name = sessionName || localName;
+
+  const sessionCode = window.sessionStorage.getItem('gos.proxyCompanyCode') ?? '';
+  const localCode = sessionCode ? '' : window.localStorage.getItem('gos.proxyCompanyCode') ?? '';
+  const code = sessionCode || localCode;
+
+  if (id && localId) {
+    window.sessionStorage.setItem('gos.currentCompanyId', id);
+    window.sessionStorage.setItem('gos.proxyCompanyId', id);
+    if (name) window.sessionStorage.setItem('gos.proxyCompanyName', name);
+    if (code) window.sessionStorage.setItem('gos.proxyCompanyCode', code);
+    window.localStorage.removeItem('gos.currentCompanyId');
+    window.localStorage.removeItem('gos.proxyCompanyId');
+    window.localStorage.removeItem('gos.proxyCompanyName');
+    window.localStorage.removeItem('gos.proxyCompanyCode');
+  }
   if (!id) return null;
   return { id, name, code };
 }
 
 function writeProxyCompanyToStorage(c: CompanyInfo) {
-  window.localStorage.setItem('gos.currentCompanyId', c.id);
-  window.localStorage.setItem('gos.proxyCompanyId', c.id);
-  window.localStorage.setItem('gos.proxyCompanyName', c.name);
-  window.localStorage.setItem('gos.proxyCompanyCode', c.code);
+  window.sessionStorage.setItem('gos.currentCompanyId', c.id);
+  window.sessionStorage.setItem('gos.proxyCompanyId', c.id);
+  window.sessionStorage.setItem('gos.proxyCompanyName', c.name);
+  window.sessionStorage.setItem('gos.proxyCompanyCode', c.code);
+  window.localStorage.removeItem('gos.currentCompanyId');
+  window.localStorage.removeItem('gos.proxyCompanyId');
+  window.localStorage.removeItem('gos.proxyCompanyName');
+  window.localStorage.removeItem('gos.proxyCompanyCode');
 }
 
 function clearProxyCompanyFromStorage() {
+  window.sessionStorage.removeItem('gos.proxyCompanyId');
+  window.sessionStorage.removeItem('gos.proxyCompanyName');
+  window.sessionStorage.removeItem('gos.proxyCompanyCode');
   window.localStorage.removeItem('gos.proxyCompanyId');
   window.localStorage.removeItem('gos.proxyCompanyName');
   window.localStorage.removeItem('gos.proxyCompanyCode');

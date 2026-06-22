@@ -151,7 +151,9 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
 
   useEffect(() => {
     if (!clientId) return;
-    const raw = window.localStorage.getItem(draftKey(clientId));
+    const rawSession = window.sessionStorage.getItem(draftKey(clientId));
+    const rawLocal = rawSession ? null : window.localStorage.getItem(draftKey(clientId));
+    const raw = rawSession ?? rawLocal;
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
@@ -167,7 +169,12 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
       if (Array.isArray(d.removeDirectorRoleIds)) setRemoveRoleIds(d.removeDirectorRoleIds);
       if (Array.isArray(d.addDirectors)) setAddDirectors(d.addDirectors);
       setEditing(false);
+      if (rawLocal) {
+        window.sessionStorage.setItem(draftKey(clientId), rawLocal);
+        window.localStorage.removeItem(draftKey(clientId));
+      }
     } catch {
+      window.sessionStorage.removeItem(draftKey(clientId));
       window.localStorage.removeItem(draftKey(clientId));
     }
   }, [clientId]);
@@ -201,7 +208,7 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
 
     setSubmitting(true);
     try {
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         draftKey(clientId),
         JSON.stringify({
           effectiveDate,
@@ -292,6 +299,7 @@ export default function DirectorChangeRequestForm({ clientId, directors }: Props
       const signLinksText = Array.isArray(j.signLinks)
         ? (j.signLinks as Array<{ email: string; url: string }>).map((x) => `${x.email} — ${x.url}`).join('\n')
         : null;
+      window.sessionStorage.removeItem(draftKey(clientId));
       window.localStorage.removeItem(draftKey(clientId));
       router.push(`/corporate-secretary/applications/director-change/${encodeURIComponent(j.request.id)}`);
     } finally {

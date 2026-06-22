@@ -73,12 +73,15 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
   const selectableCompanies = companies.filter((c) => !c.isStruckOff);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
+    const storedFromSession = window.sessionStorage.getItem('gos.currentCompanyId') ?? '';
+    const storedFromLocal = storedFromSession ? '' : (window.localStorage.getItem('gos.currentCompanyId') ?? '');
+    const stored = storedFromSession || storedFromLocal;
     const valid = companies.some((c) => c.id === stored && !c.isStruckOff);
     const next = valid ? stored : selectableCompanies[0]?.id ?? '';
     if (next) {
       setCurrentCompanyId(next);
-      window.localStorage.setItem('gos.currentCompanyId', next);
+      window.sessionStorage.setItem('gos.currentCompanyId', next);
+      if (storedFromLocal) window.localStorage.removeItem('gos.currentCompanyId');
     }
   }, [companies, selectableCompanies]);
 
@@ -86,7 +89,8 @@ export default function FrontTopNavClient({ active, user, companies }: Props) {
     const c = companies.find((x) => x.id === id);
     if (!c || c.isStruckOff) return;
     setCurrentCompanyId(id);
-    window.localStorage.setItem('gos.currentCompanyId', id);
+    window.sessionStorage.setItem('gos.currentCompanyId', id);
+    window.localStorage.removeItem('gos.currentCompanyId');
     window.dispatchEvent(new Event('gos.companyChanged'));
     if (pathname?.startsWith('/portal/companies/')) {
       router.replace(`/portal/companies/${encodeURIComponent(id)}`);

@@ -180,7 +180,13 @@ export default function ShareTransfersClient(props: {
 
   const proxyCompanyId = useMemo(() => {
     try {
-      return (window.localStorage.getItem('gos.proxyCompanyId') ?? '').trim();
+      const pid = (window.sessionStorage.getItem('gos.proxyCompanyId') ?? '').trim();
+      if (pid) return pid;
+      const legacy = (window.localStorage.getItem('gos.proxyCompanyId') ?? '').trim();
+      if (!legacy) return '';
+      window.sessionStorage.setItem('gos.proxyCompanyId', legacy);
+      window.localStorage.removeItem('gos.proxyCompanyId');
+      return legacy;
     } catch {
       return '';
     }

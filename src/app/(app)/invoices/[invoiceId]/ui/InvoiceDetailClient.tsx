@@ -398,7 +398,7 @@ export default function InvoiceDetailClient({
           onMouseDown={() => setMarkPaidOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white shadow-lg border border-black/10 overflow-hidden"
+            className="w-full max-w-md rounded-2xl bg-white shadow-lg border border-black/10"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">

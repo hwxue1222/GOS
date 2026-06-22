@@ -22,28 +22,24 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function clearPortalLocalDrafts() {
-    try {
+  function clearGosClientState() {
+    function clearStore(store: Storage) {
       const keys: string[] = [];
-      for (let i = 0; i < window.localStorage.length; i += 1) {
-        const k = window.localStorage.key(i);
+      for (let i = 0; i < store.length; i += 1) {
+        const k = store.key(i);
         if (k) keys.push(k);
       }
       for (const k of keys) {
-        if (
-          k === 'gos.currentCompanyId' ||
-          k === 'gos.proxyCompanyId' ||
-          k === 'gos.proxyCompanyName' ||
-          k === 'gos.proxyCompanyCode' ||
-          k.startsWith('gos.inc.') ||
-          k.startsWith('gos.secretary.shareTransfers.')
-        ) {
-          window.localStorage.removeItem(k);
-        }
+        if (k.startsWith('gos.')) store.removeItem(k);
       }
-    } catch {
-      return;
     }
+
+    try {
+      clearStore(window.sessionStorage);
+    } catch {}
+    try {
+      clearStore(window.localStorage);
+    } catch {}
   }
 
   useEffect(() => {
@@ -95,7 +91,7 @@ export default function LoginFormClient({ mode, title, subtitle, defaultFrom }: 
       }
 
       if (mode === 'portal') {
-        clearPortalLocalDrafts();
+        clearGosClientState();
         router.replace('/portal/companies');
         return;
       }

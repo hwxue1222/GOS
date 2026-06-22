@@ -74,8 +74,18 @@ export default function RegisterCompanyWizardClient(props: Props) {
   }, [props.initialStep, props.mode, setPersisted]);
 
   useEffect(() => {
-    const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
-    setProxyCompanyId(pid);
+    try {
+      const sessionPid = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+      const localPid = sessionPid ? '' : window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+      const pid = sessionPid || localPid;
+      if (pid && localPid) {
+        window.sessionStorage.setItem('gos.proxyCompanyId', pid);
+        window.localStorage.removeItem('gos.proxyCompanyId');
+      }
+      setProxyCompanyId(pid);
+    } catch {
+      setProxyCompanyId('');
+    }
   }, []);
 
   const step1Errors = useMemo(() => validateStep1(draft), [draft]);
@@ -246,9 +256,16 @@ export default function RegisterCompanyWizardClient(props: Props) {
         const id = j.application.id;
         if (files.length) await uploadFiles(id);
         try {
+          window.sessionStorage.removeItem(storageKey);
           window.localStorage.removeItem(storageKey);
         } catch {}
-        const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+        const sessionPid = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+        const localPid = sessionPid ? '' : window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+        const pid = sessionPid || localPid;
+        if (pid && localPid) {
+          window.sessionStorage.setItem('gos.proxyCompanyId', pid);
+          window.localStorage.removeItem('gos.proxyCompanyId');
+        }
         router.push(pid ? `/proxy/${encodeURIComponent(pid)}` : '/dashboard');
         router.refresh();
         return;

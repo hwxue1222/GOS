@@ -131,7 +131,11 @@ export default function ChangeDirectorClient(props: {
   const lookupSeqByIdxRef = useRef(new Map<number, number>());
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(draftKey(companyId));
+    if (!companyId) return;
+    const key = draftKey(companyId);
+    const rawSession = window.sessionStorage.getItem(key);
+    const rawLocal = rawSession ? null : window.localStorage.getItem(key);
+    const raw = rawSession ?? rawLocal;
     if (!raw) return;
     try {
       const d = JSON.parse(raw) as {
@@ -140,14 +144,18 @@ export default function ChangeDirectorClient(props: {
         useByBridgeNomineeDirector?: boolean;
         addDirectors?: NewDirector[];
       };
-      if (Array.isArray(d.removeDirectorRoleIds)) {
-        setRemoveDirectorRoleIds(d.removeDirectorRoleIds.filter((x) => typeof x === 'string'));
-      }
+      if (Array.isArray(d.removeDirectorRoleIds)) setRemoveDirectorRoleIds(d.removeDirectorRoleIds.filter((x) => typeof x === 'string'));
       if (typeof d.resignationDateYmd === 'string' && isYmd(d.resignationDateYmd)) setResignationDateYmd(d.resignationDateYmd);
       if (typeof d.useByBridgeNomineeDirector === 'boolean') setUseByBridgeNomineeDirector(d.useByBridgeNomineeDirector);
       if (Array.isArray(d.addDirectors)) setAddDirectors(d.addDirectors);
+
+      if (rawLocal) {
+        window.sessionStorage.setItem(key, rawLocal);
+        window.localStorage.removeItem(key);
+      }
     } catch {
-      window.localStorage.removeItem(draftKey(companyId));
+      window.sessionStorage.removeItem(key);
+      window.localStorage.removeItem(key);
     }
   }, [companyId]);
 
@@ -286,7 +294,7 @@ export default function ChangeDirectorClient(props: {
       return;
     }
 
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       draftKey(companyId),
       JSON.stringify({
         removeDirectorRoleIds,
@@ -392,6 +400,7 @@ export default function ChangeDirectorClient(props: {
         }
         return;
       }
+      window.sessionStorage.removeItem(draftKey(companyId));
       window.localStorage.removeItem(draftKey(companyId));
       router.push(`/corporate-secretary/applications/director-change/${encodeURIComponent(j.request.id)}`);
     } finally {

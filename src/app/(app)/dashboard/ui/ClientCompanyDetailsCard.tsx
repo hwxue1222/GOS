@@ -79,33 +79,30 @@ export default function ClientCompanyDetailsCard(props: { companies: CompanyLite
   const [ssicSecondaryDesc, setSsicSecondaryDesc] = useState<string>('');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
+    const storedFromSession = window.sessionStorage.getItem('gos.currentCompanyId') ?? '';
+    const storedFromLocal = storedFromSession ? '' : (window.localStorage.getItem('gos.currentCompanyId') ?? '');
+    const stored = storedFromSession || storedFromLocal;
     const valid = selectable.some((c) => c.id === stored);
     const next = valid ? stored : props.initialCompanyId ?? selectable[0]?.id ?? '';
     if (next) {
       setCompanyId(next);
-      window.localStorage.setItem('gos.currentCompanyId', next);
+      window.sessionStorage.setItem('gos.currentCompanyId', next);
+      if (storedFromLocal) window.localStorage.removeItem('gos.currentCompanyId');
     }
   }, [props.initialCompanyId, selectable]);
 
   useEffect(() => {
     function syncFromStorage() {
-      const stored = window.localStorage.getItem('gos.currentCompanyId') ?? '';
+      const stored = window.sessionStorage.getItem('gos.currentCompanyId') ?? '';
       if (!stored) return;
       if (!selectable.some((c) => c.id === stored)) return;
       setCompanyId(stored);
     }
-    function onStorage(e: StorageEvent) {
-      if (e.key !== 'gos.currentCompanyId') return;
-      syncFromStorage();
-    }
     function onCompanyChanged() {
       syncFromStorage();
     }
-    window.addEventListener('storage', onStorage);
     window.addEventListener('gos.companyChanged', onCompanyChanged as EventListener);
     return () => {
-      window.removeEventListener('storage', onStorage);
       window.removeEventListener('gos.companyChanged', onCompanyChanged as EventListener);
     };
   }, [selectable]);

@@ -58,10 +58,28 @@ export function useCompanyContext() {
   const [data, setData] = useState<CompanyApiResponse | null>(null);
 
   useEffect(() => {
-    const id = window.localStorage.getItem('gos.currentCompanyId') ?? '';
-    setCompanyId(id);
-    const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
-    setProxyCompanyId(pid);
+    try {
+      const sessionId = window.sessionStorage.getItem('gos.currentCompanyId') ?? '';
+      const localId = sessionId ? '' : window.localStorage.getItem('gos.currentCompanyId') ?? '';
+      const id = sessionId || localId;
+      if (id && localId) {
+        window.sessionStorage.setItem('gos.currentCompanyId', id);
+        window.localStorage.removeItem('gos.currentCompanyId');
+      }
+      setCompanyId(id);
+
+      const sessionPid = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+      const localPid = sessionPid ? '' : window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+      const pid = sessionPid || localPid;
+      if (pid && localPid) {
+        window.sessionStorage.setItem('gos.proxyCompanyId', pid);
+        window.localStorage.removeItem('gos.proxyCompanyId');
+      }
+      setProxyCompanyId(pid);
+    } catch {
+      setCompanyId('');
+      setProxyCompanyId('');
+    }
   }, []);
 
   useEffect(() => {

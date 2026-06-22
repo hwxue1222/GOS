@@ -13,8 +13,18 @@ export default function ModalShell(props: {
   const [proxyCompanyId, setProxyCompanyId] = useState('');
 
   useEffect(() => {
-    const pid = window.localStorage.getItem('gos.proxyCompanyId') ?? '';
-    setProxyCompanyId(pid);
+    try {
+      const sessionPid = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+      const localPid = sessionPid ? '' : window.localStorage.getItem('gos.proxyCompanyId') ?? '';
+      const pid = sessionPid || localPid;
+      if (pid && localPid) {
+        window.sessionStorage.setItem('gos.proxyCompanyId', pid);
+        window.localStorage.removeItem('gos.proxyCompanyId');
+      }
+      setProxyCompanyId(pid);
+    } catch {
+      setProxyCompanyId('');
+    }
   }, []);
 
   const effectiveCloseHref = proxyCompanyId ? `/proxy/${encodeURIComponent(proxyCompanyId)}` : props.closeHref;

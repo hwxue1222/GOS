@@ -55,7 +55,6 @@ export async function POST(req: Request) {
         sameSite: 'lax',
         secure: isHttpsRequest(req),
         path: '/',
-        expires: new Date(session.expiresAt),
       });
       clearCookie(res, ADMIN_SESSION_COOKIE, req);
       return res;
