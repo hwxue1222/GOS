@@ -131,7 +131,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       const clientText = row.client ? `${row.client.code} ${row.client.name}` : '';
       const billToText = inv.billTo.companyName || '';
       const totalText = `${inv.total}`;
-      const datesText = `${inv.issueDate} ${inv.dueDate ?? ''} ${inv.paidAt ?? ''}`;
+      const datesText = `${inv.issueDate} ${inv.paidAt ?? ''}`;
       return textMatch(
         `${inv.invoiceNo} ${inv.issuer} ${billToText} ${clientText} ${inv.currency} ${inv.status} ${totalText} ${datesText} ${row.createdByName}`,
         q,
@@ -455,7 +455,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       'Client Code',
       'Client Name',
       'Issue Date',
-      'Due Date',
+      'Payment date',
       'Currency',
       'Total',
       'Status',
@@ -473,7 +473,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           toCsvValue(code),
           toCsvValue(name),
           toCsvValue(inv.issueDate ?? ''),
-          toCsvValue(inv.dueDate ?? ''),
+          toCsvValue(inv.paidAt ?? ''),
           toCsvValue(inv.currency),
           toCsvValue(String(inv.total)),
           toCsvValue(inv.status),
@@ -632,7 +632,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
                 </th>
                 <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Payment date</div>
                 </th>
                 <th className="px-3 py-3 align-top">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
@@ -671,7 +671,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </td>
                     <td className="px-3 py-3 text-black/70">{inv.issuer}</td>
                     <td className="px-3 py-3">{formatDateDMY(inv.issueDate)}</td>
-                    <td className="px-3 py-3">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
+                    <td className="px-3 py-3">{inv.paidAt ? formatDateDMY(inv.paidAt) : '-'}</td>
                     <td className="px-3 py-3">{formatMoney(inv.currency, inv.total)}</td>
                     <td className="px-3 py-3">
                       <span className={['inline-flex px-2 py-1 rounded-full text-xs font-semibold', s.cls].join(' ')}>
