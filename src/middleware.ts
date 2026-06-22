@@ -9,9 +9,8 @@ const publicPaths = ['/login', '/admin/login', '/portal/login', '/portal/forgot-
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isPortalPath =
-    pathname === '/portal' ||
-    pathname.startsWith('/portal/') ||
+  const isPortalStrictPath = pathname === '/portal' || pathname.startsWith('/portal/');
+  const isDualAuthPath =
     pathname === '/dashboard' ||
     pathname.startsWith('/dashboard/') ||
     pathname === '/incorporation' ||
@@ -35,11 +34,15 @@ export function middleware(req: NextRequest) {
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isPublic) return NextResponse.next();
 
-  const portalContext = isPortalPath || (isFrontDomain && pathname === '/');
-  const token = portalContext ? req.cookies.get(PORTAL_SESSION_COOKIE)?.value : req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const portalToken = req.cookies.get(PORTAL_SESSION_COOKIE)?.value;
+  const adminToken = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+
+  const portalContext = isPortalStrictPath || (isFrontDomain && pathname === '/');
+  const token = portalContext ? portalToken : isDualAuthPath ? portalToken ?? adminToken : adminToken;
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = portalContext ? '/portal/login' : '/admin/login';
+    const toPortalLogin = portalContext || (isDualAuthPath && isFrontDomain);
+    url.pathname = toPortalLogin ? '/portal/login' : '/admin/login';
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
