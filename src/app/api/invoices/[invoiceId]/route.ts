@@ -112,7 +112,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
   }
 
   const issuer: InvoiceIssuer = body?.issuer ?? current.issuer;
-  const invoiceNo = body?.invoiceNo?.trim() ? body!.invoiceNo!.trim() : current.invoiceNo;
+  const baseInvoiceNo = body?.invoiceNo?.trim() ? body!.invoiceNo!.trim() : current.invoiceNo;
   const issueDate = body?.issueDate?.trim() ? body!.issueDate!.trim() : current.issueDate;
   const dueDate =
     body && 'dueDate' in body ? (body.dueDate ? String(body.dueDate).trim() || undefined : undefined) : current.dueDate;
@@ -144,6 +144,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ invoiceId: st
     return t;
   };
   const isMarkingPaid = wantsStatusChange && status === 'PAID';
+  const shouldAppendRevisionSuffix = Boolean(current.sentAt) && !isMarkingPaid && status !== 'PAID';
+  const invoiceNo = shouldAppendRevisionSuffix ? `${baseInvoiceNo}R` : baseInvoiceNo;
   let paidAt: string | undefined = undefined;
   let paymentNote: string | undefined = undefined;
   if (status === 'PAID') {
