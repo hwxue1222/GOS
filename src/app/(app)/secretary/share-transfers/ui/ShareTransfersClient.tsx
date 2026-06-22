@@ -165,8 +165,9 @@ export default function ShareTransfersClient(props: {
   initialClients: ClientLite[];
   initialTransfers: ShareTransfer[];
   initialClientId?: string;
+  hideTitle?: boolean;
 }) {
-  const { initialClients, initialTransfers, initialClientId } = props;
+  const { initialClients, initialTransfers, initialClientId, hideTitle } = props;
 
   const [clients, setClients] = useState<ClientLite[]>(initialClients);
   const [transfers, setTransfers] = useState<ShareTransfer[]>(initialTransfers);
@@ -766,12 +767,14 @@ export default function ShareTransfersClient(props: {
     <div className="flex-1">
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="rounded-xl bg-white border border-black/5 p-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-            <div className="text-lg font-semibold">Share Transfers</div>
-            <div />
-          </div>
+          {hideTitle ? null : (
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <div className="text-lg font-semibold">Share Transfers</div>
+              <div />
+            </div>
+          )}
 
-          <div className="mt-4 rounded-lg bg-black/[0.02] border border-black/5 p-4">
+          <div className={(hideTitle ? '' : 'mt-4 ') + 'rounded-lg bg-black/[0.02] border border-black/5 p-4'}>
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium">New Share Transfer</div>
               <button

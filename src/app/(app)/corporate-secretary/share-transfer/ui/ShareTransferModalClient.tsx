@@ -14,8 +14,8 @@ export default function ShareTransferModalClient(props: {
         initialClients={props.initialClients}
         initialTransfers={props.initialTransfers as any}
         initialClientId={props.companyId}
+        hideTitle
       />
     </ModalShell>
   );
 }
-
