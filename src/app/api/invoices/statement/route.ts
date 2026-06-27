@@ -18,19 +18,6 @@ function clampYmd(s: string) {
   return isYmd(v) ? v : '';
 }
 
-function addMonthsTag(dueYmd: string, todayYmd: string) {
-  if (!isYmd(dueYmd) || !isYmd(todayYmd)) return '';
-  const due = new Date(`${dueYmd}T00:00:00Z`).getTime();
-  const today = new Date(`${todayYmd}T00:00:00Z`).getTime();
-  if (!Number.isFinite(due) || !Number.isFinite(today)) return '';
-  const diffDays = Math.floor((today - due) / (24 * 60 * 60 * 1000));
-  if (diffDays <= 0) return '';
-  if (diffDays <= 90) return '1-3 months';
-  if (diffDays <= 180) return '3-6 months';
-  if (diffDays <= 365) return '6-12 months';
-  return '>12 months';
-}
-
 function moneyRound2(n: number) {
   return Math.round(n * 100) / 100;
 }
@@ -83,44 +70,39 @@ export async function POST(req: Request) {
   if (!client) return NextResponse.json({ ok: false, error: 'CLIENT_NOT_FOUND' }, { status: 404 });
 
   const today = ymdToday();
-  const lines = db.invoices
-    .filter((inv) => !(inv as any).deletedAt)
-    .filter((inv) => inv.billTo.type === 'CLIENT' && inv.billTo.clientId === clientId)
-    .filter((inv) => {
-      const d = String(inv.issueDate ?? '').slice(0, 10);
-      if (!isYmd(d)) return false;
-      return d >= periodFrom && d <= periodTo;
-    })
-    .sort((a, b) => String(a.issueDate).localeCompare(String(b.issueDate)) || a.createdAt.localeCompare(b.createdAt))
-    .map((inv) => {
-      const debit = inv.status === 'VOID' ? 0 : Number(inv.total) || 0;
-      const credit = inv.status === 'PAID' ? debit : 0;
-      const outstanding = moneyRound2(Math.max(0, debit - credit));
-      const dueDate = typeof inv.dueDate === 'string' ? inv.dueDate.slice(0, 10) : undefined;
-      const overdueBucket = inv.status === 'UNPAID' && dueDate ? addMonthsTag(dueDate, today) : '';
-      return {
-        invoiceNo: inv.invoiceNo,
-        issueDate: String(inv.issueDate).slice(0, 10),
-        dueDate,
-        debit: moneyRound2(debit),
-        credit: moneyRound2(credit),
-        outstanding,
-        overdueBucket,
-      };
-    });
+  const events: Array<{ kind: 'INVOICE' | 'PAYMENT'; date: string; invoiceNo: string; amount: number }> = [];
 
-  const totals = lines.reduce(
-    (acc, l) => {
-      acc.debit += l.debit;
-      acc.credit += l.credit;
-      acc.outstanding += l.outstanding;
+  const invoices = db.invoices
+    .filter((inv) => !(inv as any).deletedAt)
+    .filter((inv) => inv.billTo.type === 'CLIENT' && inv.billTo.clientId === clientId);
+
+  for (const inv of invoices) {
+    const invoiceDate = String(inv.issueDate ?? '').slice(0, 10);
+    const total = inv.status === 'VOID' ? 0 : Number(inv.total) || 0;
+    if (isYmd(invoiceDate) && invoiceDate >= periodFrom && invoiceDate <= periodTo) {
+      events.push({ kind: 'INVOICE', date: invoiceDate, invoiceNo: inv.invoiceNo, amount: moneyRound2(total) });
+    }
+
+    const paidAt = typeof inv.paidAt === 'string' ? inv.paidAt.slice(0, 10) : '';
+    if (inv.status === 'PAID' && isYmd(paidAt) && paidAt >= periodFrom && paidAt <= periodTo) {
+      events.push({ kind: 'PAYMENT', date: paidAt, invoiceNo: inv.invoiceNo, amount: moneyRound2(-total) });
+    }
+  }
+
+  events.sort((a, b) => a.date.localeCompare(b.date) || (a.kind === b.kind ? a.invoiceNo.localeCompare(b.invoiceNo) : a.kind === 'INVOICE' ? -1 : 1));
+
+  const totals = events.reduce(
+    (acc, e) => {
+      if (e.kind === 'INVOICE') acc.invoiceAmount += e.amount;
+      if (e.kind === 'PAYMENT') acc.paymentAmount += e.amount;
+      acc.netAmount += e.amount;
       return acc;
     },
-    { debit: 0, credit: 0, outstanding: 0 },
+    { invoiceAmount: 0, paymentAmount: 0, netAmount: 0 },
   );
-  totals.debit = moneyRound2(totals.debit);
-  totals.credit = moneyRound2(totals.credit);
-  totals.outstanding = moneyRound2(totals.outstanding);
+  totals.invoiceAmount = moneyRound2(totals.invoiceAmount);
+  totals.paymentAmount = moneyRound2(totals.paymentAmount);
+  totals.netAmount = moneyRound2(totals.netAmount);
 
   const statementNo = nextStatementNo(db.documents);
   const html = renderStatementOfAccountHtml({
@@ -129,7 +111,7 @@ export async function POST(req: Request) {
     periodFrom,
     periodTo,
     billTo: { name: `${client.code} ${client.name}`.trim(), address: client.address ?? undefined, email: client.email ?? undefined, phone: client.phone ?? undefined },
-    lines,
+    lines: events,
     totals,
     currency,
   });

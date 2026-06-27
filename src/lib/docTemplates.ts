@@ -2108,15 +2108,12 @@ export function renderStatementOfAccountHtml(input: {
     phone?: string;
   };
   lines: Array<{
+    kind: 'INVOICE' | 'PAYMENT';
+    date: string;
     invoiceNo: string;
-    issueDate: string;
-    dueDate?: string;
-    debit: number;
-    credit: number;
-    outstanding: number;
-    overdueBucket: string;
+    amount: number;
   }>;
-  totals: { debit: number; credit: number; outstanding: number };
+  totals: { invoiceAmount: number; paymentAmount: number; netAmount: number };
   currency: string;
 }) {
   const money = (n: number) => {
@@ -2128,17 +2125,19 @@ export function renderStatementOfAccountHtml(input: {
     }
   };
 
+  const moneySigned = (n: number) => {
+    const v = Number.isFinite(n) ? n : 0;
+    if (v < 0) return `(${money(Math.abs(v))})`;
+    return money(v);
+  };
+
   const rows = input.lines
     .map((l) => {
       return `
 <tr>
+  <td>${esc(l.date)}</td>
   <td class="mono">${esc(l.invoiceNo)}</td>
-  <td>${esc(l.issueDate)}</td>
-  <td>${esc(l.dueDate ?? '-') }</td>
-  <td class="num">${esc(money(l.debit))}</td>
-  <td class="num">${esc(money(l.credit))}</td>
-  <td class="num">${esc(money(l.outstanding))}</td>
-  <td>${esc(l.overdueBucket || '-') }</td>
+  <td class="num">${esc(moneySigned(l.amount))}</td>
 </tr>
 `.trim();
     })
@@ -2189,24 +2188,20 @@ export function renderStatementOfAccountHtml(input: {
       <table>
         <thead>
           <tr>
-            <th style="width: 120px;">Invoice No</th>
-            <th style="width: 90px;">Invoice Date</th>
-            <th style="width: 90px;">Due Date</th>
-            <th class="num" style="width: 110px;">Debit</th>
-            <th class="num" style="width: 110px;">Credit</th>
-            <th class="num" style="width: 120px;">Outstanding</th>
-            <th style="width: 130px;">Overdue</th>
+            <th style="width: 100px;">Date</th>
+            <th>Invoice No.</th>
+            <th class="num" style="width: 140px;">Amount</th>
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="7" class="muted">No invoices in period</td></tr>`}
+          ${rows || `<tr><td colspan="3" class="muted">No records in period</td></tr>`}
         </tbody>
       </table>
 
       <div class="totals">
-        <div class="row"><span>Total Debit</span><strong>${esc(money(input.totals.debit))}</strong></div>
-        <div class="row"><span>Total Credit</span><strong>${esc(money(input.totals.credit))}</strong></div>
-        <div class="row"><span>Total Outstanding</span><strong>${esc(money(input.totals.outstanding))}</strong></div>
+        <div class="row"><span>Total Invoice Amount</span><strong>${esc(money(input.totals.invoiceAmount))}</strong></div>
+        <div class="row"><span>Total Payments</span><strong>${esc(moneySigned(input.totals.paymentAmount))}</strong></div>
+        <div class="row"><span>Net Amount</span><strong>${esc(moneySigned(input.totals.netAmount))}</strong></div>
       </div>
     </div>
   </body>
