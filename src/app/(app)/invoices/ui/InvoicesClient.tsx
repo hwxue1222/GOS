@@ -1249,18 +1249,30 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
                       placeholder="Search client..."
                     />
-                    <select
-                      value={statementClientId}
-                      onChange={(e) => setStatementClientId(e.target.value)}
-                      className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      size={Math.min(10, Math.max(4, statementClientOptions.length || 4))}
-                    >
-                      {statementClientOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.code} {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-2 rounded-lg border border-black/10 overflow-hidden">
+                      <div className="max-h-56 overflow-y-auto bg-white">
+                        {statementClientOptions.length ? (
+                          statementClientOptions.map((c) => {
+                            const selected = c.id === statementClientId;
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setStatementClientId(c.id)}
+                                className={[
+                                  'w-full text-left px-3 py-2 text-sm',
+                                  selected ? 'bg-black/5 text-black font-medium' : 'text-black/80 hover:bg-black/[0.03]',
+                                ].join(' ')}
+                              >
+                                {c.code} {c.name}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-sm text-black/40">No results</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
