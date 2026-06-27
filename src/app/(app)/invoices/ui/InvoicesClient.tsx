@@ -311,14 +311,21 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       const res = await fetch('/api/invoices/statement', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ clientId, periodFrom, periodTo, currency: statementCurrency }),
+        body: JSON.stringify({ clientId, periodFrom, periodTo, currency: statementCurrency, format: 'pdf' }),
       }).catch(() => null);
-      const j = (await res?.json().catch(() => null)) as { ok?: boolean; pdfUrl?: string; error?: string } | null;
-      if (!res?.ok || !j?.ok || !j.pdfUrl) {
+      if (!res?.ok) {
+        const j = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
         setStatementError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
-      window.open(j.pdfUrl, '_blank', 'noopener,noreferrer');
+      const blob = await res.blob().catch(() => null);
+      if (!blob || blob.type !== 'application/pdf') {
+        setStatementError('PDF_GENERATION_FAILED');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setShowStatement(false);
     } finally {
       setStatementGenerating(false);

@@ -1,10 +1,51 @@
 import { NextResponse } from 'next/server';
+import fs from 'node:fs';
+import type { Browser } from 'puppeteer-core';
 
 import { getCurrentUser } from '@/lib/auth';
 import { createDocument, readDb } from '@/lib/db';
 import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { hasPermission } from '@/lib/permissions';
 import { renderStatementOfAccountHtml } from '@/lib/docTemplates';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
+async function getBrowser() {
+  const g = globalThis as unknown as { __gosStatementPdfBrowserPromise?: Promise<Browser> };
+  if (!g.__gosStatementPdfBrowserPromise) {
+    g.__gosStatementPdfBrowserPromise = (async () => {
+      const chromiumMod = await import('@sparticuz/chromium');
+      const puppeteerMod = await import('puppeteer-core');
+      const chromium = chromiumMod.default ?? chromiumMod;
+      const puppeteer = puppeteerMod.default ?? puppeteerMod;
+
+      const envPath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || process.env.CHROME_EXECUTABLE_PATH?.trim();
+      const chromiumPath = await chromium.executablePath();
+      const macCandidates = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium'];
+      const candidate =
+        (envPath && fs.existsSync(envPath) ? envPath : null) ||
+        (chromiumPath && fs.existsSync(chromiumPath) ? chromiumPath : null) ||
+        macCandidates.find((p) => fs.existsSync(p)) ||
+        null;
+      if (!candidate) throw new Error('CHROME_NOT_FOUND');
+      const executablePath = candidate;
+      return puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath,
+        headless: chromium.headless,
+      });
+    })();
+  }
+  return g.__gosStatementPdfBrowserPromise;
+}
+
+function sanitizeFilenameBase(input: string) {
+  const s = input.trim();
+  if (!s) return 'statement';
+  return s.replaceAll(/[^a-zA-Z0-9._-]+/g, '_');
+}
 
 function ymdToday() {
   return new Date().toISOString().slice(0, 10);
@@ -64,12 +105,13 @@ export async function POST(req: Request) {
   if (!canViewAll) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as
-    | { clientId?: unknown; periodFrom?: unknown; periodTo?: unknown; currency?: unknown }
+    | { clientId?: unknown; periodFrom?: unknown; periodTo?: unknown; currency?: unknown; format?: unknown }
     | null;
   const clientId = String(body?.clientId ?? '').trim();
   const periodFrom = clampYmd(String(body?.periodFrom ?? ''));
   const periodTo = clampYmd(String(body?.periodTo ?? ''));
   const currency = String(body?.currency ?? 'SGD').trim() || 'SGD';
+  const format = String(body?.format ?? '').trim().toLowerCase();
 
   if (!clientId || !periodFrom || !periodTo) {
     return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
@@ -199,5 +241,34 @@ export async function POST(req: Request) {
   });
 
   const doc = await createDocument({ type: 'SOA', title: statementNo, html });
+
+  if (format === 'pdf') {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.emulateMediaType('print');
+      await page.setContent(html, { waitUntil: ['domcontentloaded'] });
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '14mm', right: '12mm', bottom: '14mm', left: '12mm' },
+      });
+      const pdfBuf = Buffer.from(pdf);
+      const filenameBase = sanitizeFilenameBase(statementNo);
+      return new Response(pdfBuf, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `inline; filename="${filenameBase}.pdf"`,
+          'Cache-Control': 'no-store',
+          'X-Document-Id': doc.id,
+          'X-Statement-No': statementNo,
+        },
+      });
+    } finally {
+      await page.close().catch(() => null);
+    }
+  }
+
   return NextResponse.json({ ok: true, documentId: doc.id, statementNo, pdfUrl: `/api/documents/${encodeURIComponent(doc.id)}/pdf` });
 }
