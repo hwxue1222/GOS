@@ -2226,7 +2226,7 @@ export function renderStatementOfAccountHtml(input: {
           <div class="row"><span>6-12 months</span><strong>${esc(moneyOrZero(input.overdueSummary.m6to12))}</strong></div>
           <div class="row"><span>&gt;12 months</span><strong>${esc(moneyOrZero(input.overdueSummary.over12))}</strong></div>
         </div>
-        <div class="muted" style="margin-top: 6px;">Ageing is calculated from invoice date to statement issued date.</div>
+        <div class="muted" style="margin-top: 6px;">Ageing is calculated from date of invoices issued to date of this statement generated.</div>
       </div>
     </div>
   </body>
