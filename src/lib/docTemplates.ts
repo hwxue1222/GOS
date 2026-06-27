@@ -2101,6 +2101,18 @@ export function renderStatementOfAccountHtml(input: {
   issuedAt: string;
   periodFrom: string;
   periodTo: string;
+  issuer: {
+    issuer: string;
+    displayName: string;
+    uen?: string;
+    addressLine?: string;
+    tel?: string;
+    customerService?: string;
+    email?: string;
+    website?: string;
+    paymentMethodsTitle?: string;
+    paymentMethods: string[];
+  };
   billTo: {
     name: string;
     address?: string;
@@ -2175,6 +2187,14 @@ export function renderStatementOfAccountHtml(input: {
       .summary { margin-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-size: 12px; }
       .summary .label { color: #111; }
       .summary .val { text-align: right; white-space: nowrap; font-weight: 700; }
+      .issuer-footer { margin-top: 12px; display: flex; gap: 16px; align-items: flex-start; }
+      .issuer-logo { width: 46px; height: 46px; border-radius: 10px; overflow: hidden; flex: 0 0 auto; }
+      .issuer-meta { font-size: 12px; color: #111; }
+      .issuer-meta .muted { font-size: 11px; }
+      .issuer-meta .title { font-weight: 700; font-size: 12px; margin: 0; }
+      .issuer-bank { margin-top: 8px; font-size: 11px; color: #111; }
+      .issuer-bank ul { margin: 6px 0 0 18px; padding: 0; }
+      .issuer-bank li { margin: 2px 0; }
       @media print { body { padding: 0; } .box { border: none; } }
     </style>
   </head>
@@ -2227,6 +2247,48 @@ export function renderStatementOfAccountHtml(input: {
           <div class="row"><span>&gt;12 months</span><strong>${esc(moneyOrZero(input.overdueSummary.over12))}</strong></div>
         </div>
         <div class="muted" style="margin-top: 6px;">Ageing is calculated from date of invoices issued to date of this statement generated.</div>
+      </div>
+
+      <div class="issuer-footer">
+        <div class="issuer-logo">
+          ${(() => {
+            const k = String(input.issuer.issuer || '').toUpperCase();
+            if (k === 'BYBRIDGE') {
+              return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f6feb" />
+      <stop offset="1" stop-color="#2f7bdc" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="url(#g)" />
+  <text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">By</text>
+</svg>
+`.trim();
+            }
+            return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="#c62828" />
+  <text x="23" y="30" text-anchor="middle" font-size="18" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">B</text>
+</svg>
+`.trim();
+          })()}
+        </div>
+        <div class="issuer-meta">
+          <div class="title">${esc(input.issuer.displayName)}</div>
+          ${input.issuer.uen ? `<div class="muted" style="margin-top:2px;">UEN: ${esc(input.issuer.uen)}</div>` : ''}
+          ${input.issuer.addressLine ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.addressLine)}</div>` : ''}
+          ${input.issuer.tel ? `<div class="muted" style="margin-top:2px;">Tel: ${esc(input.issuer.tel)}</div>` : ''}
+          ${input.issuer.customerService ? `<div class="muted" style="margin-top:2px;">CS: ${esc(input.issuer.customerService)}</div>` : ''}
+          ${input.issuer.email ? `<div class="muted" style="margin-top:2px;">Email: ${esc(input.issuer.email)}</div>` : ''}
+          ${input.issuer.website ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.website)}</div>` : ''}
+
+          <div class="issuer-bank">
+            <div style="font-weight:700;">${esc(input.issuer.paymentMethodsTitle || 'Payment Methods')}</div>
+            ${input.issuer.paymentMethods?.length ? `<ul>${input.issuer.paymentMethods.map((x) => `<li>${esc(String(x))}</li>`).join('')}</ul>` : '<div class="muted" style="margin-top:6px;">-</div>'}
+          </div>
+        </div>
       </div>
     </div>
   </body>

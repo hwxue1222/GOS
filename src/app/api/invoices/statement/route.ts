@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/lib/auth';
 import { createDocument, readDb } from '@/lib/db';
+import { getInvoiceIssuerConfig } from '@/lib/invoice';
 import { hasPermission } from '@/lib/permissions';
 import { renderStatementOfAccountHtml } from '@/lib/docTemplates';
 
@@ -88,6 +89,30 @@ export async function POST(req: Request) {
     .filter((inv) => !(inv as any).deletedAt)
     .filter((inv) => inv.billTo.type === 'CLIENT' && inv.billTo.clientId === clientId);
 
+  const issuer = (() => {
+    const inPeriod = invoices.filter((inv) => {
+      const d = String(inv.issueDate ?? '').slice(0, 10);
+      return isYmd(d) && d >= periodFrom && d <= periodTo;
+    });
+    const pool = inPeriod.length ? inPeriod : invoices;
+    const counts = new Map<string, number>();
+    for (const inv of pool) {
+      const k = String((inv as any).issuer ?? '').trim();
+      if (!k) continue;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    let best = 'BBY_SG';
+    let bestN = -1;
+    for (const [k, n] of counts.entries()) {
+      if (n > bestN) {
+        best = k;
+        bestN = n;
+      }
+    }
+    return (best === 'BYBRIDGE' ? 'BYBRIDGE' : 'BBY_SG') as 'BBY_SG' | 'BYBRIDGE';
+  })();
+  const issuerCfg = getInvoiceIssuerConfig(issuer);
+
   for (const inv of invoices) {
     const invoiceDate = String(inv.issueDate ?? '').slice(0, 10);
     const total = inv.status === 'VOID' ? 0 : Number(inv.total) || 0;
@@ -154,6 +179,18 @@ export async function POST(req: Request) {
     issuedAt: today,
     periodFrom,
     periodTo,
+    issuer: {
+      issuer: issuerCfg.issuer,
+      displayName: issuerCfg.displayName,
+      uen: issuerCfg.uen,
+      addressLine: issuerCfg.addressLine,
+      tel: issuerCfg.tel,
+      customerService: issuerCfg.customerService,
+      email: issuerCfg.email,
+      website: issuerCfg.website,
+      paymentMethodsTitle: issuerCfg.paymentMethodsTitle,
+      paymentMethods: issuerCfg.paymentMethods,
+    },
     billTo: { name: `${client.code} ${client.name}`.trim(), address: client.address ?? undefined, email: client.email ?? undefined, phone: client.phone ?? undefined },
     lines: events,
     totals: { invoiceAmount: totals.invoiceAmount, paymentAmount: totals.paymentAmount, totalOutstandingAmount },
