@@ -566,7 +566,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 const nextId = statementClientId || clients[0]?.id || '';
                 setStatementClientId(nextId);
                 const selected = nextId ? clients.find((c) => c.id === nextId) ?? null : null;
-                setStatementClientSearch(selected ? `${selected.code} ${selected.name}`.trim() : '');
+                setStatementClientSearch(selected ? selected.name : '');
                 setStatementFrom((p) => p || monthStartYmd());
                 setStatementTo((p) => p || todayYmd());
                 setShowStatement(true);
@@ -1265,7 +1265,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                                 type="button"
                                 onClick={() => {
                                   setStatementClientId(c.id);
-                                  setStatementClientSearch(`${c.code} ${c.name}`.trim());
+                                  setStatementClientSearch(c.name);
                                 }}
                                 className={[
                                   'w-full text-left px-3 py-2 text-sm',
