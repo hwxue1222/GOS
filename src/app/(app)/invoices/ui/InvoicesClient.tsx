@@ -563,8 +563,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
             <button
               onClick={() => {
                 setStatementError(null);
-                setStatementClientSearch('');
-                setStatementClientId((p) => p || clients[0]?.id || '');
+                const nextId = statementClientId || clients[0]?.id || '';
+                setStatementClientId(nextId);
+                const selected = nextId ? clients.find((c) => c.id === nextId) ?? null : null;
+                setStatementClientSearch(selected ? `${selected.code} ${selected.name}`.trim() : '');
                 setStatementFrom((p) => p || monthStartYmd());
                 setStatementTo((p) => p || todayYmd());
                 setShowStatement(true);
@@ -1245,7 +1247,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     <div className="text-xs text-black/60 mb-1">Client</div>
                     <input
                       value={statementClientSearch}
-                      onChange={(e) => setStatementClientSearch(e.target.value)}
+                      onChange={(e) => {
+                        setStatementClientSearch(e.target.value);
+                        setStatementClientId('');
+                      }}
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
                       placeholder="Search client..."
                     />
@@ -1258,7 +1263,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                               <button
                                 key={c.id}
                                 type="button"
-                                onClick={() => setStatementClientId(c.id)}
+                                onClick={() => {
+                                  setStatementClientId(c.id);
+                                  setStatementClientSearch(`${c.code} ${c.name}`.trim());
+                                }}
                                 className={[
                                   'w-full text-left px-3 py-2 text-sm',
                                   selected ? 'bg-black/5 text-black font-medium' : 'text-black/80 hover:bg-black/[0.03]',
