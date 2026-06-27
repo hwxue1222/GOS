@@ -2113,7 +2113,7 @@ export function renderStatementOfAccountHtml(input: {
     invoiceNo: string;
     amount: number;
   }>;
-  totals: { invoiceAmount: number; paymentAmount: number; netAmount: number };
+  totals: { invoiceAmount: number; paymentAmount: number; totalOutstandingAmount: number };
   overdueSummary: { m1to3: number; m3to6: number; m6to12: number; over12: number };
   currency: string;
 }) {
@@ -2172,6 +2172,9 @@ export function renderStatementOfAccountHtml(input: {
       .totals { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .totals .row { display: flex; justify-content: space-between; font-size: 12px; }
       .totals .row strong { font-weight: 700; }
+      .summary { margin-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-size: 12px; }
+      .summary .label { color: #111; }
+      .summary .val { text-align: right; white-space: nowrap; font-weight: 700; }
       @media print { body { padding: 0; } .box { border: none; } }
     </style>
   </head>
@@ -2206,10 +2209,13 @@ export function renderStatementOfAccountHtml(input: {
         </tbody>
       </table>
 
-      <div class="totals">
-        <div class="row"><span>Total Invoice Amount</span><strong>${esc(money(input.totals.invoiceAmount))}</strong></div>
-        <div class="row"><span>Total Payment Amount</span><strong>${esc(money(Math.abs(input.totals.paymentAmount)))}</strong></div>
-        <div class="row"><span>Net Amount</span><strong>${esc(moneySigned(input.totals.netAmount))}</strong></div>
+      <div class="summary">
+        <div class="label">Total Invoice Amount</div>
+        <div class="val">${esc(money(input.totals.invoiceAmount))}</div>
+        <div class="label">Total Payment Amount</div>
+        <div class="val">${esc(money(Math.abs(input.totals.paymentAmount)))}</div>
+        <div class="label">Total Outstanding Amount</div>
+        <div class="val">${esc(money(input.totals.totalOutstandingAmount))}</div>
       </div>
 
       <div style="margin-top: 14px; border-top: 1px solid #eee; padding-top: 12px;">

@@ -32,7 +32,7 @@ function daysBetween(fromYmd: string, toYmd: string) {
 
 function overdueBucketFromInvoiceDate(invoiceDateYmd: string, statementDateYmd: string) {
   const diffDays = daysBetween(invoiceDateYmd, statementDateYmd);
-  if (diffDays <= 0) return null;
+  if (diffDays < 30) return null;
   if (diffDays <= 90) return 'm1to3' as const;
   if (diffDays <= 180) return 'm3to6' as const;
   if (diffDays <= 365) return 'm6to12' as const;
@@ -131,14 +131,23 @@ export async function POST(req: Request) {
     (acc, e) => {
       if (e.kind === 'INVOICE') acc.invoiceAmount += e.amount;
       if (e.kind === 'PAYMENT') acc.paymentAmount += e.amount;
-      acc.netAmount += e.amount;
       return acc;
     },
-    { invoiceAmount: 0, paymentAmount: 0, netAmount: 0 },
+    { invoiceAmount: 0, paymentAmount: 0 },
   );
   totals.invoiceAmount = moneyRound2(totals.invoiceAmount);
   totals.paymentAmount = moneyRound2(totals.paymentAmount);
-  totals.netAmount = moneyRound2(totals.netAmount);
+
+  const totalOutstandingAmount = moneyRound2(
+    invoices.reduce((sum, inv) => {
+      if (inv.status !== 'UNPAID') return sum;
+      const invoiceDate = String(inv.issueDate ?? '').slice(0, 10);
+      if (!isYmd(invoiceDate) || invoiceDate > today) return sum;
+      const total = Number(inv.total) || 0;
+      if (!(total > 0)) return sum;
+      return sum + total;
+    }, 0),
+  );
 
   const statementNo = nextStatementNo(db.documents);
   const html = renderStatementOfAccountHtml({
@@ -148,7 +157,7 @@ export async function POST(req: Request) {
     periodTo,
     billTo: { name: `${client.code} ${client.name}`.trim(), address: client.address ?? undefined, email: client.email ?? undefined, phone: client.phone ?? undefined },
     lines: events,
-    totals,
+    totals: { invoiceAmount: totals.invoiceAmount, paymentAmount: totals.paymentAmount, totalOutstandingAmount },
     overdueSummary,
     currency,
   });
