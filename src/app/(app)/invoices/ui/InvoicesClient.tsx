@@ -93,11 +93,18 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
   const [createdInvoice, setCreatedInvoice] = useState<Invoice | null>(null);
 
   const [statementClientId, setStatementClientId] = useState(() => initialClients[0]?.id ?? '');
+  const [statementClientSearch, setStatementClientSearch] = useState('');
   const [statementFrom, setStatementFrom] = useState(() => monthStartYmd());
   const [statementTo, setStatementTo] = useState(() => todayYmd());
   const [statementCurrency, setStatementCurrency] = useState<Currency>('SGD');
   const [statementGenerating, setStatementGenerating] = useState(false);
   const [statementError, setStatementError] = useState<string | null>(null);
+
+  const statementClientOptions = useMemo(() => {
+    const q = statementClientSearch.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q));
+  }, [clients, statementClientSearch]);
 
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientSearch, setNewClientSearch] = useState('');
@@ -556,6 +563,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
             <button
               onClick={() => {
                 setStatementError(null);
+                setStatementClientSearch('');
                 setStatementClientId((p) => p || clients[0]?.id || '');
                 setStatementFrom((p) => p || monthStartYmd());
                 setStatementTo((p) => p || todayYmd());
@@ -1235,12 +1243,19 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 <div className="grid grid-cols-1 gap-3">
                   <div>
                     <div className="text-xs text-black/60 mb-1">Client</div>
+                    <input
+                      value={statementClientSearch}
+                      onChange={(e) => setStatementClientSearch(e.target.value)}
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
+                      placeholder="Search client..."
+                    />
                     <select
                       value={statementClientId}
                       onChange={(e) => setStatementClientId(e.target.value)}
-                      className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      size={Math.min(10, Math.max(4, statementClientOptions.length || 4))}
                     >
-                      {clients.map((c) => (
+                      {statementClientOptions.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.code} {c.name}
                         </option>
