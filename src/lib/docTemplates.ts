@@ -2188,14 +2188,14 @@ export function renderStatementOfAccountHtml(input: {
       .summary { margin-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-size: 12px; }
       .summary .label { color: #111; }
       .summary .val { text-align: right; white-space: nowrap; font-weight: 700; }
-      .issuer-footer { margin-top: 12px; display: flex; gap: 16px; align-items: flex-start; }
+      .issuer-footer { display: flex; gap: 12px; align-items: flex-start; }
       .issuer-logo { width: 46px; height: 46px; border-radius: 10px; overflow: hidden; flex: 0 0 auto; }
       .issuer-meta { font-size: 12px; color: #111; }
       .issuer-meta .muted { font-size: 11px; }
       .issuer-meta .title { font-weight: 700; font-size: 12px; margin: 0; }
-      .issuer-bank { margin-top: 8px; font-size: 11px; color: #111; }
-      .issuer-bank ul { margin: 6px 0 0 18px; padding: 0; }
-      .issuer-bank li { margin: 2px 0; }
+      .pay-title { font-weight: 700; font-size: 13px; }
+      .pay-list { margin: 8px 0 0 18px; padding: 0; font-size: 12px; }
+      .pay-list li { margin: 2px 0; }
       @media print { body { padding: 0; } .box { border: none; } }
     </style>
   </head>
@@ -2208,45 +2208,6 @@ export function renderStatementOfAccountHtml(input: {
         <div class="muted">Period: ${esc(input.periodFrom)} ~ ${esc(input.periodTo)}</div>
       </div>
       <div class="h-right">
-        <div class="box">
-          <div class="issuer-footer" style="margin-top:0;">
-            <div class="issuer-logo">
-              ${(() => {
-                const k = String(input.issuer.issuer || '').toUpperCase();
-                if (k === 'BYBRIDGE') {
-                  return `
-<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1f6feb" />
-      <stop offset="1" stop-color="#2f7bdc" />
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="46" height="46" rx="10" fill="url(#g)" />
-  <text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">By</text>
-</svg>
-`.trim();
-                }
-                return `
-<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
-  <rect x="0" y="0" width="46" height="46" rx="10" fill="#c62828" />
-  <text x="23" y="30" text-anchor="middle" font-size="18" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">B</text>
-</svg>
-`.trim();
-              })()}
-            </div>
-            <div class="issuer-meta">
-              <div class="title">${esc(input.issuer.displayName)}</div>
-              ${input.issuer.uen ? `<div class="muted" style="margin-top:2px;">UEN: ${esc(input.issuer.uen)}</div>` : ''}
-              ${input.issuer.addressLine ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.addressLine)}</div>` : ''}
-              ${input.issuer.tel ? `<div class="muted" style="margin-top:2px;">Tel: ${esc(input.issuer.tel)}</div>` : ''}
-              ${input.issuer.customerService ? `<div class="muted" style="margin-top:2px;">CS: ${esc(input.issuer.customerService)}</div>` : ''}
-              ${input.issuer.email ? `<div class="muted" style="margin-top:2px;">Email: ${esc(input.issuer.email)}</div>` : ''}
-              ${input.issuer.website ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.website)}</div>` : ''}
-            </div>
-          </div>
-        </div>
-
         <div class="box">
           <div style="font-weight:700;">Bill To</div>
           <div style="margin-top:6px;">${esc(input.billTo.name)}</div>
@@ -2291,14 +2252,53 @@ export function renderStatementOfAccountHtml(input: {
         <div class="muted" style="margin-top: 6px;">Ageing is calculated from date of invoices issued to date of this statement generated.</div>
       </div>
 
-      <div class="box" style="margin-top: 12px;">
-        <div style="font-weight:700; font-size: 12px;">Payment Methods</div>
-        ${input.issuer.paymentMethods?.length
-          ? `<ul style="margin:6px 0 0 18px;">${input.issuer.paymentMethods
-              .filter((x) => !String(x).includes('6225 8812 5777 1831'))
-              .map((x) => `<li style=\"margin:2px 0;\">${esc(String(x))}</li>`)
-              .join('')}</ul>`
-          : '<div class="muted" style="margin-top:6px;">0</div>'}
+      <div class="box" style="margin-top: 16px; max-width: 560px;">
+        <div class="issuer-footer">
+          <div class="issuer-logo">
+            ${(() => {
+              const k = String(input.issuer.issuer || '').toUpperCase();
+              if (k === 'BYBRIDGE') {
+                return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f6feb" />
+      <stop offset="1" stop-color="#2f7bdc" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="url(#g)" />
+  <text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">By</text>
+</svg>
+`.trim();
+              }
+              return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="#c62828" />
+  <text x="23" y="30" text-anchor="middle" font-size="18" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">B</text>
+</svg>
+`.trim();
+            })()}
+          </div>
+          <div class="issuer-meta">
+            <div class="title">${esc(input.issuer.displayName)}</div>
+            ${input.issuer.uen ? `<div class="muted" style="margin-top:2px;">UEN: ${esc(input.issuer.uen)}</div>` : ''}
+            ${input.issuer.addressLine ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.addressLine)}</div>` : ''}
+            ${input.issuer.tel ? `<div class="muted" style="margin-top:2px;">Tel: ${esc(input.issuer.tel)}</div>` : ''}
+            ${input.issuer.customerService ? `<div class="muted" style="margin-top:2px;">CS: ${esc(input.issuer.customerService)}</div>` : ''}
+            ${input.issuer.email ? `<div class="muted" style="margin-top:2px;">Email: ${esc(input.issuer.email)}</div>` : ''}
+            ${input.issuer.website ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.website)}</div>` : ''}
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 10px;">
+          <div class="pay-title">Payment Methods</div>
+          ${input.issuer.paymentMethods?.length
+            ? `<ul class="pay-list">${input.issuer.paymentMethods
+                .filter((x) => !String(x).includes('6225 8812 5777 1831'))
+                .map((x) => `<li>${esc(String(x))}</li>`)
+                .join('')}</ul>`
+            : '<div class="muted" style="margin-top:6px;">0</div>'}
+        </div>
       </div>
     </div>
   </body>
