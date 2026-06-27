@@ -265,6 +265,7 @@ export type DocumentType =
   | 'AGM_NOTICE'
   | 'AGM_MIN'
   | 'AGM_DIR_STMT'
+  | 'SOA'
   | 'CONTRACT';
 
 export type Document = {

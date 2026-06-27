@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateDMY } from '@/lib/date';
-import { DateInputYMD } from '@/components/DateInputYMD';
+import { DateInputDMY } from '@/components/DateInputDMY';
 import { usePersistedState } from '@/lib/usePersistedState';
 import PaginationControls from '@/components/PaginationControls';
-import type { Currency, Invoice, InvoiceIssuer, InvoiceItem, InvoiceStatus, Role } from '@/lib/types';
+import type { Currency, Invoice, InvoiceItem, InvoiceIssuer, InvoiceStatus, Role } from '@/lib/types';
 
 type ClientLite = { id: string; code: string; name: string };
 type UserLite = { id: string; name: string; email: string; role: Role };
@@ -58,6 +58,13 @@ function todayYmd() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function monthStartYmd() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  return `${y}-${String(m).padStart(2, '0')}-01`;
+}
+
 function newTempId() {
   return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
 }
@@ -74,16 +81,23 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
   const [search, setSearch] = usePersistedState('gos.invoices.search', '');
   const [statusFilter, setStatusFilter] = usePersistedState<InvoiceStatus | ''>('gos.invoices.status', '');
+  const [clientFilter, setClientFilter] = usePersistedState('gos.invoices.clientId', '');
   const [issuerFilter, setIssuerFilter] = usePersistedState<InvoiceIssuer | ''>('gos.invoices.issuer', '');
   const [pageSize, setPageSize] = usePersistedState('gos.invoices.pageSize', 20);
   const [page, setPage] = usePersistedState('gos.invoices.page', 1);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdInvoice, setCreatedInvoice] = useState<Invoice | null>(null);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statementClientId, setStatementClientId] = useState(() => initialClients[0]?.id ?? '');
+  const [statementFrom, setStatementFrom] = useState(() => monthStartYmd());
+  const [statementTo, setStatementTo] = useState(() => todayYmd());
+  const [statementCurrency, setStatementCurrency] = useState<Currency>('SGD');
+  const [statementGenerating, setStatementGenerating] = useState(false);
+  const [statementError, setStatementError] = useState<string | null>(null);
 
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientSearch, setNewClientSearch] = useState('');
@@ -127,20 +141,17 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       const inv = row.invoice;
       if (statusFilter && inv.status !== statusFilter) return false;
       if (issuerFilter && inv.issuer !== issuerFilter) return false;
+      if (clientFilter) {
+        const invClientId = inv.billTo.type === 'CLIENT' ? inv.billTo.clientId : '';
+        if (invClientId !== clientFilter) return false;
+      }
       if (!q) return true;
       const clientText = row.client ? `${row.client.code} ${row.client.name}` : '';
       const billToText = inv.billTo.companyName || '';
-      const totalText = `${inv.total}`;
-      const datesText = `${inv.issueDate} ${inv.paidAt ?? ''}`;
-      return textMatch(
-        `${inv.invoiceNo} ${inv.issuer} ${billToText} ${clientText} ${inv.currency} ${inv.status} ${totalText} ${datesText} ${row.createdByName}`,
-        q,
-      );
+      return textMatch(`${inv.invoiceNo} ${inv.issuer} ${billToText} ${clientText} ${inv.currency} ${inv.status} ${row.createdByName}`, q);
     });
     return rows.sort((a, b) => (b.invoice.issueDate || '').localeCompare(a.invoice.issueDate || '') || b.invoice.createdAt.localeCompare(a.invoice.createdAt));
-  }, [invoices, issuerFilter, search, statusFilter]);
-
-  const activeFilterCount = (statusFilter ? 1 : 0) + (issuerFilter ? 1 : 0);
+  }, [clientFilter, invoices, issuerFilter, search, statusFilter]);
 
   const total = filtered.length;
   const safePageSize = Math.max(1, Number(pageSize) || 20);
@@ -259,6 +270,39 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
         createdByName: '-',
       })),
     );
+  }
+
+  async function generateStatement() {
+    if (statementGenerating) return;
+    setStatementError(null);
+    const clientId = statementClientId.trim();
+    if (!clientId) {
+      setStatementError('CLIENT_REQUIRED');
+      return;
+    }
+    const periodFrom = statementFrom.trim();
+    const periodTo = statementTo.trim();
+    if (!periodFrom || !periodTo) {
+      setStatementError('PERIOD_REQUIRED');
+      return;
+    }
+    setStatementGenerating(true);
+    try {
+      const res = await fetch('/api/invoices/statement', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clientId, periodFrom, periodTo, currency: statementCurrency }),
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as { ok?: boolean; pdfUrl?: string; error?: string } | null;
+      if (!res?.ok || !j?.ok || !j.pdfUrl) {
+        setStatementError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        return;
+      }
+      window.open(j.pdfUrl, '_blank', 'noopener,noreferrer');
+      setShowStatement(false);
+    } finally {
+      setStatementGenerating(false);
+    }
   }
 
   function resetNewInvoice() {
@@ -455,7 +499,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       'Client Code',
       'Client Name',
       'Issue Date',
-      'Payment date',
+      'Due Date',
       'Currency',
       'Total',
       'Status',
@@ -473,7 +517,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           toCsvValue(code),
           toCsvValue(name),
           toCsvValue(inv.issueDate ?? ''),
-          toCsvValue(inv.paidAt ?? ''),
+          toCsvValue(inv.dueDate ?? ''),
           toCsvValue(inv.currency),
           toCsvValue(String(inv.total)),
           toCsvValue(inv.status),
@@ -493,82 +537,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
   return (
     <div className="flex-1">
-      {filtersOpen ? (
-        <div className="fixed inset-0 z-[90] bg-black/30" onMouseDown={() => setFiltersOpen(false)}>
-          <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
-              <div className="text-base font-semibold">Filters</div>
-              <button onClick={() => setFiltersOpen(false)} className="text-black/50 hover:text-black">
-                ✕
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <div className="text-xs text-black/60 mb-1">Status</div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as InvoiceStatus | '');
-                    setPage(1);
-                  }}
-                  className="h-9 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                >
-                  <option value="">All</option>
-                  <option value="UNPAID">Unpaid</option>
-                  <option value="PAID">Paid</option>
-                  <option value="VOID">Void</option>
-                </select>
-              </div>
-              <div>
-                <div className="text-xs text-black/60 mb-1">Issuer</div>
-                <select
-                  value={issuerFilter}
-                  onChange={(e) => {
-                    setIssuerFilter(e.target.value as InvoiceIssuer | '');
-                    setPage(1);
-                  }}
-                  className="h-9 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                >
-                  <option value="">All</option>
-                  <option value="BBY_SG">BBY.SG</option>
-                  <option value="BYBRIDGE">Bybridge</option>
-                </select>
-              </div>
-            </div>
-            <div className="px-4 py-3 border-t border-black/5 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  setStatusFilter('');
-                  setIssuerFilter('');
-                  setPage(1);
-                }}
-                className="rounded-md border border-black/10 bg-white px-4 py-2 text-sm"
-              >
-                Clear
-              </button>
-              <button onClick={() => setFiltersOpen(false)} className="rounded-md bg-black text-white px-4 py-2 text-sm font-medium">
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-xl font-semibold shrink-0">Invoices</h1>
-              <input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="h-9 w-[360px] max-w-[60vw] rounded-lg border border-black/10 px-3 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
-                placeholder="Search invoices..."
-              />
-            </div>
-            <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">Invoices</h1>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => void reloadInvoices()}
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
@@ -582,10 +554,16 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
               Export CSV
             </button>
             <button
-              onClick={() => setFiltersOpen(true)}
+              onClick={() => {
+                setStatementError(null);
+                setStatementClientId((p) => p || clients[0]?.id || '');
+                setStatementFrom((p) => p || monthStartYmd());
+                setStatementTo((p) => p || todayYmd());
+                setShowStatement(true);
+              }}
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
             >
-              Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+              Statement
             </button>
             <button
               disabled={!canCreate}
@@ -598,7 +576,6 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
             >
               + New Invoice
             </button>
-            </div>
           </div>
         </div>
 
@@ -615,32 +592,89 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           />
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5">
-          <table className="w-full text-sm table-auto">
+        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
+          <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/10 bg-black/[0.02]">
-                <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[360px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
+                    <select
+                      value={clientFilter}
+                      onChange={(e) => {
+                        setClientFilter(e.target.value);
+                        setPage(1);
+                      }}
+                      className="h-8 w-full min-w-[220px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                    >
+                      <option value="">All clients</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </th>
-                <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[220px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
+                    <input
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                      }}
+                      className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
+                      placeholder="Search invoice..."
+                    />
+                  </div>
                 </th>
-                <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[160px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
+                    <select
+                      value={issuerFilter}
+                      onChange={(e) => {
+                        setIssuerFilter(e.target.value as InvoiceIssuer | '');
+                        setPage(1);
+                      }}
+                      className="h-8 w-full min-w-[130px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                    >
+                      <option value="">All issuer</option>
+                      <option value="BBY_SG">BBY.SG</option>
+                      <option value="BYBRIDGE">Bybridge</option>
+                    </select>
+                  </div>
                 </th>
-                <th className="px-3 py-3 align-top">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[130px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
                 </th>
-                <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Payment date</div>
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[120px]">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
                 </th>
-                <th className="px-3 py-3 align-top">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
                 </th>
-                <th className="px-3 py-3 align-top">
-                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => {
+                        setStatusFilter(e.target.value as InvoiceStatus | '');
+                        setPage(1);
+                      }}
+                      className="h-8 w-full min-w-[120px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                    >
+                      <option value="">All status</option>
+                      <option value="UNPAID">Unpaid</option>
+                      <option value="PAID">Paid</option>
+                      <option value="VOID">Void</option>
+                    </select>
+                  </div>
                 </th>
-                <th className="px-3 py-3 align-top">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[200px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
                 </th>
               </tr>
@@ -651,7 +685,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 const s = statusLabel(inv.status);
                 return (
                   <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                    <td className="px-3 py-3 overflow-hidden">
+                    <td className="px-4 py-3 whitespace-nowrap overflow-hidden">
                       {row.client ? (
                         <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
                         <div className="block truncate text-black/80">
@@ -664,21 +698,21 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
                         {inv.invoiceNo}
                       </Link>
                     </td>
-                    <td className="px-3 py-3 text-black/70">{inv.issuer}</td>
-                    <td className="px-3 py-3">{formatDateDMY(inv.issueDate)}</td>
-                    <td className="px-3 py-3">{inv.paidAt ? formatDateDMY(inv.paidAt) : '-'}</td>
-                    <td className="px-3 py-3">{formatMoney(inv.currency, inv.total)}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{inv.issuer}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{formatDateDMY(inv.issueDate)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{formatMoney(inv.currency, inv.total)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={['inline-flex px-2 py-1 rounded-full text-xs font-semibold', s.cls].join(' ')}>
                         {s.text}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-black/70">{row.createdByName}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{row.createdByName}</td>
                   </tr>
                 );
               })}
@@ -853,7 +887,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
                 <div>
                   <div className="text-xs text-black/60 mb-1">Issue Date</div>
-                  <DateInputYMD
+                  <DateInputDMY
                     value={form.issueDate}
                     onChange={(v) => setForm((p) => ({ ...p, issueDate: v }))}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
@@ -862,7 +896,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
 
                 <div>
                   <div className="text-xs text-black/60 mb-1">Due Date (optional)</div>
-                  <DateInputYMD
+                  <DateInputDMY
                     value={form.dueDate}
                     onChange={(v) => setForm((p) => ({ ...p, dueDate: v }))}
                     inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
@@ -1176,6 +1210,89 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     {creating ? 'Creating & sending...' : 'Create & Send'}
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showStatement ? (
+          <div
+            className="fixed inset-0 z-[80] bg-black/30 flex items-center justify-center p-4"
+            onMouseDown={() => setShowStatement(false)}
+          >
+            <div
+              className="w-full max-w-lg rounded-2xl bg-white shadow-lg border border-black/10 overflow-hidden"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
+                <div className="text-base font-semibold">Statement of Account</div>
+                <button onClick={() => setShowStatement(false)} className="text-black/50 hover:text-black">
+                  ✕
+                </button>
+              </div>
+              <div className="p-4">
+                {statementError ? <div className="mb-3 text-sm text-red-600">{statementError}</div> : null}
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <div className="text-xs text-black/60 mb-1">Client</div>
+                    <select
+                      value={statementClientId}
+                      onChange={(e) => setStatementClientId(e.target.value)}
+                      className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    >
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-black/60 mb-1">Period From</div>
+                      <DateInputDMY
+                        value={statementFrom}
+                        onChange={(v) => setStatementFrom(v)}
+                        inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-black/60 mb-1">Period To</div>
+                      <DateInputDMY
+                        value={statementTo}
+                        onChange={(v) => setStatementTo(v)}
+                        inputClassName="rounded-lg border border-black/10 px-3 py-2 text-sm bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-black/60 mb-1">Currency</div>
+                    <select
+                      value={statementCurrency}
+                      onChange={(e) => setStatementCurrency(e.target.value as Currency)}
+                      className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="SGD">SGD</option>
+                      <option value="USD">USD</option>
+                      <option value="CNY">CNY</option>
+                    </select>
+                    <div className="mt-1 text-xs text-black/40">Amounts are shown as invoice totals; payments are treated as full when status is PAID.</div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 border-t border-black/5 flex items-center justify-end gap-2">
+                <button onClick={() => setShowStatement(false)} className="rounded-md border border-black/10 bg-white px-4 py-2 text-sm">
+                  Cancel
+                </button>
+                <button
+                  disabled={statementGenerating}
+                  onClick={() => void generateStatement()}
+                  className="rounded-md bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-60"
+                >
+                  {statementGenerating ? 'Generating...' : 'Generate PDF'}
+                </button>
               </div>
             </div>
           </div>

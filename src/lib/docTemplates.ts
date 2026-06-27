@@ -2096,6 +2096,124 @@ That the business activities of the Company are changed from:
 `.trim();
 }
 
+export function renderStatementOfAccountHtml(input: {
+  statementNo: string;
+  issuedAt: string;
+  periodFrom: string;
+  periodTo: string;
+  billTo: {
+    name: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+  };
+  lines: Array<{
+    invoiceNo: string;
+    issueDate: string;
+    dueDate?: string;
+    debit: number;
+    credit: number;
+    outstanding: number;
+    overdueBucket: string;
+  }>;
+  totals: { debit: number; credit: number; outstanding: number };
+  currency: string;
+}) {
+  const money = (n: number) => {
+    const v = Number.isFinite(n) ? n : 0;
+    try {
+      return new Intl.NumberFormat('en', { style: 'currency', currency: input.currency, maximumFractionDigits: 2 }).format(v);
+    } catch {
+      return `${input.currency} ${v.toFixed(2)}`;
+    }
+  };
+
+  const rows = input.lines
+    .map((l) => {
+      return `
+<tr>
+  <td class="mono">${esc(l.invoiceNo)}</td>
+  <td>${esc(l.issueDate)}</td>
+  <td>${esc(l.dueDate ?? '-') }</td>
+  <td class="num">${esc(money(l.debit))}</td>
+  <td class="num">${esc(money(l.credit))}</td>
+  <td class="num">${esc(money(l.outstanding))}</td>
+  <td>${esc(l.overdueBucket || '-') }</td>
+</tr>
+`.trim();
+    })
+    .join('\n');
+
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Statement of Account ${esc(input.statementNo)}</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; padding: 24px; color: #111; }
+      .muted { color: #555; font-size: 12px; }
+      .h { display: flex; justify-content: space-between; gap: 16px; }
+      .title { font-size: 18px; font-weight: 700; margin: 0; }
+      .box { border: 1px solid #ddd; border-radius: 12px; padding: 14px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { border-bottom: 1px solid #eee; padding: 8px 10px; font-size: 12px; vertical-align: top; }
+      th { text-align: left; color: #444; font-weight: 700; background: #fafafa; }
+      .num { text-align: right; white-space: nowrap; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .totals { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .totals .row { display: flex; justify-content: space-between; font-size: 12px; }
+      .totals .row strong { font-weight: 700; }
+      @media print { body { padding: 0; } .box { border: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="h">
+      <div>
+        <h1 class="title">Statement of Account</h1>
+        <div class="muted">Statement No: ${esc(input.statementNo)}</div>
+        <div class="muted">Issued: ${esc(input.issuedAt)}</div>
+        <div class="muted">Period: ${esc(input.periodFrom)} ~ ${esc(input.periodTo)}</div>
+      </div>
+      <div class="box" style="min-width:260px;">
+        <div style="font-weight:700;">Bill To</div>
+        <div style="margin-top:6px;">${esc(input.billTo.name)}</div>
+        ${input.billTo.address ? `<div class="muted" style="margin-top:4px;">${esc(input.billTo.address)}</div>` : ''}
+        ${input.billTo.email ? `<div class="muted" style="margin-top:4px;">${esc(input.billTo.email)}</div>` : ''}
+        ${input.billTo.phone ? `<div class="muted" style="margin-top:4px;">${esc(input.billTo.phone)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="box" style="margin-top: 14px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 120px;">Invoice No</th>
+            <th style="width: 90px;">Invoice Date</th>
+            <th style="width: 90px;">Due Date</th>
+            <th class="num" style="width: 110px;">Debit</th>
+            <th class="num" style="width: 110px;">Credit</th>
+            <th class="num" style="width: 120px;">Outstanding</th>
+            <th style="width: 130px;">Overdue</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="7" class="muted">No invoices in period</td></tr>`}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="row"><span>Total Debit</span><strong>${esc(money(input.totals.debit))}</strong></div>
+        <div class="row"><span>Total Credit</span><strong>${esc(money(input.totals.credit))}</strong></div>
+        <div class="row"><span>Total Outstanding</span><strong>${esc(money(input.totals.outstanding))}</strong></div>
+      </div>
+    </div>
+  </body>
+</html>
+`.trim();
+}
+
 export function renderRorcDeclarationHtml(input: {
   companyName: string;
   effectiveDate: string;
