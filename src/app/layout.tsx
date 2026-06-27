@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 import I18nProviderClient from '@/components/I18nProviderClient';
-import WhatsappSupportButton from '@/components/WhatsappSupportButton';
+import WhatsappSupportGate from '@/components/WhatsappSupportGate';
 import { getLangFromCookies } from '@/lib/i18n.server';
 
 
@@ -34,7 +34,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col overflow-x-hidden">
         <I18nProviderClient initialLang={lang}>
           {children}
-          <WhatsappSupportButton phoneE164="+6589926681" defaultMessage="Hi, I need help with GOS." />
+          <WhatsappSupportGate phoneE164="+6589926681" defaultMessage="Hi, I need help with GOS." />
         </I18nProviderClient>
       </body>
     </html>
