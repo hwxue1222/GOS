@@ -2114,6 +2114,7 @@ export function renderStatementOfAccountHtml(input: {
     amount: number;
   }>;
   totals: { invoiceAmount: number; paymentAmount: number; netAmount: number };
+  overdueSummary: { m1to3: number; m3to6: number; m6to12: number; over12: number };
   currency: string;
 }) {
   const money = (n: number) => {
@@ -2128,6 +2129,12 @@ export function renderStatementOfAccountHtml(input: {
   const moneySigned = (n: number) => {
     const v = Number.isFinite(n) ? n : 0;
     if (v < 0) return `(${money(Math.abs(v))})`;
+    return money(v);
+  };
+
+  const moneyOrZero = (n: number) => {
+    const v = Number.isFinite(n) ? n : 0;
+    if (v === 0) return '0';
     return money(v);
   };
 
@@ -2203,6 +2210,17 @@ export function renderStatementOfAccountHtml(input: {
         <div class="row"><span>Total Invoice Amount</span><strong>${esc(money(input.totals.invoiceAmount))}</strong></div>
         <div class="row"><span>Total Payment Amount</span><strong>${esc(money(Math.abs(input.totals.paymentAmount)))}</strong></div>
         <div class="row"><span>Net Amount</span><strong>${esc(moneySigned(input.totals.netAmount))}</strong></div>
+      </div>
+
+      <div style="margin-top: 14px; border-top: 1px solid #eee; padding-top: 12px;">
+        <div style="font-weight: 700; font-size: 12px;">Overdue (Outstanding invoices)</div>
+        <div class="totals" style="margin-top: 8px; grid-template-columns: 1fr;">
+          <div class="row"><span>1-3 months</span><strong>${esc(moneyOrZero(input.overdueSummary.m1to3))}</strong></div>
+          <div class="row"><span>3-6 months</span><strong>${esc(moneyOrZero(input.overdueSummary.m3to6))}</strong></div>
+          <div class="row"><span>6-12 months</span><strong>${esc(moneyOrZero(input.overdueSummary.m6to12))}</strong></div>
+          <div class="row"><span>&gt;12 months</span><strong>${esc(moneyOrZero(input.overdueSummary.over12))}</strong></div>
+        </div>
+        <div class="muted" style="margin-top: 6px;">Ageing is calculated from invoice date to statement issued date.</div>
       </div>
     </div>
   </body>
