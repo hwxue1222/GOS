@@ -106,6 +106,19 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     return clients.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q));
   }, [clients, statementClientSearch]);
 
+  const selectedStatementClient = useMemo(() => {
+    const id = statementClientId.trim();
+    if (!id) return null;
+    return clients.find((c) => c.id === id) ?? null;
+  }, [clients, statementClientId]);
+
+  const showStatementClientOptions = useMemo(() => {
+    const q = statementClientSearch.trim();
+    if (!q) return !selectedStatementClient;
+    if (!selectedStatementClient) return true;
+    return q.toLowerCase() !== selectedStatementClient.name.toLowerCase();
+  }, [selectedStatementClient, statementClientSearch]);
+
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientSearch, setNewClientSearch] = useState('');
   const clientSearchRef = useRef<HTMLInputElement | null>(null);
@@ -1254,33 +1267,35 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none bg-white"
                       placeholder="Search client..."
                     />
-                    <div className="mt-2 rounded-lg border border-black/10 overflow-hidden">
-                      <div className="max-h-56 overflow-y-auto bg-white">
-                        {statementClientOptions.length ? (
-                          statementClientOptions.map((c) => {
-                            const selected = c.id === statementClientId;
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setStatementClientId(c.id);
-                                  setStatementClientSearch(c.name);
-                                }}
-                                className={[
-                                  'w-full text-left px-3 py-2 text-sm',
-                                  selected ? 'bg-black/5 text-black font-medium' : 'text-black/80 hover:bg-black/[0.03]',
-                                ].join(' ')}
-                              >
-                                {c.code} {c.name}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-3 py-3 text-sm text-black/40">No results</div>
-                        )}
+                    {showStatementClientOptions ? (
+                      <div className="mt-2 rounded-lg border border-black/10 overflow-hidden">
+                        <div className="max-h-56 overflow-y-auto bg-white">
+                          {statementClientOptions.length ? (
+                            statementClientOptions.map((c) => {
+                              const selected = c.id === statementClientId;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setStatementClientId(c.id);
+                                    setStatementClientSearch(c.name);
+                                  }}
+                                  className={[
+                                    'w-full text-left px-3 py-2 text-sm',
+                                    selected ? 'bg-black/5 text-black font-medium' : 'text-black/80 hover:bg-black/[0.03]',
+                                  ].join(' ')}
+                                >
+                                  {c.code} {c.name}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="px-3 py-3 text-sm text-black/40">No results</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
