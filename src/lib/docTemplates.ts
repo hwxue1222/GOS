@@ -2209,6 +2209,44 @@ export function renderStatementOfAccountHtml(input: {
       </div>
       <div class="h-right">
         <div class="box">
+          <div class="issuer-footer">
+            <div class="issuer-logo">
+              ${(() => {
+                const k = String(input.issuer.issuer || '').toUpperCase();
+                if (k === 'BYBRIDGE') {
+                  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f6feb" />
+      <stop offset="1" stop-color="#2f7bdc" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="url(#g)" />
+  <text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">By</text>
+</svg>
+`.trim();
+                }
+                return `
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  <rect x="0" y="0" width="46" height="46" rx="10" fill="#c62828" />
+  <text x="23" y="30" text-anchor="middle" font-size="18" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">B</text>
+</svg>
+`.trim();
+              })()}
+            </div>
+            <div class="issuer-meta">
+              <div class="title">${esc(input.issuer.displayName)}</div>
+              ${input.issuer.uen ? `<div class="muted" style="margin-top:2px;">UEN: ${esc(input.issuer.uen)}</div>` : ''}
+              ${input.issuer.addressLine ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.addressLine)}</div>` : ''}
+              ${input.issuer.tel ? `<div class="muted" style="margin-top:2px;">Tel: ${esc(input.issuer.tel)}</div>` : ''}
+              ${input.issuer.customerService ? `<div class="muted" style="margin-top:2px;">CS: ${esc(input.issuer.customerService)}</div>` : ''}
+              ${input.issuer.email ? `<div class="muted" style="margin-top:2px;">Email: ${esc(input.issuer.email)}</div>` : ''}
+              ${input.issuer.website ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.website)}</div>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="box">
           <div style="font-weight:700;">Bill To</div>
           <div style="margin-top:6px;">${esc(input.billTo.name)}</div>
           ${input.billTo.address ? `<div class="muted" style="margin-top:4px;">${esc(input.billTo.address)}</div>` : ''}
@@ -2253,52 +2291,13 @@ export function renderStatementOfAccountHtml(input: {
       </div>
 
       <div class="box" style="margin-top: 16px; max-width: 560px;">
-        <div class="issuer-footer">
-          <div class="issuer-logo">
-            ${(() => {
-              const k = String(input.issuer.issuer || '').toUpperCase();
-              if (k === 'BYBRIDGE') {
-                return `
-<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1f6feb" />
-      <stop offset="1" stop-color="#2f7bdc" />
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="46" height="46" rx="10" fill="url(#g)" />
-  <text x="23" y="28" text-anchor="middle" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">By</text>
-</svg>
-`.trim();
-              }
-              return `
-<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
-  <rect x="0" y="0" width="46" height="46" rx="10" fill="#c62828" />
-  <text x="23" y="30" text-anchor="middle" font-size="18" font-weight="700" font-family="ui-sans-serif,system-ui" fill="#fff">B</text>
-</svg>
-`.trim();
-            })()}
-          </div>
-          <div class="issuer-meta">
-            <div class="title">${esc(input.issuer.displayName)}</div>
-            ${input.issuer.uen ? `<div class="muted" style="margin-top:2px;">UEN: ${esc(input.issuer.uen)}</div>` : ''}
-            ${input.issuer.addressLine ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.addressLine)}</div>` : ''}
-            ${input.issuer.tel ? `<div class="muted" style="margin-top:2px;">Tel: ${esc(input.issuer.tel)}</div>` : ''}
-            ${input.issuer.customerService ? `<div class="muted" style="margin-top:2px;">CS: ${esc(input.issuer.customerService)}</div>` : ''}
-            ${input.issuer.email ? `<div class="muted" style="margin-top:2px;">Email: ${esc(input.issuer.email)}</div>` : ''}
-            ${input.issuer.website ? `<div class="muted" style="margin-top:2px;">${esc(input.issuer.website)}</div>` : ''}
-          </div>
-        </div>
-
-        <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 10px;">
-          <div class="pay-title">Payment Methods</div>
-          ${input.issuer.paymentMethods?.length
-            ? `<ul class="pay-list">${input.issuer.paymentMethods
-                .filter((x) => !String(x).includes('6225 8812 5777 1831'))
-                .map((x) => `<li>${esc(String(x))}</li>`)
-                .join('')}</ul>`
-            : '<div class="muted" style="margin-top:6px;">0</div>'}
-        </div>
+        <div class="pay-title">Payment Methods</div>
+        ${input.issuer.paymentMethods?.length
+          ? `<ul class="pay-list">${input.issuer.paymentMethods
+              .filter((x) => !String(x).includes('6225 8812 5777 1831'))
+              .map((x) => `<li>${esc(String(x))}</li>`)
+              .join('')}</ul>`
+          : '<div class="muted" style="margin-top:6px;">0</div>'}
       </div>
     </div>
   </body>
