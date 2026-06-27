@@ -2293,7 +2293,12 @@ export function renderStatementOfAccountHtml(input: {
 
       <div class="box" style="margin-top: 12px;">
         <div style="font-weight:700; font-size: 12px;">Payment Methods</div>
-        ${input.issuer.paymentMethods?.length ? `<ul style="margin:6px 0 0 18px;">${input.issuer.paymentMethods.map((x) => `<li style=\"margin:2px 0;\">${esc(String(x))}</li>`).join('')}</ul>` : '<div class="muted" style="margin-top:6px;">0</div>'}
+        ${input.issuer.paymentMethods?.length
+          ? `<ul style="margin:6px 0 0 18px;">${input.issuer.paymentMethods
+              .filter((x) => !String(x).includes('6225 8812 5777 1831'))
+              .map((x) => `<li style=\"margin:2px 0;\">${esc(String(x))}</li>`)
+              .join('')}</ul>`
+          : '<div class="muted" style="margin-top:6px;">0</div>'}
       </div>
     </div>
   </body>
