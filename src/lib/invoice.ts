@@ -29,7 +29,6 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
       paymentMethods: [
         'Cheque payable to BBY.SG PTE LTD',
         'Bank transfer to BBY.SG PTE LTD, Maybank Singapore, Bank Account No.: 04011569555, Swift Code: MBBESGS2',
-        '人民币汇款：收款人：薛宏伟，收款银行：招商银行南京城西支行，收款账号：6225 8812 5777 1831',
         'Scan Paynow QR code or Paynow to UEN: 201608450W',
       ],
     };
