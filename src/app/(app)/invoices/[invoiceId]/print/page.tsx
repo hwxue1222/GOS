@@ -337,12 +337,17 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
             </div>
             <div className="text-sm">
-              {cfg.paymentMethods.map((line, idx) => (
-                <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
-                  <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
-                  <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
-                </div>
-              ))}
+              {cfg.paymentMethods
+                .filter((line) => {
+                  if (invoice.currency === 'CNY') return true;
+                  return !line.includes('人民币汇款');
+                })
+                .map((line, idx) => (
+                  <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
+                    <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
+                    <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
+                  </div>
+                ))}
             </div>
           </div>
 
