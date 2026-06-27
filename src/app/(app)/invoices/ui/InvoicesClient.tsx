@@ -641,7 +641,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 </th>
                 <th className="px-4 py-3 align-top whitespace-nowrap w-[220px]">
                   <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
+                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Search</div>
                     <input
                       value={search}
                       onChange={(e) => {
@@ -649,7 +649,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         setPage(1);
                       }}
                       className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
-                      placeholder="Search invoice..."
+                      placeholder="Search invoice no / client / issuer..."
                     />
                   </div>
                 </th>
