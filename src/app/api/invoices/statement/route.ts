@@ -39,25 +39,20 @@ function overdueBucketFromInvoiceDate(invoiceDateYmd: string, statementDateYmd: 
   return 'over12' as const;
 }
 
-function parseSeqState(docTitle?: string) {
-  const m = /SOA-(\d{6})-(\d{4})/.exec(docTitle ?? '');
-  if (!m) return null;
-  return { yyyymm: m[1], seq: Number(m[2]) || 0 };
+function sanitizeClientCode(code: string) {
+  const raw = String(code ?? '').trim().toUpperCase();
+  return raw.replace(/[^A-Z0-9]/g, '');
 }
 
-function nextStatementNo(docs: Array<{ type: string; title: string }>) {
-  const now = new Date();
-  const yyyymm = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  let maxSeq = 0;
-  for (const d of docs) {
-    if (d.type !== 'SOA') continue;
-    const p = parseSeqState(d.title);
-    if (!p) continue;
-    if (p.yyyymm !== yyyymm) continue;
-    if (p.seq > maxSeq) maxSeq = p.seq;
-  }
-  const next = maxSeq + 1;
-  return `SOA-${yyyymm}-${String(next).padStart(4, '0')}`;
+function buildStatementNo(input: { issuedAtYmd: string; clientCode: string; existingTitles: string[] }) {
+  const ymd = input.issuedAtYmd;
+  const yyyymm = isYmd(ymd) ? `${ymd.slice(0, 4)}${ymd.slice(5, 7)}` : new Date().toISOString().slice(0, 7).replace('-', '');
+  const code = sanitizeClientCode(input.clientCode) || 'CLIENT';
+  const base = `SOA-${yyyymm}-${code}`;
+  if (!input.existingTitles.includes(base)) return base;
+  let n = 2;
+  while (input.existingTitles.includes(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
 }
 
 export async function POST(req: Request) {
@@ -149,7 +144,11 @@ export async function POST(req: Request) {
     }, 0),
   );
 
-  const statementNo = nextStatementNo(db.documents);
+  const statementNo = buildStatementNo({
+    issuedAtYmd: today,
+    clientCode: client.code,
+    existingTitles: db.documents.filter((d) => d.type === 'SOA').map((d) => d.title),
+  });
   const html = renderStatementOfAccountHtml({
     statementNo,
     issuedAt: today,
