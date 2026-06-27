@@ -2133,10 +2133,11 @@ export function renderStatementOfAccountHtml(input: {
 
   const rows = input.lines
     .map((l) => {
+      const noText = l.kind === 'PAYMENT' ? 'Payment' : l.invoiceNo;
       return `
 <tr>
   <td>${esc(l.date)}</td>
-  <td class="mono">${esc(l.invoiceNo)}</td>
+  <td class="mono">${esc(noText)}</td>
   <td class="num">${esc(moneySigned(l.amount))}</td>
 </tr>
 `.trim();
@@ -2200,7 +2201,7 @@ export function renderStatementOfAccountHtml(input: {
 
       <div class="totals">
         <div class="row"><span>Total Invoice Amount</span><strong>${esc(money(input.totals.invoiceAmount))}</strong></div>
-        <div class="row"><span>Total Payments</span><strong>${esc(moneySigned(input.totals.paymentAmount))}</strong></div>
+        <div class="row"><span>Total Payment Amount</span><strong>${esc(money(Math.abs(input.totals.paymentAmount)))}</strong></div>
         <div class="row"><span>Net Amount</span><strong>${esc(moneySigned(input.totals.netAmount))}</strong></div>
       </div>
     </div>
