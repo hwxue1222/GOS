@@ -81,6 +81,13 @@ function monthStartYmd() {
   return `${y}-${String(m).padStart(2, '0')}-01`;
 }
 
+function formatCreateSendError(err: string, created: boolean) {
+  const e = err.trim();
+  if (!created) return e;
+  if (e.startsWith('EMAIL_')) return `Invoice created. Email not sent: ${e}`;
+  return `Invoice created. Action failed: ${e}`;
+}
+
 function newTempId() {
   return globalThis.crypto?.randomUUID?.() ?? `tmp_${Math.random().toString(16).slice(2)}`;
 }
@@ -804,7 +811,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
-                {error ? <div className="text-sm text-red-600">{error}</div> : null}
+                {error ? <div className="text-sm text-red-600">{formatCreateSendError(error, !!createdInvoice)}</div> : null}
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
