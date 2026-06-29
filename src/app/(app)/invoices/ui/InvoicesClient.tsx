@@ -28,7 +28,15 @@ function textMatch(haystack: string, needle: string) {
 }
 
 function safeNumber(v: unknown) {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : Number.NaN;
+  const n = (() => {
+    if (typeof v === 'number') return v;
+    if (typeof v !== 'string') return Number.NaN;
+    const s = v.trim().replace(/\s+/g, '');
+    if (!s) return Number.NaN;
+    if (s.includes('.') && s.includes(',')) return Number(s.replace(/,/g, ''));
+    if (s.includes(',') && !s.includes('.')) return Number(s.replace(/,/g, '.'));
+    return Number(s);
+  })();
   return Number.isFinite(n) ? n : 0;
 }
 
