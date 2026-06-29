@@ -19,7 +19,15 @@ export async function sendEmail(input: {
   const smtpSecureEnv = process.env.SMTP_SECURE?.trim();
   const smtpSecure = smtpSecureEnv ? smtpSecureEnv === 'true' || smtpSecureEnv === '1' : smtpPort === 465;
 
+  const extractEmailAddress = (v: string) => {
+    const s = v.trim();
+    const m = s.match(/<([^>]+)>/);
+    return (m?.[1] ?? s).trim();
+  };
+  const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
   if (!from) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
+  if (!isEmail(extractEmailAddress(from))) return { ok: false as const, error: 'EMAIL_FROM_INVALID' as const };
 
   if (apiKey) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -116,6 +124,10 @@ export async function sendEmail(input: {
     if (code === 'ETIMEDOUT') return { ok: false as const, error: 'EMAIL_TIMEOUT' as const };
     if (code === 'ECONNECTION' || code === 'ESOCKET' || code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'EHOSTUNREACH' || code === 'ENOTFOUND') {
       return { ok: false as const, error: 'EMAIL_CONNECT_FAILED' as const };
+    }
+
+    if ((code === 'EENVELOPE' || responseCode === 501) && /MAIL FROM/i.test(command || responseText)) {
+      return { ok: false as const, error: 'EMAIL_SENDER_REJECTED' as const };
     }
     if (code === 'EENVELOPE' || (responseCode !== null && responseCode >= 550 && responseCode < 560)) {
       const looksInvalid =
