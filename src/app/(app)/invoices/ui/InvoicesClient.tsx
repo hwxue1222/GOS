@@ -23,6 +23,13 @@ type Props = {
   initialClients: ClientLite[];
 };
 
+type DraftInvoiceItem = {
+  id: string;
+  description: string;
+  qtyText: string;
+  unitPriceText: string;
+};
+
 function textMatch(haystack: string, needle: string) {
   return haystack.toLowerCase().includes(needle.trim().toLowerCase());
 }
@@ -44,8 +51,8 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
-function computeSubtotal(items: InvoiceItem[]) {
-  return round2(items.reduce((sum, it) => sum + safeNumber(it.qty) * safeNumber(it.unitPrice), 0));
+function computeSubtotal(items: DraftInvoiceItem[]) {
+  return round2(items.reduce((sum, it) => sum + safeNumber(it.qtyText) * safeNumber(it.unitPriceText), 0));
 }
 
 function formatMoney(currency: Currency, amount: number) {
@@ -159,8 +166,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     notifyPeople: Array<{ role: 'DIRECTOR' | 'SHAREHOLDER'; name: string; email: string }>;
   } | null>(null);
 
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { id: newTempId(), description: '', qty: 1, unitPrice: 0 },
+  const [items, setItems] = useState<DraftInvoiceItem[]>([
+    { id: newTempId(), description: '', qtyText: '1', unitPriceText: '' },
   ]);
 
   const filtered = useMemo(() => {
@@ -363,7 +370,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       notes: '',
       toEmailsText: '',
     });
-    setItems([{ id: newTempId(), description: '', qty: 1, unitPrice: 0 }]);
+    setItems([{ id: newTempId(), description: '', qtyText: '1', unitPriceText: '' }]);
     setNewClientSearch('');
     setNewClientOpen(false);
     setSuggestions(null);
@@ -383,12 +390,12 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
         return;
       }
     }
-    const normalizedItems = items
+    const normalizedItems: InvoiceItem[] = items
       .map((it) => ({
-        ...it,
+        id: it.id,
         description: it.description.trim(),
-        qty: round2(Math.max(0, safeNumber(it.qty))),
-        unitPrice: round2(Math.max(0, safeNumber(it.unitPrice))),
+        qty: round2(Math.max(0, safeNumber(it.qtyText))),
+        unitPrice: round2(Math.max(0, safeNumber(it.unitPriceText))),
       }))
       .filter((it) => it.description);
     if (!normalizedItems.length) {
@@ -1114,7 +1121,9 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                   <div className="text-sm font-semibold">Items</div>
                   <button
                     type="button"
-                    onClick={() => setItems((prev) => [...prev, { id: newTempId(), description: '', qty: 1, unitPrice: 0 }])}
+                    onClick={() =>
+                      setItems((prev) => [...prev, { id: newTempId(), description: '', qtyText: '1', unitPriceText: '' }])
+                    }
                     className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm"
                   >
                     + Add item
@@ -1134,7 +1143,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </thead>
                     <tbody>
                       {items.map((it) => {
-                        const amount = round2(safeNumber(it.qty) * safeNumber(it.unitPrice));
+                        const amount = round2(safeNumber(it.qtyText) * safeNumber(it.unitPriceText));
                         return (
                           <tr key={it.id} className="border-b border-black/5">
                             <td className="px-3 py-2">
@@ -1150,11 +1159,11 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                             </td>
                             <td className="px-3 py-2">
                               <input
-                                value={String(it.qty)}
+                                value={it.qtyText}
                                 onChange={(e) => {
                                   const v = e.target.value;
                                   setItems((prev) =>
-                                    prev.map((x) => (x.id === it.id ? { ...x, qty: safeNumber(v) } : x)),
+                                    prev.map((x) => (x.id === it.id ? { ...x, qtyText: v } : x)),
                                   );
                                 }}
                                 className="w-full rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none"
@@ -1163,11 +1172,11 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                             </td>
                             <td className="px-3 py-2">
                               <input
-                                value={String(it.unitPrice)}
+                                value={it.unitPriceText}
                                 onChange={(e) => {
                                   const v = e.target.value;
                                   setItems((prev) =>
-                                    prev.map((x) => (x.id === it.id ? { ...x, unitPrice: safeNumber(v) } : x)),
+                                    prev.map((x) => (x.id === it.id ? { ...x, unitPriceText: v } : x)),
                                   );
                                 }}
                                 className="w-full rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none"
