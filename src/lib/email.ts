@@ -93,14 +93,27 @@ export async function sendEmail(input: {
     contentType: a.contentType,
   }));
 
+  const toList = normalizeList(input.to);
+  const ccList = normalizeList(input.cc);
+  const fromEmail = extractEmailAddress(from);
+  const smtpUserEmail = smtpUser && isEmail(smtpUser) ? smtpUser : '';
+  const envelopeFrom = smtpUserEmail || fromEmail;
+
   try {
     const info = await transporter.sendMail({
       from,
-      to: normalizeList(input.to).join(','),
-      cc: normalizeList(input.cc).join(',') || undefined,
+      sender: envelopeFrom,
+      replyTo: fromEmail,
+      to: toList.join(','),
+      cc: ccList.join(',') || undefined,
       subject: input.subject,
       html: input.html,
       attachments: attachments.length ? attachments : undefined,
+      envelope: {
+        from: envelopeFrom,
+        to: toList.join(','),
+        cc: ccList.join(',') || undefined,
+      },
     });
 
     if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
