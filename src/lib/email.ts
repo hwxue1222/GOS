@@ -99,9 +99,9 @@ export async function sendEmail(input: {
   const smtpUserEmail = smtpUser && isEmail(smtpUser) ? smtpUser : '';
   const envelopeFrom = smtpUserEmail || fromEmail;
 
-  try {
-    const info = await transporter.sendMail({
-      from,
+  const sendViaSmtp = async (fromHeader: string) => {
+    return transporter.sendMail({
+      from: fromHeader,
       sender: envelopeFrom,
       replyTo: fromEmail,
       to: toList.join(','),
@@ -115,10 +115,28 @@ export async function sendEmail(input: {
         cc: ccList.join(',') || undefined,
       },
     });
+  };
 
+  const isMailFromRejected = (err: unknown) => {
+    const e = err as { code?: unknown; responseCode?: unknown; command?: unknown; response?: unknown } | null;
+    const code = typeof e?.code === 'string' ? e.code : '';
+    const responseCode = typeof e?.responseCode === 'number' ? e.responseCode : null;
+    const command = typeof e?.command === 'string' ? e.command : '';
+    const responseText = typeof e?.response === 'string' ? e.response : '';
+    return (code === 'EENVELOPE' || responseCode === 501) && /MAIL FROM/i.test(command || responseText);
+  };
+
+  try {
+    const info = await sendViaSmtp(from);
     if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
     return { ok: true as const };
   } catch (err) {
+    if (smtpUserEmail && extractEmailAddress(from) !== smtpUserEmail && isMailFromRejected(err)) {
+      try {
+        const info2 = await sendViaSmtp(smtpUserEmail);
+        if (info2) return { ok: true as const };
+      } catch {}
+    }
     const e = err as {
       code?: unknown;
       responseCode?: unknown;
