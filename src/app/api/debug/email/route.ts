@@ -26,14 +26,14 @@ export async function POST(req: Request) {
   const emailFrom = (process.env.EMAIL_FROM ?? '').trim() || null;
   const usingResend = !!process.env.RESEND_API_KEY?.trim();
   const usingSmtp = !!process.env.SMTP_HOST?.trim();
+  const smtpReady = !!process.env.SMTP_HOST?.trim() && !!process.env.SMTP_PORT?.trim() && !!process.env.SMTP_USER?.trim() && !!process.env.SMTP_PASS?.trim();
 
   if (!res.ok) {
     return NextResponse.json(
-      { ok: false, error: res.error, debug: { usingResend, usingSmtp, emailFrom } },
+      { ok: false, error: res.error, debug: { usingResend, usingSmtp, smtpReady, emailFrom } },
       { status: 400, headers: { 'cache-control': 'no-store' } },
     );
   }
 
-  return NextResponse.json({ ok: true, debug: { usingResend, usingSmtp, emailFrom } }, { headers: { 'cache-control': 'no-store' } });
+  return NextResponse.json({ ok: true, debug: { usingResend, usingSmtp, smtpReady, emailFrom } }, { headers: { 'cache-control': 'no-store' } });
 }
-

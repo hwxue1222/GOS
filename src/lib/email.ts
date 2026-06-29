@@ -29,7 +29,9 @@ export async function sendEmail(input: {
   if (!from) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
   if (!isEmail(extractEmailAddress(from))) return { ok: false as const, error: 'EMAIL_FROM_INVALID' as const };
 
-  if (apiKey) {
+  const smtpReady = !!smtpHost && !!smtpPort && !!smtpUser && !!smtpPass;
+
+  if (!smtpReady && apiKey) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -69,7 +71,7 @@ export async function sendEmail(input: {
     return { ok: true as const };
   }
 
-  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+  if (!smtpReady) {
     return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
   }
 
