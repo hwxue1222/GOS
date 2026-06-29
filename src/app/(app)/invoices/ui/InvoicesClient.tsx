@@ -650,11 +650,11 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           />
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
+        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto pb-1">
           <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/10 bg-black/[0.02]">
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[360px]">
+                <th className="px-4 py-3 align-top w-[280px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
                     <select
@@ -663,7 +663,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         setClientFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="h-8 w-full min-w-[220px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                      className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All clients</option>
                       {clients.map((c) => (
@@ -674,7 +674,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[220px]">
+                <th className="px-4 py-3 align-top w-[200px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Search</div>
                     <input
@@ -683,12 +683,12 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         setSearch(e.target.value);
                         setPage(1);
                       }}
-                      className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
+                      className="h-8 w-full min-w-[160px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
                       placeholder="Search invoice no / client / issuer..."
                     />
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[160px]">
+                <th className="px-4 py-3 align-top w-[120px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
                     <select
@@ -697,7 +697,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         setIssuerFilter(e.target.value as InvoiceIssuer | '');
                         setPage(1);
                       }}
-                      className="h-8 w-full min-w-[130px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                      className="h-8 w-full min-w-[110px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All issuer</option>
                       <option value="BBY_SG">BBY.SG</option>
@@ -705,16 +705,16 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[130px]">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[120px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[120px]">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[110px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[130px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[140px]">
+                <th className="px-4 py-3 align-top w-[130px]">
                   <div className="flex flex-col gap-1">
                     <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
                     <select
@@ -723,7 +723,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         setStatusFilter(e.target.value as InvoiceStatus | '');
                         setPage(1);
                       }}
-                      className="h-8 w-full min-w-[120px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+                      className="h-8 w-full min-w-[110px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
                     >
                       <option value="">All status</option>
                       <option value="UNPAID">Unpaid</option>
@@ -732,7 +732,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[200px]">
+                <th className="px-4 py-3 align-top whitespace-nowrap w-[160px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
                 </th>
               </tr>
@@ -743,7 +743,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 const s = statusLabel(inv.status);
                 return (
                   <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                    <td className="px-4 py-3 whitespace-nowrap overflow-hidden">
+                    <td className="px-4 py-3 overflow-hidden">
                       {row.client ? (
                         <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
                         <div className="block truncate text-black/80">
@@ -756,7 +756,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
                         {inv.invoiceNo}
                       </Link>
