@@ -248,8 +248,8 @@ export function buildIncorporationSubmittedEmail(input: {
   const details = app.type === 'REGISTER_COMPANY' ? buildRegisterCompanyDetails(app.payload) : buildTransferSecretaryDetails(app.payload);
   const detailsUrl = `${input.origin}/incorporation/applications/${encodeURIComponent(app.id)}`;
 
-  const reminderLineEn = `Please send the required documents to BBY (Luke@bby.sg).`;
-  const reminderLineZh = `请将所需资料发送给百桥咨询（Luke@bby.sg）。`;
+  const reminderLineEn = `Please send the required documents to BBY (bbysgsg@gmail.com).`;
+  const reminderLineZh = `请将所需资料发送给百桥咨询（bbysgsg@gmail.com）。`;
 
   const html = `
     <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; line-height:1.55; color:#111;">
@@ -280,4 +280,3 @@ export function buildIncorporationSubmittedEmail(input: {
 
   return { subject, html };
 }
-

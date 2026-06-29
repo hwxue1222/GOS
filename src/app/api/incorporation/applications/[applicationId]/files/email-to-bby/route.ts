@@ -113,7 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     });
   }
 
-  const to = 'Luke@bby.sg';
+  const to = 'bbysgsg@gmail.com';
   const origin = new URL(req.url).origin;
   const serviceTitle = app.type === 'REGISTER_COMPANY' ? 'Register Company' : 'Transfer of Company Secretary';
   const company = (app.companyName ?? '').trim() || '-';
