@@ -98,17 +98,37 @@ export async function sendEmail(input: {
     if (!info) return { ok: false as const, error: 'EMAIL_SEND_FAILED' as const };
     return { ok: true as const };
   } catch (err) {
-    const e = err as { code?: unknown; responseCode?: unknown; command?: unknown } | null;
+    const e = err as {
+      code?: unknown;
+      responseCode?: unknown;
+      command?: unknown;
+      response?: unknown;
+      rejected?: unknown;
+      rejectedErrors?: unknown;
+    } | null;
     const code = typeof e?.code === 'string' ? e.code : '';
     const responseCode = typeof e?.responseCode === 'number' ? e.responseCode : null;
     const command = typeof e?.command === 'string' ? e.command : '';
+    const responseText = typeof e?.response === 'string' ? e.response : '';
+    const rejected = Array.isArray(e?.rejected) ? e?.rejected.filter((x): x is string => typeof x === 'string') : [];
 
     if (code === 'EAUTH' || responseCode === 535) return { ok: false as const, error: 'EMAIL_AUTH_FAILED' as const };
     if (code === 'ETIMEDOUT') return { ok: false as const, error: 'EMAIL_TIMEOUT' as const };
     if (code === 'ECONNECTION' || code === 'ESOCKET' || code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'EHOSTUNREACH' || code === 'ENOTFOUND') {
       return { ok: false as const, error: 'EMAIL_CONNECT_FAILED' as const };
     }
-    if (code === 'EENVELOPE' || responseCode === 550) return { ok: false as const, error: 'EMAIL_INVALID_RECIPIENT' as const };
+    if (code === 'EENVELOPE' || (responseCode !== null && responseCode >= 550 && responseCode < 560)) {
+      const looksInvalid =
+        responseCode === 550 &&
+        /user unknown|no such user|invalid recipient|mailbox unavailable|recipient address rejected|unknown user|does not exist/i.test(
+          responseText,
+        );
+      if (looksInvalid) return { ok: false as const, error: 'EMAIL_INVALID_RECIPIENT' as const };
+      const detail = [code || '', responseCode ? String(responseCode) : '', command || '', rejected.length ? rejected.join(',') : '']
+        .filter(Boolean)
+        .join('-');
+      return { ok: false as const, error: (`EMAIL_RECIPIENT_REJECTED${detail ? `:${detail}` : ''}`) as const };
+    }
     const detail = [code || '', responseCode ? String(responseCode) : '', command || ''].filter(Boolean).join('-');
     return { ok: false as const, error: (`EMAIL_SEND_FAILED${detail ? `:${detail}` : ''}`) as const };
   }
