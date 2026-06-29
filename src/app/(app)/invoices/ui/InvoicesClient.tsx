@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputDMY } from '@/components/DateInputDMY';
 import { usePersistedState } from '@/lib/usePersistedState';
@@ -90,6 +91,7 @@ function toCsvValue(v: string) {
 }
 
 export default function InvoicesClient({ initialMe, initialInvoices, initialClients }: Props) {
+  const router = useRouter();
   const [me] = useState<UserLite>(initialMe);
   const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices);
   const [clients] = useState<ClientLite[]>(initialClients);
@@ -482,6 +484,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       }
       setShowAdd(false);
       resetNewInvoice();
+      router.replace('/invoices');
+      router.refresh();
     } finally {
       setCreating(false);
     }
@@ -528,6 +532,8 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
       }
       setShowAdd(false);
       resetNewInvoice();
+      router.replace('/invoices');
+      router.refresh();
     } finally {
       setCreating(false);
     }
