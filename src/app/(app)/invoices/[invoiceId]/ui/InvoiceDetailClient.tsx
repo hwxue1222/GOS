@@ -104,6 +104,10 @@ export default function InvoiceDetailClient({
   const [success, setSuccess] = useState<string | null>(null);
   const successTimerRef = useRef<number | null>(null);
 
+  const [clientOpen, setClientOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const clientSearchRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     return () => {
       if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
@@ -192,6 +196,12 @@ export default function InvoiceDetailClient({
     if (draft.billToType !== 'CLIENT') return null;
     return clients.find((c) => c.id === draft.clientId) ?? null;
   }, [clients, draft.billToType, draft.clientId]);
+
+  const clientOptions = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => `${c.code} ${c.name}`.toLowerCase().includes(q));
+  }, [clients, clientSearch]);
 
   useEffect(() => {
     let canceled = false;
@@ -581,6 +591,7 @@ export default function InvoiceDetailClient({
                   onChange={(e) => {
                     const v = e.target.value as 'CLIENT' | 'ONE_OFF';
                     setDraft((p) => ({ ...p, billToType: v, clientId: v === 'CLIENT' ? p.clientId : '' }));
+                    setClientOpen(false);
                   }}
                   className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
                 >
@@ -605,19 +616,49 @@ export default function InvoiceDetailClient({
               {draft.billToType === 'CLIENT' ? (
                 <div className="sm:col-span-2">
                   <div className="text-xs text-black/60 mb-1">Company</div>
-                  <select
-                    disabled={!canEdit}
-                    value={draft.clientId}
-                    onChange={(e) => setDraft((p) => ({ ...p, clientId: e.target.value }))}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
-                  >
-                    <option value="">Select client...</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      className="w-full text-left rounded-lg border border-black/10 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                      onClick={() => {
+                        setClientOpen((v) => !v);
+                        setTimeout(() => clientSearchRef.current?.focus(), 0);
+                      }}
+                    >
+                      {currentClient ? `${currentClient.code} ${currentClient.name}` : 'Select client...'}
+                    </button>
+                    {clientOpen ? (
+                      <div className="absolute z-[90] mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
+                        <div className="p-2 border-b border-black/5">
+                          <input
+                            ref={clientSearchRef}
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full rounded-md border border-black/10 px-2 py-1.5 text-sm outline-none"
+                            placeholder="Search client..."
+                          />
+                        </div>
+                        <div className="max-h-64 overflow-auto">
+                          {clientOptions.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03]"
+                              onClick={() => {
+                                setDraft((p) => ({ ...p, clientId: c.id }));
+                                setClientOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">{c.code}</div>
+                              <div className="text-black/60">{c.name}</div>
+                            </button>
+                          ))}
+                          {clientOptions.length === 0 ? <div className="px-3 py-4 text-sm text-black/50">No results</div> : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               ) : (
                 <div className="sm:col-span-2">
