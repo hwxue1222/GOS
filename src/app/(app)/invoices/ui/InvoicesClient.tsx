@@ -650,89 +650,101 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           />
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto pb-1">
+        <div className="mt-4 rounded-xl bg-white border border-black/5 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <div>
+              <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
+              <select
+                value={clientFilter}
+                onChange={(e) => {
+                  setClientFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+              >
+                <option value="">All clients</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div className="text-[11px] font-semibold text-black/50 tracking-wide">Search</div>
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
+                placeholder="Invoice no / client / issuer"
+              />
+            </div>
+
+            <div>
+              <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
+              <select
+                value={issuerFilter}
+                onChange={(e) => {
+                  setIssuerFilter(e.target.value as InvoiceIssuer | '');
+                  setPage(1);
+                }}
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+              >
+                <option value="">All issuer</option>
+                <option value="BBY_SG">BBY.SG</option>
+                <option value="BYBRIDGE">Bybridge</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as InvoiceStatus | '');
+                  setPage(1);
+                }}
+                className="mt-1 h-8 w-full rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
+              >
+                <option value="">All status</option>
+                <option value="UNPAID">Unpaid</option>
+                <option value="PAID">Paid</option>
+                <option value="VOID">Void</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl bg-white border border-black/5 overflow-x-auto pb-1">
           <table className="min-w-full text-sm table-fixed">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/10 bg-black/[0.02]">
-                <th className="px-4 py-3 align-top w-[280px]">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
-                    <select
-                      value={clientFilter}
-                      onChange={(e) => {
-                        setClientFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 w-full min-w-[180px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                    >
-                      <option value="">All clients</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.code} {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <th className="px-3 py-2 align-top w-[240px]">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Bill To</div>
                 </th>
-                <th className="px-4 py-3 align-top w-[200px]">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Search</div>
-                    <input
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 w-full min-w-[160px] rounded-lg border border-black/10 px-2.5 text-sm outline-none bg-white text-black/80 placeholder:text-black/30 focus:ring-2 focus:ring-black/5"
-                      placeholder="Search invoice no / client / issuer..."
-                    />
-                  </div>
+                <th className="px-3 py-2 align-top w-[160px]">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Invoice No</div>
                 </th>
-                <th className="px-4 py-3 align-top w-[120px]">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
-                    <select
-                      value={issuerFilter}
-                      onChange={(e) => {
-                        setIssuerFilter(e.target.value as InvoiceIssuer | '');
-                        setPage(1);
-                      }}
-                      className="h-8 w-full min-w-[110px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                    >
-                      <option value="">All issuer</option>
-                      <option value="BBY_SG">BBY.SG</option>
-                      <option value="BYBRIDGE">Bybridge</option>
-                    </select>
-                  </div>
+                <th className="px-3 py-2 align-top w-[90px]">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issuer</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[120px]">
+                <th className="px-3 py-2 align-top whitespace-nowrap w-[100px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Issue Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[110px]">
+                <th className="px-3 py-2 align-top whitespace-nowrap w-[90px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Due Date</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[130px]">
+                <th className="px-3 py-2 align-top whitespace-nowrap w-[110px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Total</div>
                 </th>
-                <th className="px-4 py-3 align-top w-[130px]">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => {
-                        setStatusFilter(e.target.value as InvoiceStatus | '');
-                        setPage(1);
-                      }}
-                      className="h-8 w-full min-w-[110px] rounded-lg border border-black/10 bg-white px-2.5 text-sm text-black/80 focus:ring-2 focus:ring-black/5"
-                    >
-                      <option value="">All status</option>
-                      <option value="UNPAID">Unpaid</option>
-                      <option value="PAID">Paid</option>
-                      <option value="VOID">Void</option>
-                    </select>
-                  </div>
+                <th className="px-3 py-2 align-top w-[100px]">
+                  <div className="text-[11px] font-semibold text-black/50 tracking-wide">Status</div>
                 </th>
-                <th className="px-4 py-3 align-top whitespace-nowrap w-[160px]">
+                <th className="px-3 py-2 align-top w-[120px]">
                   <div className="text-[11px] font-semibold text-black/50 tracking-wide">Created by</div>
                 </th>
               </tr>
@@ -743,7 +755,7 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                 const s = statusLabel(inv.status);
                 return (
                   <tr key={inv.id} className="border-b border-black/5 hover:bg-black/[0.02]">
-                    <td className="px-4 py-3 overflow-hidden">
+                    <td className="px-3 py-2 overflow-hidden">
                       {row.client ? (
                         <div className="truncate" title={`${row.client.code} ${row.client.name}`}>
                         <div className="block truncate text-black/80">
@@ -756,21 +768,21 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Link className="text-[#2f7bdc] hover:underline" href={`/invoices/${inv.id}`}>
                         {inv.invoiceNo}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{inv.issuer}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDateDMY(inv.issueDate)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatMoney(inv.currency, inv.total)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap text-black/70">{inv.issuer}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatDateDMY(inv.issueDate)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{inv.dueDate ? formatDateDMY(inv.dueDate) : '-'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatMoney(inv.currency, inv.total)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <span className={['inline-flex px-2 py-1 rounded-full text-xs font-semibold', s.cls].join(' ')}>
                         {s.text}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-black/70">{row.createdByName}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-black/70">{row.createdByName}</td>
                   </tr>
                 );
               })}
