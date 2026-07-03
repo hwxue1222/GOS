@@ -197,10 +197,8 @@ export async function sendSigningInvite(input: {
   const yyyy = String(today.getFullYear());
   const dated = `${dd}/${mm}/${yyyy}`;
 
-  const title = String(input.title ?? '').trim();
-  const m = title ? title.match(/^(.+?)\s+-\s+(.+)$/) : null;
-  const applicationName = String(input.applicationName ?? (m?.[1] ?? title) ?? '').trim();
-  const companyName = String(input.companyName ?? (m?.[2] ?? '')).trim();
+  const applicationName = String(input.applicationName ?? '').trim();
+  const companyName = String(input.companyName ?? '').trim();
   const documentTitle = String(input.documentTitle ?? '').trim();
   const signerRole = String(input.signerRole ?? '').trim();
 
@@ -212,7 +210,7 @@ export async function sendSigningInvite(input: {
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
 
-  const salutation = signerRole.toLowerCase().includes('director') ? 'Dear Director,' : 'Dear Signatory,';
+  const salutation = 'Dear Sir/Madam,';
   const subject = `${companyName || 'Company'}_${applicationName || 'Signing'}`;
 
   const intro = (() => {

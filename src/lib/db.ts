@@ -10469,7 +10469,7 @@ export async function createDirectorChangeRequest(input: {
   db.signaturePackets.unshift(packet);
 
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string; title?: string }> = [];
+  const signLinks: Array<{ email: string; url: string; title?: string; signerRole?: string }> = [];
   for (const emailKey of signerEmails) {
     const token = newToken();
     const req: SignatureRequest = {
@@ -11207,7 +11207,7 @@ export async function createCompanyUpdateRequest(input: {
   };
 
   const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const signLinks: Array<{ email: string; url: string; title?: string }> = [];
+  const signLinks: Array<{ email: string; url: string; title?: string; signerRole?: string }> = [];
 
   let primaryPacketId = '';
   const requestStatus: CompanyUpdateRequest['status'] = 'PENDING_SIGNATURES';
@@ -11250,6 +11250,7 @@ export async function createCompanyUpdateRequest(input: {
 
     const minutesSigners: Array<{ fullName: string; email: string }> = [];
     const minutesSignerEmails = new Set<string>();
+    const minutesSignerRoleByEmail = new Map<string, string>();
     const personShareholderNames = new Set<string>();
 
     for (const r of shareholderRoles) {
@@ -11264,6 +11265,7 @@ export async function createCompanyUpdateRequest(input: {
         if (!minutesSignerEmails.has(email)) {
           minutesSignerEmails.add(email);
           minutesSigners.push({ fullName: sp.fullName, email });
+          minutesSignerRoleByEmail.set(email, 'Shareholder');
         }
         continue;
       }
@@ -11292,6 +11294,7 @@ export async function createCompanyUpdateRequest(input: {
         if (!minutesSignerEmails.has(repEmail)) {
           minutesSignerEmails.add(repEmail);
           minutesSigners.push({ fullName: `${rep.representativeName} (on behalf of ${shareholderCompanyName})`, email: repEmail });
+          minutesSignerRoleByEmail.set(repEmail, 'Corporate Representative of corporate shareholder');
         }
 
         const shareholderDirectors = db.clientPartyRoles
@@ -11374,7 +11377,12 @@ export async function createCompanyUpdateRequest(input: {
             updatedAt: now,
           };
           db.signatureRequests.unshift(req);
-          signLinks.push({ email: req.email, url: `/sign/${token}`, title: `corporate representative certificate - ${shareholderCompanyName}` });
+          signLinks.push({
+            email: req.email,
+            url: `/sign/${token}`,
+            title: `corporate representative certificate - ${shareholderCompanyName}`,
+            signerRole: 'Director of corporate shareholder',
+          });
         }
       }
     }
@@ -11438,7 +11446,7 @@ export async function createCompanyUpdateRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      signLinks.push({ email: req.email, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+      signLinks.push({ email: req.email, url: `/sign/${token}`, title: `${applicationName} - ${companyName}`, signerRole: 'Director' });
     }
 
     const minutesHtml = templates.renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
@@ -11489,7 +11497,12 @@ export async function createCompanyUpdateRequest(input: {
           updatedAt: now,
         };
         db.signatureRequests.unshift(req);
-        signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+        signLinks.push({
+          email: emailKey,
+          url: `/sign/${token}`,
+          title: `${applicationName} - ${companyName}`,
+          signerRole: minutesSignerRoleByEmail.get(emailKey) ?? 'Shareholder',
+        });
       }
     }
   } else {
@@ -11531,7 +11544,7 @@ export async function createCompanyUpdateRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}` });
+      signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}`, signerRole: 'Director' });
     }
   }
 

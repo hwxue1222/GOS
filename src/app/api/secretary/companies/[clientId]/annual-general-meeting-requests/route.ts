@@ -116,7 +116,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         to: l.email,
         url: `${baseUrl}${l.url}`,
         companyName,
-        applicationName: 'annual general meeting',
+        applicationName: 'Annual General Meeting',
         documentTitle: l.documentTitle,
         signerRole: 'Director',
       }),

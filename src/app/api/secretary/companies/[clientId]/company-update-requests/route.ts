@@ -118,17 +118,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const companyName = client?.name ?? clientId;
   const applicationName =
     type === 'CHANGE_COMPANY_NAME'
-      ? 'change of company name'
+      ? 'Change of Company Name'
       : type === 'CHANGE_FINANCIAL_YEAR_END'
-        ? 'change of financial year end (FYE)'
+        ? 'Change of Financial Year End (FYE)'
         : type === 'CHANGE_REGISTERED_OFFICE_ADDRESS'
-          ? 'change of registered office address'
+          ? 'Change of Registered Office Address'
           : type === 'CHANGE_BUSINESS_ACTIVITIES'
-            ? 'change of business activities'
+            ? 'Change of Business Activities'
             : type === 'CHANGE_SECRETARY'
-              ? 'change of secretary'
+              ? 'Change of Secretary'
               : type === 'TRANSFER_COMPANY_SECRETARY'
-                ? 'transfer of company secretary'
+                ? 'Transfer of Company Secretary'
                 : String(type).toLowerCase();
   await Promise.all(
     signLinks.map((l) =>
@@ -138,7 +138,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         companyName,
         applicationName,
         documentTitle: (l as { title?: string }).title ?? applicationName,
-        signerRole: 'Director',
+        signerRole: (l as { signerRole?: string }).signerRole ?? 'Director',
       }),
     ),
   );
