@@ -122,8 +122,9 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
           loading={loading}
           canApprove={canApprove}
           onDecide={(requestId, decision) => {
-            const note = window.prompt('Note (optional)') ?? '';
-            void decide(requestId, decision, note);
+            const noteRaw = window.prompt('Note (optional)');
+            if (noteRaw === null) return;
+            void decide(requestId, decision, noteRaw);
           }}
         />
       </div>

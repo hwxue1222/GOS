@@ -23,7 +23,9 @@ export default function SecretaryIncorporationReviewClient({ rows, canWrite }: {
     setError(null);
     setBusyId(row.applicationId);
     try {
-      const note = window.prompt('Note (optional)') ?? '';
+      const noteRaw = window.prompt('Note (optional)');
+      if (noteRaw === null) return;
+      const note = noteRaw;
       const res = await fetch(`/api/incorporation/applications/${encodeURIComponent(row.applicationId)}/status`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

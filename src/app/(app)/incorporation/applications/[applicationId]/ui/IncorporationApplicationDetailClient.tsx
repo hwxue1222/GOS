@@ -146,7 +146,9 @@ export default function IncorporationApplicationDetailClient(props: Props) {
     setError(null);
     setBusy(true);
     try {
-      const note = window.prompt('Note (optional)') ?? '';
+      const noteRaw = window.prompt('Note (optional)');
+      if (noteRaw === null) return;
+      const note = noteRaw;
       const res = await fetch(`/api/incorporation/applications/${encodeURIComponent(app.id)}/status`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

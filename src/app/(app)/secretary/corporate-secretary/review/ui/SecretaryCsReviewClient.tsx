@@ -34,7 +34,9 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
     setError(null);
     setBusyId(row.id);
     try {
-      const note = window.prompt('Note (optional)') ?? '';
+      const noteRaw = window.prompt('Note (optional)');
+      if (noteRaw === null) return;
+      const note = noteRaw;
       const res = await fetch(row.decisionUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
