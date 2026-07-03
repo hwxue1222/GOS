@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import AppTopNav from '@/components/AppTopNav';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
@@ -18,6 +19,14 @@ export default async function CorporateSecretaryApplicationsPage({
 }) {
   const me = await getCurrentUser();
   if (!me) return null;
+  if (me.role !== 'client') {
+    const sp = await searchParams;
+    const qp = new URLSearchParams();
+    qp.set('view', 'records');
+    if (sp.companyId) qp.set('companyId', String(sp.companyId));
+    if (sp.type) qp.set('type', String(sp.type));
+    redirect(`/secretary/acra-filing?${qp.toString()}`);
+  }
   const sp = await searchParams;
   const filterType = (sp.type ?? '').trim();
   const filterCompanyId = (sp.companyId ?? '').trim();

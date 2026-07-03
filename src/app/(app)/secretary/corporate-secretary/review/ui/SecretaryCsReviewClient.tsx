@@ -23,13 +23,14 @@ function ellipsizeId(id: string) {
   return `${s.slice(0, 10)}…${s.slice(-4)}`;
 }
 
-export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] }) {
+export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: ReviewRow[]; canWrite: boolean }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO') {
     if (busyId) return;
+    if (!canWrite) return;
     setError(null);
     setBusyId(row.id);
     try {
@@ -52,6 +53,7 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
 
   async function remove(row: ReviewRow) {
     if (busyId) return;
+    if (!canWrite) return;
     if (row.status !== 'REJECTED') return;
     if (!row.deleteUrl) return;
     const ok = window.confirm(`Delete rejected application ${row.id}?`);
@@ -108,47 +110,49 @@ export default function SecretaryCsReviewClient({ rows }: { rows: ReviewRow[] })
                     >
                       Details
                     </Link>
-                    {r.status === 'REJECTED' ? (
-                      <button
-                        disabled={!!busyId}
-                        onClick={() => void remove(r)}
-                        className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                      >
-                        Delete
-                      </button>
-                    ) : r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
-                      <>
+                    {canWrite ? (
+                      r.status === 'REJECTED' ? (
                         <button
                           disabled={!!busyId}
-                          onClick={() => void decide(r, 'APPROVE')}
-                          className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                          onClick={() => void remove(r)}
+                          className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                         >
-                          Approve
+                          Delete
                         </button>
-                        <button
-                          disabled={!!busyId}
-                          onClick={() => void decide(r, 'NEED_MORE_INFO')}
-                          className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                        >
-                          Need more info
-                        </button>
-                        <button
-                          disabled={!!busyId}
-                          onClick={() => void decide(r, 'REJECT')}
-                          className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    ) : (
-                      <div className="text-xs text-black/50">
-                        {r.status === 'NEED_MORE_INFO'
-                          ? 'Need more info'
-                          : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
-                            ? 'Decided'
-                            : '-'}
-                      </div>
-                    )}
+                      ) : r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
+                        <>
+                          <button
+                            disabled={!!busyId}
+                            onClick={() => void decide(r, 'APPROVE')}
+                            className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            disabled={!!busyId}
+                            onClick={() => void decide(r, 'NEED_MORE_INFO')}
+                            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                          >
+                            Need more info
+                          </button>
+                          <button
+                            disabled={!!busyId}
+                            onClick={() => void decide(r, 'REJECT')}
+                            className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-xs text-black/50">
+                          {r.status === 'NEED_MORE_INFO'
+                            ? 'Need more info'
+                            : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
+                              ? 'Decided'
+                              : '-'}
+                        </div>
+                      )
+                    ) : null}
                   </div>
                 </td>
               </tr>

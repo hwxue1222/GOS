@@ -13,12 +13,13 @@ export type ReviewRow = {
   editDate: string;
 };
 
-export default function SecretaryIncorporationReviewClient({ rows }: { rows: ReviewRow[] }) {
+export default function SecretaryIncorporationReviewClient({ rows, canWrite }: { rows: ReviewRow[]; canWrite: boolean }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function decide(row: ReviewRow, toStatus: 'PROCESSING' | 'NEED_MORE_INFO' | 'COMPLETED' | 'REJECTED') {
+    if (!canWrite) return;
     setError(null);
     setBusyId(row.applicationId);
     try {
@@ -41,6 +42,7 @@ export default function SecretaryIncorporationReviewClient({ rows }: { rows: Rev
 
   async function remove(row: ReviewRow) {
     setError(null);
+    if (!canWrite) return;
     if (row.status !== 'REJECTED') return;
     const ok = window.confirm(`Delete rejected application INC-${row.applicationId}?`);
     if (!ok) return;
@@ -96,46 +98,48 @@ export default function SecretaryIncorporationReviewClient({ rows }: { rows: Rev
                       <Link href={detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium">
                         Details
                       </Link>
-                      {r.status === 'REJECTED' ? (
-                        <button
-                          disabled={busyId === r.applicationId}
-                          onClick={() => void remove(r)}
-                          className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                        >
-                          Delete
-                        </button>
-                      ) : (
-                        <>
+                      {canWrite ? (
+                        r.status === 'REJECTED' ? (
                           <button
                             disabled={busyId === r.applicationId}
-                            onClick={() => void decide(r, 'PROCESSING')}
-                            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            onClick={() => void remove(r)}
+                            className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                           >
-                            Processing
+                            Delete
                           </button>
-                          <button
-                            disabled={busyId === r.applicationId}
-                            onClick={() => void decide(r, 'NEED_MORE_INFO')}
-                            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                          >
-                            Need info
-                          </button>
-                          <button
-                            disabled={busyId === r.applicationId}
-                            onClick={() => void decide(r, 'COMPLETED')}
-                            className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            disabled={busyId === r.applicationId}
-                            onClick={() => void decide(r, 'REJECTED')}
-                            className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <button
+                              disabled={busyId === r.applicationId}
+                              onClick={() => void decide(r, 'PROCESSING')}
+                              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              Processing
+                            </button>
+                            <button
+                              disabled={busyId === r.applicationId}
+                              onClick={() => void decide(r, 'NEED_MORE_INFO')}
+                              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              Need info
+                            </button>
+                            <button
+                              disabled={busyId === r.applicationId}
+                              onClick={() => void decide(r, 'COMPLETED')}
+                              className="rounded-md bg-[#46b35a] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              disabled={busyId === r.applicationId}
+                              onClick={() => void decide(r, 'REJECTED')}
+                              className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )
+                      ) : null}
                     </div>
                   </td>
                 </tr>

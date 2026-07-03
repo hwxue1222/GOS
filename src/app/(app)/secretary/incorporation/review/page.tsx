@@ -69,11 +69,10 @@ export default async function SecretaryIncorporationReviewPage() {
           <h1 className="text-xl font-semibold">Incorporation Review</h1>
           <div className="mt-1 text-sm text-black/60">Submitted / processing applications</div>
           <div className="mt-4">
-            <SecretaryIncorporationReviewClient rows={rows} />
+            <SecretaryIncorporationReviewClient rows={rows} canWrite={true} />
           </div>
         </div>
       </div>
     </div>
   );
 }
-

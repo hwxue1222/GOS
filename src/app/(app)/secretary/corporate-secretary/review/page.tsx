@@ -179,7 +179,7 @@ export default async function SecretaryCorporateSecretaryReviewPage() {
           <h1 className="text-xl font-semibold">Corporate Secretary Review</h1>
           <div className="mt-1 text-sm text-black/60">Pending approvals</div>
           <div className="mt-4">
-            <SecretaryCsReviewClient rows={rows} />
+            <SecretaryCsReviewClient rows={rows} canWrite={true} />
           </div>
         </div>
       </div>
