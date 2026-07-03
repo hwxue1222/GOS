@@ -75,6 +75,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { clientId } = await ctx.params;
+  const proxyCompanyId = (req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  const isProxyingThisCompany = !!proxyCompanyId && proxyCompanyId === clientId;
+
   if (user.role !== 'client') {
     if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
@@ -83,7 +87,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   if (!(await canAccessClient(user, clientId))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
-  if (user.role !== 'client') {
+
+  if (user.role !== 'client' && !(canProxy && isProxyingThisCompany)) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 

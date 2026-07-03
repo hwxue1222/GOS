@@ -118,5 +118,5 @@ export function useCompanyContext() {
     return `/portal/companies/${encodeURIComponent(companyId)}`;
   }, [companyId, proxyCompanyId]);
 
-  return { companyId, loading, error, client: data?.client ?? null, roles: data?.roles ?? null, closeHref };
+  return { companyId, proxyCompanyId, loading, error, client: data?.client ?? null, roles: data?.roles ?? null, closeHref };
 }

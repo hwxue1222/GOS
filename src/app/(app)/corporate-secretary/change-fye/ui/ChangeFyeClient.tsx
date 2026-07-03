@@ -17,7 +17,7 @@ function toDdMm(dateIso: string) {
 
 export default function ChangeFyeClient() {
   const router = useRouter();
-  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
 
   const original = useMemo(() => (client?.fye ?? '-').trim() || '-', [client?.fye]);
 
@@ -40,7 +40,10 @@ export default function ChangeFyeClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           type: 'CHANGE_FINANCIAL_YEAR_END',
           payload: { originalFye: original, newFye: ddmm, rawDate: newFyeDate },

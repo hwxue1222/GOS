@@ -9,7 +9,7 @@ import { DateInputYMD } from '@/components/DateInputYMD';
 
 export default function TransferCompanySecretaryClient() {
   const router = useRouter();
-  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const [effectiveDate, setEffectiveDate] = useState('');
   const [newSecretaryName, setNewSecretaryName] = useState('');
@@ -30,7 +30,10 @@ export default function TransferCompanySecretaryClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           type: 'TRANSFER_COMPANY_SECRETARY',
           payload: {

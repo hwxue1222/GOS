@@ -9,7 +9,7 @@ import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompany
 export default function ChangeAddressClient() {
   const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
-  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
   const prevManualAddressRef = useRef<string>('');
 
   const [newAddress, setNewAddress] = useState('');
@@ -28,7 +28,10 @@ export default function ChangeAddressClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           type: 'CHANGE_REGISTERED_OFFICE_ADDRESS',
           payload: {

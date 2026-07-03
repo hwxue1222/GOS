@@ -203,7 +203,7 @@ function maskAddress(addr: string) {
 
 export default function ChangeSecretaryClient() {
   const router = useRouter();
-  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const [addSecretaries, setAddSecretaries] = useState<NewSecretary[]>([]);
   const [editing, setEditing] = useState(false);
@@ -458,7 +458,10 @@ export default function ChangeSecretaryClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           type: 'CHANGE_SECRETARY',
           payload: {

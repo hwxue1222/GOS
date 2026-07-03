@@ -21,7 +21,7 @@ type CorporateRepresentativeDraft = {
 export default function ChangeCompanyNameClient() {
   const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
-  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
   const prevManualMeetingVenueRef = useRef<string>('');
 
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -161,7 +161,10 @@ export default function ChangeCompanyNameClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/company-update-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           type: 'CHANGE_COMPANY_NAME',
           payload: {
