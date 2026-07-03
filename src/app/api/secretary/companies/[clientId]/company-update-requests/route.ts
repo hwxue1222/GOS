@@ -136,7 +136,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         to: l.email,
         url: `${baseUrl}${l.url}`,
         companyName,
-        applicationName: 'Corporate Secretary Service',
+        applicationName,
         documentTitle: (l as { title?: string }).title ?? applicationName,
         signerRole: 'Director',
       }),

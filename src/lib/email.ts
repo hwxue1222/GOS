@@ -213,14 +213,7 @@ export async function sendSigningInvite(input: {
       .replaceAll("'", '&#39;');
 
   const salutation = signerRole.toLowerCase().includes('director') ? 'Dear Director,' : 'Dear Signatory,';
-  const subject = (() => {
-    const override = String(input.subject ?? '').trim();
-    if (override) return override;
-    const subjectParts = [companyName || 'Company', documentTitle || applicationName || 'Signing', signerRole ? `(${signerRole})` : '']
-      .map((x) => x.trim())
-      .filter(Boolean);
-    return subjectParts.join(' ');
-  })();
+  const subject = `${companyName || 'Company'}_${applicationName || 'Signing'}`;
 
   const intro = (() => {
     const pieces: string[] = [];

@@ -117,7 +117,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         to: l.email,
         url: `${baseUrl}${l.url}`,
         companyName,
-        applicationName: 'Corporate Secretary Service',
+        applicationName: 'rorc declaration',
         documentTitle: (l as any).documentTitle ?? 'RORC Declaration',
         signerRole: (l as any).signerRole ?? 'Director',
       }),
