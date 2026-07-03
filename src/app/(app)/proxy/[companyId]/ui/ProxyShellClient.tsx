@@ -132,16 +132,10 @@ export default function ProxyShellClient(props: { company: Company }) {
           <div className="mt-1 text-sm text-black/50">View submitted applications for this company</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
-              href={`/secretary/acra-filing?view=records&companyId=${encodeURIComponent(props.company.id)}`}
+              href={`/secretary/acra-filing?companyId=${encodeURIComponent(props.company.id)}`}
               className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
             >
-              Open Records
-            </Link>
-            <Link
-              href="/secretary/acra-filing"
-              className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
-            >
-              Open Queue
+              Open ACRA Filing
             </Link>
           </div>
         </div>

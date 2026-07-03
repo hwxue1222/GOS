@@ -67,6 +67,13 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
   const r = ctx.request;
   const db = await readDb();
 
+  const isProxySubmitted = (() => {
+    const createdByUserId = String((r as any).createdByUserId ?? '').trim();
+    if (!createdByUserId) return false;
+    const creator = db.users.find((u) => u.id === createdByUserId) ?? null;
+    return !!creator && creator.role !== 'client';
+  })();
+
   const company = db.clients.find((c) => c.id === r.clientId && !c.deletedAt) ?? null;
   const signatureRows = ctx.assets
     .flatMap((a) =>
@@ -111,8 +118,14 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
   return (
     <ApplicationDetailShell
       title="Annual General Meeting"
+      titleBadge={
+        isProxySubmitted ? (
+          <span className="inline-flex rounded-full border border-black/10 bg-black/[0.02] px-2 py-1 text-xs font-medium text-black/70">via Proxy</span>
+        ) : null
+      }
       requestId={r.id}
       statusBadge={<StatusBadge status={r.status} />}
+      backHref={me.role === 'client' ? '/corporate-secretary/applications' : isProxySubmitted ? '/proxy' : '/secretary/acra-filing'}
       left={
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>} />

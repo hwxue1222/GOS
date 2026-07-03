@@ -117,7 +117,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
             companyName: client.name,
             applicationName: 'Corporate representative designation',
             documentTitle: `Corporate Representative - ${client.name}`,
-            signerRole: 'Director',
+            signerRole: `Director of ${client.name}`,
           })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),

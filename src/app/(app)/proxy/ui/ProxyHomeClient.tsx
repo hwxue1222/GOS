@@ -145,8 +145,8 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
       </div>
 
       <div className="text-xs text-black/50">
-        <Link href="/secretary/acra-filing?view=records" className="text-[#2f7bdc] hover:underline">
-          Open ACRA Filing Records
+        <Link href="/secretary/acra-filing" className="text-[#2f7bdc] hover:underline">
+          Open ACRA Filing
         </Link>
       </div>
     </div>

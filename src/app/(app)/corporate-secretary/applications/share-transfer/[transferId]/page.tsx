@@ -131,6 +131,12 @@ export default async function ShareTransferApplicationDetailPage({
     .filter((l) => l.entityType === 'share_transfer' && l.entityId === transfer.id)
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const isProxySubmitted = (() => {
+    const createLog = auditLogs.find((l) => l.action === 'create_share_transfer') ?? null;
+    if (!createLog) return false;
+    return String(createLog.actorRole ?? '') !== 'client';
+  })();
   const timelineItems = [
     ...auditLogsToTimelineItems({ logs: auditLogs }),
     ...signatureEventsToTimelineItems({ signatures: signatureRows }),
@@ -139,8 +145,14 @@ export default async function ShareTransferApplicationDetailPage({
   return (
     <ApplicationDetailShell
       title="Transfer of Shares"
+      titleBadge={
+        isProxySubmitted ? (
+          <span className="inline-flex rounded-full border border-black/10 bg-black/[0.02] px-2 py-1 text-xs font-medium text-black/70">via Proxy</span>
+        ) : null
+      }
       requestId={transfer.id}
       statusBadge={<StatusBadge status={transfer.status} />}
+      backHref={me.role === 'client' ? '/corporate-secretary/applications' : isProxySubmitted ? '/proxy' : '/secretary/acra-filing'}
       left={
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(transfer.updatedAt ?? transfer.createdAt).slice(0, 10)}</div>} />

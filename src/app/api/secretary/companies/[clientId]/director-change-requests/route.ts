@@ -156,7 +156,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         companyName,
         applicationName: 'Change of Director',
         documentTitle: l.title ?? 'Director change documents',
-        signerRole: 'Director',
+        signerRole: `Director of ${companyName}`,
       }),
     ),
   );

@@ -22,10 +22,8 @@ export default async function CorporateSecretaryApplicationsPage({
   if (me.role !== 'client') {
     const sp = await searchParams;
     const qp = new URLSearchParams();
-    qp.set('view', 'records');
     if (sp.companyId) qp.set('companyId', String(sp.companyId));
-    if (sp.type) qp.set('type', String(sp.type));
-    redirect(`/secretary/acra-filing?${qp.toString()}`);
+    redirect(qp.toString() ? `/secretary/acra-filing?${qp.toString()}` : '/secretary/acra-filing');
   }
   const sp = await searchParams;
   const filterType = (sp.type ?? '').trim();

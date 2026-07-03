@@ -119,7 +119,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         companyName,
         applicationName: 'RORC Declaration',
         documentTitle: (l as any).documentTitle ?? 'RORC Declaration',
-        signerRole: (l as any).signerRole ?? 'Director',
+        signerRole: (l as any).signerRole ?? `Director of ${companyName}`,
       }),
     ),
   );

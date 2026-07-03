@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           <div className="mt-6">
             <div className="rounded-xl bg-white border border-black/5 p-6">
               <div className="text-base font-semibold">Quick actions</div>
-              <div className="mt-1 text-sm text-black/50">Go to the unified queue and records center.</div>
+              <div className="mt-1 text-sm text-black/50">Go to the unified queue for submitted applications.</div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 {me.role === 'client' ? (
                   <>
@@ -74,11 +74,8 @@ export default async function DashboardPage() {
                   </>
                 ) : (
                   <>
-                    <Link href="/secretary/acra-filing" className={actionBtnSecondary}>
-                      ACRA Filing Queue
-                    </Link>
-                    <Link href="/secretary/acra-filing?view=records" className={actionBtnPrimary}>
-                      ACRA Filing Records
+                    <Link href="/secretary/acra-filing" className={actionBtnPrimary}>
+                      ACRA Filing
                     </Link>
                     <Link href="/proxy" className={actionBtnSecondary}>
                       Proxy

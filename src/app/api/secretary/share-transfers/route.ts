@@ -210,7 +210,7 @@ export async function POST(req: Request) {
             companyName,
             applicationName: appName,
             documentTitle: l.documentTitle ?? "Director Resolution",
-            signerRole: l.signerRole ?? 'Director',
+            signerRole: l.signerRole ?? `Director of ${companyName}`,
           })
         : Promise.resolve({ ok: false }),
     );
@@ -224,7 +224,7 @@ export async function POST(req: Request) {
             companyName,
             applicationName: appName,
             documentTitle: l.documentTitle ?? 'Share Transfer Form',
-            signerRole: l.signerRole ?? 'Signatory',
+            signerRole: l.signerRole ?? `Signatory of ${companyName}`,
           })
         : Promise.resolve({ ok: false }),
     );
@@ -238,7 +238,7 @@ export async function POST(req: Request) {
             companyName,
             applicationName: appName,
             documentTitle: l.documentTitle ?? 'Corporate Representative Authorization',
-            signerRole: l.signerRole ?? 'Director',
+            signerRole: l.signerRole ?? `Director of ${companyName}`,
           })
         : Promise.resolve({ ok: false }),
     );
@@ -252,7 +252,7 @@ export async function POST(req: Request) {
             companyName,
             applicationName: appName,
             documentTitle: l.documentTitle ?? 'Certificate of Appointment of Corporate Secretary',
-            signerRole: l.signerRole ?? 'Signatory',
+            signerRole: l.signerRole ?? `Signatory of ${companyName}`,
           })
         : Promise.resolve({ ok: false }),
     );
@@ -266,7 +266,7 @@ export async function POST(req: Request) {
             companyName,
             applicationName: appName,
             documentTitle: l.documentTitle ?? 'Certificate of Appointment of Corporate Representative',
-            signerRole: l.signerRole ?? 'Signatory',
+            signerRole: l.signerRole ?? `Signatory of ${companyName}`,
           })
         : Promise.resolve({ ok: false }),
     );

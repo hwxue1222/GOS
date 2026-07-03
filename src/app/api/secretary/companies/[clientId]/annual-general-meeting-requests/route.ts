@@ -118,7 +118,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         companyName,
         applicationName: 'Annual General Meeting',
         documentTitle: l.documentTitle,
-        signerRole: 'Director',
+        signerRole: `Director of ${companyName}`,
       }),
     ),
   );

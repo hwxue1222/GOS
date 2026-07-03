@@ -11265,7 +11265,7 @@ export async function createCompanyUpdateRequest(input: {
         if (!minutesSignerEmails.has(email)) {
           minutesSignerEmails.add(email);
           minutesSigners.push({ fullName: sp.fullName, email });
-          minutesSignerRoleByEmail.set(email, 'Shareholder');
+          minutesSignerRoleByEmail.set(email, `Shareholder of ${companyName}`);
         }
         continue;
       }
@@ -11294,7 +11294,7 @@ export async function createCompanyUpdateRequest(input: {
         if (!minutesSignerEmails.has(repEmail)) {
           minutesSignerEmails.add(repEmail);
           minutesSigners.push({ fullName: `${rep.representativeName} (on behalf of ${shareholderCompanyName})`, email: repEmail });
-          minutesSignerRoleByEmail.set(repEmail, 'Corporate Representative of corporate shareholder');
+          minutesSignerRoleByEmail.set(repEmail, `Corporate Representative of ${shareholderCompanyName}`);
         }
 
         const shareholderDirectors = db.clientPartyRoles
@@ -11381,7 +11381,7 @@ export async function createCompanyUpdateRequest(input: {
             email: req.email,
             url: `/sign/${token}`,
             title: `corporate representative certificate - ${shareholderCompanyName}`,
-            signerRole: 'Director of corporate shareholder',
+            signerRole: `Director of ${shareholderCompanyName}`,
           });
         }
       }
@@ -11446,7 +11446,12 @@ export async function createCompanyUpdateRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      signLinks.push({ email: req.email, url: `/sign/${token}`, title: `${applicationName} - ${companyName}`, signerRole: 'Director' });
+      signLinks.push({
+        email: req.email,
+        url: `/sign/${token}`,
+        title: `${applicationName} - ${companyName}`,
+        signerRole: `Director of ${companyName}`,
+      });
     }
 
     const minutesHtml = templates.renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml({
@@ -11501,7 +11506,7 @@ export async function createCompanyUpdateRequest(input: {
           email: emailKey,
           url: `/sign/${token}`,
           title: `${applicationName} - ${companyName}`,
-          signerRole: minutesSignerRoleByEmail.get(emailKey) ?? 'Shareholder',
+          signerRole: minutesSignerRoleByEmail.get(emailKey) ?? `Shareholder of ${companyName}`,
         });
       }
     }
@@ -11544,7 +11549,12 @@ export async function createCompanyUpdateRequest(input: {
         updatedAt: now,
       };
       db.signatureRequests.unshift(req);
-      signLinks.push({ email: emailKey, url: `/sign/${token}`, title: `${applicationName} - ${companyName}`, signerRole: 'Director' });
+      signLinks.push({
+        email: emailKey,
+        url: `/sign/${token}`,
+        title: `${applicationName} - ${companyName}`,
+        signerRole: `Director of ${companyName}`,
+      });
     }
   }
 

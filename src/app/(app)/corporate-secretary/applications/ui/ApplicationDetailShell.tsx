@@ -4,9 +4,11 @@ import AppTopNav from '@/components/AppTopNav';
 
 export default function ApplicationDetailShell(props: {
   title: string;
+  titleBadge?: React.ReactNode;
   requestId: string;
   statusBadge?: React.ReactNode;
   headerActions?: React.ReactNode;
+  backHref?: string;
   left: React.ReactNode;
   right: React.ReactNode;
 }) {
@@ -29,7 +31,10 @@ export default function ApplicationDetailShell(props: {
                 </Link>
                 <span> / Details</span>
               </div>
-              <h1 className="mt-1 text-xl font-semibold">{props.title}</h1>
+              <div className="mt-1 flex items-center gap-2">
+                <h1 className="text-xl font-semibold">{props.title}</h1>
+                {props.titleBadge ? <div>{props.titleBadge}</div> : null}
+              </div>
               <div className="mt-1 text-sm text-black/60" title={props.requestId}>
                 Request ID: {requestIdDisplay}
               </div>
@@ -37,7 +42,7 @@ export default function ApplicationDetailShell(props: {
             <div className="flex items-center gap-3">
               {props.statusBadge ? <div>{props.statusBadge}</div> : null}
               {props.headerActions ? <div>{props.headerActions}</div> : null}
-              <Link href="/dashboard" className="text-sm text-[#2f7bdc] hover:underline">
+              <Link href={props.backHref ?? '/dashboard'} className="text-sm text-[#2f7bdc] hover:underline">
                 Back
               </Link>
             </div>

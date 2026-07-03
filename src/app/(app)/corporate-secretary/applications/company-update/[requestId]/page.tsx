@@ -103,6 +103,13 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   const payload = req.payload as Record<string, unknown>;
   const label = typeLabel(req.type);
 
+  const isProxySubmitted = (() => {
+    const createdByUserId = String(req.createdByUserId ?? '').trim();
+    if (!createdByUserId) return false;
+    const creator = db.users.find((u) => u.id === createdByUserId) ?? null;
+    return !!creator && creator.role !== 'client';
+  })();
+
   const packets = db.signaturePackets
     .filter((p) => p.relatedType === 'COMPANY_UPDATE' && p.relatedId === req.id)
     .slice()
@@ -237,8 +244,14 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
   return (
     <ApplicationDetailShell
       title={label}
+      titleBadge={
+        isProxySubmitted ? (
+          <span className="inline-flex rounded-full border border-black/10 bg-black/[0.02] px-2 py-1 text-xs font-medium text-black/70">via Proxy</span>
+        ) : null
+      }
       requestId={req.id}
       statusBadge={<StatusBadge status={req.status} />}
+      backHref={me.role === 'client' ? '/corporate-secretary/applications' : isProxySubmitted ? '/proxy' : '/secretary/acra-filing'}
       left={
         <>
           <KeyValueCard title="Overview" subtitle="Quick summary of the application." rows={summaryRows} right={<div className="text-xs text-black/50">Updated: {(req.updatedAt ?? req.createdAt).slice(0, 10)}</div>} />
