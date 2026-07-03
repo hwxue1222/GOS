@@ -28,7 +28,7 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO') {
+  async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT') {
     if (busyId) return;
     if (!canWrite) return;
     setError(null);
@@ -130,13 +130,6 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
                           </button>
                           <button
                             disabled={!!busyId}
-                            onClick={() => void decide(r, 'NEED_MORE_INFO')}
-                            className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                          >
-                            Need more info
-                          </button>
-                          <button
-                            disabled={!!busyId}
                             onClick={() => void decide(r, 'REJECT')}
                             className="rounded-md bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                           >
@@ -145,9 +138,7 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
                         </>
                       ) : (
                         <div className="text-xs text-black/50">
-                          {r.status === 'NEED_MORE_INFO'
-                            ? 'Need more info'
-                            : r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
+                          {r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'COMPLETE'
                               ? 'Decided'
                               : '-'}
                         </div>

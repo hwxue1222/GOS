@@ -18,7 +18,7 @@ export default function SecretaryIncorporationReviewClient({ rows, canWrite }: {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function decide(row: ReviewRow, toStatus: 'PROCESSING' | 'NEED_MORE_INFO' | 'COMPLETED' | 'REJECTED') {
+  async function decide(row: ReviewRow, toStatus: 'PROCESSING' | 'COMPLETED' | 'REJECTED') {
     if (!canWrite) return;
     setError(null);
     setBusyId(row.applicationId);
@@ -115,13 +115,6 @@ export default function SecretaryIncorporationReviewClient({ rows, canWrite }: {
                               className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
                             >
                               Processing
-                            </button>
-                            <button
-                              disabled={busyId === r.applicationId}
-                              onClick={() => void decide(r, 'NEED_MORE_INFO')}
-                              className="rounded-md bg-white border border-black/10 text-black/70 px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                            >
-                              Need info
                             </button>
                             <button
                               disabled={busyId === r.applicationId}

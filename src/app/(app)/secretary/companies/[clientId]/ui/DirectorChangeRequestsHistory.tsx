@@ -24,7 +24,7 @@ export default function DirectorChangeRequestsHistory(props: {
   directorByRoleId: Map<string, { roleId: string; fullName: string; email?: string }>;
   loading: boolean;
   canApprove: boolean;
-  onDecide: (requestId: string, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO') => void;
+  onDecide: (requestId: string, decision: 'APPROVE' | 'REJECT') => void;
 }) {
   const { items, directorByRoleId, loading, canApprove, onDecide } = props;
 
@@ -83,12 +83,6 @@ export default function DirectorChangeRequestsHistory(props: {
                         Approve
                       </button>
                       <button
-                        onClick={() => onDecide(r.id, 'NEED_MORE_INFO')}
-                        className="rounded-md bg-white border border-black/10 text-black/70 px-4 py-2 text-sm font-medium"
-                      >
-                        Need more info
-                      </button>
-                      <button
                         onClick={() => onDecide(r.id, 'REJECT')}
                         className="rounded-md bg-[#dc2626] text-white px-4 py-2 text-sm font-medium"
                       >
@@ -107,4 +101,3 @@ export default function DirectorChangeRequestsHistory(props: {
     </div>
   );
 }
-

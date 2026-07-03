@@ -73,7 +73,7 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
     void refresh();
   }, [refresh]);
 
-  async function decide(requestId: string, decision: 'APPROVE' | 'REJECT' | 'NEED_MORE_INFO', note?: string) {
+  async function decide(requestId: string, decision: 'APPROVE' | 'REJECT', note?: string) {
     if (!canApprove) return;
     setError(null);
     const res = await fetch(

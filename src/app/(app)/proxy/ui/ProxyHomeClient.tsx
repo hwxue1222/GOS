@@ -37,17 +37,7 @@ function statusPill(s: string) {
 
 export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[]; records: ProxySubmittedRecordRow[] }) {
   const router = useRouter();
-  const [companyQ, setCompanyQ] = useState('');
   const [recordQ, setRecordQ] = useState('');
-
-  const visibleCompanies = useMemo(() => {
-    const needle = companyQ.trim().toLowerCase();
-    if (!needle) return props.companies;
-    return props.companies.filter((c) => {
-      const hay = `${c.name} ${c.code} ${c.companyRegistrationNo ?? ''} ${c.entityStatus ?? ''}`.toLowerCase();
-      return hay.includes(needle);
-    });
-  }, [companyQ, props.companies]);
 
   const visibleRecords = useMemo(() => {
     const needle = recordQ.trim().toLowerCase();
@@ -66,12 +56,6 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
             <div className="text-sm font-medium">选择要进入的公司</div>
             <div className="mt-1 text-xs text-black/60">你只会看到已授权可代理进入的公司</div>
           </div>
-          <input
-            value={companyQ}
-            onChange={(e) => setCompanyQ(e.target.value)}
-            className="w-full sm:w-80 rounded-lg border border-black/10 px-3 py-2 text-sm"
-            placeholder="搜索公司名称/代码/注册号"
-          />
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -85,7 +69,7 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
             className="w-full sm:max-w-[520px] truncate rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
           >
             <option value="">请选择公司（Select a company）</option>
-            {visibleCompanies.map((c) => (
+            {props.companies.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({c.code})
               </option>
@@ -168,4 +152,3 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
     </div>
   );
 }
-
