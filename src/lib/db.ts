@@ -11271,8 +11271,9 @@ export async function createCompanyUpdateRequest(input: {
       if (party.type === 'COMPANY' && party.clientId) {
         const shareholderClientId = party.clientId;
         const shareholderClient = db.clients.find((c) => c.id === shareholderClientId) ?? null;
-        const shareholderCompanyName = shareholderClient?.name ?? party.displayName;
-        const shareholderCompanyRegistrationNo = shareholderClient?.companyRegistrationNo;
+        if (!shareholderClient || shareholderClient.deletedAt) return { ok: false as const, error: 'INVALID_INPUT' as const };
+        const shareholderCompanyName = shareholderClient.name;
+        const shareholderCompanyRegistrationNo = shareholderClient.companyRegistrationNo;
 
         const rep = corporateRepByCompanyId.get(shareholderClientId) ?? null;
         if (!rep) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -11296,7 +11297,7 @@ export async function createCompanyUpdateRequest(input: {
         const shareholderDirectors = db.clientPartyRoles
           .filter((x) => x.clientId === shareholderClientId)
           .filter((x) => x.role === 'DIRECTOR')
-          .filter((x) => !x.toDate)
+          .filter((x) => !(x as any).resignationDate)
           .map((x) => {
             const pty = partyById.get(x.partyId);
             if (!pty || pty.type !== 'PERSON' || !pty.personId) return null;
