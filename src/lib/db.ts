@@ -11380,7 +11380,7 @@ export async function createCompanyUpdateRequest(input: {
           signLinks.push({
             email: req.email,
             url: `/sign/${token}`,
-            title: `corporate representative certificate - ${shareholderCompanyName}`,
+            title: certDoc.title,
             signerRole: `Director of ${shareholderCompanyName}`,
           });
         }
@@ -11449,7 +11449,7 @@ export async function createCompanyUpdateRequest(input: {
       signLinks.push({
         email: req.email,
         url: `/sign/${token}`,
-        title: `${applicationName} - ${companyName}`,
+        title: noticeDoc.title,
         signerRole: `Director of ${companyName}`,
       });
     }
@@ -11505,7 +11505,7 @@ export async function createCompanyUpdateRequest(input: {
         signLinks.push({
           email: emailKey,
           url: `/sign/${token}`,
-          title: `${applicationName} - ${companyName}`,
+          title: minutesDoc.title,
           signerRole: minutesSignerRoleByEmail.get(emailKey) ?? `Shareholder of ${companyName}`,
         });
       }
@@ -11536,6 +11536,8 @@ export async function createCompanyUpdateRequest(input: {
     db.signaturePackets.unshift(packet);
     primaryPacketId = packet.id;
 
+    const documentTitle = titlePrefix.startsWith('Director Resolution') ? 'Director Resolution' : titlePrefix;
+
     for (const emailKey of signerEmails) {
       const token = newToken();
       const req: SignatureRequest = {
@@ -11552,7 +11554,7 @@ export async function createCompanyUpdateRequest(input: {
       signLinks.push({
         email: emailKey,
         url: `/sign/${token}`,
-        title: `${applicationName} - ${companyName}`,
+        title: documentTitle,
         signerRole: `Director of ${companyName}`,
       });
     }

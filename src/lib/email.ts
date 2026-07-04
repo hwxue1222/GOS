@@ -215,10 +215,13 @@ export async function sendSigningInvite(input: {
 
   const intro = (() => {
     const pieces: string[] = [];
-    if (companyName) pieces.push(`Company: <strong>${companyName}</strong>`);
-    if (applicationName) pieces.push(`Application: <strong>${applicationName}</strong>`);
-    if (documentTitle) pieces.push(`Document: <strong>${documentTitle}</strong>`);
-    if (signerRole) pieces.push(`Signing as: <strong>${signerRole}</strong>`);
+    if (companyName) pieces.push(`Company: <strong>${escHtml(companyName)}</strong>`);
+    if (applicationName) pieces.push(`Application: <strong>${escHtml(applicationName)}</strong>`);
+    if (documentTitle)
+      pieces.push(
+        `Document: <strong><span style="display:inline-block; border:1px solid #ef4444; background:#fef2f2; color:#111; padding:2px 6px; border-radius:8px;">${escHtml(documentTitle)}</span></strong>`,
+      );
+    if (signerRole) pieces.push(`Signing as: <strong>${escHtml(signerRole)}</strong>`);
     return pieces.length ? pieces.join('<br />') : '';
   })();
   const message = String(input.message ?? '').trim();
