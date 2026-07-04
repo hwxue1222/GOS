@@ -3,6 +3,7 @@ import SecretaryCompanyClient from '@/app/(app)/secretary/companies/[clientId]/u
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { buildSecretaryServiceApplications } from '@/lib/secretaryApplications';
 
 function isActiveRole(r: { role: string; resignationDate?: string; toDate?: string }) {
   if (r.role === 'DIRECTOR' || r.role === 'SECRETARY') return !r.resignationDate;
@@ -115,6 +116,66 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
     .map((c) => ({ id: c.id, code: c.code, name: safeName(c.name) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const labelForCompanyUpdateType = (t: string) => {
+    if (t === 'CHANGE_COMPANY_NAME') return 'Change of Company Name';
+    if (t === 'CHANGE_FINANCIAL_YEAR_END') return 'Change of Financial Year End (FYE)';
+    if (t === 'CHANGE_REGISTERED_OFFICE_ADDRESS') return 'Change of Registered Office Address';
+    if (t === 'CHANGE_BUSINESS_ACTIVITIES') return 'Change of Business Activities';
+    if (t === 'CHANGE_SECRETARY') return 'Change of Secretary';
+    if (t === 'TRANSFER_COMPANY_SECRETARY') return 'Transfer of Company Secretary';
+    return 'Company Update';
+  };
+
+  const applications = buildSecretaryServiceApplications(db, new Set([clientId]))
+    .filter((r) => r.status !== 'DRAFT')
+    .map((r) => {
+      const map = (() => {
+        if (r.type === 'DIRECTOR_CHANGE') {
+          return {
+            id: `DCR-${r.source.id}`,
+            typeLabel: 'Change of Director',
+            detailsHref: `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`,
+          };
+        }
+        if (r.type === 'RORC_DECLARATION') {
+          return {
+            id: `RORC-${r.source.id}`,
+            typeLabel: 'Declaration of Company Controller (RORC)',
+            detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`,
+          };
+        }
+        if (r.type === 'ANNUAL_GENERAL_MEETING') {
+          return {
+            id: `AGM-${r.source.id}`,
+            typeLabel: 'Annual General Meeting',
+            detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`,
+          };
+        }
+        if (r.type === 'SHARE_TRANSFER') {
+          return {
+            id: `ST-${r.source.id}`,
+            typeLabel: 'Transfer of Shares',
+            detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
+          };
+        }
+        return {
+          id: `CUR-${r.source.id}`,
+          typeLabel: labelForCompanyUpdateType(r.type),
+          detailsHref: `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`,
+        };
+      })();
+
+      return {
+        id: map.id,
+        typeLabel: map.typeLabel,
+        applicationDate: r.applicationDate,
+        editDate: r.editDate,
+        status: r.status,
+        detailsHref: map.detailsHref,
+      };
+    })
+    .sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="secretary" />
@@ -129,6 +190,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
           }}
           peopleOptions={peopleOptions}
           companyOptions={companyOptions}
+          applicationHistoryRows={applications}
           canEditCompany={canEditCompany}
           canEditRoles={canEditRoles}
           isClientUser={me.role === 'client'}

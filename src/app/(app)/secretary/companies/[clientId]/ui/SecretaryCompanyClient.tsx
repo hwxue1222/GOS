@@ -6,6 +6,9 @@ import { useState } from 'react';
 import CompanyInfoForm from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyInfoForm';
 import CompanyRolesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyRolesPanel';
 import DirectorsAndCorporateRepresentativePanel from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorsAndCorporateRepresentativePanel';
+import CompanyApplicationsHistoryPanel, {
+  type CompanyApplicationHistoryRow,
+} from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyApplicationsHistoryPanel';
 
 type Client = {
   id: string;
@@ -48,6 +51,7 @@ type Props = {
   };
   peopleOptions: Array<{ id: string; fullName: string; email?: string }>;
   companyOptions: Array<{ id: string; code: string; name: string }>;
+  applicationHistoryRows: CompanyApplicationHistoryRow[];
   canEditCompany: boolean;
   canEditRoles: boolean;
   isClientUser: boolean;
@@ -58,6 +62,7 @@ export default function SecretaryCompanyClient({
   initialRoles,
   peopleOptions,
   companyOptions,
+  applicationHistoryRows,
   canEditCompany,
   canEditRoles,
 }: Props) {
@@ -293,6 +298,8 @@ export default function SecretaryCompanyClient({
       </div>
 
       <DirectorsAndCorporateRepresentativePanel clientId={client.id} companyName={client.name} canEdit={canEditRoles} />
+
+      <CompanyApplicationsHistoryPanel rows={applicationHistoryRows} />
     </div>
   );
 }
