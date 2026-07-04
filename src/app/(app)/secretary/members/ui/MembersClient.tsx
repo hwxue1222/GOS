@@ -560,7 +560,8 @@ export default function MembersClient() {
                 <div className="text-black/60">Name</div>
                 <input
                   value={form.fullName}
-                  onChange={(e) => setForm((v) => ({ ...v, fullName: titleCaseWords(e.target.value) }))}
+                  onChange={(e) => setForm((v) => ({ ...v, fullName: e.target.value }))}
+                  onBlur={() => setForm((v) => ({ ...v, fullName: titleCaseWords(v.fullName) }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   placeholder="Full name"
                 />
@@ -701,7 +702,8 @@ export default function MembersClient() {
                 <div className="text-black/60">Name</div>
                 <input
                   value={editForm.fullName}
-                  onChange={(e) => setEditForm((v) => ({ ...v, fullName: titleCaseWords(e.target.value) }))}
+                  onChange={(e) => setEditForm((v) => ({ ...v, fullName: e.target.value }))}
+                  onBlur={() => setEditForm((v) => ({ ...v, fullName: titleCaseWords(v.fullName) }))}
                   className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                   placeholder="Full name"
                 />
