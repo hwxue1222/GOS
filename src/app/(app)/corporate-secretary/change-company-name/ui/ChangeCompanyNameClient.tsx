@@ -68,6 +68,57 @@ export default function ChangeCompanyNameClient() {
     });
   }, [shareholderCompanies.map((s) => s.entity.company.id).join('|')]);
 
+  useEffect(() => {
+    if (!shareholderCompanies.length) return;
+
+    let cancelled = false;
+    async function run() {
+      for (const s of shareholderCompanies) {
+        const shareholderCompanyId = s.entity.company.id;
+        const res = await fetch(`/api/clients/${encodeURIComponent(shareholderCompanyId)}/corporate-representative`).catch(() => null);
+        const j = (await res?.json().catch(() => null)) as
+          | {
+              ok: boolean;
+              current?: { person?: { fullName?: string; email?: string; phone?: string; address?: string; idType?: string; idNo?: string } };
+            }
+          | null;
+        if (cancelled) return;
+        if (!res?.ok || !j?.ok) continue;
+
+        const p = j.current?.person ?? null;
+        if (!p) continue;
+
+        const nextIdType = (() => {
+          const v = String(p.idType ?? '').trim().toUpperCase();
+          if (v === 'NRIC' || v === 'FIN' || v === 'PASSPORT' || v === 'IC') return v as CorporateRepresentativeDraft['representativeIdType'];
+          return 'PASSPORT' as const;
+        })();
+
+        setCorporateRepresentatives((prev) => {
+          const cur = prev[shareholderCompanyId];
+          if (!cur) return prev;
+          return {
+            ...prev,
+            [shareholderCompanyId]: {
+              ...cur,
+              representativeName: cur.representativeName.trim() ? cur.representativeName : String(p.fullName ?? ''),
+              representativeEmail: cur.representativeEmail.trim() ? cur.representativeEmail : String(p.email ?? ''),
+              representativePhone: cur.representativePhone.trim() ? cur.representativePhone : String(p.phone ?? ''),
+              representativeAddress: cur.representativeAddress.trim() ? cur.representativeAddress : String(p.address ?? ''),
+              representativeIdType: cur.representativeIdType || nextIdType,
+              representativeIdNo: cur.representativeIdNo.trim() ? cur.representativeIdNo : String(p.idNo ?? ''),
+            },
+          };
+        });
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [shareholderCompanies.map((s) => s.entity.company.id).join('|')]);
+
   async function onSubmit() {
     setSubmitError(null);
     const nextName = newCompanyName.trim();

@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import CompanyInfoForm from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyInfoForm';
 import CompanyRolesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyRolesPanel';
+import DirectorsAndCorporateRepresentativePanel from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorsAndCorporateRepresentativePanel';
 
 type Client = {
   id: string;
@@ -290,6 +291,8 @@ export default function SecretaryCompanyClient({
           />
         </div>
       </div>
+
+      <DirectorsAndCorporateRepresentativePanel clientId={client.id} companyName={client.name} canEdit={canEditRoles} />
     </div>
   );
 }

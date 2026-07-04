@@ -6,12 +6,12 @@ import {
   createSignaturePacket,
   createSignatureRequestsForPacket,
   findClientById,
+  findPersonById,
   getActiveCompanyRepresentative,
   getOrCreateCompanyPartyForClient,
   listClientDirectors,
   listRepresentativeDesignationRequests,
   listSignatureRequestsByPacket,
-  findPersonById,
   readDb,
 } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -19,7 +19,30 @@ import { newId } from '@/lib/id';
 import { renderRdrAuthorizationHtml } from '@/lib/docTemplates';
 import { sendSigningInvite } from '@/lib/email';
 
-export async function GET(_: Request, { params }: { params: Promise<{ clientId: string }> }) {
+function isActiveDirectorRole(r: { role: string; resignationDate?: string }) {
+  return r.role === 'DIRECTOR' && !r.resignationDate;
+}
+
+async function canAccessClientAsDirector(user: { role: string; email: string }, clientId: string) {
+  if (user.role !== 'client') return true;
+  const db = await readDb();
+  const emailKey = user.email.trim().toLowerCase();
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const personById = new Map(db.persons.map((p) => [p.id, p]));
+  for (const r of db.clientPartyRoles) {
+    if (r.clientId !== clientId) continue;
+    if (!isActiveDirectorRole(r as any)) continue;
+    const party = partyById.get((r as any).partyId);
+    if (!party || party.type !== 'PERSON' || !party.personId) continue;
+    const person = personById.get(party.personId);
+    if (!person) continue;
+    if ((person.email ?? '').trim().toLowerCase() !== emailKey) continue;
+    return true;
+  }
+  return false;
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ clientId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
@@ -27,36 +50,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ clientId: 
   const client = await findClientById(clientId);
   if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  const canViewAllClients = hasPermission(user, 'clients', 'viewAll');
-  const canViewAssignedClients = hasPermission(user, 'clients', 'viewAssigned');
-  const canProxyAll = hasPermission(user, 'proxy', 'viewAll');
-  const canProxyAssigned = hasPermission(user, 'proxy', 'viewAssigned');
-  const canView = canViewAllClients || canViewAssignedClients || canProxyAll || canProxyAssigned;
-  if (!canView) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-
-  if (!canViewAllClients && !canProxyAll) {
-    const db = await readDb();
-    const assignedJobId = new Set(
-      db.tasks
-        .filter((t: any) => (t as any).assigneeUserId === user.id)
-        .map((t: any) => String((t as any).jobId ?? ''))
-        .filter(Boolean),
-    );
-
-    const visibleClientIds = new Set<string>();
-    for (const j of db.jobs) {
-      if (!j.clientId) continue;
-      const assigned =
-        j.managerUserId === user.id ||
-        (j as any).staffUserId === user.id ||
-        (j as any).createdByUserId === user.id ||
-        assignedJobId.has(j.id);
-      if (assigned) visibleClientIds.add(j.clientId);
-    }
-
-    if ((canViewAssignedClients || canProxyAssigned) && !visibleClientIds.has(clientId)) {
-      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-    }
+  if (user.role !== 'client') {
+    const canViewSecretary = hasPermission(user, 'secretary', 'viewAll') || hasPermission(user, 'secretary', 'viewAssigned');
+    if (!canViewSecretary) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+  if (!(await canAccessClientAsDirector(user, clientId))) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
   const companyParty = await getOrCreateCompanyPartyForClient(clientId);
@@ -67,19 +66,22 @@ export async function GET(_: Request, { params }: { params: Promise<{ clientId: 
   const latestRdr = rdrs[0] ?? null;
   const latestRequests = latestRdr ? await listSignatureRequestsByPacket(latestRdr.packetId) : [];
 
-  return NextResponse.json({
-    ok: true,
-    companyPartyId: companyParty.id,
-    current,
-    latestRdr,
-    latestRequests: latestRequests.map((r) => ({ email: r.email, status: r.status, signedAt: r.signedAt })),
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      companyPartyId: companyParty.id,
+      current,
+      latestRdr,
+      latestRequests: latestRequests.map((r) => ({ email: r.email, status: r.status, signedAt: r.signedAt })),
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  );
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ clientId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'clients', 'update')) {
+  if (!hasPermission(user, 'secretary', 'update')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -152,3 +154,4 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
 
   return NextResponse.json({ ok: true, rdrId, packetId: packet.id, signLinks });
 }
+
