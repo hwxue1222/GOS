@@ -127,6 +127,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
   };
 
   const applications = buildSecretaryServiceApplications(db, new Set([clientId]))
+    .filter((r) => r.companyId === clientId)
     .filter((r) => r.status !== 'DRAFT')
     .map((r) => {
       const map = (() => {
