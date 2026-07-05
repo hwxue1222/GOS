@@ -7,6 +7,7 @@ import { useState } from 'react';
 export type ReviewRow = {
   id: string;
   typeLabel: string;
+  viaProxy?: boolean;
   companyId: string;
   companyName: string;
   applicationDate: string;
@@ -97,7 +98,16 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
                 <td className="px-3 py-2" title={r.id}>
                   {ellipsizeId(r.id)}
                 </td>
-                <td className="px-3 py-2">{r.typeLabel}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span>{r.typeLabel}</span>
+                    {r.viaProxy ? (
+                      <span className="rounded-full bg-black/5 border border-black/10 px-2 py-0.5 text-[10px] font-medium text-black/60">
+                        via Proxy
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-3 py-2">{r.companyName}</td>
                 <td className="px-3 py-2">{r.applicationDate.slice(0, 10)}</td>
                 <td className="px-3 py-2">{r.editDate.slice(0, 10)}</td>

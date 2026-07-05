@@ -10962,6 +10962,7 @@ export async function createCompanyUpdateRequest(input: {
   type: CompanyUpdateRequestType;
   payload: Record<string, unknown>;
   createdByUserId: string;
+  createdViaProxy?: boolean;
 }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
@@ -11224,6 +11225,13 @@ export async function createCompanyUpdateRequest(input: {
     const meetingDateYmd = String(p.meetingDate ?? p.startDate ?? '').trim();
     const noticeDateYmd = String(p.noticeDateYmd ?? p.noticeDate ?? '').trim();
     const meetingVenue = String(p.meetingVenue ?? '').trim();
+
+    const nameAvailability = (p as any).nameAvailability;
+    const checkedName = typeof nameAvailability?.checkedName === 'string' ? nameAvailability.checkedName.trim() : '';
+    const available = nameAvailability?.available === true;
+    if (!available || checkedName !== newCompanyName) {
+      return { ok: false as const, error: 'INVALID_INPUT' as const };
+    }
 
     const corporateReps = Array.isArray((p as { corporateRepresentatives?: unknown }).corporateRepresentatives)
       ? ((p as { corporateRepresentatives: any[] }).corporateRepresentatives
@@ -11682,6 +11690,7 @@ export async function createCompanyUpdateRequest(input: {
     status: requestStatus,
     payload: p,
     createdByUserId: input.createdByUserId,
+    createdViaProxy: !!input.createdViaProxy,
     packetId: primaryPacketId,
     createdAt: now,
     updatedAt: now,

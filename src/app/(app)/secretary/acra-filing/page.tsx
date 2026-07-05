@@ -132,6 +132,7 @@ export default async function SecretaryAcraFilingPage({
       return {
         id: map.id,
         typeLabel: map.typeLabel,
+        viaProxy: (r as { viaProxy?: boolean }).viaProxy,
         companyId: r.companyId,
         companyName: r.companyName,
         applicationDate: r.applicationDate,

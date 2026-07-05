@@ -118,6 +118,7 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
       applicationDate,
       editDate,
       status: statusFromCompanyUpdateRequest(r),
+      viaProxy: !!(r as { createdViaProxy?: unknown }).createdViaProxy,
       source: { kind: 'COMPANY_UPDATE_REQUEST', id: r.id },
     });
   }

@@ -482,6 +482,7 @@ export type SecretaryServiceApplicationRow = {
   applicationDate: string;
   editDate: string;
   status: SecretaryServiceApplicationStatus;
+  viaProxy?: boolean;
   source:
     | { kind: 'DIRECTOR_CHANGE_REQUEST'; id: string }
     | { kind: 'SHARE_TRANSFER'; id: string }
@@ -512,6 +513,7 @@ export type CompanyUpdateRequest = {
   status: CompanyUpdateRequestStatus;
   payload: Record<string, unknown>;
   createdByUserId: string;
+  createdViaProxy?: boolean;
   packetId: string;
   createdAt: string;
   updatedAt?: string;

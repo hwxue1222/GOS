@@ -301,6 +301,9 @@ export default function ChangeCompanyNameClient() {
           payload: {
             originalCompanyName: client.name,
             newCompanyName: nextName,
+            nameAvailability: nameCheck
+              ? { checkedName: nameCheck.checkedName, available: nameCheck.available, checkedAt: new Date().toISOString() }
+              : null,
             chairman: nextChairman,
             directorSendingNotice: nextDirectorSendingNotice,
             meetingDate: nextMeetingDate,
@@ -324,7 +327,8 @@ export default function ChangeCompanyNameClient() {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
       if (!res?.ok || !j?.ok || !j.request?.id) {
-        if (j?.error === 'INVALID_INPUT') setSubmitError('Invalid input. Please check meeting date, notice date and required fields.');
+        if (j?.error === 'INVALID_INPUT')
+          setSubmitError('Invalid input. Please ensure name availability is checked (available) and required fields are filled.');
         else setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
@@ -506,7 +510,9 @@ export default function ChangeCompanyNameClient() {
               >
                 {checkingName ? 'Checking...' : 'Check name availability'}
               </button>
-              {renderAvailabilityBadge(nameCheck)}
+              {nameCheck ? renderAvailabilityBadge(nameCheck) : proposedNewName ? (
+                <div className="mt-2 text-xs text-black/50">● not checked</div>
+              ) : null}
             </label>
 
             <label className="sm:col-span-4 text-sm">

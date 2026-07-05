@@ -97,7 +97,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   if (!ALLOWED_TYPES.includes(type)) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const payload = (body?.payload && typeof body.payload === 'object' ? (body.payload as Record<string, unknown>) : {}) as Record<string, unknown>;
 
-  const r = await createCompanyUpdateRequest({ clientId, type, payload, createdByUserId: user.id });
+  const r = await createCompanyUpdateRequest({
+    clientId,
+    type,
+    payload,
+    createdByUserId: user.id,
+    createdViaProxy: isProxyingThisCompany,
+  });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
 
   await appendAuditLog({
