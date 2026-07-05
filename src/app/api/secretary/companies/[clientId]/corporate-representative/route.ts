@@ -89,6 +89,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   const client = await findClientById(clientId);
   if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
+  if (!(await canAccessClientAsDirector(user, clientId))) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
   const body = (await req.json().catch(() => null)) as { representativePersonId?: string } | null;
   const representativePersonId = typeof body?.representativePersonId === 'string' ? body.representativePersonId : '';
   if (!representativePersonId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
@@ -154,4 +158,3 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
 
   return NextResponse.json({ ok: true, rdrId, packetId: packet.id, signLinks });
 }
-

@@ -111,6 +111,13 @@ export default function ProxyShellClient(props: { company: Company }) {
               AGM
             </Link>
             <Link
+              href="/corporate-secretary/appoint-corporate-representative"
+              onClick={() => window.sessionStorage.setItem('gos.currentCompanyId', props.company.id)}
+              className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
+            >
+              Appointment of Corporate Representative
+            </Link>
+            <Link
               href={`/corporate-secretary/share-transfer?companyId=${encodeURIComponent(props.company.id)}`}
               onClick={() => window.sessionStorage.setItem('gos.currentCompanyId', props.company.id)}
               className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"

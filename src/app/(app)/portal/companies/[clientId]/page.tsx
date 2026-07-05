@@ -5,6 +5,7 @@ import FrontTopNavClient from '@/components/FrontTopNavClient';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import ssic from '@/data/ssic.json';
+import PortalCorporateSecretaryServicesClient from '@/app/(app)/portal/companies/[clientId]/ui/PortalCorporateSecretaryServicesClient';
 
 type SsicRow = { code: string; description: string };
 const SSIC_ROWS = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
@@ -196,6 +197,10 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                   <DlRow label="SSIC (Primary)" value={<SsicValue code={client.ssicPrimaryCode} />} />
                   <DlRow label="SSIC (Secondary)" value={<SsicValue code={client.ssicSecondaryCode} />} />
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <PortalCorporateSecretaryServicesClient clientId={clientId} />
               </div>
             </div>
 
