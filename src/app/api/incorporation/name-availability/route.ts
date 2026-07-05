@@ -62,7 +62,7 @@ export async function GET(req: Request) {
   const debug = url.searchParams.get('debug') === '1';
   if (name.length < 2 || name.length > 120) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
-  const searchUrl = 'https://osome.com/sg/company-name-search-singapore/';
+  const searchUrl = 'https://www.bizfile.gov.sg';
   const targetKey = normalizeName(name);
   if (targetKey.length < 2) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
   const apiUrl = `https://api.osome.com/api/v2/corpsec/acra_companies/sg?entity_name=${encodeURIComponent(targetKey)}`;
