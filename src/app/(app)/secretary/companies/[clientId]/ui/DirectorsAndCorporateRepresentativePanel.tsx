@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatDateDMY } from '@/lib/date';
 import { DateInputYMD } from '@/components/DateInputYMD';
@@ -355,20 +354,6 @@ export default function DirectorsAndCorporateRepresentativePanel(props: {
               ) : null}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div className="rounded-xl bg-white border border-black/5 p-5">
-        <div className="text-sm font-semibold">Corporate Representative</div>
-        <div className="mt-1 text-sm text-black/50">Use Corporate Secretary Service to appoint / change GLOBAL corporate representative.</div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link
-            href="/corporate-secretary/appoint-corporate-representative"
-            onClick={() => window.sessionStorage.setItem('gos.currentCompanyId', props.clientId)}
-            className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
-          >
-            Open Appointment Service
-          </Link>
         </div>
       </div>
     </div>
