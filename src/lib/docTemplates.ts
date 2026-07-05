@@ -993,6 +993,11 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
   directorSignerEmail?: string;
   dateYmd: string;
 }) {
+  const addDot = (s: string) => {
+    const v = s.trim();
+    if (!v) return v;
+    return v.endsWith('.') ? v : `${v}.`;
+  };
   const directorSig = signatureLineBlocks({
     signers: [{ fullName: input.directorSignerName, email: input.directorSignerEmail }],
   });
@@ -1025,7 +1030,7 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
     </style>
   </head>
   <body>
-    <div class="title">${esc(input.companyName)}</div>
+    <div class="title">${esc(addDot(input.companyName))}</div>
     ${input.companyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
 
     <div class="block title center">CERTIFICATE OF APPOINTMENT OF CORPORATE REPRESENTATIVE</div>
@@ -1045,7 +1050,7 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
     <div class="block">Dated this ${esc(datedLong)}</div>
 
     <div class="block">We confirm that ${esc(input.companyName)} is not required to have a Common Seal under the provisions of its Articles of Association or the prevailing laws applicable to the company in its country of incorporation.</div>
-    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(input.companyName)}</div>
+    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(addDot(input.companyName))}</div>
 
     <div class="block">${esc(input.directorSignerName)}</div>
     <div class="block">Director</div>
