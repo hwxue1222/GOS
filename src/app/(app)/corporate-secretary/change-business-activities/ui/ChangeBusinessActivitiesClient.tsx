@@ -190,7 +190,8 @@ export default function ChangeBusinessActivitiesClient() {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setChangePrimary(checked);
-                    if (!checked) setPrimary(String(client.ssicPrimaryCode ?? '').trim() || undefined);
+                    if (checked) setPrimary(undefined);
+                    else setPrimary(String(client.ssicPrimaryCode ?? '').trim() || undefined);
                   }}
                 />
                 Change
@@ -229,7 +230,8 @@ export default function ChangeBusinessActivitiesClient() {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setChangeSecondary(checked);
-                    if (!checked) setSecondary(String(client.ssicSecondaryCode ?? '').trim() || undefined);
+                    if (checked) setSecondary(undefined);
+                    else setSecondary(String(client.ssicSecondaryCode ?? '').trim() || undefined);
                   }}
                 />
                 Change
