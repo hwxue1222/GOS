@@ -883,6 +883,7 @@ export function renderMinutesOfExtraordinaryGeneralMeetingChangeCompanyNameHtml(
 export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(input: {
   shareholderCompanyName: string;
   shareholderCompanyRegistrationNo?: string;
+  shareholderCompanyCountryOfIncorporation?: string;
   shareholderCompanyAddress: string;
   targetCompanyName: string;
   representativeName: string;
@@ -896,6 +897,11 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
   directorSignerEmail?: string;
   dateYmd: string;
 }) {
+  const addDot = (s: string) => {
+    const v = s.trim();
+    if (!v) return v;
+    return v.endsWith('.') ? v : `${v}.`;
+  };
   const directorSig = signatureLineBlocks({
     signers: [{ fullName: input.directorSignerName, email: input.directorSignerEmail }],
   });
@@ -905,6 +911,7 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
   const datedLong = toDayOfMonthLong(input.dateYmd);
   const shareholderAddress = input.shareholderCompanyAddress.trim() ? esc(input.shareholderCompanyAddress) : '______________________________';
   const representativeAddress = input.representativeAddress.trim() ? esc(input.representativeAddress) : '______________________________';
+  const shareholderCountry = String(input.shareholderCompanyCountryOfIncorporation ?? '').trim();
   return `
 <!doctype html>
 <html>
@@ -923,11 +930,13 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
       .sig-name { margin-top: 4px; }
       .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
       .mt2 { margin-top: 8px; }
+      .dated { display: inline-block; border-bottom: 1px solid #111; padding-bottom: 2px; }
     </style>
   </head>
   <body>
-    <div class="title">${esc(input.shareholderCompanyName)}</div>
+    <div class="title">${esc(addDot(input.shareholderCompanyName))}</div>
     ${input.shareholderCompanyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.shareholderCompanyRegistrationNo)}</div>` : ''}
+    ${shareholderCountry ? `<div>Incorporated in ${esc(shareholderCountry)},</div>` : ''}
 
     <div class="block title center">CERTIFICATE OF APPOINTMENT OF CORPORATE REPRESENTATIVE</div>
 
@@ -942,10 +951,10 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
     <div class="block">as our representative at all general meetings of the Company and at any adjournments thereof with full authority to sign, execute and exercise the same powers on our behalf as we could exercise if we were an individual member of the Company including, without limitation to the foregoing, the power to accept shorter notice or to waive notice of any such general meetings of the Company, and to act on, vote on, sign and execute, on our behalf, all relevant documents recording members’ resolutions.</div>
     <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
 
-    <div class="block">Dated this ${esc(datedLong)}</div>
+    <div class="block"><span class="dated">Dated this ${esc(datedLong)}</span></div>
 
     <div class="block">We confirm that ${esc(input.shareholderCompanyName)} is not required to have a Common Seal under the provisions of its Articles of Association or the prevailing laws applicable to the company in its country of incorporation.</div>
-    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(input.shareholderCompanyName)}</div>
+    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(addDot(input.shareholderCompanyName))}</div>
 
     <div class="block">${esc(input.directorSignerName)}</div>
     <div class="block">Director</div>

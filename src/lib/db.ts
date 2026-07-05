@@ -11284,6 +11284,7 @@ export async function createCompanyUpdateRequest(input: {
         if (!shareholderClient || shareholderClient.deletedAt) return { ok: false as const, error: 'INVALID_INPUT' as const };
         const shareholderCompanyName = shareholderClient.name;
         const shareholderCompanyRegistrationNo = shareholderClient.companyRegistrationNo;
+        const shareholderCompanyCountryOfIncorporation = String((shareholderClient as any).countryOfIncorporation ?? '').trim() || undefined;
 
         const rep = corporateRepByCompanyId.get(shareholderClientId) ?? null;
         if (!rep) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -11337,6 +11338,7 @@ export async function createCompanyUpdateRequest(input: {
         const certHtml = templates.renderCertificateOfAppointmentOfCorporateRepresentativeHtml({
           shareholderCompanyName,
           shareholderCompanyRegistrationNo,
+          shareholderCompanyCountryOfIncorporation,
           shareholderCompanyAddress,
           targetCompanyName: companyName,
           representativeName: rep.representativeName,
