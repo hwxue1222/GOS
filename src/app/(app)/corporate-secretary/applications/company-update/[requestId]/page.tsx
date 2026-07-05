@@ -231,6 +231,41 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
     return [] as Array<{ k: string; before: string; after: string }>;
   })();
 
+  const corporateRepRows = (() => {
+    if (req.type !== 'CHANGE_COMPANY_NAME') return [] as Array<{
+      shareholderCompany: string;
+      name: string;
+      idType: string;
+      idNo: string;
+      email: string;
+      phone: string;
+      address: string;
+    }>;
+    const list = Array.isArray((payload as any).corporateRepresentatives)
+      ? ((payload as any).corporateRepresentatives as Array<Record<string, unknown>>)
+      : [];
+    const byClientId = new Map(db.clients.filter((c) => !c.deletedAt).map((c) => [c.id, c]));
+    return list
+      .map((x) => {
+        const shareholderCompanyClientId = String(x.shareholderCompanyClientId ?? '').trim();
+        const shareholderCompany = shareholderCompanyClientId
+          ? (byClientId.get(shareholderCompanyClientId)?.name ?? shareholderCompanyClientId)
+          : '-';
+        const idType = String(x.representativeIdType ?? '').trim();
+        const idTypeLabel = idType === 'NRIC' ? 'NRIC' : idType === 'FIN' ? 'FIN' : idType === 'IC' ? 'IC' : idType ? idType : '-';
+        return {
+          shareholderCompany,
+          name: String(x.representativeName ?? '').trim() || '-',
+          idType: idTypeLabel,
+          idNo: String(x.representativeIdNo ?? '').trim() || '-',
+          email: String(x.representativeEmail ?? '').trim() || '-',
+          phone: String(x.representativePhone ?? '').trim() || '-',
+          address: String(x.representativeAddress ?? '').trim() || '-',
+        };
+      })
+      .filter((r) => r.shareholderCompany !== '-' || r.name !== '-' || r.email !== '-');
+  })();
+
   const summaryRows = [
     { label: 'Company', value: company?.name ?? req.clientId },
     { label: 'Company code', value: company?.code ?? req.clientId },
@@ -289,6 +324,36 @@ export default async function CompanyUpdateApplicationDetailPage({ params }: { p
               </table>
             </div>
           </SectionCard>
+          {corporateRepRows.length ? (
+            <SectionCard title="Corporate representatives" subtitle="Ad-hoc representative information captured for this request.">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-left text-black/60 bg-black/[0.02]">
+                    <tr className="border-b border-black/10">
+                      <th className="px-3 py-2 font-medium">Shareholder company</th>
+                      <th className="px-3 py-2 font-medium">Name</th>
+                      <th className="px-3 py-2 font-medium">ID</th>
+                      <th className="px-3 py-2 font-medium">Email</th>
+                      <th className="px-3 py-2 font-medium">Phone</th>
+                      <th className="px-3 py-2 font-medium">Address</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {corporateRepRows.map((r) => (
+                      <tr key={`${r.shareholderCompany}-${r.email}-${r.name}`} className="border-b border-black/5 hover:bg-black/[0.02]">
+                        <td className="px-3 py-2 align-top text-black/80 whitespace-nowrap">{r.shareholderCompany}</td>
+                        <td className="px-3 py-2 align-top text-black/70 whitespace-nowrap">{r.name}</td>
+                        <td className="px-3 py-2 align-top text-black/70 whitespace-nowrap">{`${r.idType} ${r.idNo}`.trim()}</td>
+                        <td className="px-3 py-2 align-top text-black/70 whitespace-nowrap">{r.email}</td>
+                        <td className="px-3 py-2 align-top text-black/70 whitespace-nowrap">{r.phone}</td>
+                        <td className="px-3 py-2 align-top text-black/70 whitespace-pre-wrap">{r.address}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          ) : null}
           <ActivityTimelineCard items={timelineItems} />
         </>
       }
