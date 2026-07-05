@@ -33,11 +33,15 @@ export default function ModalShell(props: {
     <div className="fixed inset-0 bg-black/30 flex items-start justify-center p-4 sm:p-8">
       <div className="w-full max-w-5xl rounded-xl bg-white shadow-xl overflow-hidden max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
         <div className="p-4 border-b border-black/5 bg-white">
-          <ProxyContextBlockClient variant="full" sticky={false} />
+          <ProxyContextBlockClient variant="full" sticky={false} showExitButton={false} />
         </div>
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 flex-none">
           <div className="text-base font-semibold text-black">{props.title}</div>
-          <Link href={effectiveCloseHref} className="text-black/40 hover:text-black/70 px-2 py-1">
+          <Link
+            href={effectiveCloseHref}
+            aria-label="Close"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 text-2xl leading-none hover:bg-black/[0.02]"
+          >
             ×
           </Link>
         </div>

@@ -65,10 +65,12 @@ export default function ProxyContextBlockClient(props: {
   bootstrapCompany?: CompanyInfo;
   variant?: 'full' | 'compact';
   sticky?: boolean;
+  showExitButton?: boolean;
 }) {
   const router = useRouter();
   const variant = props.variant ?? 'full';
   const sticky = props.sticky ?? true;
+  const showExitButton = props.showExitButton ?? true;
   const [busy, setBusy] = useState(false);
   const [company, setCompany] = useState<CompanyInfo | null>(null);
 
@@ -110,13 +112,15 @@ export default function ProxyContextBlockClient(props: {
               {company.name} <span className="text-black/40 text-xs">({company.code})</span>
             </div>
           </div>
-          <button
-            disabled={busy}
-            onClick={() => void exitProxy()}
-            className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-          >
-            退出 Proxy
-          </button>
+          {showExitButton ? (
+            <button
+              disabled={busy}
+              onClick={() => void exitProxy()}
+              className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              退出 Proxy
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -132,13 +136,15 @@ export default function ProxyContextBlockClient(props: {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            disabled={busy}
-            onClick={() => void exitProxy()}
-            className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-          >
-            退出 Proxy
-          </button>
+          {showExitButton ? (
+            <button
+              disabled={busy}
+              onClick={() => void exitProxy()}
+              className="rounded-md bg-black text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              退出 Proxy
+            </button>
+          ) : null}
         </div>
       </div>
       <div className="p-4">
