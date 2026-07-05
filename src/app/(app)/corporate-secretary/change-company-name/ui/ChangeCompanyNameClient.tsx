@@ -18,13 +18,27 @@ type CorporateRepresentativeDraft = {
   representativePhone: string;
 };
 
+const COMPANY_NAME_SUFFIX_OPTIONS = ['Pte Ltd', '(Pte) Ltd', 'Private Limited', '(Private) Limited'] as const;
+type CompanyNameSuffixOption = (typeof COMPANY_NAME_SUFFIX_OPTIONS)[number];
+
+function normalizeSpace(s: string) {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function endsWithKnownCompanySuffix(base: string) {
+  const s = normalizeSpace(base).toLowerCase();
+  if (!s) return false;
+  return /(^|\s)\(?pte\)?\s+ltd$/i.test(s) || /(^|\s)\(?private\)?\s+limited$/i.test(s);
+}
+
 export default function ChangeCompanyNameClient() {
   const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
   const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
   const prevManualMeetingVenueRef = useRef<string>('');
 
-  const [newCompanyName, setNewCompanyName] = useState('');
+  const [newCompanyNameBase, setNewCompanyNameBase] = useState('');
+  const [newCompanyNameSuffix, setNewCompanyNameSuffix] = useState<CompanyNameSuffixOption>('Pte Ltd');
   const [chairman, setChairman] = useState('');
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
@@ -38,8 +52,15 @@ export default function ChangeCompanyNameClient() {
   const [checkingName, setCheckingName] = useState(false);
   const [nameCheck, setNameCheck] = useState<{ available: boolean | null; searchUrl?: string; reason?: string } | null>(null);
 
+  const proposedNewName = (() => {
+    const base = normalizeSpace(newCompanyNameBase);
+    if (!base) return '';
+    if (endsWithKnownCompanySuffix(base)) return base;
+    return `${base} ${newCompanyNameSuffix}`;
+  })();
+
   async function checkNameAvailability() {
-    const name = newCompanyName.trim();
+    const name = proposedNewName;
     if (!name) return;
     setCheckingName(true);
     setNameCheck(null);
@@ -168,7 +189,7 @@ export default function ChangeCompanyNameClient() {
 
   async function onSubmit() {
     setSubmitError(null);
-    const nextName = newCompanyName.trim();
+    const nextName = proposedNewName;
     const nextChairman = chairman.trim();
     const nextDirectorSendingNotice = directorSendingNotice.trim() || directors[0]?.entity.person.fullName?.trim() || '';
     const nextMeetingDate = meetingDate.trim();
@@ -178,7 +199,7 @@ export default function ChangeCompanyNameClient() {
       setSubmitError('Company not loaded.');
       return;
     }
-    if (!nextName) {
+    if (!normalizeSpace(newCompanyNameBase)) {
       setSubmitError('Proposed new name is required.');
       return;
     }
@@ -435,14 +456,33 @@ export default function ChangeCompanyNameClient() {
               <div className="text-black">
                 <span className="text-red-500">*</span> Proposed new name :
               </div>
-              <input
-                value={newCompanyName}
-                onChange={(e) => {
-                  setNewCompanyName(e.target.value);
-                  if (nameCheck) setNameCheck(null);
-                }}
-                className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-              />
+              <div className="mt-1 flex flex-col sm:flex-row gap-2">
+                <input
+                  value={newCompanyNameBase}
+                  onChange={(e) => {
+                    setNewCompanyNameBase(e.target.value);
+                    if (nameCheck) setNameCheck(null);
+                  }}
+                  onBlur={() => setNewCompanyNameBase((v) => normalizeSpace(v))}
+                  className="w-full sm:flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  placeholder="e.g. Red Lion"
+                />
+                <select
+                  value={newCompanyNameSuffix}
+                  onChange={(e) => {
+                    setNewCompanyNameSuffix(e.target.value as CompanyNameSuffixOption);
+                    if (nameCheck) setNameCheck(null);
+                  }}
+                  className="w-full sm:w-[210px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  {COMPANY_NAME_SUFFIX_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-1 text-xs text-black/50">{proposedNewName ? `Full: ${proposedNewName}` : ''}</div>
               <button
                 type="button"
                 disabled={checkingName}
