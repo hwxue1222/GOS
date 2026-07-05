@@ -65,6 +65,7 @@ function statusFromAgm(r: AnnualGeneralMeetingRequest): SecretaryServiceApplicat
 
 export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<string> | null) {
   const clientById = new Map(db.clients.map((c) => [c.id, c]));
+  const userById = new Map((db.users ?? []).map((u) => [u.id, u]));
   const rows: SecretaryServiceApplicationRow[] = [];
 
   const dcrs = db.directorChangeRequests ?? [];
@@ -110,6 +111,8 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
     if (allowedClientIds && !allowedClientIds.has(r.clientId)) continue;
     const applicationDate = iso(r.submittedAt || r.createdAt);
     const editDate = iso(r.updatedAt || r.createdAt);
+    const createdBy = userById.get(r.createdByUserId);
+    const inferredViaProxy = createdBy ? createdBy.role !== 'client' : false;
     rows.push({
       id: `CUR-${r.id}`,
       type: r.type,
@@ -118,7 +121,7 @@ export function buildSecretaryServiceApplications(db: Db, allowedClientIds: Set<
       applicationDate,
       editDate,
       status: statusFromCompanyUpdateRequest(r),
-      viaProxy: !!(r as { createdViaProxy?: unknown }).createdViaProxy,
+      viaProxy: !!(r as { createdViaProxy?: unknown }).createdViaProxy || inferredViaProxy,
       source: { kind: 'COMPANY_UPDATE_REQUEST', id: r.id },
     });
   }
