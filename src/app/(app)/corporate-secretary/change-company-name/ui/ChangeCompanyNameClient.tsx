@@ -50,7 +50,12 @@ export default function ChangeCompanyNameClient() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [checkingName, setCheckingName] = useState(false);
-  const [nameCheck, setNameCheck] = useState<{ available: boolean | null; searchUrl?: string; reason?: string } | null>(null);
+  const [nameCheck, setNameCheck] = useState<{
+    checkedName: string;
+    available: boolean | null;
+    searchUrl?: string;
+    reason?: string;
+  } | null>(null);
 
   const proposedNewName = (() => {
     const base = normalizeSpace(newCompanyNameBase);
@@ -71,7 +76,7 @@ export default function ChangeCompanyNameClient() {
       const j = (await res?.json().catch(() => null)) as
         | { ok?: boolean; available?: boolean | null; searchUrl?: string; reason?: string }
         | null;
-      setNameCheck({ available: j?.available ?? null, searchUrl: j?.searchUrl, reason: j?.reason });
+      setNameCheck({ checkedName: name, available: j?.available ?? null, searchUrl: j?.searchUrl, reason: j?.reason });
     } finally {
       setCheckingName(false);
     }
@@ -102,6 +107,8 @@ export default function ChangeCompanyNameClient() {
       </div>
     );
   }
+
+  const canSubmitWithName = !!proposedNewName && nameCheck?.available === true && nameCheck.checkedName === proposedNewName;
 
   const directors = roles?.directors ?? [];
   const shareholders = roles?.shareholders ?? [];
@@ -201,6 +208,11 @@ export default function ChangeCompanyNameClient() {
     }
     if (!normalizeSpace(newCompanyNameBase)) {
       setSubmitError('Proposed new name is required.');
+      return;
+    }
+
+    if (!canSubmitWithName) {
+      setSubmitError('Please check name availability and ensure it is available before submitting.');
       return;
     }
     if (!nextChairman) {
@@ -463,7 +475,10 @@ export default function ChangeCompanyNameClient() {
                     setNewCompanyNameBase(e.target.value);
                     if (nameCheck) setNameCheck(null);
                   }}
-                  onBlur={() => setNewCompanyNameBase((v) => normalizeSpace(v))}
+                  onBlur={() => {
+                    setNewCompanyNameBase((v) => normalizeSpace(v));
+                    if (nameCheck) setNameCheck(null);
+                  }}
                   className="w-full sm:flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
                   placeholder="e.g. Red Lion"
                 />
@@ -596,7 +611,7 @@ export default function ChangeCompanyNameClient() {
           </label>
 
           <button
-            disabled={submitting}
+            disabled={submitting || !canSubmitWithName}
             onClick={() => void onSubmit()}
             className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
