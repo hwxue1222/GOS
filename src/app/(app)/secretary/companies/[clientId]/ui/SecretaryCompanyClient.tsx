@@ -5,7 +5,6 @@ import { useState } from 'react';
 
 import CompanyInfoForm from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyInfoForm';
 import CompanyRolesPanel from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyRolesPanel';
-import DirectorsAndCorporateRepresentativePanel from '@/app/(app)/secretary/companies/[clientId]/ui/DirectorsAndCorporateRepresentativePanel';
 import CompanyApplicationsHistoryPanel, {
   type CompanyApplicationHistoryRow,
 } from '@/app/(app)/secretary/companies/[clientId]/ui/CompanyApplicationsHistoryPanel';
@@ -296,8 +295,6 @@ export default function SecretaryCompanyClient({
           />
         </div>
       </div>
-
-      <DirectorsAndCorporateRepresentativePanel clientId={client.id} canEdit={canEditRoles} />
 
       <CompanyApplicationsHistoryPanel rows={applicationHistoryRows} />
     </div>
