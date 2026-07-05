@@ -617,7 +617,7 @@ export default function ChangeCompanyNameClient() {
           </label>
 
           <button
-            disabled={submitting || !canSubmitWithName}
+            disabled={submitting}
             onClick={() => void onSubmit()}
             className="w-full rounded-lg bg-[#2f7bdc] text-white px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
