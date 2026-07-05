@@ -35,6 +35,53 @@ export default function ChangeCompanyNameClient() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [checkingName, setCheckingName] = useState(false);
+  const [nameCheck, setNameCheck] = useState<{ available: boolean | null; searchUrl?: string; reason?: string } | null>(null);
+
+  async function checkNameAvailability() {
+    const name = newCompanyName.trim();
+    if (!name) return;
+    setCheckingName(true);
+    setNameCheck(null);
+    try {
+      const res = await fetch(`/api/incorporation/name-availability?name=${encodeURIComponent(name)}&t=${Date.now()}`, {
+        cache: 'no-store',
+      }).catch(() => null);
+      const j = (await res?.json().catch(() => null)) as
+        | { ok?: boolean; available?: boolean | null; searchUrl?: string; reason?: string }
+        | null;
+      setNameCheck({ available: j?.available ?? null, searchUrl: j?.searchUrl, reason: j?.reason });
+    } finally {
+      setCheckingName(false);
+    }
+  }
+
+  function renderAvailabilityBadge(r: { available: boolean | null; searchUrl?: string; reason?: string } | null) {
+    if (!r) return null;
+    if (r.available === true) return <div className="mt-2 text-xs font-medium text-[#16a34a]">● available</div>;
+    if (r.available === false) return <div className="mt-2 text-xs font-medium text-red-600">● not available</div>;
+    const msg =
+      r.reason === 'BLOCKED'
+        ? 'Unable to check automatically (blocked by name search provider).'
+        : r.reason === 'BROWSER_UNAVAILABLE'
+          ? 'Unable to check automatically (name check not supported on this server).'
+          : 'Unable to check.';
+    return (
+      <div className="mt-2 text-xs text-black/60">
+        {msg}{
+          r.searchUrl ? (
+            <>
+              {' '}
+              <a href={r.searchUrl} target="_blank" rel="noreferrer" className="text-[#2f7bdc] hover:underline">
+                Open search
+              </a>
+            </>
+          ) : null
+        }
+      </div>
+    );
+  }
+
   const directors = roles?.directors ?? [];
   const shareholders = roles?.shareholders ?? [];
   const shareholderPersonNames = shareholders
@@ -390,9 +437,21 @@ export default function ChangeCompanyNameClient() {
               </div>
               <input
                 value={newCompanyName}
-                onChange={(e) => setNewCompanyName(e.target.value)}
+                onChange={(e) => {
+                  setNewCompanyName(e.target.value);
+                  if (nameCheck) setNameCheck(null);
+                }}
                 className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
               />
+              <button
+                type="button"
+                disabled={checkingName}
+                onClick={() => void checkNameAvailability()}
+                className="mt-2 inline-flex items-center gap-2 rounded-md bg-white border border-black/10 px-3 py-1.5 text-xs font-medium text-black/70 hover:bg-black/[0.02] disabled:opacity-60"
+              >
+                {checkingName ? 'Checking...' : 'Check name availability'}
+              </button>
+              {renderAvailabilityBadge(nameCheck)}
             </label>
 
             <label className="sm:col-span-4 text-sm">
