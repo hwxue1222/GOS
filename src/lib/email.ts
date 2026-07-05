@@ -240,6 +240,10 @@ export async function sendSigningInvite(input: {
     <a href="${input.url}">${input.url}</a>
   </div>
   <div style="margin-top:10px; color:#555; font-size:12px;">This link is valid for 10 days.</div>
+  <div style="margin-top:14px; color:#555; font-size:12px;">
+    You can reply to this email if any query.<br />
+    <span style="color:#111;">Your 24-hour reliable corporate secretary service provider</span>
+  </div>
   <div style="margin-top:16px; color:#111; font-size:12px;">
     ${issuer.displayName} (${issuer.uen})<br />
     ${dated}
