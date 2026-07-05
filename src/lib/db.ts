@@ -438,7 +438,7 @@ function seedContractsTemplatesV48(db: Db) {
         <div class="row"><div class="k">UEN / Registration No. / ID（注册号/证件号）</div><div class="v">201608450W</div></div>
         <div class="row"><div class="k">地址 / Address</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
         <div class="row"><div class="k">电话 / Contact</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
-        <div class="row"><div class="k">邮箱 / Email</div><div class="v">bbysgsg@gmail.com</div></div>
+        <div class="row"><div class="k">邮箱 / Email</div><div class="v">service@bybridge.com.sg</div></div>
         </div>
 
         <div class="section">
@@ -771,7 +771,7 @@ function seedContractsTemplatesV48(db: Db) {
           <div class="row"><div class="k">UEN / Registration No. / ID（注册号/证件号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
           <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
-          <div class="row"><div class="k">Email（邮箱）</div><div class="v">bbysgsg@gmail.com</div></div>
+          <div class="row"><div class="k">Email（邮箱）</div><div class="v">service@bybridge.com.sg</div></div>
         </div>
 
         <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.<br />为维护合同当事的合法权益，并依据新加坡共和国相关法律法规，甲乙双方就乙方向甲方提供专业服务事项达成如下协议条款。</div>
@@ -1197,7 +1197,7 @@ function seedContractsTemplatesV48(db: Db) {
 <p class="p14">BBY Pte. Ltd.</p>
 <p class="p14">8 Burn Road#15-03 Trivex</p>
 <p class="p14">369977 Singapore<span class="Apple-converted-space"> </span></p>
-<p class="p14">bbysgsg@gmail.com</p>
+<p class="p14">service@bybridge.com.sg</p>
 <p class="p4"><br></p>
 <p class="p9">Or to such other address, or the designated person to whom Notice should be addressed, at any time by giving the appropriate Notice in sufficient time not less than five (5) working days before the change/s become effective to the other party in accordance with the provisions of this Clause 13 hereof.<span class="Apple-converted-space"> </span></p>
 <p class="p4"><br></p>
@@ -13714,7 +13714,7 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
             ({
               id: newId('per'),
               fullName: 'BBY Company Secretary',
-              email: 'bbysgsg@gmail.com',
+              email: 'service@bybridge.com.sg',
               idType: 'NRIC',
               idNo: 'S7864540G',
               nationality: 'Singapore',
@@ -13819,7 +13819,7 @@ export async function transitionAndApplyIncorporationApplicationStatus(input: {
           ({
             id: newId('per'),
             fullName: 'BBY Company Secretary',
-            email: 'bbysgsg@gmail.com',
+            email: 'service@bybridge.com.sg',
             idType: 'NRIC',
             idNo: 'S7864540G',
             nationality: 'Singapore',

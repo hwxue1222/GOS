@@ -65,7 +65,7 @@ export default function IncorporationDetailsSection(props: {
               <div className="text-black/50">Secretary email</div>
               <div className="mt-1 font-medium">
                 {payload.useByBridgeCompanySecretary
-                  ? 'bbysgsg@gmail.com'
+                  ? 'service@bybridge.com.sg'
                   : String((payload.secretary as any)?.email ?? (payload.secretary as any)?.person?.email ?? '-')}
               </div>
             </div>

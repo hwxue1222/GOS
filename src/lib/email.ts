@@ -11,7 +11,7 @@ export async function sendEmail(input: {
   attachments?: EmailAttachment[];
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = (process.env.EMAIL_FROM?.trim() || 'bbysgsg@gmail.com').trim();
+  const from = (process.env.EMAIL_FROM?.trim() || 'service@bybridge.com.sg').trim();
   const smtpHost = process.env.SMTP_HOST?.trim();
   const smtpPort = Number(process.env.SMTP_PORT) || 0;
   const smtpUser = process.env.SMTP_USER?.trim();

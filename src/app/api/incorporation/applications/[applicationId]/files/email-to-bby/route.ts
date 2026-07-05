@@ -113,7 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ applicationId:
     });
   }
 
-  const to = 'bbysgsg@gmail.com';
+  const to = (process.env.BBY_SERVICE_EMAIL?.trim() || 'service@bybridge.com.sg').trim();
   const origin = new URL(req.url).origin;
   const serviceTitle = app.type === 'REGISTER_COMPANY' ? 'Register Company' : 'Transfer of Company Secretary';
   const company = (app.companyName ?? '').trim() || '-';
