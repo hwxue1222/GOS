@@ -297,7 +297,7 @@ export default function SecretaryCompanyClient({
         </div>
       </div>
 
-      <DirectorsAndCorporateRepresentativePanel clientId={client.id} companyName={client.name} canEdit={canEditRoles} />
+      <DirectorsAndCorporateRepresentativePanel clientId={client.id} canEdit={canEditRoles} />
 
       <CompanyApplicationsHistoryPanel rows={applicationHistoryRows} />
     </div>
