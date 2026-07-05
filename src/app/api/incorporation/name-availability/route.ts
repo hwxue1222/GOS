@@ -65,6 +65,9 @@ export async function GET(req: Request) {
   const searchUrl = 'https://www.bizfile.gov.sg';
   const targetKey = normalizeName(name);
   if (targetKey.length < 2) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (!targetKey.includes(' ')) {
+    return NextResponse.json({ ok: true, available: false, reason: 'TOO_GENERIC', searchUrl });
+  }
   const apiUrl = `https://api.osome.com/api/v2/corpsec/acra_companies/sg?entity_name=${encodeURIComponent(targetKey)}`;
 
   try {
