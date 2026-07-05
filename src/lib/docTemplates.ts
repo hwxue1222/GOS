@@ -958,6 +958,7 @@ export function renderCertificateOfAppointmentOfCorporateRepresentativeHtml(inpu
       <div>
         <div>Signature of authorised representative</div>
         ${repSig}
+        <div style="margin-top:2px; font-size:11px; color:#555;">${esc(input.witnessIdTypeLabel)}: ${esc(input.witnessIdNo)}</div>
       </div>
       <div>
         <div>Witnessed by</div>
