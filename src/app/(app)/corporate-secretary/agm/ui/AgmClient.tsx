@@ -206,6 +206,14 @@ export default function AgmClient() {
                 ))}
               </select>
             </label>
+
+            <div className="flex items-end">
+              {fiscalYearReport ? (
+                <div className="mb-1 inline-flex items-center rounded-full bg-black/5 border border-black/10 px-3 py-1 text-xs font-medium text-black/70">
+                  {`FYE.${fiscalYearReport}`}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <label className="text-sm">
