@@ -24,16 +24,30 @@ export async function POST(req: Request) {
 
   const res = await sendEmail({ to, subject, html });
   const emailFrom = (process.env.EMAIL_FROM ?? '').trim() || null;
+  const provider = (process.env.EMAIL_PROVIDER?.trim() || 'auto').toLowerCase();
   const usingResend = !!process.env.RESEND_API_KEY?.trim();
   const usingSmtp = !!process.env.SMTP_HOST?.trim();
   const smtpReady = !!process.env.SMTP_HOST?.trim() && !!process.env.SMTP_PORT?.trim() && !!process.env.SMTP_USER?.trim() && !!process.env.SMTP_PASS?.trim();
+  const selectedProvider =
+    provider === 'resend'
+      ? 'resend'
+      : provider === 'smtp'
+        ? 'smtp'
+        : smtpReady
+          ? 'smtp'
+          : usingResend
+            ? 'resend'
+            : 'none';
 
   if (!res.ok) {
     return NextResponse.json(
-      { ok: false, error: res.error, debug: { usingResend, usingSmtp, smtpReady, emailFrom } },
+      { ok: false, error: res.error, debug: { provider, selectedProvider, usingResend, usingSmtp, smtpReady, emailFrom } },
       { status: 400, headers: { 'cache-control': 'no-store' } },
     );
   }
 
-  return NextResponse.json({ ok: true, debug: { usingResend, usingSmtp, smtpReady, emailFrom } }, { headers: { 'cache-control': 'no-store' } });
+  return NextResponse.json(
+    { ok: true, debug: { provider, selectedProvider, usingResend, usingSmtp, smtpReady, emailFrom } },
+    { headers: { 'cache-control': 'no-store' } },
+  );
 }

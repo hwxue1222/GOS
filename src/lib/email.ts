@@ -12,6 +12,7 @@ export async function sendEmail(input: {
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = (process.env.EMAIL_FROM?.trim() || 'service@bybridge.com.sg').trim();
+  const provider = (process.env.EMAIL_PROVIDER?.trim() || 'auto').toLowerCase();
   const smtpHost = process.env.SMTP_HOST?.trim();
   const smtpPort = Number(process.env.SMTP_PORT) || 0;
   const smtpUser = process.env.SMTP_USER?.trim();
@@ -30,8 +31,14 @@ export async function sendEmail(input: {
   if (!isEmail(extractEmailAddress(from))) return { ok: false as const, error: 'EMAIL_FROM_INVALID' as const };
 
   const smtpReady = !!smtpHost && !!smtpPort && !!smtpUser && !!smtpPass;
+  const canUseResend = !!apiKey;
 
-  if (!smtpReady && apiKey) {
+  const shouldUseResend =
+    provider === 'resend' ? true : provider === 'smtp' ? false : provider === 'auto' ? !smtpReady && canUseResend : false;
+  const shouldUseSmtp = provider === 'smtp' ? true : provider === 'resend' ? false : provider === 'auto' ? smtpReady : false;
+
+  if (shouldUseResend) {
+    if (!apiKey) return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -71,7 +78,7 @@ export async function sendEmail(input: {
     return { ok: true as const };
   }
 
-  if (!smtpReady) {
+  if (!shouldUseSmtp) {
     return { ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const };
   }
 
