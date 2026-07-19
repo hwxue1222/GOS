@@ -236,6 +236,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     const isAgm = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT';
     if (!isAgm) return out;
 
+    if (out.includes('</style>')) {
+      out = out.replace(
+        '</style>',
+        'p[align="center"] { margin-top: 0in !important; margin-bottom: 0in !important; }\n</style>',
+      );
+    }
+
     out = out
       .replaceAll('color="#ee0000"', 'color="#111111"')
       .replaceAll('color="#ff0000"', 'color="#111111"')
@@ -247,6 +254,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     if (packet?.relatedType === 'ANNUAL_GENERAL_MEETING') {
       const agm = (db.annualGeneralMeetingRequests ?? []).find((x) => x.id === packet.relatedId) ?? null;
       const client = agm ? db.clients.find((c) => c.id === agm.clientId && !c.deletedAt) ?? null : null;
+
+      if (client?.name) {
+        const upper = client.name.toUpperCase();
+        out = out.replaceAll(client.name, upper);
+      }
       const fiscalYearEnd = agm && client ? computeAgmFiscalYearEndDisplay({ year: String(agm.fiscalYearReport ?? ''), fye: String(client.fye ?? '') }) : '';
       if (fiscalYearEnd) {
         const variants = ['2026-11-30', '2026‑11‑30', '2026–11–30', '2026—11—30'];

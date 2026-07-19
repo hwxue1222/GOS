@@ -73,9 +73,10 @@ function replaceAgmSme(
 
   const companyNameEsc = input.companyName ? esc(String(input.companyName)) : '';
   if (companyNameEsc) {
-    out = replaceAllLiteral(out, 'JUNDO\nPTE LTD', companyNameEsc);
-    out = replaceAllLiteral(out, 'JUNDO\r\nPTE LTD', companyNameEsc);
-    out = replaceAllLiteral(out, 'JUNDO PTE LTD', companyNameEsc);
+    const companyNameUpperEsc = esc(String(input.companyName).toUpperCase());
+    out = replaceAllLiteral(out, 'JUNDO\nPTE LTD', companyNameUpperEsc);
+    out = replaceAllLiteral(out, 'JUNDO\r\nPTE LTD', companyNameUpperEsc);
+    out = replaceAllLiteral(out, 'JUNDO PTE LTD', companyNameUpperEsc);
   }
 
   const regNoEsc = input.companyRegistrationNo ? esc(String(input.companyRegistrationNo)) : '';
@@ -141,13 +142,13 @@ const AGM_NOTICE_SME_HTML = `<!DOCTYPE html>
 		p { direction: ltr; widows: 0; orphans: 0; margin-bottom: 0.1in; text-align: justify; line-height: 115%; background: transparent }
 	</style>
 </head>
-<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
 PTE LTD</b></font></font></font></p>
-<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Co.
 Reg. No.: </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">202244987D</font></font></font></p>
-<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">(Incorporated
 in the Republic of Singapore)</font></font></p>
 <p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
@@ -252,13 +253,13 @@ const AGM_MINUTES_SME_HTML = `<!DOCTYPE html>
 		p { direction: ltr; widows: 0; text-align: justify; line-height: 115%; margin-bottom: 0.1in; orphans: 0; font-size: 10pt; background: transparent }
 	</style>
 </head>
-<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt"><b>JUNDO
 PTE LTD</b></font></font></font></p>
-<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">Co.
 Reg. No.: </font></font><font color="#ee0000"><font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">202244987D</font></font></font></p>
-<p align="center" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
+<p align="center" style="orphans: 2; margin-top: 0in; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
 <font face="Verdana, sans-serif"><font size="2" style="font-size: 9pt">(Incorporated
 in the Republic of Singapore)</font></font></p>
 <p align="left" style="orphans: 2; margin-bottom: 0in; widows: 2; line-height: 100%; background: #ffffff">
