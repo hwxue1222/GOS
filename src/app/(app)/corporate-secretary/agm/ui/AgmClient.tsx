@@ -10,7 +10,7 @@ import { DateInputYMD } from '@/components/DateInputYMD';
 export default function AgmClient() {
   const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
-  const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -39,6 +39,14 @@ export default function AgmClient() {
     return years;
   }, []);
 
+  const fyeLabel = useMemo(() => {
+    const y = String(fiscalYearReport ?? '').trim();
+    if (!y) return '';
+    const ddmm = String(client?.fye ?? '').trim();
+    if (ddmm && /^\d{2}\/\d{2}$/.test(ddmm)) return `FYE ${ddmm}/${y}`;
+    return `FY ${y}`;
+  }, [client?.fye, fiscalYearReport]);
+
   useEffect(() => {
     if (!useByBridgeAddress) return;
     if (meetingVenue.trim() && meetingVenue.trim() !== bbyRegisteredOfficeAddress) prevManualVenueRef.current = meetingVenue;
@@ -65,7 +73,10 @@ export default function AgmClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/annual-general-meeting-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           meetingDate: md,
           meetingTime: mt,
@@ -208,9 +219,9 @@ export default function AgmClient() {
             </label>
 
             <div className="flex items-end">
-              {fiscalYearReport ? (
+              {fyeLabel ? (
                 <div className="mb-1 inline-flex items-center rounded-full bg-black/5 border border-black/10 px-3 py-1 text-xs font-medium text-black/70">
-                  {`FYE.${fiscalYearReport}`}
+                  {fyeLabel}
                 </div>
               ) : null}
             </div>
