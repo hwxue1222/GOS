@@ -48,6 +48,18 @@ function toArrayBuffer(bytes: Uint8Array) {
   return ab.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }
 
+function computeAgmFiscalYearEndDisplay(input: { year: string; fye: string }) {
+  const year = String(input.year ?? '').trim();
+  if (!/^\d{4}$/.test(year)) return '';
+  const fye = String(input.fye ?? '').trim();
+  const m = fye.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return '';
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(dd) || !Number.isFinite(mm) || dd < 1 || dd > 31 || mm < 1 || mm > 12) return '';
+  return `${dd}/${mm}/${year}`;
+}
+
 async function getBrowser() {
   const g = globalThis as unknown as { __gosDocPdfBrowserPromise?: Promise<Browser> };
   if (!g.__gosDocPdfBrowserPromise) {
@@ -194,27 +206,30 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
       .replaceAll('color:#ee0000', 'color:#111111')
       .replaceAll('color:#ff0000', 'color:#111111');
 
-    if (out.includes('2026-11-30') && packet?.relatedType === 'ANNUAL_GENERAL_MEETING') {
+    if (packet?.relatedType === 'ANNUAL_GENERAL_MEETING') {
       const agm = (db.annualGeneralMeetingRequests ?? []).find((x) => x.id === packet.relatedId) ?? null;
       const client = agm ? db.clients.find((c) => c.id === agm.clientId && !c.deletedAt) ?? null : null;
-      const year = String(agm?.fiscalYearReport ?? '').trim();
-      const fye = String(client?.fye ?? '').trim();
-      const m = fye.match(/^(\d{1,2})\/(\d{1,2})$/);
-      if (/^\d{4}$/.test(year) && m) {
-        const dd = Number(m[1]);
-        const mm = Number(m[2]);
-        if (Number.isFinite(dd) && Number.isFinite(mm) && dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
-          const fiscalYearEnd = `${dd}/${mm}/${year}`;
-          out = out.replaceAll('2026-11-30', fiscalYearEnd);
-        }
+      const fiscalYearEnd = agm && client ? computeAgmFiscalYearEndDisplay({ year: String(agm.fiscalYearReport ?? ''), fye: String(client.fye ?? '') }) : '';
+      if (fiscalYearEnd) {
+        const variants = ['2026-11-30', '2026‑11‑30', '2026–11–30', '2026—11—30'];
+        for (const v of variants) out = out.replaceAll(v, fiscalYearEnd);
       }
     }
 
     return out;
   })();
 
-  const renderVersion = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT' ? 'v2' : 'v1';
-  const cacheKey = `docPdf:${renderVersion}:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
+  const isAgmDoc = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT';
+  const agmFyeKey = (() => {
+    if (!isAgmDoc) return '';
+    if (packet?.relatedType !== 'ANNUAL_GENERAL_MEETING') return '';
+    const agm = (db.annualGeneralMeetingRequests ?? []).find((x) => x.id === packet.relatedId) ?? null;
+    const client = agm ? db.clients.find((c) => c.id === agm.clientId && !c.deletedAt) ?? null : null;
+    const fiscalYearEnd = agm && client ? computeAgmFiscalYearEndDisplay({ year: String(agm.fiscalYearReport ?? ''), fye: String(client.fye ?? '') }) : '';
+    return fiscalYearEnd ? `fye:${fiscalYearEnd}` : '';
+  })();
+  const renderVersion = isAgmDoc ? 'v3' : 'v1';
+  const cacheKey = `docPdf:${renderVersion}:${agmFyeKey}:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
   const cached = cacheGet(cacheKey);
   if (cached) {
     const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
