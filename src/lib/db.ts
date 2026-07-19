@@ -12578,7 +12578,13 @@ export async function getAnnualGeneralMeetingRequestContext(requestId: string) {
   const request = getAnnualGeneralMeetingRequestList(db).find((r) => r.id === requestId) ?? null;
   if (!request) return null;
 
-  const packetIds = (request.packetIds ?? []).length ? (request.packetIds ?? []) : [request.packetId];
+  const packetIds = (() => {
+    const base = (request.packetIds ?? []).length ? (request.packetIds ?? []) : [request.packetId];
+    const related = db.signaturePackets
+      .filter((p) => p.relatedType === 'ANNUAL_GENERAL_MEETING' && p.relatedId === request.id)
+      .map((p) => p.id);
+    return Array.from(new Set([...base, ...related]));
+  })();
   const assets = packetIds
     .map((packetId) => {
       const packet = db.signaturePackets.find((p) => p.id === packetId) ?? null;
@@ -12657,9 +12663,12 @@ export async function createAnnualGeneralMeetingRequest(input: {
     const year = fiscalYearReport.trim();
     if (!/^\d{4}$/.test(year)) return '';
     const fye = String(client.fye ?? '').trim();
-    const m = fye.match(/^(\d{2})\/(\d{2})$/);
+    const m = fye.match(/^(\d{1,2})\/(\d{1,2})$/);
     if (!m) return '';
-    return `${year}-${m[1]}-${m[2]}`;
+    const dd = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isFinite(dd) || !Number.isFinite(mm) || dd < 1 || dd > 31 || mm < 1 || mm > 12) return '';
+    return `${dd}/${mm}/${year}`;
   })();
 
   const now = nowIso();

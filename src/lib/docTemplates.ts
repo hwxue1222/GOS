@@ -64,6 +64,13 @@ function replaceAgmSme(
 ) {
   let out = html;
 
+  out = replaceAllLiteral(out, 'color="#ee0000"', 'color="#111111"');
+  out = replaceAllLiteral(out, 'color="#ff0000"', 'color="#111111"');
+  out = replaceAllLiteral(out, 'color="#EE0000"', 'color="#111111"');
+  out = replaceAllLiteral(out, 'color="#FF0000"', 'color="#111111"');
+  out = replaceAllLiteral(out, 'color:#ee0000', 'color:#111111');
+  out = replaceAllLiteral(out, 'color:#ff0000', 'color:#111111');
+
   const companyNameEsc = input.companyName ? esc(String(input.companyName)) : '';
   if (companyNameEsc) {
     out = replaceAllLiteral(out, 'JUNDO\nPTE LTD', companyNameEsc);
