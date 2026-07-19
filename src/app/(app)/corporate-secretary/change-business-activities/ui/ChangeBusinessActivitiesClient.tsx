@@ -10,6 +10,7 @@ import SsicCombobox from '@/app/(app)/secretary/companies/[clientId]/ui/SsicComb
 export default function ChangeBusinessActivitiesClient() {
   const router = useRouter();
   const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
 
   const [primary, setPrimary] = useState<string | undefined>(undefined);
   const [secondary, setSecondary] = useState<string | undefined>(undefined);
@@ -123,7 +124,7 @@ export default function ChangeBusinessActivitiesClient() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
         },
         body: JSON.stringify({
           type: 'CHANGE_BUSINESS_ACTIVITIES',

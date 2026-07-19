@@ -18,6 +18,7 @@ function toDdMm(dateIso: string) {
 export default function ChangeFyeClient() {
   const router = useRouter();
   const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
 
   const original = useMemo(() => (client?.fye ?? '-').trim() || '-', [client?.fye]);
 
@@ -42,7 +43,7 @@ export default function ChangeFyeClient() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
         },
         body: JSON.stringify({
           type: 'CHANGE_FINANCIAL_YEAR_END',

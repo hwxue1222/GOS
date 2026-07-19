@@ -10,6 +10,7 @@ import { DateInputYMD } from '@/components/DateInputYMD';
 export default function TransferCompanySecretaryClient() {
   const router = useRouter();
   const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
 
   const [effectiveDate, setEffectiveDate] = useState('');
   const [newSecretaryName, setNewSecretaryName] = useState('');
@@ -32,7 +33,7 @@ export default function TransferCompanySecretaryClient() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
         },
         body: JSON.stringify({
           type: 'TRANSFER_COMPANY_SECRETARY',

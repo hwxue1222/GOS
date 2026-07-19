@@ -204,6 +204,7 @@ function maskAddress(addr: string) {
 export default function ChangeSecretaryClient() {
   const router = useRouter();
   const { companyId, proxyCompanyId, client, roles, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
 
   const [addSecretaries, setAddSecretaries] = useState<NewSecretary[]>([]);
   const [editing, setEditing] = useState(false);
@@ -460,7 +461,7 @@ export default function ChangeSecretaryClient() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
         },
         body: JSON.stringify({
           type: 'CHANGE_SECRETARY',

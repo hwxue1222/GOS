@@ -10,6 +10,7 @@ export default function ChangeAddressClient() {
   const bbyRegisteredOfficeAddress = '8 Burn Road#15-03 Trivex Singapore 369977';
   const router = useRouter();
   const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
   const prevManualAddressRef = useRef<string>('');
 
   const [newAddress, setNewAddress] = useState('');
@@ -30,7 +31,7 @@ export default function ChangeAddressClient() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(proxyCompanyId ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
         },
         body: JSON.stringify({
           type: 'CHANGE_REGISTERED_OFFICE_ADDRESS',
