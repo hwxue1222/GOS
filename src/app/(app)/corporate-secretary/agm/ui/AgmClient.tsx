@@ -74,6 +74,21 @@ export default function AgmClient() {
       setSubmitError('Please fill in required fields.');
       return;
     }
+
+    const meetingM = md.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const fyeM = String(client.fye ?? '').trim().match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (meetingM && /^\d{4}$/.test(fy) && fyeM) {
+      const meetingDateUtc = new Date(Date.UTC(Number(meetingM[1]), Number(meetingM[2]) - 1, Number(meetingM[3])));
+      const dd = Number(fyeM[1]);
+      const mm = Number(fyeM[2]);
+      if (Number.isFinite(dd) && Number.isFinite(mm) && dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+        const fyeUtc = new Date(Date.UTC(Number(fy), mm - 1, dd));
+        if (Number.isFinite(meetingDateUtc.getTime()) && Number.isFinite(fyeUtc.getTime()) && fyeUtc.getTime() > meetingDateUtc.getTime()) {
+          setSubmitError('FYE date cannot be after the AGM meeting date. Please choose an earlier fiscal year.');
+          return;
+        }
+      }
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/annual-general-meeting-requests`, {
@@ -95,7 +110,11 @@ export default function AgmClient() {
       }).catch(() => null);
       const j = (await res?.json().catch(() => null)) as { ok: boolean; request?: { id: string }; error?: string } | null;
       if (!res?.ok || !j?.ok || !j.request?.id) {
-        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        if (j?.error === 'FYE_IN_FUTURE') {
+          setSubmitError('FYE date cannot be after the AGM meeting date. Please choose an earlier fiscal year.');
+        } else {
+          setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        }
         return;
       }
       router.push(`/corporate-secretary/applications/agm/${encodeURIComponent(j.request.id)}`);

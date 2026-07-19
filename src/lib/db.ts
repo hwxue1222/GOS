@@ -12629,6 +12629,26 @@ export async function createAnnualGeneralMeetingRequest(input: {
     return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
 
+  const parseYmdUtc = (ymd: string) => {
+    const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+
+  const parseFyeUtc = (fye: string, year: string) => {
+    if (!/^\d{4}$/.test(year)) return null;
+    const m = String(fye ?? '').trim().match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (!m) return null;
+    const dd = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isFinite(dd) || !Number.isFinite(mm) || dd < 1 || dd > 31 || mm < 1 || mm > 12) return null;
+    const d = new Date(Date.UTC(Number(year), mm - 1, dd));
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+
   const directors = await listClientDirectors(input.clientId);
   const directorsByName = new Map(directors.map((d) => [d.person.fullName.trim(), d.person]));
   const signerEmails = Array.from(
@@ -12670,6 +12690,14 @@ export async function createAnnualGeneralMeetingRequest(input: {
     if (!Number.isFinite(dd) || !Number.isFinite(mm) || dd < 1 || dd > 31 || mm < 1 || mm > 12) return '';
     return `${dd}/${mm}/${year}`;
   })();
+
+  const meetingDateUtc = parseYmdUtc(meetingDate);
+  if (!meetingDateUtc) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const fiscalYearEndUtc = parseFyeUtc(String(client.fye ?? ''), fiscalYearReport.trim());
+  if (fiscalYearEndUtc && fiscalYearEndUtc.getTime() > meetingDateUtc.getTime()) {
+    return { ok: false as const, error: 'FYE_IN_FUTURE' as const };
+  }
 
   const now = nowIso();
   const id = newId('agm');
