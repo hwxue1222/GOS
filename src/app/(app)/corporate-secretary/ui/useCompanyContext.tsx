@@ -82,6 +82,7 @@ export function useCompanyContext() {
     }
   }, []);
 
+
   useEffect(() => {
     let cancelled = false;
     async function run() {
@@ -93,7 +94,11 @@ export function useCompanyContext() {
           setError('NO_COMPANY');
           return;
         }
-        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, { cache: 'no-store' }).catch(() => null);
+        const isProxyingThisCompany = !!proxyCompanyId && proxyCompanyId === companyId;
+        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, {
+          cache: 'no-store',
+          headers: isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : undefined,
+        }).catch(() => null);
         const j = (await res?.json().catch(() => null)) as CompanyApiResponse | { ok: false; error?: string } | null;
         if (!res?.ok || !j || (j as any).ok !== true) {
           setData(null);
@@ -110,7 +115,7 @@ export function useCompanyContext() {
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, proxyCompanyId]);
 
   const closeHref = useMemo(() => {
     if (!companyId) return '/dashboard';

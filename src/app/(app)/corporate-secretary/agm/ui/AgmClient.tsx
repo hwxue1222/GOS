@@ -42,9 +42,13 @@ export default function AgmClient() {
   const fyeLabel = useMemo(() => {
     const y = String(fiscalYearReport ?? '').trim();
     if (!y) return '';
-    const ddmm = String(client?.fye ?? '').trim();
-    if (ddmm && /^\d{2}\/\d{2}$/.test(ddmm)) return `FYE ${ddmm}/${y}`;
-    return `FY ${y}`;
+    const raw = String(client?.fye ?? '').trim();
+    const m = raw.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (!m) return `FY ${y}`;
+    const dd = String(Number(m[1]));
+    const mm = String(Number(m[2]));
+    if (!dd || !mm || dd === 'NaN' || mm === 'NaN') return `FY ${y}`;
+    return `FYE ${dd}/${mm}/${y}`;
   }, [client?.fye, fiscalYearReport]);
 
   useEffect(() => {
