@@ -10360,6 +10360,14 @@ export async function createDirectorChangeRequest(input: {
 
   const directors = await listClientDirectors(input.clientId);
 
+  const normalizeNameKey = (v: string) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const existingNameSet = new Set(directors.map((d) => normalizeNameKey(d.person.fullName)));
+  const existingEmailSet = new Set(directors.map((d) => String(d.person.email ?? '').trim().toLowerCase()).filter(Boolean));
+  for (const d of cleanedAdd) {
+    if (d.fullName && existingNameSet.has(normalizeNameKey(d.fullName))) return { ok: false as const, error: 'DIRECTOR_ALREADY_EXISTS' as const };
+    if (d.email && existingEmailSet.has(String(d.email).trim().toLowerCase())) return { ok: false as const, error: 'DIRECTOR_ALREADY_EXISTS' as const };
+  }
+
   const isLocalDirector = (v: unknown) => {
     const s = String(v ?? '').trim().toLowerCase();
     if (!s) return false;

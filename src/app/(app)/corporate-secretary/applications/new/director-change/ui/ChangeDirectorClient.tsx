@@ -101,6 +101,13 @@ function splitPhone(phoneRaw: string): { phoneCountryCode: PhoneCountryCode; pho
   return { phoneCountryCode: '+65', phoneLocal: s.replace(/\D/g, '') };
 }
 
+function normalizeNameKey(v: string) {
+  return String(v ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 export default function ChangeDirectorClient(props: {
   companyId: string;
   closeHref: string;
@@ -336,6 +343,17 @@ export default function ChangeDirectorClient(props: {
       }))
       .filter((d) => !!d.fullName);
 
+    const existingNameSet = new Set(directors.map((d) => normalizeNameKey(d.fullName)));
+    const newNameKeys = cleanedAdd.map((d) => normalizeNameKey(d.fullName));
+    if (newNameKeys.some((k) => k && existingNameSet.has(k))) {
+      setSubmitError('New director appointed cannot be the same as an existing director.');
+      return;
+    }
+    if (new Set(newNameKeys.filter(Boolean)).size !== newNameKeys.filter(Boolean).length) {
+      setSubmitError('New director appointed cannot contain duplicate names.');
+      return;
+    }
+
     const hasDelete = removeDirectorRoleIds.length > 0;
     const hasAdd = cleanedAdd.length > 0;
     if (!useByBridgeNomineeDirector && !hasDelete && !hasAdd) {
@@ -405,6 +423,8 @@ export default function ChangeDirectorClient(props: {
       if (!res?.ok || !j?.ok || !j.request?.id) {
         if (j?.error === 'NEED_LOCAL_DIRECTOR') {
           setSubmitError('Company must have at least one local director (Singapore / Singapore PR / EP).');
+        } else if (j?.error === 'DIRECTOR_ALREADY_EXISTS') {
+          setSubmitError('New director appointed cannot be the same as an existing director.');
         } else {
           setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         }
