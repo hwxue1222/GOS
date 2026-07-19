@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
@@ -27,6 +28,7 @@ function date10(v?: string) {
 }
 
 export default function AppointCorporateRepresentativeClient() {
+  const router = useRouter();
   const { companyId, client, roles, loading, error, closeHref } = useCompanyContext();
 
   const directors = useMemo(() => {
@@ -95,8 +97,19 @@ export default function AppointCorporateRepresentativeClient() {
         setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
-      setSignLinks(Array.isArray(j?.signLinks) ? j.signLinks : null);
+      const links = Array.isArray(j?.signLinks) ? (j.signLinks as Array<{ email: string; url: string }>) : null;
+      setSignLinks(links);
       await load();
+
+      const picked = directors.find((d) => d.id === id) ?? null;
+      const preferredEmailKey = (picked?.email ?? '').trim().toLowerCase();
+      const nextUrl =
+        (preferredEmailKey ? links?.find((l) => String(l.email ?? '').trim().toLowerCase() === preferredEmailKey)?.url : '') ||
+        links?.[0]?.url ||
+        '';
+      if (nextUrl && typeof nextUrl === 'string' && nextUrl.startsWith('/')) {
+        router.push(nextUrl);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -216,4 +229,3 @@ export default function AppointCorporateRepresentativeClient() {
     </ModalShell>
   );
 }
-
