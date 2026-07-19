@@ -62,7 +62,8 @@ function maskDateYmd(raw: string) {
 
 export default function RorcClient() {
   const router = useRouter();
-  const { companyId, client, loading, error, closeHref } = useCompanyContext();
+  const { companyId, proxyCompanyId, client, loading, error, closeHref } = useCompanyContext();
+  const isProxyingThisCompany = !!proxyCompanyId && !!companyId && proxyCompanyId === companyId;
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -104,7 +105,10 @@ export default function RorcClient() {
   useEffect(() => {
     if (!companyId) return;
     setCandidateLoading(true);
-    fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, { cache: 'no-store' })
+    fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}`, {
+      cache: 'no-store',
+      headers: isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : undefined,
+    })
       .then((r) => r.json().catch(() => null))
       .then((j: any) => {
         const roles = j?.roles ?? null;
@@ -436,7 +440,10 @@ export default function RorcClient() {
       try {
         const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+          },
           body: JSON.stringify({
             effectiveDate: eff,
             controllerType: 'PERSON',
@@ -502,7 +509,10 @@ export default function RorcClient() {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/rorc-declaration-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           effectiveDate: eff,
           controllerType: 'COMPANY',
