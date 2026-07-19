@@ -12674,6 +12674,16 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const now = nowIso();
   const id = newId('agm');
 
+  const addDaysYmd = (ymd: string, deltaDays: number) => {
+    const m = String(ymd ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    if (Number.isNaN(d.getTime())) return '';
+    d.setUTCDate(d.getUTCDate() + deltaDays);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+  };
+
   const templates = await import('@/lib/docTemplates');
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const signLinks: Array<{ email: string; url: string; documentTitle: string }> = [];
@@ -12733,7 +12743,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingDateYmd: meetingDate,
     meetingTime,
     meetingVenue,
-    noticeDateYmd: now.slice(0, 10),
+    noticeDateYmd: addDaysYmd(meetingDate, -14) || now.slice(0, 10),
     companyCategory,
     fiscalYearEndYmd: fiscalYearEndYmd || undefined,
     signer: { fullName: noticeSigner.fullName, email: noticeSigner.email },

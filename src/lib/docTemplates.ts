@@ -95,7 +95,12 @@ function replaceAgmSme(
   if (meetingTimeEsc) out = replaceAllLiteral(out, '10:00', meetingTimeEsc);
 
   const fyeEsc = input.fiscalYearEndYmd ? esc(String(input.fiscalYearEndYmd)) : '';
-  if (fyeEsc) out = replaceAllLiteral(out, '2026-11-30', fyeEsc);
+  if (fyeEsc) {
+    out = replaceAllLiteral(out, '2026-11-30', fyeEsc);
+    out = replaceAllLiteral(out, '2026‑11‑30', fyeEsc);
+    out = replaceAllLiteral(out, '2026–11–30', fyeEsc);
+    out = replaceAllLiteral(out, '2026—11—30', fyeEsc);
+  }
 
   const signerNameEsc = input.signerName ? esc(String(input.signerName)) : '';
   if (signerNameEsc) {
