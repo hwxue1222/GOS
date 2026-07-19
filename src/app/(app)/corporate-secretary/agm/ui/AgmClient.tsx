@@ -45,9 +45,9 @@ export default function AgmClient() {
     const raw = String(client?.fye ?? '').trim();
     const m = raw.match(/^(\d{1,2})\/(\d{1,2})$/);
     if (!m) return `FY ${y}`;
-    const dd = String(Number(m[1]));
-    const mm = String(Number(m[2]));
-    if (!dd || !mm || dd === 'NaN' || mm === 'NaN') return `FY ${y}`;
+    const dd = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isFinite(dd) || !Number.isFinite(mm) || dd < 1 || dd > 31 || mm < 1 || mm > 12) return `FY ${y}`;
     return `FYE ${dd}/${mm}/${y}`;
   }, [client?.fye, fiscalYearReport]);
 
