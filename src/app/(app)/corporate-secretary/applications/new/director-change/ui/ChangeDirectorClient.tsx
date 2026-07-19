@@ -109,6 +109,13 @@ export default function ChangeDirectorClient(props: {
   const router = useRouter();
   const { companyId, closeHref, directors } = props;
 
+  const [proxyCompanyId, setProxyCompanyId] = useState('');
+  useEffect(() => {
+    const v = window.sessionStorage.getItem('gos.proxyCompanyId') ?? '';
+    setProxyCompanyId(v.trim());
+  }, [companyId]);
+  const isProxyingThisCompany = !!proxyCompanyId && proxyCompanyId === companyId;
+
   const isLocalDirector = (v: unknown) => {
     const s = String(v ?? '').trim().toLowerCase();
     if (!s) return false;
@@ -373,7 +380,10 @@ export default function ChangeDirectorClient(props: {
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/director-change-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(isProxyingThisCompany ? { 'x-gos-proxy-company-id': proxyCompanyId } : {}),
+        },
         body: JSON.stringify({
           effectiveDate,
           resignationDateYmd: hasDelete ? resignationDateYmd : undefined,

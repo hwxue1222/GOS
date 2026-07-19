@@ -47,8 +47,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ clientId: stri
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { clientId } = await ctx.params;
-  if (user.role !== 'client') {
-    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
+  const isClientUser = String(user.role) === 'client';
+  const proxyCompanyId = (_req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  const isProxyingThisCompany = !!proxyCompanyId && proxyCompanyId === clientId;
+
+  if (!isClientUser) {
+    const canViewSecretary = hasPermission(user, 'secretary', 'viewAll') || hasPermission(user, 'secretary', 'viewAssigned');
+    if (!canViewSecretary && !(canProxy && isProxyingThisCompany)) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
   }
@@ -91,17 +97,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
   const { clientId } = await ctx.params;
-  if (user.role !== 'client') {
-    if (!hasPermission(user, 'secretary', 'viewAll') && !hasPermission(user, 'secretary', 'viewAssigned')) {
+  const isClientUser = String(user.role) === 'client';
+  const proxyCompanyId = (req.headers.get('x-gos-proxy-company-id') ?? '').trim();
+  const canProxy = hasPermission(user, 'proxy', 'viewAll') || hasPermission(user, 'proxy', 'viewAssigned');
+  const isProxyingThisCompany = !!proxyCompanyId && proxyCompanyId === clientId;
+
+  if (!isClientUser) {
+    const canViewSecretary = hasPermission(user, 'secretary', 'viewAll') || hasPermission(user, 'secretary', 'viewAssigned');
+    if (!canViewSecretary && !(canProxy && isProxyingThisCompany)) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
   }
   if (!(await canAccessClient(user, clientId))) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
-  if (user.role !== 'client') {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  }
+
+  const allowCreate = isClientUser || (canProxy && isProxyingThisCompany);
+  if (!allowCreate) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as
     | {
