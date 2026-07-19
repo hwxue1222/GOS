@@ -181,7 +181,40 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     return crypto.createHash('sha256').update(base).digest('hex');
   })();
 
-  const cacheKey = `docPdf:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
+  const html = (() => {
+    let out = doc.html;
+    const isAgm = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT';
+    if (!isAgm) return out;
+
+    out = out
+      .replaceAll('color="#ee0000"', 'color="#111111"')
+      .replaceAll('color="#ff0000"', 'color="#111111"')
+      .replaceAll('color="#EE0000"', 'color="#111111"')
+      .replaceAll('color="#FF0000"', 'color="#111111"')
+      .replaceAll('color:#ee0000', 'color:#111111')
+      .replaceAll('color:#ff0000', 'color:#111111');
+
+    if (out.includes('2026-11-30') && packet?.relatedType === 'ANNUAL_GENERAL_MEETING') {
+      const agm = (db.annualGeneralMeetingRequests ?? []).find((x) => x.id === packet.relatedId) ?? null;
+      const client = agm ? db.clients.find((c) => c.id === agm.clientId && !c.deletedAt) ?? null : null;
+      const year = String(agm?.fiscalYearReport ?? '').trim();
+      const fye = String(client?.fye ?? '').trim();
+      const m = fye.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (/^\d{4}$/.test(year) && m) {
+        const dd = Number(m[1]);
+        const mm = Number(m[2]);
+        if (Number.isFinite(dd) && Number.isFinite(mm) && dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+          const fiscalYearEnd = `${dd}/${mm}/${year}`;
+          out = out.replaceAll('2026-11-30', fiscalYearEnd);
+        }
+      }
+    }
+
+    return out;
+  })();
+
+  const renderVersion = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT' ? 'v2' : 'v1';
+  const cacheKey = `docPdf:${renderVersion}:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
   const cached = cacheGet(cacheKey);
   if (cached) {
     const filenameBase = sanitizeFilenameBase(doc.title || doc.id);
@@ -200,7 +233,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(doc.html, { waitUntil: ['domcontentloaded'] });
+      await page.setContent(html, { waitUntil: ['domcontentloaded'] });
       const signed = packetReqs
         .filter((r) => r.status === 'SIGNED' && !!r.signedAt)
         .map((r) => ({
