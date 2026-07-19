@@ -12779,16 +12779,19 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const dirStmtHtml = templates.renderAnnualGeneralMeetingDirectorStatementHtml({
     companyName: client.name,
     companyRegistrationNo: client.companyRegistrationNo,
-    dateYmd: now.slice(0, 10),
+    dateYmd: meetingDate,
     companyCategory,
-    signers: [{ fullName: chairmanSigner.fullName, email: chairmanSigner.email }],
+    signers: directors
+      .map((d) => ({ fullName: d.person.fullName, email: d.person.email }))
+      .filter((s): s is { fullName: string; email: string } => !!s.email?.trim())
+      .map((s) => ({ fullName: s.fullName.trim(), email: s.email.trim().toLowerCase() })),
   });
   await createDocAndPacket({
     kind: 'AGM_DIR_STMT',
     documentType: 'AGM_DIR_STMT',
     title: `AGM Director Statement - ${client.name}`,
     html: dirStmtHtml,
-    signerEmails: [String(chairmanSigner.email).trim().toLowerCase()],
+    signerEmails,
   });
 
   const request: AnnualGeneralMeetingRequest = {

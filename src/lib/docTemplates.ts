@@ -2755,26 +2755,6 @@ export function renderAnnualGeneralMeetingDirectorStatementHtml(input: {
   signers: Array<{ fullName: string; email?: string }>;
 }) {
   const companyCategory = String(input.companyCategory ?? '').trim();
-  if (companyCategory === 'SME') {
-    const companyNameRaw = String(input.companyName ?? '').trim();
-    const regNoRaw = String(input.companyRegistrationNo ?? '').trim();
-    const signerNameRaw = String(input.signers?.[0]?.fullName ?? '').trim();
-    const datedDmy = toDdMmYyyy(input.dateYmd);
-
-    let html = AGM_DIR_STMT_SME_HTML;
-    html = replaceAgmSme(html, {
-      companyName: companyNameRaw,
-      companyRegistrationNo: regNoRaw,
-      signerName: signerNameRaw,
-      datedDmy,
-    });
-    html = injectHiddenSignerPlaceholders(
-      html,
-      (input.signers ?? []).map((s) => s.email).filter(Boolean) as string[],
-    );
-    return html;
-  }
-
   const companyName = esc(input.companyName);
   const regNo = esc(String(input.companyRegistrationNo ?? '').trim());
   const dated = esc(toDdMmYyyy(input.dateYmd));
@@ -2805,6 +2785,11 @@ e) no notice has been received from any member under Section 205B(6) requiring t
 
 f) the accounting and other records required to be kept by the company in accordance with Section 199 of the Companies Act have been so kept.`;
 
+  const title =
+    companyCategory === 'SME'
+      ? 'STATEMENT BY AN EXEMPT PRIVATE COMPANY<br />EXEMPTED FROM AUDIT REQUIREMENTS'
+      : 'DIRECTOR STATEMENT';
+
   return `
 <!doctype html>
 <html>
@@ -2814,6 +2799,8 @@ f) the accounting and other records required to be kept by the company in accord
     <title>Director's Statement</title>
     <style>
       body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.45; padding: 28px; color: #111; font-size: 12px; }
+      .center { text-align: center; }
+      .title { font-weight: 700; text-transform: uppercase; }
       .block { margin-top: 10px; }
       .sig-row { margin-top: 14px; }
       .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
@@ -2822,9 +2809,16 @@ f) the accounting and other records required to be kept by the company in accord
     </style>
   </head>
   <body>
+    <div class="title">${companyName}</div>
+    ${regNo ? `<div>Co. Reg. No.: ${regNo}</div>` : ''}
+    <div class="block" style="color:#444;">(Incorporated in the Republic of Singapore)</div>
+
+    <div class="block title center">${title}</div>
+
     <div class="block"><strong>Name of Company :</strong> ${companyName}</div>
     <div class="block">Unique Entity Number (UEN) : <strong>${regNo || '_____________'}</strong></div>
     <div class="block" style="white-space: pre-wrap;">${esc(statement)}</div>
+
     <div class="block">Directors</div>
     ${sig}
     <div class="block">Dated: ${dated}</div>
