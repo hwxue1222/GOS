@@ -129,7 +129,7 @@ export default function ProxyShellClient(props: { company: Company }) {
               onClick={() => window.sessionStorage.setItem('gos.currentCompanyId', props.company.id)}
               className="rounded-md bg-white border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/[0.02]"
             >
-              Director Change
+              Change of Director
             </Link>
           </div>
         </div>

@@ -96,7 +96,7 @@ export default function DirectorChangeRequestsPanel({ clientId, directors, canSu
     <div className="rounded-xl bg-white border border-black/5 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-medium">Director Change Requests</div>
+          <div className="text-sm font-medium">Change of Director Requests</div>
           <div className="mt-0.5 text-xs text-black/50">Submit → directors sign → back office approves → data updated.</div>
         </div>
         <button

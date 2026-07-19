@@ -72,7 +72,7 @@ export default async function ProxyCompanyPickerPage() {
   };
 
   const labelForSecretaryServiceType = (t: string) => {
-    if (t === 'DIRECTOR_CHANGE') return 'Director Change';
+    if (t === 'DIRECTOR_CHANGE') return 'Change of Director';
     if (t === 'RORC_DECLARATION') return 'RORC Declaration';
     if (t === 'ANNUAL_GENERAL_MEETING') return 'Annual General Meeting';
     return labelForCompanyUpdateType(t);
