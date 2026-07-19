@@ -71,6 +71,13 @@ export default async function ProxyCompanyPickerPage() {
     return 'Company Update';
   };
 
+  const labelForSecretaryServiceType = (t: string) => {
+    if (t === 'DIRECTOR_CHANGE') return 'Director Change';
+    if (t === 'RORC_DECLARATION') return 'RORC Declaration';
+    if (t === 'ANNUAL_GENERAL_MEETING') return 'Annual General Meeting';
+    return labelForCompanyUpdateType(t);
+  };
+
   const userById = new Map(db.users.map((u) => [u.id, u]));
   const auditLogs = Array.isArray((db as any).auditLogs) ? ((db as any).auditLogs as Array<any>) : [];
   const shareTransferCreateLogById = new Map<string, any>();
@@ -84,16 +91,20 @@ export default async function ProxyCompanyPickerPage() {
     }
   }
 
+  const directorChangeById = new Map((db.directorChangeRequests ?? []).map((r) => [r.id, r]));
+  const rorcById = new Map((db.rorcDeclarationRequests ?? []).map((r) => [r.id, r]));
+  const agmById = new Map((db.annualGeneralMeetingRequests ?? []).map((r) => [r.id, r]));
+
   const proxySubmittedRecords: ProxySubmittedRecordRow[] = (() => {
     const allowedClientIds = visibleClientIds ?? null;
     const secApps = buildSecretaryServiceApplications(db, allowedClientIds)
       .filter((r) => r.status !== 'DRAFT')
-      .filter((r) => r.source.kind === 'COMPANY_UPDATE_REQUEST' || r.source.kind === 'SHARE_TRANSFER')
       .map((r) => {
         if (r.source.kind === 'COMPANY_UPDATE_REQUEST') {
           const req = (db.companyUpdateRequests ?? []).find((x) => x.id === r.source.id) ?? null;
           const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
           if (!createdBy) return null;
+          if (!r.viaProxy) return null;
           return {
             id: `CUR-${r.source.id}`,
             typeLabel: labelForCompanyUpdateType(r.type),
@@ -107,19 +118,74 @@ export default async function ProxyCompanyPickerPage() {
           } satisfies ProxySubmittedRecordRow;
         }
 
-        const log = shareTransferCreateLogById.get(r.source.id) ?? null;
-        if (!log || log.actorRole === 'client') return null;
-        return {
-          id: `ST-${r.source.id}`,
-          typeLabel: 'Transfer of Shares',
-          companyId: r.companyId,
-          companyName: r.companyName,
-          applicationDate: r.applicationDate,
-          editDate: r.editDate,
-          status: r.status,
-          createdByName: String(log.actorName ?? ''),
-          detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
-        } satisfies ProxySubmittedRecordRow;
+        if (r.source.kind === 'SHARE_TRANSFER') {
+          const log = shareTransferCreateLogById.get(r.source.id) ?? null;
+          if (!log || log.actorRole === 'client') return null;
+          return {
+            id: `ST-${r.source.id}`,
+            typeLabel: 'Transfer of Shares',
+            companyId: r.companyId,
+            companyName: r.companyName,
+            applicationDate: r.applicationDate,
+            editDate: r.editDate,
+            status: r.status,
+            createdByName: String(log.actorName ?? ''),
+            detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
+          } satisfies ProxySubmittedRecordRow;
+        }
+
+        if (r.source.kind === 'DIRECTOR_CHANGE_REQUEST') {
+          const req = directorChangeById.get(r.source.id) ?? null;
+          const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
+          if (!createdBy || createdBy.role === 'client') return null;
+          return {
+            id: `DCR-${r.source.id}`,
+            typeLabel: labelForSecretaryServiceType(r.type),
+            companyId: r.companyId,
+            companyName: r.companyName,
+            applicationDate: r.applicationDate,
+            editDate: r.editDate,
+            status: r.status,
+            createdByName: createdBy.name,
+            detailsHref: `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`,
+          } satisfies ProxySubmittedRecordRow;
+        }
+
+        if (r.source.kind === 'RORC_DECLARATION_REQUEST') {
+          const req = rorcById.get(r.source.id) ?? null;
+          const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
+          if (!createdBy || createdBy.role === 'client') return null;
+          return {
+            id: `RORC-${r.source.id}`,
+            typeLabel: labelForSecretaryServiceType(r.type),
+            companyId: r.companyId,
+            companyName: r.companyName,
+            applicationDate: r.applicationDate,
+            editDate: r.editDate,
+            status: r.status,
+            createdByName: createdBy.name,
+            detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`,
+          } satisfies ProxySubmittedRecordRow;
+        }
+
+        if (r.source.kind === 'ANNUAL_GENERAL_MEETING_REQUEST') {
+          const req = agmById.get(r.source.id) ?? null;
+          const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
+          if (!createdBy || createdBy.role === 'client') return null;
+          return {
+            id: `AGM-${r.source.id}`,
+            typeLabel: labelForSecretaryServiceType(r.type),
+            companyId: r.companyId,
+            companyName: r.companyName,
+            applicationDate: r.applicationDate,
+            editDate: r.editDate,
+            status: r.status,
+            createdByName: createdBy.name,
+            detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`,
+          } satisfies ProxySubmittedRecordRow;
+        }
+
+        return null;
       })
       .filter(Boolean) as ProxySubmittedRecordRow[];
 

@@ -83,7 +83,7 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <div className="text-sm font-semibold">Proxy submitted applications</div>
-            <div className="mt-1 text-xs text-black/60">仅显示通过 Proxy 提交的 Company Update 与 Share Transfer</div>
+            <div className="mt-1 text-xs text-black/60">仅显示通过 Proxy 提交的秘书服务申请</div>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <input
