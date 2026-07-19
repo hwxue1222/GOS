@@ -107,7 +107,7 @@ export default async function CorporateSecretaryApplicationsPage({
           const detailsHref = `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`;
           return {
             typeKey: 'change_registered_office_address',
-            typeLabel: 'Change of Registered Office Address',
+            typeLabel: 'Change of Registerd Office Address',
             detailsHref,
             hasDocuments: true,
           };
@@ -179,7 +179,7 @@ export default async function CorporateSecretaryApplicationsPage({
     { typeKey: 'transfer_company_secretary', label: 'Transfer Secretary' },
     { typeKey: 'change_company_name', label: 'Change of Company Name' },
     { typeKey: 'change_fye', label: 'Change of FYE' },
-    { typeKey: 'change_registered_office_address', label: 'Change of Address' },
+    { typeKey: 'change_registered_office_address', label: 'Change of Registerd Office Address' },
     { typeKey: 'change_business_activities', label: 'Change of Activities' },
     { typeKey: 'change_secretary', label: 'Change of Secretary' },
   ];
