@@ -8,6 +8,26 @@ function isScExternalCode(code: string) {
   return /^SC\d+$/i.test(String(code ?? '').trim());
 }
 
+function parseClientCode(code: string) {
+  const raw = String(code ?? '').trim();
+  const m = raw.match(/^([A-Za-z]+)?(\d+)?([A-Za-z]+)?$/);
+  const prefix = String(m?.[1] ?? '').toUpperCase();
+  const num = m?.[2] ? Number.parseInt(m[2], 10) : -1;
+  const suffix = String(m?.[3] ?? '').toUpperCase();
+  return { prefix, num: Number.isFinite(num) ? num : -1, suffix, rawUpper: raw.toUpperCase() };
+}
+
+function compareClientCodeDesc(a: { code: string }, b: { code: string }) {
+  const pa = parseClientCode(a.code);
+  const pb = parseClientCode(b.code);
+  const prefixCmp = pa.prefix.localeCompare(pb.prefix);
+  if (prefixCmp) return prefixCmp;
+  if (pa.num !== pb.num) return pb.num - pa.num;
+  const suffixCmp = pa.suffix.localeCompare(pb.suffix);
+  if (suffixCmp) return suffixCmp;
+  return pa.rawUpper.localeCompare(pb.rawUpper);
+}
+
 export default async function ClientsPage() {
   const me = await getCurrentUser();
   if (!me) return null;
@@ -36,6 +56,8 @@ export default async function ClientsPage() {
     );
     clients = clients.filter((c) => assignedClientIds.has(c.id));
   }
+
+  clients = clients.slice().sort(compareClientCodeDesc);
 
   return (
     <div className="min-h-screen flex flex-col">

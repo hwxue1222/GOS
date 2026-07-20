@@ -38,6 +38,26 @@ function textMatch(haystack: string, needle: string) {
   return haystack.toLowerCase().includes(needle.trim().toLowerCase());
 }
 
+function parseClientCode(code: string) {
+  const raw = String(code ?? '').trim();
+  const m = raw.match(/^([A-Za-z]+)?(\d+)?([A-Za-z]+)?$/);
+  const prefix = String(m?.[1] ?? '').toUpperCase();
+  const num = m?.[2] ? Number.parseInt(m[2], 10) : -1;
+  const suffix = String(m?.[3] ?? '').toUpperCase();
+  return { prefix, num: Number.isFinite(num) ? num : -1, suffix, rawUpper: raw.toUpperCase() };
+}
+
+function compareClientCodeDesc(a: { code: string }, b: { code: string }) {
+  const pa = parseClientCode(a.code);
+  const pb = parseClientCode(b.code);
+  const prefixCmp = pa.prefix.localeCompare(pb.prefix);
+  if (prefixCmp) return prefixCmp;
+  if (pa.num !== pb.num) return pb.num - pa.num;
+  const suffixCmp = pa.suffix.localeCompare(pb.suffix);
+  if (suffixCmp) return suffixCmp;
+  return pa.rawUpper.localeCompare(pb.rawUpper);
+}
+
 export default function ClientsClient({ initialMe, initialClients }: Props) {
   const [me] = useState<User>(initialMe);
   const [clients, setClients] = useState<Client[]>(initialClients);
@@ -61,13 +81,15 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   });
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return clients;
-    return clients.filter((c) =>
-      textMatch(
-        `${c.code} ${c.name} ${c.fka ?? ''} ${c.companyRegistrationNo ?? ''} ${c.incorporationDate ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
-        search,
-      ),
-    );
+    const list = !search.trim()
+      ? clients
+      : clients.filter((c) =>
+          textMatch(
+            `${c.code} ${c.name} ${c.fka ?? ''} ${c.companyRegistrationNo ?? ''} ${c.incorporationDate ?? ''} ${c.fye ?? ''} ${c.contactPerson ?? ''} ${c.address ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`,
+            search,
+          ),
+        );
+    return list.slice().sort(compareClientCodeDesc);
   }, [clients, search]);
 
   const total = filtered.length;
