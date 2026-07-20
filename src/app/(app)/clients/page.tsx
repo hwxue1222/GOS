@@ -17,9 +17,21 @@ function parseClientCode(code: string) {
   return { prefix, num: Number.isFinite(num) ? num : -1, suffix, rawUpper: raw.toUpperCase() };
 }
 
+function prefixPriority(prefix: string) {
+  const p = String(prefix ?? '').toUpperCase();
+  if (p.startsWith('E')) return 0;
+  if (p.startsWith('D')) return 1;
+  return 2;
+}
+
 function compareClientCodeDesc(a: { code: string }, b: { code: string }) {
   const pa = parseClientCode(a.code);
   const pb = parseClientCode(b.code);
+
+  const priA = prefixPriority(pa.prefix);
+  const priB = prefixPriority(pb.prefix);
+  if (priA !== priB) return priA - priB;
+
   const prefixCmp = pa.prefix.localeCompare(pb.prefix);
   if (prefixCmp) return prefixCmp;
   if (pa.num !== pb.num) return pb.num - pa.num;
