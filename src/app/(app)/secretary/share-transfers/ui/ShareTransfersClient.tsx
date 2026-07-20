@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DateInputYMD } from '@/components/DateInputYMD';
 import CountryOfIncorporationSelect from '@/components/CountryOfIncorporationSelect';
 import { formatDateDMY } from '@/lib/date';
@@ -167,6 +168,7 @@ export default function ShareTransfersClient(props: {
   initialClientId?: string;
   hideTitle?: boolean;
 }) {
+  const router = useRouter();
   const { initialClients, initialTransfers, initialClientId, hideTitle } = props;
 
   const [clients, setClients] = useState<ClientLite[]>(initialClients);
@@ -738,6 +740,11 @@ export default function ShareTransfersClient(props: {
         setTransfers((prev) => [...createdTransfers, ...prev]);
         setInfo(infoBlocks.length ? infoBlocks.join('\n\n') : `CREATED_${createdTransfers.length}`);
         setDrafts([makeDraft()]);
+
+        if (hideTitle && createdTransfers[0]?.id) {
+          router.push(`/corporate-secretary/applications/share-transfer/${encodeURIComponent(createdTransfers[0].id)}`);
+          return;
+        }
       }
       await refresh();
     } finally {
