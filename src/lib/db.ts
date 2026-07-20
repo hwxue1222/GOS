@@ -8499,6 +8499,7 @@ export async function createRepresentativeDesignationRequest(input: {
   representativeEmail?: string;
   matter?: string;
   appointmentDateYmd?: string;
+  createdByUserId?: string;
 }) {
   const db = await readDb();
   const createdAt = nowIso();
@@ -8511,6 +8512,7 @@ export async function createRepresentativeDesignationRequest(input: {
     representativeEmail: input.representativeEmail,
     matter: input.matter,
     appointmentDateYmd: input.appointmentDateYmd,
+    createdByUserId: input.createdByUserId,
     packetId: input.packetId,
     status: 'SIGNING',
     createdAt,

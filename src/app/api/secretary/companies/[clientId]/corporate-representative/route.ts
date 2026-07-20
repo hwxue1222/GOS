@@ -156,6 +156,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     representativeEmail: person.email,
     matter,
     appointmentDateYmd,
+    createdByUserId: user.id,
     packetId: packet.id,
   });
 

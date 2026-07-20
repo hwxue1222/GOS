@@ -95,6 +95,12 @@ export default async function ProxyCompanyPickerPage() {
   const rorcById = new Map((db.rorcDeclarationRequests ?? []).map((r) => [r.id, r]));
   const agmById = new Map((db.annualGeneralMeetingRequests ?? []).map((r) => [r.id, r]));
 
+  const rdrs = Array.isArray((db as any).representativeDesignationRequests)
+    ? (((db as any).representativeDesignationRequests ?? []) as Array<any>)
+    : [];
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+
   const proxySubmittedRecords: ProxySubmittedRecordRow[] = (() => {
     const allowedClientIds = visibleClientIds ?? null;
     const secApps = buildSecretaryServiceApplications(db, allowedClientIds)
@@ -189,8 +195,33 @@ export default async function ProxyCompanyPickerPage() {
       })
       .filter(Boolean) as ProxySubmittedRecordRow[];
 
-    secApps.sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
-    return secApps;
+    const rdrRows: ProxySubmittedRecordRow[] = rdrs
+      .filter((r) => r && r.triggerType === 'MANUAL_MAINTENANCE')
+      .map((r) => {
+        const companyParty = partyById.get(String(r.companyPartyId ?? '')) as any;
+        const clientId = companyParty && companyParty.type === 'COMPANY' ? String(companyParty.clientId ?? '').trim() : '';
+        if (!clientId) return null;
+        if (allowedClientIds && !allowedClientIds.has(clientId)) return null;
+        const c = clientById.get(clientId) as any;
+        if (!c || c.deletedAt) return null;
+        const createdBy = r.createdByUserId ? (userById.get(String(r.createdByUserId)) ?? null) : null;
+        return {
+          id: `RDR-${String(r.id ?? '')}`,
+          typeLabel: 'Appointment of (GLOBAL) Corporate Representative',
+          companyId: c.id,
+          companyName: c.name,
+          applicationDate: String(r.createdAt ?? ''),
+          editDate: String(r.updatedAt ?? r.createdAt ?? ''),
+          status: String(r.status ?? ''),
+          createdByName: createdBy?.name ?? '-',
+          detailsHref: `/corporate-secretary/applications/corporate-representative/${encodeURIComponent(String(r.id ?? ''))}`,
+        } satisfies ProxySubmittedRecordRow;
+      })
+      .filter(Boolean) as ProxySubmittedRecordRow[];
+
+    const all = [...secApps, ...rdrRows];
+    all.sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+    return all;
   })();
 
   return (
