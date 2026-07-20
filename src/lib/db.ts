@@ -10271,6 +10271,31 @@ export async function getDirectorChangeRequestContext(requestId: string) {
   return { request, packets, documents, signatures };
 }
 
+export async function getRepresentativeDesignationRequestContext(requestId: string) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { representativeDesignationRequests?: unknown }).representativeDesignationRequests)
+    ? (((db as unknown as { representativeDesignationRequests?: RepresentativeDesignationRequest[] }).representativeDesignationRequests ?? []) as RepresentativeDesignationRequest[])
+    : [];
+  const request = list.find((r) => r.id === requestId) ?? null;
+  if (!request) return null;
+
+  const packets = db.signaturePackets
+    .filter((p) => p.relatedType === 'RDR' && p.relatedId === requestId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (!packets.length) return null;
+
+  const docsById = new Map(db.documents.map((d) => [d.id, d]));
+  const documents = packets.map((p) => docsById.get(p.documentId)).filter(Boolean) as Document[];
+  if (!documents.length) return null;
+
+  const packetIds = new Set(packets.map((p) => p.id));
+  const signatures = db.signatureRequests
+    .filter((r) => packetIds.has(r.packetId))
+    .sort((a, b) => (a.packetId !== b.packetId ? a.packetId.localeCompare(b.packetId) : a.email.localeCompare(b.email)));
+
+  return { request, packets, documents, signatures };
+}
+
 export async function createDirectorChangeRequest(input: {
   clientId: string;
   createdByUserId: string;

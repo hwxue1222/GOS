@@ -101,14 +101,14 @@ export default function AppointCorporateRepresentativeClient() {
       setSignLinks(links);
       await load();
 
-      const picked = directors.find((d) => d.id === id) ?? null;
-      const preferredEmailKey = (picked?.email ?? '').trim().toLowerCase();
-      const nextUrl =
-        (preferredEmailKey ? links?.find((l) => String(l.email ?? '').trim().toLowerCase() === preferredEmailKey)?.url : '') ||
-        links?.[0]?.url ||
-        '';
-      if (nextUrl && typeof nextUrl === 'string' && nextUrl.startsWith('/')) {
-        router.push(nextUrl);
+      const rdrId = String(j?.rdrId ?? '').trim();
+      if (rdrId) {
+        try {
+          if (links?.length) window.sessionStorage.setItem(`gos.tmp.rdrSignLinks.${rdrId}`, JSON.stringify(links));
+        } catch {
+          void 0;
+        }
+        router.push(`/corporate-secretary/applications/corporate-representative/${encodeURIComponent(rdrId)}`);
       }
     } finally {
       setSubmitting(false);
