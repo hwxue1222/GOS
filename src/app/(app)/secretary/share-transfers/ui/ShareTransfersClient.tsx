@@ -93,6 +93,7 @@ type ShareTransferDraft = {
   shares: number;
   valueSgd: string;
   shareClass: (typeof SHARE_CLASS_OPTIONS)[number];
+  corporateRepresentativeMatter: string;
   transferorPartyId: string;
   transferorRepresentativePersonId: string;
   transferorCorporateRepresentativeName: string;
@@ -120,6 +121,7 @@ function makeDraft(): ShareTransferDraft {
     shares: 0,
     valueSgd: '',
     shareClass: 'ORDINARY SHARE',
+    corporateRepresentativeMatter: 'share transfer',
     transferorPartyId: '',
     transferorRepresentativePersonId: '',
     transferorCorporateRepresentativeName: '',
@@ -635,6 +637,7 @@ export default function ShareTransfersClient(props: {
             shares: d.shares,
             valueSgd,
             shareClass: d.shareClass.trim() || undefined,
+            matter: d.corporateRepresentativeMatter,
             transferor: {
               kind: 'EXISTING_PARTY',
               partyId: d.transferorPartyId,
@@ -895,6 +898,20 @@ export default function ShareTransfersClient(props: {
                               value={d.transferorDirectorSignerEmail}
                               onChange={(e) => patchDraft(d.id, { transferorDirectorSignerEmail: e.target.value })}
                               className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+
+                      {shareholderByPartyId.get(d.transferorPartyId)?.kind === 'COMPANY' ? (
+                        <div className="mt-3">
+                          <label className="text-sm block">
+                            <div className="text-black/70">Matters</div>
+                            <input
+                              value={d.corporateRepresentativeMatter}
+                              onChange={(e) => patchDraft(d.id, { corporateRepresentativeMatter: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                              placeholder="e.g. share transfer"
                             />
                           </label>
                         </div>

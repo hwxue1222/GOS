@@ -42,6 +42,7 @@ export default function AppointCorporateRepresentativeClient() {
   const [repError, setRepError] = useState<string | null>(null);
   const [repData, setRepData] = useState<Extract<CorpRepApiResponse, { ok: true }> | null>(null);
   const [pickedPersonId, setPickedPersonId] = useState('');
+  const [matter, setMatter] = useState('signing documents');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [signLinks, setSignLinks] = useState<Array<{ email: string; url: string }> | null>(null);
@@ -90,7 +91,7 @@ export default function AppointCorporateRepresentativeClient() {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/corporate-representative`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ representativePersonId: id }),
+        body: JSON.stringify({ representativePersonId: id, matter }),
       }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok || !j?.ok) {
@@ -163,6 +164,17 @@ export default function AppointCorporateRepresentativeClient() {
                     ))}
                   </select>
                   {directors.length === 0 ? <div className="mt-2 text-xs text-red-600">No directors found</div> : null}
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-sm text-black/70">Matters</div>
+                  <input
+                    value={matter}
+                    onChange={(e) => setMatter(e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
+                    placeholder="e.g. share transfer, change of company name"
+                  />
                 </div>
 
                 {submitError ? <div className="mt-3 text-sm text-red-600">{submitError}</div> : null}

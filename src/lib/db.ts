@@ -8497,6 +8497,7 @@ export async function createRepresentativeDesignationRequest(input: {
   representativePersonId?: string;
   representativeName?: string;
   representativeEmail?: string;
+  matter?: string;
 }) {
   const db = await readDb();
   const createdAt = nowIso();
@@ -8507,6 +8508,7 @@ export async function createRepresentativeDesignationRequest(input: {
     representativePersonId: input.representativePersonId,
     representativeName: input.representativeName,
     representativeEmail: input.representativeEmail,
+    matter: input.matter,
     packetId: input.packetId,
     status: 'SIGNING',
     createdAt,
@@ -9124,6 +9126,7 @@ export async function createShareTransferRequest(input: {
   valueSgd?: number;
   shareClass?: string;
   effectiveDate: string;
+  matter?: string;
 }) {
   const db = await readDb();
   const client = db.clients.find((c) => c.id === input.clientId) ?? null;
@@ -9136,6 +9139,10 @@ export async function createShareTransferRequest(input: {
   if (!Number.isFinite(shares) || shares <= 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
   const valueSgd = Number(input.valueSgd);
   if (!Number.isFinite(valueSgd) || valueSgd < 0) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const matterRaw = String(input.matter ?? '').trim();
+  if (matterRaw.length > 200) return { ok: false as const, error: 'INVALID_INPUT' as const };
+  const matter = matterRaw || 'share transfer';
 
   const normalizeIdNo = (s: string) => String(s ?? '').trim().replace(/\s+/g, '').toLowerCase();
 
@@ -9614,8 +9621,13 @@ export async function createShareTransferRequest(input: {
       const rdrId = newId('rdr');
       const html = (await import('@/lib/docTemplates')).renderRdrAuthorizationHtml({
         companyName: cfg.companyName,
+        companyRegistrationNo: undefined,
+        companyAddress: '',
         representativeName: cfg.repName,
-        purpose: `Appoint a GLOBAL corporate representative for signing documents (Share Transfer).`,
+        representativeEmail: cfg.repEmail,
+        representativeAddress: '',
+        matter: 'share transfer',
+        directorSigners: [{ fullName: cfg.signerName, email: cfg.signerEmail }],
         dateYmd: effectiveDate,
       });
       const doc: Document = {
@@ -9647,6 +9659,7 @@ export async function createShareTransferRequest(input: {
         representativePersonId: undefined,
         representativeName: cfg.repName,
         representativeEmail: cfg.repEmail,
+        matter: 'share transfer',
         packetId: packet.id,
         status: 'SIGNING',
         createdAt: now,
@@ -9684,8 +9697,11 @@ export async function createShareTransferRequest(input: {
     const rdrId = newId('rdr');
     const html = (await import('@/lib/docTemplates')).renderRdrAuthorizationHtml({
       companyName: company.name,
+      companyRegistrationNo: company.companyRegistrationNo,
+      companyAddress: String((company as any).registeredOfficeAddress ?? (company as any).address ?? '').trim(),
       representativeName: undefined,
-      purpose: `Appoint a GLOBAL corporate representative for signing documents (Share Transfer).`,
+      matter: 'share transfer',
+      directorSigners: directors.map((d) => ({ fullName: d.fullName, email: d.email })),
       dateYmd: effectiveDate,
     });
     const doc: Document = {
@@ -9717,6 +9733,7 @@ export async function createShareTransferRequest(input: {
       representativePersonId: undefined,
       representativeName: undefined,
       representativeEmail: undefined,
+      matter: 'share transfer',
       packetId: packet.id,
       status: 'SIGNING',
       createdAt: now,
@@ -9840,6 +9857,7 @@ export async function createShareTransferRequest(input: {
 
     let repName = '';
     let repEmail = '';
+    let repAddress = '';
     let directorSignerName = '';
     let directorSignerEmail = '';
 
@@ -9856,6 +9874,14 @@ export async function createShareTransferRequest(input: {
       if (!nextRepEmail || !nextRepName) return { ok: false as const, error: 'MISSING_REPRESENTATIVE' as const };
       repName = nextRepName;
       repEmail = nextRepEmail;
+
+      const activeRep = db.companyRepresentatives
+        .filter((r) => r.companyPartyId === party.id && r.scope === 'GLOBAL')
+        .find((r) => !r.effectiveTo);
+      if (activeRep) {
+        const person = db.persons.find((p) => p.id === activeRep.representativePersonId) ?? null;
+        repAddress = String((person as any)?.address ?? '').trim();
+      }
 
       const companyClientId = party.clientId;
       if (!companyClientId) return { ok: false as const, error: 'INVALID_INPUT' as const };
@@ -9878,10 +9904,11 @@ export async function createShareTransferRequest(input: {
       companyAddress,
       representativeName: repName,
       representativeEmail: repEmail,
-      representativeAddress: '',
+      representativeAddress: repAddress,
       directorSignerName,
       directorSignerEmail,
       dateYmd: now.slice(0, 10),
+      matter,
     });
 
     const certDoc: Document = {

@@ -1005,6 +1005,7 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
   directorSignerName: string;
   directorSignerEmail?: string;
   dateYmd: string;
+  matter?: string;
 }) {
   const addDot = (s: string) => {
     const v = s.trim();
@@ -1022,6 +1023,8 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
   const representativeAddress = input.representativeAddress.trim()
     ? esc(input.representativeAddress)
     : '______________________________';
+  const matterRaw = String(input.matter ?? '').trim();
+  const matter = esc(matterRaw || 'share transfer');
   return `
 <!doctype html>
 <html>
@@ -1040,6 +1043,7 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
       .sig-name { margin-top: 4px; }
       .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
       .mt2 { margin-top: 8px; }
+      .witness-line { width: 220px; height: 20px; border-bottom: 1px solid #111; }
     </style>
   </head>
   <body>
@@ -1050,14 +1054,14 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
 
     <div class="block">We, ${esc(input.companyName)} of ${companyAddress} hereby appoint:-</div>
 
-    <div class="block">${esc(input.representativeName)}</div>
+    <div class="block">Mr ${esc(input.representativeName)}</div>
     <div class="block">of address:&nbsp;&nbsp;${representativeAddress}</div>
 
     <div class="block">or failing him / her,</div>
     <div class="block">Mr / Ms</div>
     <div class="block">of address:</div>
 
-    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to share transfer.</div>
+    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to ${matter}.</div>
     <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
 
     <div class="block">Dated this ${esc(datedLong)}</div>
@@ -1076,9 +1080,14 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
       <div>
         <div>Signature of authorised representative</div>
         ${repSig}
+        <div class="mt2">Name:&nbsp;&nbsp;${esc(input.representativeName)}</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
       </div>
       <div>
         <div>Witnessed by</div>
+        <div class="mt2 witness-line"></div>
         <div class="mt2">Name:&nbsp;&nbsp;</div>
         <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
         <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
@@ -1358,40 +1367,95 @@ function normalizeFyeDdMm(input: string) {
 
 export function renderRdrAuthorizationHtml(input: {
   companyName: string;
+  companyRegistrationNo?: string;
+  companyAddress?: string;
   representativeName?: string;
-  purpose: string;
+  representativeEmail?: string;
+  representativeAddress?: string;
+  matter?: string;
+  directorSigners: Array<{ fullName: string; email?: string }>;
   dateYmd: string;
 }) {
-  const companyName = esc(input.companyName);
-  const representativeName = input.representativeName ? esc(input.representativeName) : '________________';
-  const purpose = esc(input.purpose);
-  const dateYmd = esc(input.dateYmd);
-
+  const addDot = (s: string) => {
+    const v = s.trim();
+    if (!v) return v;
+    return v.endsWith('.') ? v : `${v}.`;
+  };
+  const companyAddress = String(input.companyAddress ?? '').trim() ? esc(String(input.companyAddress ?? '')) : '______________________________';
+  const representativeNameRaw = String(input.representativeName ?? '').trim();
+  const representativeNameEsc = representativeNameRaw ? esc(representativeNameRaw) : '________________';
+  const representativeEmail = String(input.representativeEmail ?? '').trim();
+  const representativeAddress = String(input.representativeAddress ?? '').trim() ? esc(String(input.representativeAddress ?? '')) : '______________________________';
+  const repSig = signatureLineBlocks({
+    signers: [{ fullName: representativeNameRaw || '________________', email: representativeEmail || undefined }],
+  });
+  const directorSig = signatureLineBlocks({ signers: input.directorSigners });
+  const datedLong = toDayOfMonthLong(input.dateYmd);
+  const matterRaw = String(input.matter ?? '').trim();
+  const matter = esc(matterRaw || 'signing documents');
   return `
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Corporate Representative Authorization</title>
+    <title>Certificate of Appointment of Corporate Representative</title>
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; line-height: 1.5; padding: 24px; color: #111; }
-      h1 { font-size: 18px; margin: 0 0 16px; }
-      .muted { color: #555; font-size: 12px; }
-      .box { border: 1px solid #ddd; border-radius: 10px; padding: 16px; }
-      .sig { margin-top: 18px; padding-top: 18px; border-top: 1px dashed #ddd; }
+      body { font-family: Verdana, ui-sans-serif, system-ui, -apple-system; line-height: 1.55; padding: 28px; color: #111; font-size: 12px; }
+      .title { font-weight: 700; text-transform: uppercase; }
+      .center { text-align: center; }
+      .block { margin-top: 10px; }
+      .sig-row { margin-top: 16px; }
+      .sig-line { width: 220px; height: 20px; border-bottom: 1px solid #111; position: relative; }
+      .sig-mark { position: absolute; left: 0; bottom: 2px; font-size: 12px; color: #111; font-family: ui-serif, Georgia, serif; }
+      .sig-name { margin-top: 4px; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+      .mt2 { margin-top: 8px; }
+      .witness-line { width: 220px; height: 20px; border-bottom: 1px solid #111; }
     </style>
   </head>
   <body>
-    <h1>Appointment of Corporate Representative</h1>
-    <div class="muted">Date: ${dateYmd}</div>
-    <div class="box" style="margin-top: 12px;">
-      <div><strong>Company</strong>: ${companyName}</div>
-      <div style="margin-top: 10px;"><strong>Appointed Representative</strong>: ${representativeName}</div>
-      <div style="margin-top: 10px;"><strong>Purpose</strong>: ${purpose}</div>
-      <div class="sig">
-        <div>Signed by Directors of the Company:</div>
-        <div class="muted" style="margin-top: 8px;">Electronic signature is recorded by the system with timestamp, IP, user agent, and document hash.</div>
+    <div class="title">${esc(addDot(input.companyName))}</div>
+    ${input.companyRegistrationNo ? `<div>Co. Reg. No.: ${esc(input.companyRegistrationNo)}</div>` : ''}
+
+    <div class="block title center">CERTIFICATE OF APPOINTMENT OF CORPORATE REPRESENTATIVE</div>
+
+    <div class="block">We, ${esc(input.companyName)} of ${companyAddress} hereby appoint:-</div>
+
+    <div class="block">Mr ${representativeNameEsc}</div>
+    <div class="block">of address:&nbsp;&nbsp;${representativeAddress}</div>
+    <div class="block">or failing him / her,</div>
+    <div class="block">Mr / Ms</div>
+    <div class="block">of address:</div>
+
+    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to ${matter}.</div>
+    <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
+
+    <div class="block">Dated this ${esc(datedLong)}</div>
+
+    <div class="block">We confirm that ${esc(input.companyName)} is not required to have a Common Seal under the provisions of its Articles of Association or the prevailing laws applicable to the company in its country of incorporation.</div>
+    <div class="block">This Certificate is executed in such manner as to be binding upon ${esc(addDot(input.companyName))}</div>
+
+    <div class="block">Signed For &amp;</div>
+    ${directorSig}
+    <div class="block">On Behalf of ${esc(input.companyName)}</div>
+
+    <div class="grid2 block">
+      <div>
+        <div>Signature of authorised representative</div>
+        ${repSig}
+        <div class="mt2">Name:&nbsp;&nbsp;${representativeNameEsc}</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
+      </div>
+      <div>
+        <div>Witnessed by</div>
+        <div class="mt2 witness-line"></div>
+        <div class="mt2">Name:&nbsp;&nbsp;</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
       </div>
     </div>
   </body>

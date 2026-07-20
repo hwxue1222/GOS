@@ -87,9 +87,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   const client = await findClientById(clientId);
   if (!client || client.deletedAt) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  const body = (await req.json().catch(() => null)) as { representativePersonId?: string } | null;
+  const body = (await req.json().catch(() => null)) as { representativePersonId?: string; matter?: string } | null;
   const representativePersonId = typeof body?.representativePersonId === 'string' ? body.representativePersonId : '';
   if (!representativePersonId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  const matter = String(body?.matter ?? '').trim();
+  if (matter.length > 200) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   const person = await findPersonById(representativePersonId);
   if (!person) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
@@ -102,11 +105,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   const emails = directors.map((d) => d.person.email).filter((e): e is string => !!e && !!e.trim());
   if (emails.length !== directors.length) return NextResponse.json({ ok: false, error: 'MISSING_SIGNER_EMAIL' }, { status: 400 });
 
+  const directorSigners = directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email }));
+
   const today = new Date().toISOString().slice(0, 10);
   const html = renderRdrAuthorizationHtml({
     companyName: client.name,
+    companyRegistrationNo: client.companyRegistrationNo,
+    companyAddress: String((client as any).registeredOfficeAddress ?? (client as any).address ?? '').trim(),
     representativeName: person.fullName,
-    purpose: 'Maintain a GLOBAL corporate representative for signing documents.',
+    representativeEmail: person.email,
+    representativeAddress: String((person as any).address ?? '').trim(),
+    matter: matter || 'signing documents',
+    directorSigners,
     dateYmd: today,
   });
   const doc = await createDocument({ type: 'RDR_AUTH', title: `Corporate Representative - ${client.name}`, html });
@@ -126,10 +136,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     representativePersonId: person.id,
     representativeName: person.fullName,
     representativeEmail: person.email,
+    matter: matter || 'signing documents',
     packetId: packet.id,
   });
 
-  const signLinks = await createSignatureRequestsForPacket({ packetId: packet.id, emails });
+  const allEmails = Array.from(
+    new Set([...emails, String(person.email ?? '').trim()].map((e) => e.trim().toLowerCase()).filter(Boolean)),
+  );
+  const signLinks = await createSignatureRequestsForPacket({ packetId: packet.id, emails: allEmails });
 
   const origin = req.headers.get('origin')?.trim();
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
@@ -144,7 +158,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
             companyName: client.name,
             applicationName: 'Corporate representative designation',
             documentTitle: `Corporate Representative - ${client.name}`,
-            signerRole: `Director of ${client.name}`,
+            signerRole:
+              l.email.trim().toLowerCase() === String(person.email ?? '').trim().toLowerCase()
+                ? `Corporate Representative of ${client.name}`
+                : `Director of ${client.name}`,
           })
         : Promise.resolve({ ok: false as const, error: 'EMAIL_NOT_CONFIGURED' as const }),
     ),

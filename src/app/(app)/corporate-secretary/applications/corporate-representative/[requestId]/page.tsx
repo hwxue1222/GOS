@@ -99,9 +99,10 @@ export default async function CorporateRepresentativeApplicationDetailPage({
     .map((s) => {
       const doc = docByPacketId.get(s.packetId);
       const docTitle = doc?.title ?? s.packetId;
+      const isRep = String(r.representativeEmail ?? '').trim().toLowerCase() === s.email.trim().toLowerCase();
       const meta = clientId ? getSignerIdentityForClient(db, clientId, s.email) : { fullName: '', role: '' };
-      const signerName = meta.fullName || '';
-      const signerRole = meta.role || '';
+      const signerName = (isRep ? String(r.representativeName ?? '') : meta.fullName) || '';
+      const signerRole = (isRep ? 'Corporate Representative' : meta.role) || '';
       return {
         documentTitle: docTitle,
         signerName,
@@ -131,6 +132,7 @@ export default async function CorporateRepresentativeApplicationDetailPage({
     { label: 'Status', value: <span className="text-black/80">{r.status}</span> },
     { label: 'Representative', value: r.representativeName ?? '-' },
     { label: 'Email', value: r.representativeEmail ?? '-' },
+    { label: 'Matters', value: r.matter ?? '-' },
     { label: 'Submitted', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
     { label: 'Updated', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
   ];
@@ -150,7 +152,9 @@ export default async function CorporateRepresentativeApplicationDetailPage({
             right={<div className="text-xs text-black/50">Updated: {(r.updatedAt ?? r.createdAt).slice(0, 10)}</div>}
           />
           <SectionCard title="Requested changes" subtitle="What will be updated.">
-            <div className="text-sm text-black/70">Designate {r.representativeName ?? 'a corporate representative'} for signing documents.</div>
+            <div className="text-sm text-black/70">
+              Designate {r.representativeName ?? 'a corporate representative'} for matters relating to {r.matter ?? 'signing documents'}.
+            </div>
           </SectionCard>
           <SignLinksOnceClient requestId={r.id} />
           <ActivityTimelineCard items={timelineItems} />
