@@ -100,7 +100,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   if (!representativePersonId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   const matter = String(body?.matter ?? '').trim();
-  if (!matter || matter.length > 200) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (!matter) return NextResponse.json({ ok: false, error: 'MISSING_MATTER' }, { status: 400 });
+  if (matter.length > 200) return NextResponse.json({ ok: false, error: 'INVALID_MATTER' }, { status: 400 });
 
   const appointmentDateYmd = String(body?.appointmentDateYmd ?? '').trim();
   const isValidYmd = (v: string) => {
@@ -109,7 +110,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     if (Number.isNaN(d.getTime())) return false;
     return d.toISOString().slice(0, 10) === v;
   };
-  if (!isValidYmd(appointmentDateYmd)) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (!appointmentDateYmd) return NextResponse.json({ ok: false, error: 'MISSING_APPOINTMENT_DATE' }, { status: 400 });
+  if (!isValidYmd(appointmentDateYmd)) return NextResponse.json({ ok: false, error: 'INVALID_APPOINTMENT_DATE' }, { status: 400 });
 
   const person = await findPersonById(representativePersonId);
   if (!person) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });

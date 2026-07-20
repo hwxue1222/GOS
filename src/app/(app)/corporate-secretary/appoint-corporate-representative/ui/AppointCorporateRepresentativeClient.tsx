@@ -109,7 +109,12 @@ export default function AppointCorporateRepresentativeClient() {
       }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok || !j?.ok) {
-        setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+        const e = String(j?.error ?? '');
+        if (e === 'MISSING_MATTER') setSubmitError('Please fill in Matters.');
+        else if (e === 'INVALID_MATTER') setSubmitError('Matters is too long.');
+        else if (e === 'MISSING_APPOINTMENT_DATE') setSubmitError('Please fill in Appointment date.');
+        else if (e === 'INVALID_APPOINTMENT_DATE') setSubmitError('Invalid Appointment date.');
+        else setSubmitError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
         return;
       }
       const links = Array.isArray(j?.signLinks) ? (j.signLinks as Array<{ email: string; url: string }>) : null;
