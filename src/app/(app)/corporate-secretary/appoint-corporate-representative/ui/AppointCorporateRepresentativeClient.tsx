@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import ModalShell from '@/app/(app)/corporate-secretary/ui/ModalShell';
 import { useCompanyContext } from '@/app/(app)/corporate-secretary/ui/useCompanyContext';
+import { DateInputYMD } from '@/components/DateInputYMD';
 import { formatDateDMY } from '@/lib/date';
 
 type CorpRepApiResponse =
@@ -42,7 +43,8 @@ export default function AppointCorporateRepresentativeClient() {
   const [repError, setRepError] = useState<string | null>(null);
   const [repData, setRepData] = useState<Extract<CorpRepApiResponse, { ok: true }> | null>(null);
   const [pickedPersonId, setPickedPersonId] = useState('');
-  const [matter, setMatter] = useState('signing documents');
+  const [matter, setMatter] = useState('');
+  const [appointmentDateYmd, setAppointmentDateYmd] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [signLinks, setSignLinks] = useState<Array<{ email: string; url: string }> | null>(null);
@@ -86,12 +88,24 @@ export default function AppointCorporateRepresentativeClient() {
       return;
     }
 
+    const matterClean = matter.trim();
+    if (!matterClean) {
+      setSubmitError('Please fill in Matters.');
+      return;
+    }
+
+    const dateClean = appointmentDateYmd.trim();
+    if (!dateClean) {
+      setSubmitError('Please fill in Appointment date.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`/api/secretary/companies/${encodeURIComponent(companyId)}/corporate-representative`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ representativePersonId: id, matter }),
+        body: JSON.stringify({ representativePersonId: id, matter: matterClean, appointmentDateYmd: dateClean }),
       }).catch(() => null);
       const j = await res?.json().catch(() => null);
       if (!res?.ok || !j?.ok) {
@@ -128,7 +142,7 @@ export default function AppointCorporateRepresentativeClient() {
 
           <div className="mt-6 rounded-xl bg-white border border-black/5 p-5">
             <div className="text-sm font-semibold">Corporate Representative</div>
-            <div className="mt-1 text-xs text-black/50">Maintain a single GLOBAL corporate representative for signing documents.</div>
+            <div className="mt-1 text-xs text-black/50">Maintain a single GLOBAL corporate representative.</div>
 
             {repLoading ? <div className="mt-3 text-sm text-black/50">Loading...</div> : null}
             {repError ? <div className="mt-3 text-sm text-red-600">{repError}</div> : null}
@@ -174,6 +188,16 @@ export default function AppointCorporateRepresentativeClient() {
                     disabled={submitting}
                     className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                     placeholder="e.g. share transfer, change of company name"
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-sm text-black/70">Appointment date</div>
+                  <DateInputYMD
+                    value={appointmentDateYmd}
+                    onChange={(v) => setAppointmentDateYmd(v)}
+                    disabled={submitting}
+                    inputClassName="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.02] disabled:text-black/50"
                   />
                 </div>
 

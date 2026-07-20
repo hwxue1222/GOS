@@ -8498,6 +8498,7 @@ export async function createRepresentativeDesignationRequest(input: {
   representativeName?: string;
   representativeEmail?: string;
   matter?: string;
+  appointmentDateYmd?: string;
 }) {
   const db = await readDb();
   const createdAt = nowIso();
@@ -8509,6 +8510,7 @@ export async function createRepresentativeDesignationRequest(input: {
     representativeName: input.representativeName,
     representativeEmail: input.representativeEmail,
     matter: input.matter,
+    appointmentDateYmd: input.appointmentDateYmd,
     packetId: input.packetId,
     status: 'SIGNING',
     createdAt,
@@ -9660,6 +9662,7 @@ export async function createShareTransferRequest(input: {
         representativeName: cfg.repName,
         representativeEmail: cfg.repEmail,
         matter: 'share transfer',
+        appointmentDateYmd: effectiveDate,
         packetId: packet.id,
         status: 'SIGNING',
         createdAt: now,
@@ -9734,6 +9737,7 @@ export async function createShareTransferRequest(input: {
       representativeName: undefined,
       representativeEmail: undefined,
       matter: 'share transfer',
+      appointmentDateYmd: effectiveDate,
       packetId: packet.id,
       status: 'SIGNING',
       createdAt: now,

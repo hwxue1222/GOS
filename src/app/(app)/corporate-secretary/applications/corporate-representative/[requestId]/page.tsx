@@ -133,6 +133,7 @@ export default async function CorporateRepresentativeApplicationDetailPage({
     { label: 'Representative', value: r.representativeName ?? '-' },
     { label: 'Email', value: r.representativeEmail ?? '-' },
     { label: 'Matters', value: r.matter ?? '-' },
+    { label: 'Appointment date', value: r.appointmentDateYmd ?? '-' },
     { label: 'Submitted', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
     { label: 'Updated', value: (r.updatedAt ?? r.createdAt).slice(0, 10) },
   ];

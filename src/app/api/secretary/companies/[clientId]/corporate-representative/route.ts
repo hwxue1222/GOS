@@ -93,12 +93,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
-  const body = (await req.json().catch(() => null)) as { representativePersonId?: string; matter?: string } | null;
+  const body = (await req.json().catch(() => null)) as
+    | { representativePersonId?: string; matter?: string; appointmentDateYmd?: string }
+    | null;
   const representativePersonId = typeof body?.representativePersonId === 'string' ? body.representativePersonId : '';
   if (!representativePersonId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   const matter = String(body?.matter ?? '').trim();
-  if (matter.length > 200) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+  if (!matter || matter.length > 200) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  const appointmentDateYmd = String(body?.appointmentDateYmd ?? '').trim();
+  const isValidYmd = (v: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(`${v}T00:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return false;
+    return d.toISOString().slice(0, 10) === v;
+  };
+  if (!isValidYmd(appointmentDateYmd)) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   const person = await findPersonById(representativePersonId);
   if (!person) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
@@ -113,7 +124,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
 
   const directorSigners = directors.map((d) => ({ fullName: d.person.fullName, email: d.person.email }));
 
-  const today = new Date().toISOString().slice(0, 10);
   const html = renderRdrAuthorizationHtml({
     companyName: client.name,
     companyRegistrationNo: client.companyRegistrationNo,
@@ -121,9 +131,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     representativeName: person.fullName,
     representativeEmail: person.email,
     representativeAddress: String((person as any).address ?? '').trim(),
-    matter: matter || 'signing documents',
+    matter,
     directorSigners,
-    dateYmd: today,
+    dateYmd: appointmentDateYmd,
   });
   const doc = await createDocument({ type: 'RDR_AUTH', title: `Corporate Representative - ${client.name}`, html });
 
@@ -142,7 +152,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
     representativePersonId: person.id,
     representativeName: person.fullName,
     representativeEmail: person.email,
-    matter: matter || 'signing documents',
+    matter,
+    appointmentDateYmd,
     packetId: packet.id,
   });
 

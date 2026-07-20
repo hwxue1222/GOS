@@ -418,6 +418,7 @@ export type RepresentativeDesignationRequest = {
   representativeName?: string;
   representativeEmail?: string;
   matter?: string;
+  appointmentDateYmd?: string;
   packetId: string;
   status: RepresentativeDesignationRequestStatus;
   createdAt: string;
