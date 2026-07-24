@@ -40,6 +40,30 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     }
   }
 
+  if (html.includes('TEMPLATE: QUOTATION')) {
+    const serviceCount = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
+    for (let n = serviceCount + 1; n <= 4; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const feeItemCount = Math.max(1, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
+    for (let n = feeItemCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+  }
+
 
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
@@ -389,10 +413,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation（报价）';
-      if (!String(next.service_content ?? '').trim()) {
-        next.service_content =
-          'CORPORATE SECRETARY SERVICE\n' +
-          '\n' +
+      if (!String(next.service_count ?? '').trim()) next.service_count = '1';
+      if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
+      if (!String(next.service_body_1 ?? '').trim()) {
+        next.service_body_1 =
           'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
           '• Maintain various registers（维护各类公司登记册）\n' +
           '• Appointment of local nominee director（任命本地挂名董事）\n' +
@@ -402,14 +426,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           '• Prepare AGM and minutes and submit annual return（准备年股东大会文件和年度申报）\n\n' +
           'Extra charges may apply for special transactions.（特殊事项可能产生额外费用。）';
       }
-      if (!String(next.fee_standard ?? '').trim()) {
-        next.fee_standard =
-          '1. Fee items（乙方收费标准如下：）\n' +
-          '• Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））\n' +
-          '• Local nominee director fee (per year)（本地挂名董事费（一年））\n\n' +
-          '2. The final invoice amount agreed by both parties shall prevail. Other services (if any) are listed in Appendix 1.（以双方协商同意的最终发票金额为准。其他服务，请附录一。）\n\n' +
-          '3. Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应该服务的发票。甲方在10日内付款。）\n\n' +
-          '4. Payment method is as follows:（付款方式如下：）';
+
+      if (!String(next.fee_item_count ?? '').trim()) next.fee_item_count = '2';
+      if (!String((next as any).fee_item_1 ?? '').trim()) {
+        (next as any).fee_item_1 =
+          'Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））';
+      }
+      if (!String((next as any).fee_item_2 ?? '').trim()) {
+        (next as any).fee_item_2 = 'Local nominee director fee (per year)（本地挂名董事费（一年））';
+      }
+      if (!String(next.fee_2 ?? '').trim()) {
+        next.fee_2 =
+          'The final invoice amount agreed by both parties shall prevail. Other services (if any) are listed in Appendix 1.（以双方协商同意的最终发票金额为准。其他服务，请附录一。）';
+      }
+      if (!String(next.fee_3 ?? '').trim()) {
+        next.fee_3 =
+          'Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应该服务的发票。甲方在10日内付款。）';
+      }
+      if (!String(next.fee_4 ?? '').trim()) {
+        next.fee_4 = 'Payment method is as follows:（付款方式如下：）';
       }
       return next;
     });
@@ -1102,6 +1137,174 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : isQuotationTemplate ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-1">
+                      <div className="text-xs font-medium text-black/60">Quotation title（报价标题） *</div>
+                      <input
+                        value={fields.agreement_title ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, agreement_title: e.target.value }))}
+                        className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期） *</div>
+                      <DateInputYMD
+                        value={fields.date ?? ''}
+                        onChange={(next) => setFields((prev) => ({ ...prev, date: next }))}
+                        inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-semibold text-black/70">I. Services provided（服务内容）</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
+                              const nextCount = Math.min(4, cur + 1);
+                              return { ...prev, service_count: String(nextCount) };
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
+                              const nextCount = Math.max(1, cur - 1);
+                              const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= 4; i++) {
+                                delete (next as any)[`service_title_${i}`];
+                                delete (next as any)[`service_body_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          − Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {Array.from({ length: Math.max(1, Math.min(4, Number(fields.service_count ?? '1') || 1)) }, (_, idx) => idx + 1).map(
+                      (n) => (
+                        <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">({n}) Title{n === 1 ? ' *' : ''}</div>
+                            <input
+                              value={(fields as any)[`service_title_${n}`] ?? ''}
+                              onChange={(e) => setFields((prev) => ({ ...prev, [`service_title_${n}`]: e.target.value }))}
+                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                          <div className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                            <textarea
+                              value={(fields as any)[`service_body_${n}`] ?? ''}
+                              onChange={(e) => setFields((prev) => ({ ...prev, [`service_body_${n}`]: e.target.value }))}
+                              rows={5}
+                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-black/10 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                              const nextCount = Math.min(6, cur + 1);
+                              return { ...prev, fee_item_count: String(nextCount) } as any;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                              const nextCount = Math.max(1, cur - 1);
+                              const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= 6; i++) {
+                                delete (next as any)[`fee_item_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          − Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Array.from({ length: Math.max(1, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
+                        (n) => (
+                          <div key={n} className="md:col-span-1">
+                            <div className="text-xs font-medium text-black/60">Item {n}{n <= 2 ? ' *' : ''}</div>
+                            <input
+                              value={(fields as any)[`fee_item_${n}`] ?? ''}
+                              onChange={(e) => setFields((prev) => ({ ...prev, [`fee_item_${n}`]: e.target.value }))}
+                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        ),
+                      )}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-3">
+                      <div>
+                        <div className="text-xs font-medium text-black/60">2. *</div>
+                        <textarea
+                          value={(fields as any).fee_2 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-black/60">3. *</div>
+                        <textarea
+                          value={(fields as any).fee_3 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-black/60">4. *</div>
+                        <textarea
+                          value={(fields as any).fee_4 ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
