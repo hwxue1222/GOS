@@ -232,6 +232,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
   const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
+  const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
   const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
 
   useEffect(() => {
@@ -382,6 +383,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       return next;
     });
   }, [isProfessionalTemplate]);
+
+  useEffect(() => {
+    if (!isQuotationTemplate) return;
+    setFields((prev) => {
+      const next = { ...(prev ?? {}) } as Record<string, string>;
+      if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation';
+      return next;
+    });
+  }, [isQuotationTemplate]);
 
 
   async function saveDraft() {
@@ -1091,6 +1101,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         p.key === 'agreement_date' ||
                         p.key.endsWith('_date');
 
+                      const isMultilineField =
+                        /\b多行\b/.test(p.label) ||
+                        p.key === 'service_content' ||
+                        p.key === 'fee_standard' ||
+                        p.key.endsWith('_content') ||
+                        p.key.endsWith('_standard') ||
+                        p.key.endsWith('_body');
+
                       if (isDateField) {
                         return (
                           <div key={p.key} className="md:col-span-1">
@@ -1141,6 +1159,23 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                 className="col-span-8 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
                               />
                             </div>
+                          </div>
+                        );
+                      }
+
+                      if (isMultilineField) {
+                        return (
+                          <div key={p.key} className="md:col-span-2">
+                            <div className="text-xs font-medium text-black/60">
+                              {p.label}
+                              {p.required ? ' *' : ''}
+                            </div>
+                            <textarea
+                              value={fields[p.key] ?? ''}
+                              onChange={(e) => setFields((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                              rows={6}
+                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
                           </div>
                         );
                       }
