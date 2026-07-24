@@ -80,6 +80,12 @@ export default async function SecretaryAcraFilingPage({
     return 'Company Update';
   };
 
+  const rdrs = Array.isArray((db as any).representativeDesignationRequests)
+    ? (((db as any).representativeDesignationRequests ?? []) as Array<any>)
+    : [];
+  const partyById = new Map(db.parties.map((p) => [p.id, p]));
+  const clientById = new Map(db.clients.map((c) => [c.id, c]));
+
   const csRows = buildSecretaryServiceApplications(db, allowedClientIds)
     .filter((r) => r.status !== 'DRAFT')
     .map((r) => {
@@ -146,6 +152,36 @@ export default async function SecretaryAcraFilingPage({
     .filter((r) => (!filterCompanyId ? true : r.companyId === filterCompanyId))
     .sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
 
+  const rdrRows = rdrs
+    .filter((r) => r && r.triggerType === 'MANUAL_MAINTENANCE')
+    .map((r) => {
+      const companyParty = partyById.get(String(r.companyPartyId ?? '')) as any;
+      const clientId = companyParty && companyParty.type === 'COMPANY' ? String(companyParty.clientId ?? '').trim() : '';
+      if (!clientId) return null;
+      if (allowedClientIds && !allowedClientIds.has(clientId)) return null;
+      const c = clientById.get(clientId) as any;
+      if (!c || c.deletedAt) return null;
+      if (filterCompanyId && c.id !== filterCompanyId) return null;
+      const createdAt = String(r.createdAt ?? '');
+      const updatedAt = String(r.updatedAt ?? createdAt);
+      return {
+        id: `RDR-${String(r.id ?? '')}`,
+        typeLabel: 'Appointment of (GLOBAL) Corporate Representative',
+        viaProxy: true,
+        companyId: c.id,
+        companyName: c.name,
+        applicationDate: createdAt,
+        editDate: updatedAt,
+        status: String(r.status ?? ''),
+        detailsHref: `/corporate-secretary/applications/corporate-representative/${encodeURIComponent(String(r.id ?? ''))}`,
+      };
+    })
+    .filter(Boolean) as any[];
+
+  const mergedCsRows = [...csRows, ...rdrRows].sort(
+    (a, b) => (String(b.editDate ?? '')).localeCompare(String(a.editDate ?? '')) || (String(b.applicationDate ?? '')).localeCompare(String(a.applicationDate ?? '')),
+  );
+
   const incRows = buildIncorporationApplications(db, allowedClientIds, null)
     .filter((a) => (!filterCompanyId ? true : a.companyId === filterCompanyId))
     .filter((a) => a.status === 'SUBMITTED' || a.status === 'PROCESSING' || a.status === 'NEED_MORE_INFO' || a.status === 'REJECTED')
@@ -173,7 +209,7 @@ export default async function SecretaryAcraFilingPage({
 
           <div className="mt-6">
             <div className="mt-3">
-              <SecretaryCsReviewClient rows={csRows} canWrite={canWrite} />
+              <SecretaryCsReviewClient rows={mergedCsRows as any} canWrite={canWrite} />
             </div>
           </div>
 

@@ -24,6 +24,7 @@ export default async function ProxyCompanyPickerPage() {
   }
 
   const canViewAll = hasPermission(user, 'proxy', 'viewAll');
+  const canSecretaryUpdate = hasPermission(user, 'secretary', 'update');
   const db = await readDb();
 
   const visibleClientIds = (() => {
@@ -111,6 +112,10 @@ export default async function ProxyCompanyPickerPage() {
           const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
           if (!createdBy) return null;
           if (!r.viaProxy) return null;
+          const canDelete =
+            canSecretaryUpdate &&
+            req?.createdByUserId === user.id &&
+            !['REJECTED', 'COMPLETE'].includes(String(req?.status ?? ''));
           return {
             id: `CUR-${r.source.id}`,
             typeLabel: labelForCompanyUpdateType(r.type),
@@ -121,12 +126,19 @@ export default async function ProxyCompanyPickerPage() {
             status: r.status,
             createdByName: createdBy.name,
             detailsHref: `/corporate-secretary/applications/company-update/${encodeURIComponent(r.source.id)}`,
+            deleteUrl: canDelete
+              ? `/api/secretary/companies/${encodeURIComponent(r.companyId)}/company-update-requests/${encodeURIComponent(r.source.id)}`
+              : undefined,
           } satisfies ProxySubmittedRecordRow;
         }
 
         if (r.source.kind === 'SHARE_TRANSFER') {
           const log = shareTransferCreateLogById.get(r.source.id) ?? null;
           if (!log || log.actorRole === 'client') return null;
+          const canDelete =
+            canSecretaryUpdate &&
+            String(log.actorUserId ?? '') === user.id &&
+            !['APPROVED', 'REJECTED', 'APPLIED'].includes(String((db.shareTransfers.find((t) => t.id === r.source.id) as any)?.status ?? ''));
           return {
             id: `ST-${r.source.id}`,
             typeLabel: 'Transfer of Shares',
@@ -137,6 +149,7 @@ export default async function ProxyCompanyPickerPage() {
             status: r.status,
             createdByName: String(log.actorName ?? ''),
             detailsHref: `/corporate-secretary/applications/share-transfer/${encodeURIComponent(r.source.id)}`,
+            deleteUrl: canDelete ? `/api/secretary/share-transfers/${encodeURIComponent(r.source.id)}` : undefined,
           } satisfies ProxySubmittedRecordRow;
         }
 
@@ -144,6 +157,10 @@ export default async function ProxyCompanyPickerPage() {
           const req = directorChangeById.get(r.source.id) ?? null;
           const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
           if (!createdBy || createdBy.role === 'client') return null;
+          const canDelete =
+            canSecretaryUpdate &&
+            req?.createdByUserId === user.id &&
+            !['REJECTED', 'APPROVED'].includes(String(req?.status ?? ''));
           return {
             id: `DCR-${r.source.id}`,
             typeLabel: labelForSecretaryServiceType(r.type),
@@ -154,6 +171,9 @@ export default async function ProxyCompanyPickerPage() {
             status: r.status,
             createdByName: createdBy.name,
             detailsHref: `/corporate-secretary/applications/director-change/${encodeURIComponent(r.source.id)}`,
+            deleteUrl: canDelete
+              ? `/api/secretary/companies/${encodeURIComponent(r.companyId)}/director-change-requests/${encodeURIComponent(r.source.id)}`
+              : undefined,
           } satisfies ProxySubmittedRecordRow;
         }
 
@@ -161,6 +181,10 @@ export default async function ProxyCompanyPickerPage() {
           const req = rorcById.get(r.source.id) ?? null;
           const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
           if (!createdBy || createdBy.role === 'client') return null;
+          const canDelete =
+            canSecretaryUpdate &&
+            req?.createdByUserId === user.id &&
+            !['REJECTED', 'COMPLETE'].includes(String(req?.status ?? ''));
           return {
             id: `RORC-${r.source.id}`,
             typeLabel: labelForSecretaryServiceType(r.type),
@@ -171,6 +195,9 @@ export default async function ProxyCompanyPickerPage() {
             status: r.status,
             createdByName: createdBy.name,
             detailsHref: `/corporate-secretary/applications/rorc/${encodeURIComponent(r.source.id)}`,
+            deleteUrl: canDelete
+              ? `/api/secretary/companies/${encodeURIComponent(r.companyId)}/rorc-declaration-requests/${encodeURIComponent(r.source.id)}`
+              : undefined,
           } satisfies ProxySubmittedRecordRow;
         }
 
@@ -178,6 +205,10 @@ export default async function ProxyCompanyPickerPage() {
           const req = agmById.get(r.source.id) ?? null;
           const createdBy = req?.createdByUserId ? userById.get(req.createdByUserId) ?? null : null;
           if (!createdBy || createdBy.role === 'client') return null;
+          const canDelete =
+            canSecretaryUpdate &&
+            req?.createdByUserId === user.id &&
+            !['REJECTED', 'COMPLETE'].includes(String(req?.status ?? ''));
           return {
             id: `AGM-${r.source.id}`,
             typeLabel: labelForSecretaryServiceType(r.type),
@@ -188,6 +219,9 @@ export default async function ProxyCompanyPickerPage() {
             status: r.status,
             createdByName: createdBy.name,
             detailsHref: `/corporate-secretary/applications/agm/${encodeURIComponent(r.source.id)}`,
+            deleteUrl: canDelete
+              ? `/api/secretary/companies/${encodeURIComponent(r.companyId)}/annual-general-meeting-requests/${encodeURIComponent(r.source.id)}`
+              : undefined,
           } satisfies ProxySubmittedRecordRow;
         }
 
@@ -205,6 +239,10 @@ export default async function ProxyCompanyPickerPage() {
         const c = clientById.get(clientId) as any;
         if (!c || c.deletedAt) return null;
         const createdBy = r.createdByUserId ? (userById.get(String(r.createdByUserId)) ?? null) : null;
+        const canDelete =
+          canSecretaryUpdate &&
+          String(r.status ?? '') === 'SIGNING' &&
+          String(r.createdByUserId ?? '') === user.id;
         return {
           id: `RDR-${String(r.id ?? '')}`,
           typeLabel: 'Appointment of (GLOBAL) Corporate Representative',
@@ -215,6 +253,9 @@ export default async function ProxyCompanyPickerPage() {
           status: String(r.status ?? ''),
           createdByName: createdBy?.name ?? '-',
           detailsHref: `/corporate-secretary/applications/corporate-representative/${encodeURIComponent(String(r.id ?? ''))}`,
+          deleteUrl: canDelete
+            ? `/api/secretary/companies/${encodeURIComponent(c.id)}/corporate-representative/${encodeURIComponent(String(r.id ?? ''))}`
+            : undefined,
         } satisfies ProxySubmittedRecordRow;
       })
       .filter(Boolean) as ProxySubmittedRecordRow[];

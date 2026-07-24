@@ -55,8 +55,24 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ clientId: s
   }
 
   if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  const r = await deleteRejectedDirectorChangeRequest({ requestId });
-  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+
+  const r1 = await deleteDirectorChangeRequest({ requestId, deletedByUserId: user.id });
+  if (r1.ok) {
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'secretary',
+      action: 'delete_director_change_request',
+      entityType: 'director_change_request',
+      entityId: requestId,
+      summary: `Delete director change request: ${requestId}`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  const r2 = await deleteRejectedDirectorChangeRequest({ requestId });
+  if (!r2.ok) return NextResponse.json({ ok: false, error: r2.error }, { status: 400 });
   await appendAuditLog({
     actorUserId: user.id,
     actorName: user.name,

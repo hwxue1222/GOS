@@ -55,8 +55,24 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ clientId: s
   }
 
   if (!hasPermission(user, 'secretary', 'update')) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  const r = await deleteRejectedAnnualGeneralMeetingRequest({ requestId });
-  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+
+  const r1 = await deleteAnnualGeneralMeetingRequest({ requestId, deletedByUserId: user.id });
+  if (r1.ok) {
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'secretary',
+      action: 'delete_annual_general_meeting_request',
+      entityType: 'annual_general_meeting_request',
+      entityId: requestId,
+      summary: `Delete AGM request: ${requestId}`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  const r2 = await deleteRejectedAnnualGeneralMeetingRequest({ requestId });
+  if (!r2.ok) return NextResponse.json({ ok: false, error: r2.error }, { status: 400 });
   await appendAuditLog({
     actorUserId: user.id,
     actorName: user.name,

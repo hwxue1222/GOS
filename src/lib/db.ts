@@ -10942,6 +10942,31 @@ export async function deleteAnnualGeneralMeetingRequest(input: { requestId: stri
   return { ok: true as const, request: r };
 }
 
+export async function deleteRepresentativeDesignationRequest(input: { requestId: string; deletedByUserId: string }) {
+  const db = await readDb();
+  const list = Array.isArray((db as unknown as { representativeDesignationRequests?: unknown }).representativeDesignationRequests)
+    ? (((db as unknown as { representativeDesignationRequests?: RepresentativeDesignationRequest[] }).representativeDesignationRequests ?? []) as RepresentativeDesignationRequest[])
+    : [];
+  const idx = list.findIndex((r) => r.id === input.requestId);
+  if (idx < 0) return { ok: false as const, error: 'NOT_FOUND' as const };
+
+  const r = list[idx];
+  if (r.createdByUserId !== input.deletedByUserId) return { ok: false as const, error: 'FORBIDDEN' as const };
+  if (r.status !== 'SIGNING') return { ok: false as const, error: 'INVALID_STATE' as const };
+
+  const packets = db.signaturePackets.filter((p) => p.relatedType === 'RDR' && p.relatedId === r.id);
+  if (packets.length) {
+    for (const p of packets) deleteSignaturePacketCascade(db, p.id);
+  } else {
+    deleteSignaturePacketCascade(db, r.packetId);
+  }
+
+  list.splice(idx, 1);
+  (db as unknown as { representativeDesignationRequests?: RepresentativeDesignationRequest[] }).representativeDesignationRequests = list;
+  await writeDb(db);
+  return { ok: true as const, request: r };
+}
+
 export async function deleteRejectedAnnualGeneralMeetingRequest(input: { requestId: string }) {
   const db = await readDb();
   const list = Array.isArray((db as unknown as { annualGeneralMeetingRequests?: unknown }).annualGeneralMeetingRequests)

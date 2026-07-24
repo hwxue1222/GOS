@@ -14,7 +14,7 @@ export type ReviewRow = {
   editDate: string;
   status: string;
   detailsHref: string;
-  decisionUrl: string;
+  decisionUrl?: string;
   deleteUrl?: string;
 };
 
@@ -32,6 +32,7 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
   async function decide(row: ReviewRow, decision: 'APPROVE' | 'REJECT') {
     if (busyId) return;
     if (!canWrite) return;
+    if (!row.decisionUrl) return;
     setError(null);
     setBusyId(row.id);
     try {
@@ -131,7 +132,7 @@ export default function SecretaryCsReviewClient({ rows, canWrite }: { rows: Revi
                         >
                           Delete
                         </button>
-                      ) : r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO' ? (
+                      ) : r.decisionUrl && (r.status === 'PENDING_REVIEW' || r.status === 'SIGNING' || r.status === 'NEED_MORE_INFO') ? (
                         <>
                           <button
                             disabled={!!busyId}

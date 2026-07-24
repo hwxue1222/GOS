@@ -60,8 +60,23 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ clientId: s
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
-  const r = await deleteRejectedCompanyUpdateRequest({ requestId });
-  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  const r1 = await deleteCompanyUpdateRequest({ requestId, deletedByUserId: user.id });
+  if (r1.ok) {
+    await appendAuditLog({
+      actorUserId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      area: 'secretary',
+      action: 'delete_company_update_request',
+      entityType: 'company_update_request',
+      entityId: requestId,
+      summary: `Delete company update request: ${requestId}`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  const r2 = await deleteRejectedCompanyUpdateRequest({ requestId });
+  if (!r2.ok) return NextResponse.json({ ok: false, error: r2.error }, { status: 400 });
   await appendAuditLog({
     actorUserId: user.id,
     actorName: user.name,

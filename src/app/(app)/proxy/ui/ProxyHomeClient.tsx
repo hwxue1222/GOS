@@ -23,6 +23,7 @@ export type ProxySubmittedRecordRow = {
   status: string;
   createdByName: string;
   detailsHref: string;
+  deleteUrl?: string;
 };
 
 function statusPill(s: string) {
@@ -38,6 +39,8 @@ function statusPill(s: string) {
 export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[]; records: ProxySubmittedRecordRow[] }) {
   const router = useRouter();
   const [recordQ, setRecordQ] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const visibleRecords = useMemo(() => {
     const needle = recordQ.trim().toLowerCase();
@@ -57,6 +60,8 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
             <div className="mt-1 text-xs text-black/60">你只会看到已授权可代理进入的公司</div>
           </div>
         </div>
+
+        {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <select
@@ -128,6 +133,33 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
                       <Link href={r.detailsHref} className="rounded-md bg-[#14b8a6] text-white px-3 py-1.5 text-xs font-medium hover:brightness-95">
                         Details
                       </Link>
+                      {r.deleteUrl ? (
+                        <button
+                          type="button"
+                          disabled={!!busyId}
+                          onClick={async () => {
+                            if (busyId) return;
+                            const ok = window.confirm(`Delete application ${r.id}?`);
+                            if (!ok) return;
+                            setError(null);
+                            setBusyId(r.id);
+                            try {
+                              const res = await fetch(r.deleteUrl!, { method: 'DELETE' }).catch(() => null);
+                              const j = await res?.json().catch(() => null);
+                              if (!res?.ok) {
+                                setError(j?.error ?? `HTTP_${res?.status ?? 'NETWORK'}`);
+                                return;
+                              }
+                              router.refresh();
+                            } finally {
+                              setBusyId(null);
+                            }
+                          }}
+                          className="rounded-md bg-white border border-black/10 text-red-600 px-3 py-1.5 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

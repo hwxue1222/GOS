@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { deleteRejectedShareTransfer, deleteShareTransfer, readDb } from '@/lib/db';
+import { appendAuditLog, deleteRejectedShareTransfer, deleteShareTransfer, readDb } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
 function isActiveDirector(r: { role: string; resignationDate?: string }) {
@@ -40,11 +40,30 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ transferId:
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
     }
     const st = String((t as any).status ?? '');
+    const auditLogs = Array.isArray((db as any).auditLogs) ? ((db as any).auditLogs as Array<any>) : [];
+    const createdByLog =
+      auditLogs
+        .filter((l) => l?.area === 'secretary' && l?.action === 'create_share_transfer' && l?.entityType === 'share_transfer' && l?.entityId === t.id)
+        .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))[0] ?? null;
+    const createdByMe = createdByLog && String(createdByLog.actorUserId ?? '') === user.id;
+
     if (st === 'REJECTED') {
       const r = await deleteRejectedShareTransfer({ transferId });
       if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+      await appendAuditLog({
+        actorUserId: user.id,
+        actorName: user.name,
+        actorRole: user.role,
+        area: 'secretary',
+        action: 'delete_rejected_share_transfer',
+        entityType: 'share_transfer',
+        entityId: transferId,
+        summary: `Delete rejected share transfer: ${transferId}`,
+      });
       return NextResponse.json({ ok: true });
     }
+
+    if (!createdByMe) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   } else {
     if (!(await canAccessClientAsDirector(user, t.clientId))) {
       return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
@@ -53,5 +72,15 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ transferId:
 
   const r = await deleteShareTransfer({ transferId });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 400 });
+  await appendAuditLog({
+    actorUserId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    area: 'secretary',
+    action: 'delete_share_transfer',
+    entityType: 'share_transfer',
+    entityId: transferId,
+    summary: `Delete share transfer: ${transferId}`,
+  });
   return NextResponse.json({ ok: true });
 }
