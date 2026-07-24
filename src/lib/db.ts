@@ -178,6 +178,7 @@ const SEED_KEY_CLIENT_COUNTRY_INCORP_V1 = 'clients.countryOfIncorporation.v1';
 const SEED_KEY_CONTRACTS_MODULE_V1 = 'contracts.module.v1';
 const SEED_KEY_CONTRACTS_TEMPLATES_V48 = 'contracts.templates.v48';
 const SEED_KEY_CONTRACTS_TEMPLATES_V49 = 'contracts.templates.v49';
+const SEED_KEY_CONTRACTS_TEMPLATES_V50 = 'contracts.templates.v50';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -1622,6 +1623,122 @@ function seedContractsTemplatesV49(db: Db) {
   changed = true;
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V49] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV50(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V50]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+
+  const quotationTpl: ContractTemplate = {
+    id: idx >= 0 ? templates[idx].id : newId('ctp'),
+    name: 'Quotation（报价）',
+    engine: 'HTML',
+    placeholders: [
+      { key: 'agreement_title', label: 'Quotation title（报价标题）', required: true },
+      { key: 'date', label: 'Date (YYYY-MM-DD)（日期）', required: true },
+      { key: 'partyA_name', label: 'Party A (Company name)（甲方公司名称）', required: true },
+      { key: 'partyA_email', label: 'Party A email（甲方邮箱）', required: true },
+      { key: 'service_content', label: 'Service content（服务内容，多行）', required: true },
+      { key: 'fee_standard', label: 'Fee standard（收费标准，多行）', required: true },
+    ],
+    templateHtml: `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- TEMPLATE: QUOTATION -->
+    <title>{{agreement_title}}</title>
+    <style>
+      :root { --text: #111; --muted: #4b5563; --line: rgba(17, 24, 39, 0.18); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body { color: var(--text); font-family: "Times New Roman", ui-serif, serif; line-height: 1.55; font-size: 12px; background: #f3f4f6; overflow-x: hidden; }
+      .sheet { padding: 18px 12px; counter-reset: page; }
+      .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
+      .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+      @media (max-width: 720px) { .page { padding: 22px 16px; } .logo { height: 38px; } }
+      @media print { body { background: #fff; } .sheet { padding: 0; } .page { margin: 0; box-shadow: none; padding: 36px 42px; } .page + .page { break-before: page; } .page::after { content: none; } }
+
+      .header { display: flex; align-items: flex-start; justify-content: center; gap: 16px; }
+      .logo { height: 44px; width: auto; object-fit: contain; }
+      .meta-row { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 11px; color: var(--muted); text-align: right; }
+      .meta-row b { color: var(--text); font-weight: 700; }
+      .meta-row span { white-space: nowrap; color: var(--text); }
+      .title { margin-top: 10px; text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.2px; }
+      .subtitle { margin-top: 2px; text-align: center; font-size: 14px; font-weight: 700; }
+      .divider { margin-top: 14px; height: 1px; background: var(--line); }
+
+      .parties { margin-top: 14px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+      .parties .row { display: grid; grid-template-columns: 160px 1fr; }
+      .parties .row + .row { border-top: 1px solid var(--line); }
+      .parties .k { padding: 8px 10px; background: rgba(17, 24, 39, 0.03); font-weight: 700; }
+      .parties .v { padding: 8px 10px; }
+
+      .section { margin-top: 14px; }
+      .section-title { font-weight: 800; font-size: 12px; margin-top: 12px; }
+      .p { margin: 6px 0; color: var(--text); }
+      .muted { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <div class="page">
+        <div class="header">
+          <img class="logo" src="/contracts/image2.png" alt="BBY" />
+        </div>
+
+        <div class="meta-row">
+          <div><b>Contract No:</b> <span>{{contract_no}}</span></div>
+          <div><b>Date:</b> <span>{{date}}</span></div>
+        </div>
+
+        <div class="title">{{agreement_title}}</div>
+        <div class="subtitle">（报价）</div>
+        <div class="divider"></div>
+
+        <div class="parties">
+          <div class="row"><div class="k">Party A</div><div class="v">{{partyA_name}}</div></div>
+          <div class="row"><div class="k">Email（邮箱）</div><div class="v">{{partyA_email}}</div></div>
+          <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
+          <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
+          <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">I. Services provided（服务内容）</div>
+          <div class="p">{{service_content}}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">IV. Fees（收费标准）</div>
+          <div class="p">{{fee_standard}}</div>
+        </div>
+
+        <div class="section">
+          <div class="p muted">This quotation is for reference only and is subject to final confirmation.（本报价仅供参考，以最终确认/发票为准。）</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`,
+    createdAt: idx >= 0 ? templates[idx].createdAt : now,
+    updatedAt: now,
+  };
+
+  if (idx >= 0) templates[idx] = quotationTpl;
+  else templates.unshift(quotationTpl);
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  changed = true;
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V50] = true;
   return changed;
 }
 
@@ -6894,6 +7011,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsModuleV1(db)) changed = true;
   if (seedContractsTemplatesV48(db)) changed = true;
   if (seedContractsTemplatesV49(db)) changed = true;
+  if (seedContractsTemplatesV50(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

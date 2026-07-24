@@ -388,7 +388,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (!isQuotationTemplate) return;
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
-      if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation';
+      if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation（报价）';
+      if (!String(next.service_content ?? '').trim()) {
+        next.service_content =
+          'CORPORATE SECRETARY SERVICE\n' +
+          '\n' +
+          'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
+          '• Maintain various registers（维护各类公司登记册）\n' +
+          '• Appointment of local nominee director（任命本地挂名董事）\n' +
+          '• Update of changes filed with ACRA（更新公司信息并向ACRA备案）\n' +
+          '• Provision of registered office address（提供公司注册地址/办公地址）\n' +
+          '• Prepare resolutions and ACRA filings（准备公司决议文件并办理ACRA申报）\n' +
+          '• Prepare AGM and minutes and submit annual return（准备年股东大会文件和年度申报）\n\n' +
+          'Extra charges may apply for special transactions.（特殊事项可能产生额外费用。）';
+      }
+      if (!String(next.fee_standard ?? '').trim()) {
+        next.fee_standard =
+          '1. Fee items（乙方收费标准如下：）\n' +
+          '• Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））\n' +
+          '• Local nominee director fee (per year)（本地挂名董事费（一年））\n\n' +
+          '2. The final invoice amount agreed by both parties shall prevail. Other services (if any) are listed in Appendix 1.（以双方协商同意的最终发票金额为准。其他服务，请附录一。）\n\n' +
+          '3. Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应该服务的发票。甲方在10日内付款。）\n\n' +
+          '4. Payment method is as follows:（付款方式如下：）';
+      }
       return next;
     });
   }, [isQuotationTemplate]);
