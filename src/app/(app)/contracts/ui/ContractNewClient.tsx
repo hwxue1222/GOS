@@ -871,7 +871,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          + Add service（新增服务条目）
+                          + Add
                         </button>
                         <button
                           type="button"
@@ -889,7 +889,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          − Remove last service（删除最后一条服务）
+                          − Remove
                         </button>
                       </div>
                     </div>
@@ -1175,7 +1175,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          + Add service（新增服务条目）
+                          + Add
                         </button>
                         <button
                           type="button"
@@ -1193,7 +1193,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          − Remove last service（删除最后一条服务）
+                          − Remove
                         </button>
                       </div>
                     </div>
@@ -1238,7 +1238,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          + Add fee item（新增收费条目）
+                          + Add
                         </button>
                         <button
                           type="button"
@@ -1255,7 +1255,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          − Remove last fee item（删除最后一条收费）
+                          − Remove
                         </button>
                       </div>
                     </div>
