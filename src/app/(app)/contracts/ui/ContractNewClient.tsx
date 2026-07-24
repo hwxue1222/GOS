@@ -270,6 +270,29 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
   const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
 
+  const parseBulletBody = (rawInput: string) => {
+    const raw = String(rawInput ?? '').replaceAll('\r', '');
+    const lines = raw.split('\n');
+    const isBullet = (s: string) => /^([•\u2022\-\*·])\s+/.test(s.trim());
+    const stripBullet = (s: string) => s.trim().replace(/^([•\u2022\-\*·])\s+/, '').trim();
+    const bulletStart = lines.findIndex((l) => isBullet(l));
+    if (bulletStart < 0) return { intro: raw.trim(), items: [] as string[] };
+    const intro = lines.slice(0, bulletStart).join('\n').trim();
+    const items = lines
+      .slice(bulletStart)
+      .map((l) => stripBullet(l))
+      .filter((v) => !!v);
+    return { intro, items };
+  };
+
+  const buildBulletBody = (input: { intro: string; items: string[] }) => {
+    const intro = String(input.intro ?? '').trim();
+    const items = (input.items ?? []).map((x) => String(x ?? '').trim()).filter((v) => !!v);
+    const bullets = items.map((x) => `• ${x}`).join('\n');
+    if (intro && bullets) return `${intro}\n\n${bullets}`;
+    return intro || bullets;
+  };
+
   useEffect(() => {
     if (!isNomineeTemplate) return;
     const raw = String((fields as any).annual_fee ?? '').trim();
@@ -1226,12 +1249,81 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           </div>
                           <div className="md:col-span-1">
                             <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
-                            <textarea
-                              value={(fields as any)[`service_body_${n}`] ?? ''}
-                              onChange={(e) => setFields((prev) => ({ ...prev, [`service_body_${n}`]: e.target.value }))}
-                              rows={5}
-                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                            />
+                            {(() => {
+                              const key = `service_body_${n}`;
+                              const parsed = parseBulletBody((fields as any)[key] ?? '');
+                              return (
+                                <div className="mt-1">
+                                  <textarea
+                                    value={parsed.intro}
+                                    onChange={(e) =>
+                                      setFields((prev) => ({
+                                        ...prev,
+                                        [key]: buildBulletBody({ intro: e.target.value, items: parseBulletBody((prev as any)[key] ?? '').items }),
+                                      }))
+                                    }
+                                    rows={2}
+                                    className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                  />
+
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <div className="text-xs font-medium text-black/60">Items</div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = [...cur.items, ''];
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        + Add
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        − Remove
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 space-y-2">
+                                    {parsed.items.length ? (
+                                      parsed.items.map((v, idx) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                          <div className="text-sm text-black/60">•</div>
+                                          <input
+                                            value={v}
+                                            onChange={(e) =>
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.slice();
+                                                nextItems[idx] = e.target.value;
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                              })
+                                            }
+                                            className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                          />
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="text-xs text-black/40">No items</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ),
