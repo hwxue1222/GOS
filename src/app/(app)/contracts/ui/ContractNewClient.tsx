@@ -871,7 +871,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          + Add
+                          + Add service
                         </button>
                         <button
                           type="button"
@@ -889,7 +889,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          − Remove
+                          − Remove last service
                         </button>
                       </div>
                     </div>
@@ -1175,7 +1175,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          + Add
+                          + Add fee item
                         </button>
                         <button
                           type="button"
@@ -1193,7 +1193,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           }
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
-                          − Remove
+                          − Remove last fee item
                         </button>
                       </div>
                     </div>
