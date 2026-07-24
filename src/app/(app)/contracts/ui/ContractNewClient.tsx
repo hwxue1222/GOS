@@ -1225,7 +1225,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                   <div className="rounded-lg border border-black/10 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
+                      <div className="text-xs font-semibold text-black/70">II. Fees（收费标准）</div>
                       <div className="flex gap-2">
                         <button
                           type="button"
