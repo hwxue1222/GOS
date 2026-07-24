@@ -2960,5 +2960,40 @@ export function renderContractHtml(input: {
     }
   }
 
+  if (html.includes('TEMPLATE: QUOTATION')) {
+    const serviceCount = Math.max(1, Math.min(4, Number((input.fields ?? {}).service_count ?? '1') || 1));
+    for (let n = serviceCount + 1; n <= 4; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const feeItemCount = Math.max(2, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '2') || 2));
+    for (let n = feeItemCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const feeClauseCount = Math.max(3, Math.min(6, Number((input.fields ?? {}).fee_clause_count ?? '3') || 3));
+    for (let n = feeClauseCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-clause"\\s+data-fee-clause="${n}">[\\s\\S]*?<!--\\s*END_FEE_CLAUSE_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+  }
+
   return html;
 }

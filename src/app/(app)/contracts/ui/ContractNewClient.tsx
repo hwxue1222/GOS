@@ -52,11 +52,22 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const feeItemCount = Math.max(1, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
+    const feeItemCount = Math.max(2, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
     for (let n = feeItemCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
           `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const feeClauseCount = Math.max(3, Math.min(6, Number(map.fee_clause_count ?? '3') || 3));
+    for (let n = feeClauseCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-clause"\\s+data-fee-clause="${n}">[\\s\\S]*?<!--\\s*END_FEE_CLAUSE_${n}\\s*-->\\s*`,
           'g',
         ),
         '',
@@ -435,16 +446,20 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String((next as any).fee_item_2 ?? '').trim()) {
         (next as any).fee_item_2 = 'Local nominee director fee (per year)（本地挂名董事费（一年））';
       }
-      if (!String(next.fee_2 ?? '').trim()) {
-        next.fee_2 =
+
+      if (!String(next.fee_clause_count ?? '').trim()) next.fee_clause_count = '3';
+      if (!String((next as any).fee_clause_1 ?? '').trim()) {
+        (next as any).fee_clause_1 =
+          String((next as any).fee_2 ?? '').trim() ||
           'The final invoice amount agreed by both parties shall prevail. Other services (if any) are listed in Appendix 1.（以双方协商同意的最终发票金额为准。其他服务，请附录一。）';
       }
-      if (!String(next.fee_3 ?? '').trim()) {
-        next.fee_3 =
+      if (!String((next as any).fee_clause_2 ?? '').trim()) {
+        (next as any).fee_clause_2 =
+          String((next as any).fee_3 ?? '').trim() ||
           'Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应该服务的发票。甲方在10日内付款。）';
       }
-      if (!String(next.fee_4 ?? '').trim()) {
-        next.fee_4 = 'Payment method is as follows:（付款方式如下：）';
+      if (!String((next as any).fee_clause_3 ?? '').trim()) {
+        (next as any).fee_clause_3 = String((next as any).fee_4 ?? '').trim() || 'Payment method is as follows:（付款方式如下：）';
       }
       return next;
     });
@@ -1244,8 +1259,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
-                              const nextCount = Math.max(1, cur - 1);
+                              const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                              const nextCount = Math.max(2, cur - 1);
                               const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
                               for (let i = nextCount + 1; i <= 6; i++) {
                                 delete (next as any)[`fee_item_${i}`];
@@ -1277,33 +1292,55 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     </div>
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
-                      <div>
-                        <div className="text-xs font-medium text-black/60">2. *</div>
-                        <textarea
-                          value={(fields as any).fee_2 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium text-black/60">2–{Number((fields as any).fee_clause_count ?? '3') + 1}. *</div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFields((prev) => {
+                                const cur = Math.max(3, Math.min(6, Number((prev as any).fee_clause_count ?? '3') || 3));
+                                const nextCount = Math.min(6, cur + 1);
+                                return { ...prev, fee_clause_count: String(nextCount) } as any;
+                              })
+                            }
+                            className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                          >
+                            + Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFields((prev) => {
+                                const cur = Math.max(3, Math.min(6, Number((prev as any).fee_clause_count ?? '3') || 3));
+                                const nextCount = Math.max(3, cur - 1);
+                                const next = { ...prev, fee_clause_count: String(nextCount) } as Record<string, string>;
+                                for (let i = nextCount + 1; i <= 6; i++) {
+                                  delete (next as any)[`fee_clause_${i}`];
+                                }
+                                return next;
+                              })
+                            }
+                            className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                          >
+                            − Remove
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-xs font-medium text-black/60">3. *</div>
-                        <textarea
-                          value={(fields as any).fee_3 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-black/60">4. *</div>
-                        <textarea
-                          value={(fields as any).fee_4 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
+
+                      {Array.from({ length: Math.max(3, Math.min(6, Number((fields as any).fee_clause_count ?? '3') || 3)) }, (_, idx) => idx + 1).map(
+                        (n) => (
+                          <div key={n}>
+                            <div className="text-xs font-medium text-black/60">{n + 1}. {n <= 3 ? '*' : ''}</div>
+                            <textarea
+                              value={(fields as any)[`fee_clause_${n}`] ?? ''}
+                              onChange={(e) => setFields((prev) => ({ ...prev, [`fee_clause_${n}`]: e.target.value }))}
+                              rows={2}
+                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        ),
+                      )}
                     </div>
                   </div>
                 </div>
