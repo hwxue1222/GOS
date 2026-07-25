@@ -317,8 +317,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const buildBulletBody = (input: { intro: string; items: string[]; note?: string }) => {
     const intro = String(input.intro ?? '').trim();
     const items = (input.items ?? []).map((x) => {
-      const v = String(x ?? '').trim();
-      return v ? v : EMPTY_ITEM_TOKEN;
+      const v = String(x ?? '');
+      return v === '' ? EMPTY_ITEM_TOKEN : v;
     });
     const note = String(input.note ?? '').trim();
     const bullets = items.map((x) => `• ${x}`).join('\n');
@@ -1057,7 +1057,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                               setFields((prev) => {
                                                 const cur = parseBulletBody((prev as any)[key] ?? '');
                                                 const nextItems = cur.items.slice();
-                                                nextItems[idx] = e.target.value.trim() ? e.target.value : EMPTY_ITEM_TOKEN;
+                                                nextItems[idx] = e.target.value === '' ? EMPTY_ITEM_TOKEN : e.target.value;
                                                 return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
@@ -1477,7 +1477,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                               setFields((prev) => {
                                                 const cur = parseBulletBody((prev as any)[key] ?? '');
                                                 const nextItems = cur.items.slice();
-                                                nextItems[idx] = e.target.value.trim() ? e.target.value : EMPTY_ITEM_TOKEN;
+                                                nextItems[idx] = e.target.value === '' ? EMPTY_ITEM_TOKEN : e.target.value;
                                                 return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
