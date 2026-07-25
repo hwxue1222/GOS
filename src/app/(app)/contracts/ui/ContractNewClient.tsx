@@ -1313,7 +1313,37 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                     className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                   />
 
-                                  <div className="mt-2 text-xs font-medium text-black/60">Items</div>
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <div className="text-xs font-medium text-black/60">Items</div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = [...cur.items, ''];
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        + Add
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        − Remove
+                                      </button>
+                                    </div>
+                                  </div>
 
                                   <div className="mt-2 space-y-2">
                                     {parsed.items.length ? (
