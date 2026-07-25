@@ -42,6 +42,17 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
         '',
       );
     }
+
+    const feeItemCount = Math.max(2, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
+    for (let n = feeItemCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
   }
 
   if (html.includes('TEMPLATE: QUOTATION')) {
@@ -455,6 +466,21 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String(next.law_2 ?? '').trim()) {
         next.law_2 =
           'If the matter cannot be resolved by mutual consultation, it shall be submitted to arbitration in Singapore and the arbitral award shall be final and binding.（协商不成的，提交新加坡仲裁并作出最终裁决。）';
+      }
+
+      if (!String((next as any).fee_item_count ?? '').trim()) (next as any).fee_item_count = '2';
+      if (!String((next as any).fee_item_1 ?? '').trim()) {
+        (next as any).fee_item_1 = String((next as any).fee_1_item_1 ?? '').trim();
+      }
+      if (!String((next as any).fee_item_2 ?? '').trim()) {
+        (next as any).fee_item_2 = String((next as any).fee_1_item_2 ?? '').trim();
+      }
+
+      if (!String((next as any).fee_1_item_1 ?? '').trim() && String((next as any).fee_item_1 ?? '').trim()) {
+        (next as any).fee_1_item_1 = String((next as any).fee_item_1 ?? '').trim();
+      }
+      if (!String((next as any).fee_1_item_2 ?? '').trim() && String((next as any).fee_item_2 ?? '').trim()) {
+        (next as any).fee_1_item_2 = String((next as any).fee_item_2 ?? '').trim();
       }
 
       if (!String(next.signer_date ?? '').trim()) next.signer_date = String(next.date ?? '').trim() || new Date().toISOString().slice(0, 10);
@@ -1105,23 +1131,59 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
 
                     <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
-                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Item 1 *</div>
-                        <input
-                          value={fields.fee_1_item_1 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_1_item_1: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Item 2 *</div>
-                        <input
-                          value={fields.fee_1_item_2 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_1_item_2: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFields((prev) => {
+                            const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                            const nextCount = Math.min(6, cur + 1);
+                            return { ...prev, fee_item_count: String(nextCount) } as any;
+                          })
+                        }
+                        className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                      >
+                        + Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFields((prev) => {
+                            const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                            const nextCount = Math.max(2, cur - 1);
+                            const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
+                            for (let i = nextCount + 1; i <= 6; i++) {
+                              delete (next as any)[`fee_item_${i}`];
+                            }
+                            return next;
+                          })
+                        }
+                        className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                      >
+                        − Remove
+                      </button>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-1 gap-3">
+                      {Array.from({ length: Math.max(2, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
+                        (n) => (
+                          <div key={n}>
+                            <div className="text-xs font-medium text-black/60">Item {n}{n <= 2 ? ' *' : ''}</div>
+                            <input
+                              value={(fields as any)[`fee_item_${n}`] ?? ''}
+                              onChange={(e) =>
+                                setFields((prev) => {
+                                  const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
+                                  if (n === 1) next.fee_1_item_1 = e.target.value;
+                                  if (n === 2) next.fee_1_item_2 = e.target.value;
+                                  return next;
+                                })
+                              }
+                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                          </div>
+                        ),
+                      )}
                     </div>
 
                     <div className="mt-3 grid grid-cols-1 gap-3">

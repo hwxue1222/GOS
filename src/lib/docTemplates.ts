@@ -2925,6 +2925,13 @@ export function renderContractHtml(input: {
     ...(input.fields ?? {}),
   };
 
+  if (String(input.templateHtml ?? '').includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
+    const f = input.fields ?? {};
+    if (!String(map.fee_item_count ?? '').trim()) map.fee_item_count = String((f as any).fee_item_count ?? '').trim() || '2';
+    if (!String(map.fee_item_1 ?? '').trim()) map.fee_item_1 = String((f as any).fee_1_item_1 ?? '').trim();
+    if (!String(map.fee_item_2 ?? '').trim()) map.fee_item_2 = String((f as any).fee_1_item_2 ?? '').trim();
+  }
+
   let html = String(input.templateHtml ?? '');
   for (const [k, v] of Object.entries(map)) {
     const key = String(k ?? '').trim();
@@ -2957,6 +2964,17 @@ export function renderContractHtml(input: {
       html = html.replace(
         new RegExp(
           `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const feeItemCount = Math.max(2, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '2') || 2));
+    for (let n = feeItemCount + 1; n <= 6; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
           'g',
         ),
         '',

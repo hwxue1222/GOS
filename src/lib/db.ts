@@ -183,6 +183,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V51 = 'contracts.templates.v51';
 const SEED_KEY_CONTRACTS_TEMPLATES_V52 = 'contracts.templates.v52';
 const SEED_KEY_CONTRACTS_TEMPLATES_V53 = 'contracts.templates.v53';
 const SEED_KEY_CONTRACTS_TEMPLATES_V54 = 'contracts.templates.v54';
+const SEED_KEY_CONTRACTS_TEMPLATES_V55 = 'contracts.templates.v55';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -656,8 +657,15 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'service_body_3', label: 'Services provided (3) body（服务(3)正文）', required: false },
       { key: 'service_title_4', label: 'Services provided (4) title（服务(4)标题）', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body（服务(4)正文）', required: false },
-      { key: 'fee_1_item_1', label: 'Fees (1) item 1（收费标准1-1）', required: true },
-      { key: 'fee_1_item_2', label: 'Fees (1) item 2（收费标准1-2）', required: true },
+      { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
+      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
+      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+      { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
+      { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
+      { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
+      { key: 'fee_item_6', label: 'Fee item (6)（收费条目6）', required: false },
+      { key: 'fee_1_item_1', label: 'Fees (1) item 1（收费标准1-1）', required: false },
+      { key: 'fee_1_item_2', label: 'Fees (1) item 2（收费标准1-2）', required: false },
       { key: 'fee_2', label: 'Fees (2)（收费标准2）', required: true },
       { key: 'fee_3', label: 'Fees (3)（收费标准3）', required: true },
       { key: 'fee_4', label: 'Fees (4)（收费标准4）', required: true },
@@ -735,6 +743,9 @@ function seedContractsTemplatesV48(db: Db) {
       .svc-no { font-weight: 800; }
       .svc-title { font-weight: 800; }
       .svc-body { margin-top: 6px; padding-left: 54px; }
+
+      .fee-items { margin-top: 6px; }
+      .fee-item { margin: 6px 0; padding-left: 14px; }
 
       .sig { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
@@ -821,8 +832,14 @@ function seedContractsTemplatesV48(db: Db) {
         <div class="section">
           <div class="section-title">IV. FEES（收费标准）</div>
           <div class="p"><b>1.</b> Party B's fee standard is as follows:（乙方收费标准如下：）</div>
-          <div class="p" style="padding-left:14px;">○ {{fee_1_item_1}}</div>
-          <div class="p" style="padding-left:14px;">○ {{fee_1_item_2}}</div>
+          <div class="fee-items">
+            <div class="fee-item" data-fee-item="1">○ {{fee_item_1}}</div><!-- END_FEE_ITEM_1 -->
+            <div class="fee-item" data-fee-item="2">○ {{fee_item_2}}</div><!-- END_FEE_ITEM_2 -->
+            <div class="fee-item" data-fee-item="3">○ {{fee_item_3}}</div><!-- END_FEE_ITEM_3 -->
+            <div class="fee-item" data-fee-item="4">○ {{fee_item_4}}</div><!-- END_FEE_ITEM_4 -->
+            <div class="fee-item" data-fee-item="5">○ {{fee_item_5}}</div><!-- END_FEE_ITEM_5 -->
+            <div class="fee-item" data-fee-item="6">○ {{fee_item_6}}</div><!-- END_FEE_ITEM_6 -->
+          </div>
           <div class="p"><b>2.</b> {{fee_2}}</div>
           <div class="p"><b>3.</b> {{fee_3}}</div>
           <div class="p"><b>4.</b> {{fee_4}}</div>
@@ -2150,6 +2167,69 @@ function seedContractsTemplatesV54(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V54] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV55(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V55]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx < 0) {
+    db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V55] = true;
+    return true;
+  }
+
+  const tpl = templates[idx];
+  const placeholders = (tpl.placeholders ?? [])
+    .filter((p) => !['fee_item_count', 'fee_item_1', 'fee_item_2', 'fee_item_3', 'fee_item_4', 'fee_item_5', 'fee_item_6'].includes(p.key))
+    .map((p) => {
+      if (p.key === 'fee_1_item_1' || p.key === 'fee_1_item_2') return { ...p, required: false };
+      return p;
+    });
+
+  const insertAfterKey = (key: string, list: ContractTemplate['placeholders'], toInsert: ContractTemplate['placeholders']) => {
+    const i = list.findIndex((p) => p.key === key);
+    if (i < 0) return [...list, ...toInsert];
+    return [...list.slice(0, i + 1), ...toInsert, ...list.slice(i + 1)];
+  };
+
+  const newFeePlaceholders: ContractTemplate['placeholders'] = [
+    { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
+    { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
+    { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+    { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
+    { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
+    { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
+    { key: 'fee_item_6', label: 'Fee item (6)（收费条目6）', required: false },
+  ];
+
+  const updatedPlaceholders = insertAfterKey('service_body_4', placeholders, newFeePlaceholders);
+
+  let html = String(tpl.templateHtml ?? '');
+  if (!html.includes('data-fee-item="1"')) {
+    if (!html.includes('.fee-item')) {
+      html = html.replace(
+        '.svc-body { margin-top: 6px; padding-left: 54px; }',
+        '.svc-body { margin-top: 6px; padding-left: 54px; }\n\n      .fee-items { margin-top: 6px; }\n      .fee-item { margin: 6px 0; padding-left: 14px; }',
+      );
+    }
+
+    html = html.replace(
+      /<div class="p" style="padding-left:14px;">○ \{\{fee_1_item_1\}\}<\/div>\s*<div class="p" style="padding-left:14px;">○ \{\{fee_1_item_2\}\}<\/div>/,
+      '<div class="fee-items">\n            <div class="fee-item" data-fee-item="1">○ {{fee_item_1}}</div><!-- END_FEE_ITEM_1 -->\n            <div class="fee-item" data-fee-item="2">○ {{fee_item_2}}</div><!-- END_FEE_ITEM_2 -->\n            <div class="fee-item" data-fee-item="3">○ {{fee_item_3}}</div><!-- END_FEE_ITEM_3 -->\n            <div class="fee-item" data-fee-item="4">○ {{fee_item_4}}</div><!-- END_FEE_ITEM_4 -->\n            <div class="fee-item" data-fee-item="5">○ {{fee_item_5}}</div><!-- END_FEE_ITEM_5 -->\n            <div class="fee-item" data-fee-item="6">○ {{fee_item_6}}</div><!-- END_FEE_ITEM_6 -->\n          </div>',
+    );
+  }
+
+  templates[idx] = { ...tpl, placeholders: updatedPlaceholders, templateHtml: html, updatedAt: now };
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  changed = true;
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V55] = true;
   return changed;
 }
 
@@ -7427,6 +7507,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV52(db)) changed = true;
   if (seedContractsTemplatesV53(db)) changed = true;
   if (seedContractsTemplatesV54(db)) changed = true;
+  if (seedContractsTemplatesV55(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
