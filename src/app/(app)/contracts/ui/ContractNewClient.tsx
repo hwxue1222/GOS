@@ -292,19 +292,20 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const parseBulletBody = (rawInput: string) => {
     const raw = String(rawInput ?? '').replaceAll('\r', '');
+    const stripEdgeNewlines = (s: string) => s.replace(/^\n+/, '').replace(/\n+$/, '');
     const lines = raw.split('\n');
     const isBullet = (s: string) => /^\s*([•\u2022\-\*·])\s+/.test(s);
     const stripBullet = (s: string) => s.replace(/^\s*([•\u2022\-\*·])\s+/, '');
     const bulletStart = lines.findIndex((l) => isBullet(l));
-    if (bulletStart < 0) return { intro: raw, items: [] as string[], note: '' };
-    const intro = lines.slice(0, bulletStart).join('\n');
+    if (bulletStart < 0) return { intro: stripEdgeNewlines(raw), items: [] as string[], note: '' };
+    const intro = stripEdgeNewlines(lines.slice(0, bulletStart).join('\n'));
     const rest = lines.slice(bulletStart);
     const noteStart = rest.findIndex((l, idx) => idx > 0 && !isBullet(l) && !!l.trim());
     const bulletLines = (noteStart < 0 ? rest : rest.slice(0, noteStart)).filter((l) => isBullet(l));
     const noteLines = noteStart < 0 ? [] : rest.slice(noteStart);
 
     const items = bulletLines.map((l) => stripBullet(l)).filter((v) => !!v);
-    let note = noteLines.join('\n');
+    let note = stripEdgeNewlines(noteLines.join('\n'));
 
     if (items.length) {
       const last = items[items.length - 1];
@@ -330,6 +331,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (bullets && note) return `${bullets}\n\n${note}`;
     return intro || bullets || note;
   };
+
+  const itemInputId = (key: string, idx: number) => `${key}__item__${idx}`;
 
   useEffect(() => {
     if (!isNomineeTemplate) return;
@@ -1060,6 +1063,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                         <div key={idx} className="flex items-center gap-2">
                                           <div className="text-sm text-black/60">•</div>
                                           <input
+                                            id={itemInputId(key, idx)}
                                             value={v === EMPTY_ITEM_TOKEN ? '' : v}
                                             onChange={(e) =>
                                               setFields((prev) => {
@@ -1069,6 +1073,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                                 return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
+                                            onKeyDown={(e) => {
+                                              if (e.key !== 'Backspace') return;
+                                              if (e.currentTarget.selectionStart !== 0 || e.currentTarget.selectionEnd !== 0) return;
+                                              if (e.currentTarget.value !== '') return;
+                                              if (idx <= 0) return;
+                                              e.preventDefault();
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.filter((_, i) => i !== idx);
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                              });
+                                              requestAnimationFrame(() => {
+                                                const el = document.getElementById(itemInputId(key, idx - 1)) as HTMLInputElement | null;
+                                                if (!el) return;
+                                                el.focus();
+                                                const len = el.value.length;
+                                                el.setSelectionRange(len, len);
+                                              });
+                                            }}
                                             className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                           />
                                           <button
@@ -1496,6 +1519,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                         <div key={idx} className="flex items-center gap-2">
                                           <div className="text-sm text-black/60">•</div>
                                           <input
+                                            id={itemInputId(key, idx)}
                                             value={v === EMPTY_ITEM_TOKEN ? '' : v}
                                             onChange={(e) =>
                                               setFields((prev) => {
@@ -1505,6 +1529,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                                 return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
+                                            onKeyDown={(e) => {
+                                              if (e.key !== 'Backspace') return;
+                                              if (e.currentTarget.selectionStart !== 0 || e.currentTarget.selectionEnd !== 0) return;
+                                              if (e.currentTarget.value !== '') return;
+                                              if (idx <= 0) return;
+                                              e.preventDefault();
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.filter((_, i) => i !== idx);
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                              });
+                                              requestAnimationFrame(() => {
+                                                const el = document.getElementById(itemInputId(key, idx - 1)) as HTMLInputElement | null;
+                                                if (!el) return;
+                                                el.focus();
+                                                const len = el.value.length;
+                                                el.setSelectionRange(len, len);
+                                              });
+                                            }}
                                             className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                           />
                                           <button
