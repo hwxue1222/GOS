@@ -290,22 +290,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const parseBulletBody = (rawInput: string) => {
     const raw = String(rawInput ?? '').replaceAll('\r', '');
     const lines = raw.split('\n');
-    const isBullet = (s: string) => /^([•\u2022\-\*·])\s+/.test(s.trim());
-    const stripBullet = (s: string) => s.trim().replace(/^([•\u2022\-\*·])\s+/, '').trim();
+    const isBullet = (s: string) => /^\s*([•\u2022\-\*·])\s+/.test(s);
+    const stripBullet = (s: string) => s.replace(/^\s*([•\u2022\-\*·])\s+/, '');
     const bulletStart = lines.findIndex((l) => isBullet(l));
-    if (bulletStart < 0) return { intro: raw.trim(), items: [] as string[], note: '' };
-    const intro = lines.slice(0, bulletStart).join('\n').trim();
+    if (bulletStart < 0) return { intro: raw, items: [] as string[], note: '' };
+    const intro = lines.slice(0, bulletStart).join('\n');
     const rest = lines.slice(bulletStart);
     const noteStart = rest.findIndex((l, idx) => idx > 0 && !isBullet(l) && !!l.trim());
     const bulletLines = (noteStart < 0 ? rest : rest.slice(0, noteStart)).filter((l) => isBullet(l));
     const noteLines = noteStart < 0 ? [] : rest.slice(noteStart);
 
     const items = bulletLines.map((l) => stripBullet(l)).filter((v) => !!v);
-    let note = noteLines.join('\n').trim();
+    let note = noteLines.join('\n');
 
     if (items.length) {
       const last = items[items.length - 1];
-      if (/^extra\s+charges\s+may\s+apply/i.test(last)) {
+      if (/^extra\s+charges\s+may\s+apply/i.test(last.trimStart())) {
         items.pop();
         note = note ? `${last}\n${note}` : last;
       }
@@ -315,12 +315,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   };
 
   const buildBulletBody = (input: { intro: string; items: string[]; note?: string }) => {
-    const intro = String(input.intro ?? '').trim();
+    const intro = String(input.intro ?? '');
     const items = (input.items ?? []).map((x) => {
       const v = String(x ?? '');
       return v === '' ? EMPTY_ITEM_TOKEN : v;
     });
-    const note = String(input.note ?? '').trim();
+    const note = String(input.note ?? '');
     const bullets = items.map((x) => `• ${x}`).join('\n');
     if (intro && bullets && note) return `${intro}\n\n${bullets}\n\n${note}`;
     if (intro && bullets) return `${intro}\n\n${bullets}`;
