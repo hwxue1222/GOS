@@ -28,8 +28,11 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 
   html = html.replaceAll('__EMPTY__', '');
-  html = html.replace(/•\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
-  html = html.replace(/•\s*(?=<\/)/g, '');
+  if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
+    html = html.replaceAll('•', '·');
+  }
+  html = html.replace(/[•·]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
+  html = html.replace(/[•·]\s*(?=<\/)/g, '');
 
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
     const count = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
@@ -321,7 +324,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       return v === '' ? EMPTY_ITEM_TOKEN : v;
     });
     const note = String(input.note ?? '');
-    const bullets = items.map((x) => `• ${x}`).join('\n');
+    const bullets = items.map((x) => `· ${x}`).join('\n');
     if (intro && bullets && note) return `${intro}\n\n${bullets}\n\n${note}`;
     if (intro && bullets) return `${intro}\n\n${bullets}`;
     if (bullets && note) return `${bullets}\n\n${note}`;
