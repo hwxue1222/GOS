@@ -355,10 +355,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (!isProfessionalTemplate) return;
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
+      const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
-      if (!String(next.service_body_1 ?? '').trim()) {
+      if (!hasKey('service_body_1')) {
         next.service_body_1 =
           'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
           '• Maintain various registers（维护各类公司登记册）\n' +
@@ -496,10 +497,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (!isQuotationTemplate) return;
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
+      const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation（报价）';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
-      if (!String(next.service_body_1 ?? '').trim()) {
+      if (!hasKey('service_body_1')) {
         next.service_body_1 =
           'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
           '• Maintain various registers（维护各类公司登记册）\n' +
