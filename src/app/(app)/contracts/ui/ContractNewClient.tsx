@@ -971,14 +971,96 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           </div>
                           <div className="md:col-span-1">
                             <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
-                            <textarea
-                              value={(fields as any)[`service_body_${n}`] ?? ''}
-                              onChange={(e) =>
-                                setFields((prev) => ({ ...prev, [`service_body_${n}`]: e.target.value }))
-                              }
-                              rows={5}
-                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                            />
+                            {(() => {
+                              const key = `service_body_${n}`;
+                              const parsed = parseBulletBody((fields as any)[key] ?? '');
+                              return (
+                                <div className="mt-1">
+                                  <textarea
+                                    value={parsed.intro}
+                                    onChange={(e) =>
+                                      setFields((prev) => ({
+                                        ...prev,
+                                        [key]: buildBulletBody({ intro: e.target.value, items: parseBulletBody((prev as any)[key] ?? '').items, note: parseBulletBody((prev as any)[key] ?? '').note }),
+                                      }))
+                                    }
+                                    rows={2}
+                                    className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                  />
+
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <div className="text-xs font-medium text-black/60">Items</div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = [...cur.items, EMPTY_ITEM_TOKEN];
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        + Add
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFields((prev) => {
+                                            const cur = parseBulletBody((prev as any)[key] ?? '');
+                                            const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                          })
+                                        }
+                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                      >
+                                        − Remove
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 space-y-2">
+                                    {parsed.items.length ? (
+                                      parsed.items.map((v, idx) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                          <div className="text-sm text-black/60">•</div>
+                                          <input
+                                            value={v === EMPTY_ITEM_TOKEN ? '' : v}
+                                            onChange={(e) =>
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.slice();
+                                                nextItems[idx] = e.target.value.trim() ? e.target.value : EMPTY_ITEM_TOKEN;
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                              })
+                                            }
+                                            className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                          />
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="text-xs text-black/40">No items</div>
+                                    )}
+                                  </div>
+
+                                  <div className="mt-3">
+                                    <div className="text-xs font-medium text-black/60">Note</div>
+                                    <textarea
+                                      value={parsed.note}
+                                      onChange={(e) =>
+                                        setFields((prev) => {
+                                          const cur = parseBulletBody((prev as any)[key] ?? '');
+                                          return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: cur.items, note: e.target.value }) } as any;
+                                        })
+                                      }
+                                      rows={2}
+                                      className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ),
