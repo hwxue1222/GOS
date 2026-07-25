@@ -182,6 +182,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V50 = 'contracts.templates.v50';
 const SEED_KEY_CONTRACTS_TEMPLATES_V51 = 'contracts.templates.v51';
 const SEED_KEY_CONTRACTS_TEMPLATES_V52 = 'contracts.templates.v52';
 const SEED_KEY_CONTRACTS_TEMPLATES_V53 = 'contracts.templates.v53';
+const SEED_KEY_CONTRACTS_TEMPLATES_V54 = 'contracts.templates.v54';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -368,8 +369,8 @@ function seedContractsTemplatesV48(db: Db) {
         overflow-x: hidden;
       }
       .sheet { padding: 18px 12px; counter-reset: page; }
-      .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px; }
-      .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+      .page { width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto 14px; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.08); position: relative; padding: 36px 42px 60px 42px; }
+      .page::after { counter-increment: page; content: 'Page ' counter(page); position: absolute; bottom: 6mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
       @media (max-width: 720px) {
         .page { padding: 22px 16px; }
         .logo { height: 38px; }
@@ -2121,6 +2122,34 @@ function seedContractsTemplatesV53(db: Db) {
   changed = true;
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V53] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV54(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V54]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx < 0) {
+    db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V54] = true;
+    return true;
+  }
+
+  const tpl = templates[idx];
+  let html = String(tpl.templateHtml ?? '');
+  html = html.replaceAll('padding: 36px 42px;', 'padding: 36px 42px 60px 42px;');
+  html = html.replaceAll('bottom: 10mm;', 'bottom: 6mm;');
+  if (html !== String(tpl.templateHtml ?? '')) {
+    templates[idx] = { ...tpl, templateHtml: html, updatedAt: now };
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V54] = true;
   return changed;
 }
 
@@ -7397,6 +7426,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV51(db)) changed = true;
   if (seedContractsTemplatesV52(db)) changed = true;
   if (seedContractsTemplatesV53(db)) changed = true;
+  if (seedContractsTemplatesV54(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
