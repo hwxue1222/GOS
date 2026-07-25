@@ -184,6 +184,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V52 = 'contracts.templates.v52';
 const SEED_KEY_CONTRACTS_TEMPLATES_V53 = 'contracts.templates.v53';
 const SEED_KEY_CONTRACTS_TEMPLATES_V54 = 'contracts.templates.v54';
 const SEED_KEY_CONTRACTS_TEMPLATES_V55 = 'contracts.templates.v55';
+const SEED_KEY_CONTRACTS_TEMPLATES_V56 = 'contracts.templates.v56';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2230,6 +2231,34 @@ function seedContractsTemplatesV55(db: Db) {
   changed = true;
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V55] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV56(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V56]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx < 0) {
+    db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V56] = true;
+    return true;
+  }
+
+  const tpl = templates[idx];
+  let html = String(tpl.templateHtml ?? '');
+  html = html.replaceAll('padding: 36px 42px;', 'padding: 36px 42px 60px 42px;');
+  html = html.replaceAll('bottom: 10mm;', 'bottom: 6mm;');
+  if (html !== String(tpl.templateHtml ?? '')) {
+    templates[idx] = { ...tpl, templateHtml: html, updatedAt: now };
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V56] = true;
   return changed;
 }
 
@@ -7508,6 +7537,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV53(db)) changed = true;
   if (seedContractsTemplatesV54(db)) changed = true;
   if (seedContractsTemplatesV55(db)) changed = true;
+  if (seedContractsTemplatesV56(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
