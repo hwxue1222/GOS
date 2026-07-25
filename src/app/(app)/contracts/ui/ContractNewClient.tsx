@@ -63,7 +63,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const feeClauseCount = Math.max(3, Math.min(6, Number(map.fee_clause_count ?? '3') || 3));
+    const feeClauseCount = Math.max(2, Math.min(6, Number(map.fee_clause_count ?? '2') || 2));
     for (let n = feeClauseCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
@@ -276,21 +276,36 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const isBullet = (s: string) => /^([•\u2022\-\*·])\s+/.test(s.trim());
     const stripBullet = (s: string) => s.trim().replace(/^([•\u2022\-\*·])\s+/, '').trim();
     const bulletStart = lines.findIndex((l) => isBullet(l));
-    if (bulletStart < 0) return { intro: raw.trim(), items: [] as string[] };
+    if (bulletStart < 0) return { intro: raw.trim(), items: [] as string[], note: '' };
     const intro = lines.slice(0, bulletStart).join('\n').trim();
-    const items = lines
-      .slice(bulletStart)
-      .map((l) => stripBullet(l))
-      .filter((v) => !!v);
-    return { intro, items };
+    const rest = lines.slice(bulletStart);
+    const noteStart = rest.findIndex((l, idx) => idx > 0 && !isBullet(l) && !!l.trim());
+    const bulletLines = (noteStart < 0 ? rest : rest.slice(0, noteStart)).filter((l) => isBullet(l));
+    const noteLines = noteStart < 0 ? [] : rest.slice(noteStart);
+
+    const items = bulletLines.map((l) => stripBullet(l)).filter((v) => !!v);
+    let note = noteLines.join('\n').trim();
+
+    if (items.length) {
+      const last = items[items.length - 1];
+      if (/^extra\s+charges\s+may\s+apply/i.test(last)) {
+        items.pop();
+        note = note ? `${last}\n${note}` : last;
+      }
+    }
+
+    return { intro, items, note };
   };
 
-  const buildBulletBody = (input: { intro: string; items: string[] }) => {
+  const buildBulletBody = (input: { intro: string; items: string[]; note?: string }) => {
     const intro = String(input.intro ?? '').trim();
     const items = (input.items ?? []).map((x) => String(x ?? '').trim()).filter((v) => !!v);
+    const note = String(input.note ?? '').trim();
     const bullets = items.map((x) => `• ${x}`).join('\n');
+    if (intro && bullets && note) return `${intro}\n\n${bullets}\n\n${note}`;
     if (intro && bullets) return `${intro}\n\n${bullets}`;
-    return intro || bullets;
+    if (bullets && note) return `${bullets}\n\n${note}`;
+    return intro || bullets || note;
   };
 
   useEffect(() => {
@@ -470,7 +485,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         (next as any).fee_item_2 = 'Local nominee director fee (per year)（本地挂名董事费（一年））';
       }
 
-      if (!String(next.fee_clause_count ?? '').trim()) next.fee_clause_count = '3';
+      if (!String(next.fee_clause_count ?? '').trim()) next.fee_clause_count = '2';
       if (!String((next as any).fee_clause_1 ?? '').trim()) {
         (next as any).fee_clause_1 =
           String((next as any).fee_2 ?? '').trim() ||
@@ -481,8 +496,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           String((next as any).fee_3 ?? '').trim() ||
           'Upon signing this Agreement, Party B shall issue the invoice(s) for the corresponding services, and Party A shall make payment within ten (10) days.（签署本合同，同时乙方需向甲方提供对应该服务的发票。甲方在10日内付款。）';
       }
-      if (!String((next as any).fee_clause_3 ?? '').trim()) {
-        (next as any).fee_clause_3 = String((next as any).fee_4 ?? '').trim() || 'Payment method is as follows:（付款方式如下：）';
+      if (!String((next as any).fee_clause_3 ?? '').trim() && String((next as any).fee_4 ?? '').trim()) {
+        (next as any).fee_clause_3 = String((next as any).fee_4 ?? '').trim();
       }
       return next;
     });
@@ -1275,7 +1290,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                           setFields((prev) => {
                                             const cur = parseBulletBody((prev as any)[key] ?? '');
                                             const nextItems = [...cur.items, ''];
-                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                           })
                                         }
                                         className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
@@ -1288,7 +1303,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                           setFields((prev) => {
                                             const cur = parseBulletBody((prev as any)[key] ?? '');
                                             const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
-                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                           })
                                         }
                                         className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
@@ -1310,7 +1325,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                                 const cur = parseBulletBody((prev as any)[key] ?? '');
                                                 const nextItems = cur.items.slice();
                                                 nextItems[idx] = e.target.value;
-                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems }) } as any;
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
                                             className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
@@ -1320,6 +1335,21 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                     ) : (
                                       <div className="text-xs text-black/40">No items</div>
                                     )}
+                                  </div>
+
+                                  <div className="mt-3">
+                                    <div className="text-xs font-medium text-black/60">Note</div>
+                                    <textarea
+                                      value={parsed.note}
+                                      onChange={(e) =>
+                                        setFields((prev) => {
+                                          const cur = parseBulletBody((prev as any)[key] ?? '');
+                                          return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: cur.items, note: e.target.value }) } as any;
+                                        })
+                                      }
+                                      rows={2}
+                                      className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                    />
                                   </div>
                                 </div>
                               );
@@ -1368,7 +1398,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     </div>
 
                     <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
-                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="mt-2 grid grid-cols-1 gap-3">
                       {Array.from({ length: Math.max(1, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                         (n) => (
                           <div key={n} className="md:col-span-1">
@@ -1385,13 +1415,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div className="flex items-center justify-between">
-                        <div className="text-xs font-medium text-black/60">2–{Number((fields as any).fee_clause_count ?? '3') + 1}. *</div>
+                        <div className="text-xs font-medium text-black/60">2–{Number((fields as any).fee_clause_count ?? '2') + 1}.</div>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() =>
                               setFields((prev) => {
-                                const cur = Math.max(3, Math.min(6, Number((prev as any).fee_clause_count ?? '3') || 3));
+                                const cur = Math.max(2, Math.min(6, Number((prev as any).fee_clause_count ?? '2') || 2));
                                 const nextCount = Math.min(6, cur + 1);
                                 return { ...prev, fee_clause_count: String(nextCount) } as any;
                               })
@@ -1404,8 +1434,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             type="button"
                             onClick={() =>
                               setFields((prev) => {
-                                const cur = Math.max(3, Math.min(6, Number((prev as any).fee_clause_count ?? '3') || 3));
-                                const nextCount = Math.max(3, cur - 1);
+                                const cur = Math.max(2, Math.min(6, Number((prev as any).fee_clause_count ?? '2') || 2));
+                                const nextCount = Math.max(2, cur - 1);
                                 const next = { ...prev, fee_clause_count: String(nextCount) } as Record<string, string>;
                                 for (let i = nextCount + 1; i <= 6; i++) {
                                   delete (next as any)[`fee_clause_${i}`];
@@ -1420,10 +1450,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         </div>
                       </div>
 
-                      {Array.from({ length: Math.max(3, Math.min(6, Number((fields as any).fee_clause_count ?? '3') || 3)) }, (_, idx) => idx + 1).map(
+                      {Array.from({ length: Math.max(2, Math.min(6, Number((fields as any).fee_clause_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                         (n) => (
                           <div key={n}>
-                            <div className="text-xs font-medium text-black/60">{n + 1}. {n <= 3 ? '*' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">{n + 1}. {n <= 2 ? '*' : ''}</div>
                             <textarea
                               value={(fields as any)[`fee_clause_${n}`] ?? ''}
                               onChange={(e) => setFields((prev) => ({ ...prev, [`fee_clause_${n}`]: e.target.value }))}

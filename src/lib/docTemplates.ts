@@ -2983,7 +2983,7 @@ export function renderContractHtml(input: {
       );
     }
 
-    const feeClauseCount = Math.max(3, Math.min(6, Number((input.fields ?? {}).fee_clause_count ?? '3') || 3));
+    const feeClauseCount = Math.max(2, Math.min(6, Number((input.fields ?? {}).fee_clause_count ?? '2') || 2));
     for (let n = feeClauseCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
