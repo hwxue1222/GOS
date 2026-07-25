@@ -1216,6 +1216,39 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   <div className="rounded-lg border border-black/10 p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-xs font-semibold text-black/70">I. Services provided（服务内容）</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
+                              const nextCount = Math.min(4, cur + 1);
+                              return { ...prev, service_count: String(nextCount) };
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
+                              const nextCount = Math.max(1, cur - 1);
+                              const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= 4; i++) {
+                                delete (next as any)[`service_title_${i}`];
+                                delete (next as any)[`service_body_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          − Remove
+                        </button>
+                      </div>
                     </div>
 
                     {Array.from({ length: Math.max(1, Math.min(4, Number(fields.service_count ?? '1') || 1)) }, (_, idx) => idx + 1).map(
@@ -1230,7 +1263,39 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             />
                           </div>
                           <div className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFields((prev) => {
+                                      const key = `service_body_${n}`;
+                                      const cur = parseBulletBody((prev as any)[key] ?? '');
+                                      const nextItems = [...cur.items, ''];
+                                      return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                    })
+                                  }
+                                  className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                >
+                                  + Add
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFields((prev) => {
+                                      const key = `service_body_${n}`;
+                                      const cur = parseBulletBody((prev as any)[key] ?? '');
+                                      const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
+                                      return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                    })
+                                  }
+                                  className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                                >
+                                  − Remove
+                                </button>
+                              </div>
+                            </div>
                             {(() => {
                               const key = `service_body_${n}`;
                               const parsed = parseBulletBody((fields as any)[key] ?? '');
@@ -1248,37 +1313,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                     className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                   />
 
-                                  <div className="mt-2 flex items-center justify-between">
-                                    <div className="text-xs font-medium text-black/60">Items</div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setFields((prev) => {
-                                            const cur = parseBulletBody((prev as any)[key] ?? '');
-                                            const nextItems = [...cur.items, ''];
-                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
-                                          })
-                                        }
-                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                                      >
-                                        + Add
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setFields((prev) => {
-                                            const cur = parseBulletBody((prev as any)[key] ?? '');
-                                            const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
-                                            return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
-                                          })
-                                        }
-                                        className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                                      >
-                                        − Remove
-                                      </button>
-                                    </div>
-                                  </div>
+                                  <div className="mt-2 text-xs font-medium text-black/60">Items</div>
 
                                   <div className="mt-2 space-y-2">
                                     {parsed.items.length ? (
