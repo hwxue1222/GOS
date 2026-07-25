@@ -185,6 +185,8 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V53 = 'contracts.templates.v53';
 const SEED_KEY_CONTRACTS_TEMPLATES_V54 = 'contracts.templates.v54';
 const SEED_KEY_CONTRACTS_TEMPLATES_V55 = 'contracts.templates.v55';
 const SEED_KEY_CONTRACTS_TEMPLATES_V56 = 'contracts.templates.v56';
+const SEED_KEY_CONTRACTS_TEMPLATES_V57 = 'contracts.templates.v57';
+const SEED_KEY_CONTRACTS_TEMPLATES_V58 = 'contracts.templates.v58';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -658,6 +660,18 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'service_body_3', label: 'Services provided (3) body（服务(3)正文）', required: false },
       { key: 'service_title_4', label: 'Services provided (4) title（服务(4)标题）', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body（服务(4)正文）', required: false },
+      { key: 'service_title_5', label: 'Services provided (5) title（服务(5)标题）', required: false },
+      { key: 'service_body_5', label: 'Services provided (5) body（服务(5)正文）', required: false },
+      { key: 'service_title_6', label: 'Services provided (6) title（服务(6)标题）', required: false },
+      { key: 'service_body_6', label: 'Services provided (6) body（服务(6)正文）', required: false },
+      { key: 'service_title_7', label: 'Services provided (7) title（服务(7)标题）', required: false },
+      { key: 'service_body_7', label: 'Services provided (7) body（服务(7)正文）', required: false },
+      { key: 'service_title_8', label: 'Services provided (8) title（服务(8)标题）', required: false },
+      { key: 'service_body_8', label: 'Services provided (8) body（服务(8)正文）', required: false },
+      { key: 'service_title_9', label: 'Services provided (9) title（服务(9)标题）', required: false },
+      { key: 'service_body_9', label: 'Services provided (9) body（服务(9)正文）', required: false },
+      { key: 'service_title_10', label: 'Services provided (10) title（服务(10)标题）', required: false },
+      { key: 'service_body_10', label: 'Services provided (10) body（服务(10)正文）', required: false },
       { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
       { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
       { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
@@ -814,6 +828,30 @@ function seedContractsTemplatesV48(db: Db) {
             <div class="svc-head"><span class="svc-no">(4)</span><span class="svc-title">{{service_title_4}}</span></div>
             <div class="svc-body">{{service_body_4}}</div>
           </div><!-- END_SVC_4 -->
+          <div class="svc-item" data-svc-item="5">
+            <div class="svc-head"><span class="svc-no">(5)</span><span class="svc-title">{{service_title_5}}</span></div>
+            <div class="svc-body">{{service_body_5}}</div>
+          </div><!-- END_SVC_5 -->
+          <div class="svc-item" data-svc-item="6">
+            <div class="svc-head"><span class="svc-no">(6)</span><span class="svc-title">{{service_title_6}}</span></div>
+            <div class="svc-body">{{service_body_6}}</div>
+          </div><!-- END_SVC_6 -->
+          <div class="svc-item" data-svc-item="7">
+            <div class="svc-head"><span class="svc-no">(7)</span><span class="svc-title">{{service_title_7}}</span></div>
+            <div class="svc-body">{{service_body_7}}</div>
+          </div><!-- END_SVC_7 -->
+          <div class="svc-item" data-svc-item="8">
+            <div class="svc-head"><span class="svc-no">(8)</span><span class="svc-title">{{service_title_8}}</span></div>
+            <div class="svc-body">{{service_body_8}}</div>
+          </div><!-- END_SVC_8 -->
+          <div class="svc-item" data-svc-item="9">
+            <div class="svc-head"><span class="svc-no">(9)</span><span class="svc-title">{{service_title_9}}</span></div>
+            <div class="svc-body">{{service_body_9}}</div>
+          </div><!-- END_SVC_9 -->
+          <div class="svc-item" data-svc-item="10">
+            <div class="svc-head"><span class="svc-no">(10)</span><span class="svc-title">{{service_title_10}}</span></div>
+            <div class="svc-body">{{service_body_10}}</div>
+          </div><!-- END_SVC_10 -->
         </div>
 
         <div class="section">
@@ -2259,6 +2297,144 @@ function seedContractsTemplatesV56(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V56] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV57(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V57]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const existing = new Set((tpl.placeholders ?? []).map((p) => p.key));
+    const extra: ContractTemplate['placeholders'] = [];
+    for (let n = 5; n <= 10; n++) {
+      if (!existing.has(`service_title_${n}`)) {
+        extra.push({ key: `service_title_${n}`, label: `Services provided (${n}) title（服务(${n})标题）`, required: false });
+      }
+      if (!existing.has(`service_body_${n}`)) {
+        extra.push({ key: `service_body_${n}`, label: `Services provided (${n}) body（服务(${n})正文）`, required: false });
+      }
+    }
+
+    const placeholders = (() => {
+      if (!extra.length) return tpl.placeholders ?? [];
+      const list = (tpl.placeholders ?? []).slice();
+      const i = list.findIndex((p) => p.key === 'service_body_4');
+      if (i < 0) return [...list, ...extra];
+      return [...list.slice(0, i + 1), ...extra, ...list.slice(i + 1)];
+    })();
+
+    let html = String(tpl.templateHtml ?? '');
+    if (!html.includes('data-svc-item="5"')) {
+      const insert =
+        '          <div class="svc-item" data-svc-item="5">\n' +
+        '            <div class="svc-head"><span class="svc-no">(5)</span><span class="svc-title">{{service_title_5}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_5}}</div>\n' +
+        '          </div><!-- END_SVC_5 -->\n' +
+        '          <div class="svc-item" data-svc-item="6">\n' +
+        '            <div class="svc-head"><span class="svc-no">(6)</span><span class="svc-title">{{service_title_6}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_6}}</div>\n' +
+        '          </div><!-- END_SVC_6 -->\n' +
+        '          <div class="svc-item" data-svc-item="7">\n' +
+        '            <div class="svc-head"><span class="svc-no">(7)</span><span class="svc-title">{{service_title_7}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_7}}</div>\n' +
+        '          </div><!-- END_SVC_7 -->\n' +
+        '          <div class="svc-item" data-svc-item="8">\n' +
+        '            <div class="svc-head"><span class="svc-no">(8)</span><span class="svc-title">{{service_title_8}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_8}}</div>\n' +
+        '          </div><!-- END_SVC_8 -->\n' +
+        '          <div class="svc-item" data-svc-item="9">\n' +
+        '            <div class="svc-head"><span class="svc-no">(9)</span><span class="svc-title">{{service_title_9}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_9}}</div>\n' +
+        '          </div><!-- END_SVC_9 -->\n' +
+        '          <div class="svc-item" data-svc-item="10">\n' +
+        '            <div class="svc-head"><span class="svc-no">(10)</span><span class="svc-title">{{service_title_10}}</span></div>\n' +
+        '            <div class="svc-body">{{service_body_10}}</div>\n' +
+        '          </div><!-- END_SVC_10 -->\n';
+      html = html.replace('</div><!-- END_SVC_4 -->', `</div><!-- END_SVC_4 -->\n${insert}`);
+    }
+
+    templates[idx] = { ...tpl, placeholders, templateHtml: html, updatedAt: now };
+    changed = true;
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V57] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV58(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V58]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const existing = new Set((tpl.placeholders ?? []).map((p) => p.key));
+    const extra: ContractTemplate['placeholders'] = [];
+    for (let n = 5; n <= 10; n++) {
+      if (!existing.has(`service_title_${n}`)) {
+        extra.push({ key: `service_title_${n}`, label: `Services provided (${n}) title（服务(${n})标题）`, required: false });
+      }
+      if (!existing.has(`service_body_${n}`)) {
+        extra.push({ key: `service_body_${n}`, label: `Services provided (${n}) body（服务(${n})正文）`, required: false });
+      }
+    }
+
+    const placeholders = (() => {
+      if (!extra.length) return tpl.placeholders ?? [];
+      const list = (tpl.placeholders ?? []).slice();
+      const i = list.findIndex((p) => p.key === 'service_body_4');
+      if (i < 0) return [...list, ...extra];
+      return [...list.slice(0, i + 1), ...extra, ...list.slice(i + 1)];
+    })();
+
+    let html = String(tpl.templateHtml ?? '');
+    if (!html.includes('data-svc-item="5"')) {
+      const insert =
+        '          <div class="svc-item" data-svc-item="5">\n' +
+        '            <div class="svc-head"><div class="svc-no">(5)</div><div class="svc-title">{{service_title_5}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_5}}</div>\n' +
+        '          </div><!-- END_SVC_5 -->\n\n' +
+        '          <div class="svc-item" data-svc-item="6">\n' +
+        '            <div class="svc-head"><div class="svc-no">(6)</div><div class="svc-title">{{service_title_6}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_6}}</div>\n' +
+        '          </div><!-- END_SVC_6 -->\n\n' +
+        '          <div class="svc-item" data-svc-item="7">\n' +
+        '            <div class="svc-head"><div class="svc-no">(7)</div><div class="svc-title">{{service_title_7}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_7}}</div>\n' +
+        '          </div><!-- END_SVC_7 -->\n\n' +
+        '          <div class="svc-item" data-svc-item="8">\n' +
+        '            <div class="svc-head"><div class="svc-no">(8)</div><div class="svc-title">{{service_title_8}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_8}}</div>\n' +
+        '          </div><!-- END_SVC_8 -->\n\n' +
+        '          <div class="svc-item" data-svc-item="9">\n' +
+        '            <div class="svc-head"><div class="svc-no">(9)</div><div class="svc-title">{{service_title_9}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_9}}</div>\n' +
+        '          </div><!-- END_SVC_9 -->\n\n' +
+        '          <div class="svc-item" data-svc-item="10">\n' +
+        '            <div class="svc-head"><div class="svc-no">(10)</div><div class="svc-title">{{service_title_10}}</div></div>\n' +
+        '            <div class="svc-body">{{service_body_10}}</div>\n' +
+        '          </div><!-- END_SVC_10 -->\n';
+      html = html.replace('</div><!-- END_SVC_4 -->', `</div><!-- END_SVC_4 -->\n${insert}`);
+    }
+
+    templates[idx] = { ...tpl, placeholders, templateHtml: html, updatedAt: now };
+    changed = true;
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V58] = true;
   return changed;
 }
 
@@ -7538,6 +7714,8 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV54(db)) changed = true;
   if (seedContractsTemplatesV55(db)) changed = true;
   if (seedContractsTemplatesV56(db)) changed = true;
+  if (seedContractsTemplatesV57(db)) changed = true;
+  if (seedContractsTemplatesV58(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

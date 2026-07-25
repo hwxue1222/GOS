@@ -10,6 +10,8 @@ type Props = {
   initialTemplates: ContractTemplate[];
 };
 
+const MAX_SERVICE_ITEMS = 10;
+
 function escHtml(s: string) {
   return s
     .replaceAll('&', '&amp;')
@@ -35,8 +37,8 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   html = html.replace(/[•·\-]\s*(?=<\/)/g, '');
 
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
-    const count = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
-    for (let n = count + 1; n <= 4; n++) {
+    const count = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(map.service_count ?? '1') || 1));
+    for (let n = count + 1; n <= MAX_SERVICE_ITEMS; n++) {
       html = html.replace(
         new RegExp(
           `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
@@ -59,8 +61,8 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   }
 
   if (html.includes('TEMPLATE: QUOTATION')) {
-    const serviceCount = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
-    for (let n = serviceCount + 1; n <= 4; n++) {
+    const serviceCount = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(map.service_count ?? '1') || 1));
+    for (let n = serviceCount + 1; n <= MAX_SERVICE_ITEMS; n++) {
       html = html.replace(
         new RegExp(
           `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
@@ -960,8 +962,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '2') || 2));
-                              const nextCount = Math.min(4, cur + 1);
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '2') || 2));
+                              const nextCount = Math.min(MAX_SERVICE_ITEMS, cur + 1);
                               return { ...prev, service_count: String(nextCount) };
                             })
                           }
@@ -973,10 +975,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '2') || 2));
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '2') || 2));
                               const nextCount = Math.max(1, cur - 1);
                               const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
-                              for (let i = nextCount + 1; i <= 4; i++) {
+                              for (let i = nextCount + 1; i <= MAX_SERVICE_ITEMS; i++) {
                                 delete (next as any)[`service_title_${i}`];
                                 delete (next as any)[`service_body_${i}`];
                               }
@@ -990,7 +992,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
-                    {Array.from({ length: Math.max(1, Math.min(4, Number(fields.service_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
+                    {Array.from({ length: Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(fields.service_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                       (n) => (
                         <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="md:col-span-1">
@@ -1405,8 +1407,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
-                              const nextCount = Math.min(4, cur + 1);
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '1') || 1));
+                              const nextCount = Math.min(MAX_SERVICE_ITEMS, cur + 1);
                               return { ...prev, service_count: String(nextCount) };
                             })
                           }
@@ -1418,10 +1420,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(4, Number(prev.service_count ?? '1') || 1));
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '1') || 1));
                               const nextCount = Math.max(1, cur - 1);
                               const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
-                              for (let i = nextCount + 1; i <= 4; i++) {
+                              for (let i = nextCount + 1; i <= MAX_SERVICE_ITEMS; i++) {
                                 delete (next as any)[`service_title_${i}`];
                                 delete (next as any)[`service_body_${i}`];
                               }
@@ -1435,7 +1437,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
-                    {Array.from({ length: Math.max(1, Math.min(4, Number(fields.service_count ?? '1') || 1)) }, (_, idx) => idx + 1).map(
+                    {Array.from({ length: Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(fields.service_count ?? '1') || 1)) }, (_, idx) => idx + 1).map(
                       (n) => (
                         <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="md:col-span-1">

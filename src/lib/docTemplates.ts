@@ -2899,6 +2899,7 @@ export function renderContractHtml(input: {
   clientEmail: string;
   fields: Record<string, string>;
 }) {
+  const MAX_SERVICE_ITEMS = 10;
   const partyAEntityType = String((input.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual'
     ? 'individual'
     : 'company';
@@ -2962,8 +2963,8 @@ export function renderContractHtml(input: {
   }
 
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
-    const count = Math.max(1, Math.min(4, Number((input.fields ?? {}).service_count ?? '1') || 1));
-    for (let n = count + 1; n <= 4; n++) {
+    const count = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number((input.fields ?? {}).service_count ?? '1') || 1));
+    for (let n = count + 1; n <= MAX_SERVICE_ITEMS; n++) {
       html = html.replace(
         new RegExp(
           `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
@@ -2986,8 +2987,8 @@ export function renderContractHtml(input: {
   }
 
   if (html.includes('TEMPLATE: QUOTATION')) {
-    const serviceCount = Math.max(1, Math.min(4, Number((input.fields ?? {}).service_count ?? '1') || 1));
-    for (let n = serviceCount + 1; n <= 4; n++) {
+    const serviceCount = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number((input.fields ?? {}).service_count ?? '1') || 1));
+    for (let n = serviceCount + 1; n <= MAX_SERVICE_ITEMS; n++) {
       html = html.replace(
         new RegExp(
           `<div\\s+class="svc-item"\\s+data-svc-item="${n}">[\\s\\S]*?<!--\\s*END_SVC_${n}\\s*-->\\s*`,
