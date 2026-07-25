@@ -2944,10 +2944,10 @@ export function renderContractHtml(input: {
 
   html = html.replaceAll('__EMPTY__', '');
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
-    html = html.replaceAll('•', '·');
+    html = html.replaceAll('•', '-').replaceAll('·', '-');
   }
-  html = html.replace(/[•·]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
-  html = html.replace(/[•·]\s*(?=<\/)/g, '');
+  html = html.replace(/[•·\-]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
+  html = html.replace(/[•·\-]\s*(?=<\/)/g, '');
 
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
