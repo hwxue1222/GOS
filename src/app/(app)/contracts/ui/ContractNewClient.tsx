@@ -1007,7 +1007,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                     onChange={(e) =>
                                       setFields((prev) => ({
                                         ...prev,
-                                        [key]: buildBulletBody({ intro: e.target.value, items: parseBulletBody((prev as any)[key] ?? '').items, note: parseBulletBody((prev as any)[key] ?? '').note }),
+                                        [key]: (() => {
+                                          const cur = parseBulletBody((prev as any)[key] ?? '');
+                                          return buildBulletBody({ intro: e.target.value, items: cur.items, note: cur.note });
+                                        })(),
                                       }))
                                     }
                                     rows={2}
@@ -1063,6 +1066,19 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                             }
                                             className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                           />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.filter((_, i) => i !== idx);
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                              })
+                                            }
+                                            className="h-10 w-10 flex items-center justify-center rounded-lg border border-black/10 text-sm text-black/60 hover:bg-black/[0.02]"
+                                          >
+                                            ×
+                                          </button>
                                         </div>
                                       ))
                                     ) : (
@@ -1427,7 +1443,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                     onChange={(e) =>
                                       setFields((prev) => ({
                                         ...prev,
-                                        [key]: buildBulletBody({ intro: e.target.value, items: parseBulletBody((prev as any)[key] ?? '').items }),
+                                        [key]: (() => {
+                                          const cur = parseBulletBody((prev as any)[key] ?? '');
+                                          return buildBulletBody({ intro: e.target.value, items: cur.items, note: cur.note });
+                                        })(),
                                       }))
                                     }
                                     rows={2}
@@ -1442,7 +1461,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                         onClick={() =>
                                           setFields((prev) => {
                                             const cur = parseBulletBody((prev as any)[key] ?? '');
-                                            const nextItems = [...cur.items, ''];
+                                            const nextItems = [...cur.items, EMPTY_ITEM_TOKEN];
                                             return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                           })
                                         }
@@ -1483,6 +1502,19 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                             }
                                             className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                           />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setFields((prev) => {
+                                                const cur = parseBulletBody((prev as any)[key] ?? '');
+                                                const nextItems = cur.items.filter((_, i) => i !== idx);
+                                                return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                              })
+                                            }
+                                            className="h-10 w-10 flex items-center justify-center rounded-lg border border-black/10 text-sm text-black/60 hover:bg-black/[0.02]"
+                                          >
+                                            ×
+                                          </button>
                                         </div>
                                       ))
                                     ) : (
