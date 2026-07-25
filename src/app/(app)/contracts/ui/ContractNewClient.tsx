@@ -1263,39 +1263,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             />
                           </div>
                           <div className="md:col-span-1">
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFields((prev) => {
-                                      const key = `service_body_${n}`;
-                                      const cur = parseBulletBody((prev as any)[key] ?? '');
-                                      const nextItems = [...cur.items, ''];
-                                      return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
-                                    })
-                                  }
-                                  className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                                >
-                                  + Add
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFields((prev) => {
-                                      const key = `service_body_${n}`;
-                                      const cur = parseBulletBody((prev as any)[key] ?? '');
-                                      const nextItems = cur.items.slice(0, Math.max(0, cur.items.length - 1));
-                                      return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
-                                    })
-                                  }
-                                  className="h-7 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                                >
-                                  − Remove
-                                </button>
-                              </div>
-                            </div>
+                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
                             {(() => {
                               const key = `service_body_${n}`;
                               const parsed = parseBulletBody((fields as any)[key] ?? '');
