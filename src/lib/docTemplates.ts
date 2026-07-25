@@ -2935,6 +2935,10 @@ export function renderContractHtml(input: {
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 
+  html = html.replaceAll('__EMPTY__', '');
+  html = html.replace(/•\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
+  html = html.replace(/•\s*(?=<\/)/g, '');
+
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
       /(<p class="p(?:8|9)">\s*\d+\.\d[\s\S]*?<\/p>)(\s*)(<p class="p(?:8|9)">\s*\d+\.\d)/g,

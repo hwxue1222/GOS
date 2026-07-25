@@ -27,6 +27,10 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 
+  html = html.replaceAll('__EMPTY__', '');
+  html = html.replace(/•\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
+  html = html.replace(/•\s*(?=<\/)/g, '');
+
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
     const count = Math.max(1, Math.min(4, Number(map.service_count ?? '1') || 1));
     for (let n = count + 1; n <= 4; n++) {
@@ -270,6 +274,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
   const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
 
+  const EMPTY_ITEM_TOKEN = '__EMPTY__';
+
   const parseBulletBody = (rawInput: string) => {
     const raw = String(rawInput ?? '').replaceAll('\r', '');
     const lines = raw.split('\n');
@@ -299,7 +305,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const buildBulletBody = (input: { intro: string; items: string[]; note?: string }) => {
     const intro = String(input.intro ?? '').trim();
-    const items = (input.items ?? []).map((x) => String(x ?? '').trim()).filter((v) => !!v);
+    const items = (input.items ?? []).map((x) => {
+      const v = String(x ?? '').trim();
+      return v ? v : EMPTY_ITEM_TOKEN;
+    });
     const note = String(input.note ?? '').trim();
     const bullets = items.map((x) => `• ${x}`).join('\n');
     if (intro && bullets && note) return `${intro}\n\n${bullets}\n\n${note}`;
@@ -1319,12 +1328,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                         <div key={idx} className="flex items-center gap-2">
                                           <div className="text-sm text-black/60">•</div>
                                           <input
-                                            value={v}
+                                            value={v === EMPTY_ITEM_TOKEN ? '' : v}
                                             onChange={(e) =>
                                               setFields((prev) => {
                                                 const cur = parseBulletBody((prev as any)[key] ?? '');
                                                 const nextItems = cur.items.slice();
-                                                nextItems[idx] = e.target.value;
+                                                nextItems[idx] = e.target.value.trim() ? e.target.value : EMPTY_ITEM_TOKEN;
                                                 return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
                                               })
                                             }
