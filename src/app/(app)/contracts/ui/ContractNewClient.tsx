@@ -1920,18 +1920,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
 
-                    {isQuotationTemplate ? (
-                      <div className="mt-3">
-                        <div className="text-xs font-medium text-black/60">Quotation note</div>
-                        <textarea
-                          value={(fields as any).quotation_notice ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, quotation_notice: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    ) : null}
-
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div className="flex items-center justify-between">
                         <div className="text-xs font-medium text-black/60">2–{Number((fields as any).fee_clause_count ?? '2') + 1}.</div>
@@ -2119,6 +2107,20 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               )}
             </div>
           </div>
+
+      {tpl?.name === 'Quotation（报价）' ? (
+        <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+          <div className="text-sm font-semibold">Quotation note</div>
+          <div className="mt-2">
+            <textarea
+              value={(fields as any).quotation_notice ?? ''}
+              onChange={(e) => setFields((prev) => ({ ...prev, quotation_notice: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+            />
+          </div>
+        </div>
+      ) : null}
 
           <div className="fixed bottom-0 left-0 right-0 z-40">
             <div className="max-w-6xl mx-auto px-4 pb-[env(safe-area-inset-bottom)]">
