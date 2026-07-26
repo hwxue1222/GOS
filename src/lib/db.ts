@@ -10407,21 +10407,45 @@ export async function createContractTemplateDraft(input: {
   const safeFields = Object.fromEntries(
     Object.entries(input.fields ?? {}).map(([k, v]) => [String(k), String(v ?? '')]),
   ) as Record<string, string>;
-  const draft: ContractTemplateDraft = {
-    id: newId('ctd'),
-    templateId: template.id,
-    templateName: String(template.name ?? ''),
-    name: String(input.name ?? '').trim() || `Draft ${now.slice(0, 19)}`,
-    fields: safeFields,
-    createdAt: now,
-    createdByUserId: String(input.userId ?? ''),
-  };
+  const draftName = String(input.name ?? '').trim() || `Draft ${now.slice(0, 19)}`;
+  const userId = String(input.userId ?? '');
 
   const list = (db.contractTemplateDrafts ?? []) as ContractTemplateDraft[];
-  list.push(draft);
+  const existingIdx = list.findIndex(
+    (d) => d.templateId === template.id && d.createdByUserId === userId && String(d.name ?? '') === draftName,
+  );
+
+  const draft: ContractTemplateDraft = {
+    id: existingIdx >= 0 ? list[existingIdx].id : newId('ctd'),
+    templateId: template.id,
+    templateName: String(template.name ?? ''),
+    name: draftName,
+    fields: safeFields,
+    createdAt: now,
+    createdByUserId: userId,
+  };
+
+  if (existingIdx >= 0) list[existingIdx] = draft;
+  else list.push(draft);
+
+  const group = list
+    .filter((d) => d.templateId === draft.templateId && d.createdByUserId === draft.createdByUserId)
+    .slice()
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+
+  const seen = new Set<string>();
+  const groupUnique: ContractTemplateDraft[] = [];
+  for (const d of group) {
+    const key = String(d.name ?? '');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    groupUnique.push(d);
+  }
+
+  const cappedGroup = groupUnique.slice(0, 50);
   const capped = list
     .filter((d) => !(d.templateId === draft.templateId && d.createdByUserId === draft.createdByUserId))
-    .concat(list.filter((d) => d.templateId === draft.templateId && d.createdByUserId === draft.createdByUserId).slice(-50));
+    .concat(cappedGroup);
   (db as unknown as { contractTemplateDrafts: ContractTemplateDraft[] }).contractTemplateDrafts = capped;
   await writeDb(db);
   return draft;
