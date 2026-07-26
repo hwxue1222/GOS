@@ -10391,6 +10391,22 @@ export async function listContractTemplateDrafts(templateId: string, userId: str
     .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
 }
 
+export async function deleteContractTemplateDraft(input: { templateId: string; userId: string; draftId: string }) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const templateId = String(input.templateId ?? '').trim();
+  const userId = String(input.userId ?? '').trim();
+  const draftId = String(input.draftId ?? '').trim();
+  if (!templateId || !userId || !draftId) throw new Error('INVALID_INPUT');
+
+  const list = (db.contractTemplateDrafts ?? []) as ContractTemplateDraft[];
+  const before = list.length;
+  const next = list.filter((d) => !(d.id === draftId && d.templateId === templateId && d.createdByUserId === userId));
+  (db as unknown as { contractTemplateDrafts: ContractTemplateDraft[] }).contractTemplateDrafts = next;
+  if (next.length !== before) await writeDb(db);
+  return { deleted: next.length !== before };
+}
+
 export async function createContractTemplateDraft(input: {
   templateId: string;
   userId: string;

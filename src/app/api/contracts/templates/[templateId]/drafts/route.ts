@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { createContractTemplateDraft, listContractTemplateDrafts } from '@/lib/db';
+import { createContractTemplateDraft, deleteContractTemplateDraft, listContractTemplateDrafts } from '@/lib/db';
 
 export async function GET(_req: Request, ctx: { params: Promise<{ templateId: string }> }) {
   const user = await getCurrentUser();
@@ -40,6 +40,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ templateId: st
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === 'NOT_FOUND') return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+    return NextResponse.json({ ok: false, error: 'FAILED', message: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request, ctx: { params: Promise<{ templateId: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!hasPermission(user, 'contracts', 'update')) {
+    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
+
+  const params = await ctx.params;
+  const templateId = String(params?.templateId ?? '').trim();
+  if (!templateId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  const body = (await req.json().catch(() => null)) as { draftId?: string } | null;
+  const draftId = String(body?.draftId ?? '').trim();
+  if (!draftId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
+
+  try {
+    const result = await deleteContractTemplateDraft({ templateId, userId: user.id, draftId });
+    return NextResponse.json({ ok: true, ...result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'INVALID_INPUT') return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
     return NextResponse.json({ ok: false, error: 'FAILED', message: msg }, { status: 500 });
   }
 }

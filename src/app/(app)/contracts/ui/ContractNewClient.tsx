@@ -1104,6 +1104,35 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </button>
                   <button
                     type="button"
+                    disabled={!selectedDraftId}
+                    onClick={async () => {
+                      if (!tpl?.id) return;
+                      const d = templateDrafts.find((x) => x.id === selectedDraftId);
+                      if (!d) return;
+                      const ok = window.confirm(`删除草稿 “${d.name}” ？`);
+                      if (!ok) return;
+                      setError(null);
+                      setErrorDetail('');
+                      const res = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/drafts`, {
+                        method: 'DELETE',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ draftId: d.id }),
+                      }).catch(() => null);
+                      const j = (await res?.json().catch(() => null)) as any;
+                      if (!res?.ok || !j?.ok) {
+                        setError(j?.error || `HTTP_${res?.status ?? 'FAILED'}`);
+                        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'FAILED');
+                        return;
+                      }
+                      setSelectedDraftId('');
+                      await loadTemplateDrafts(tpl.id);
+                    }}
+                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                  >
+                    删除
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => tpl?.id && loadTemplateDrafts(tpl.id)}
                     className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
                   >
