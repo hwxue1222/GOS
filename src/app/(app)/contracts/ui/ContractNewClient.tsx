@@ -1755,7 +1755,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
-                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
+                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（收费项目）</div>
 
                     <div className="mt-2">
                       <div className="text-xs font-medium text-black/60">Intro</div>

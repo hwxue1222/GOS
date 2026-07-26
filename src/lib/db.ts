@@ -193,6 +193,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V61 = 'contracts.templates.v61';
 const SEED_KEY_CONTRACTS_TEMPLATES_V62 = 'contracts.templates.v62';
 const SEED_KEY_CONTRACTS_TEMPLATES_V63 = 'contracts.templates.v63';
 const SEED_KEY_CONTRACTS_TEMPLATES_V64 = 'contracts.templates.v64';
+const SEED_KEY_CONTRACTS_TEMPLATES_V65 = 'contracts.templates.v65';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2123,7 +2124,7 @@ function seedContractsTemplatesV52(db: Db) {
 
         <div class="section">
           <div class="section-title">II. Fees（收费标准）</div>
-          <div class="p">1. Fee items（乙方收费标准如下：）</div>
+          <div class="p">1. Fee items（收费项目）</div>
           <div class="fee-items">
             <div class="fee-item" data-fee-item="1">• {{fee_item_1}}</div><!-- END_FEE_ITEM_1 -->
             <div class="fee-item" data-fee-item="2">• {{fee_item_2}}</div><!-- END_FEE_ITEM_2 -->
@@ -2652,8 +2653,8 @@ function seedContractsTemplatesV63(db: Db) {
 
     if (!html.includes(introBlock)) {
       html = html.replace(
-        '<div class="p">1. Fee items（乙方收费标准如下：）</div>',
-        '<div class="p">1. Fee items（乙方收费标准如下：）</div>\n          ' + introBlock,
+        '<div class="p">1. Fee items（收费项目）</div>',
+        '<div class="p">1. Fee items（收费项目）</div>\n          ' + introBlock,
       );
     }
 
@@ -2702,6 +2703,33 @@ function seedContractsTemplatesV64(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V64] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV65(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V65]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const updateByName = (name: string) => {
+    const idx = templates.findIndex((t) => String(t.name ?? '').trim() === name);
+    if (idx < 0) return;
+    const tpl = templates[idx];
+    const before = String(tpl.templateHtml ?? '');
+    const after = before.replaceAll('1. Fee items（乙方收费标准如下：）', '1. Fee items（收费项目）');
+    if (after === before) return;
+    templates[idx] = { ...tpl, templateHtml: after, updatedAt: now };
+    changed = true;
+  };
+
+  updateByName('Quotation（报价）');
+  updateByName('Professional Service Agreement');
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V65] = true;
   return changed;
 }
 
@@ -7997,6 +8025,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV62(db)) changed = true;
   if (seedContractsTemplatesV63(db)) changed = true;
   if (seedContractsTemplatesV64(db)) changed = true;
+  if (seedContractsTemplatesV65(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
