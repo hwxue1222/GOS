@@ -149,6 +149,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [savingDefaultFields, setSavingDefaultFields] = useState(false);
+  const [savingFeesDefaultFields, setSavingFeesDefaultFields] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -318,6 +319,57 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       router.refresh();
     } finally {
       setSavingDefaultFields(false);
+    }
+  };
+
+  const saveFeesAsDefault = async () => {
+    if (!tpl?.id) return;
+    setSavingFeesDefaultFields(true);
+    setError(null);
+    setErrorDetail('');
+    try {
+      const defaultFields: Record<string, string> = {};
+
+      if (isQuotationTemplate) {
+        defaultFields.fee_intro = String((fields as any).fee_intro ?? '');
+        defaultFields.fee_note = String((fields as any).fee_note ?? '');
+
+        const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
+        defaultFields.fee_item_count = String(feeItemCount);
+        for (let i = 1; i <= feeItemCount; i++) {
+          defaultFields[`fee_item_${i}`] = String((fields as any)[`fee_item_${i}`] ?? '');
+        }
+
+        const feeClauseCount = Math.max(0, Math.min(6, Number((fields as any).fee_clause_count ?? '0') || 0));
+        defaultFields.fee_clause_count = String(feeClauseCount);
+        for (let i = 1; i <= feeClauseCount; i++) {
+          defaultFields[`fee_clause_${i}`] = String((fields as any)[`fee_clause_${i}`] ?? '');
+        }
+      } else {
+        const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
+        defaultFields.fee_item_count = String(feeItemCount);
+        for (let i = 1; i <= feeItemCount; i++) {
+          defaultFields[`fee_item_${i}`] = String((fields as any)[`fee_item_${i}`] ?? '');
+        }
+        defaultFields.fee_2 = String((fields as any).fee_2 ?? '');
+        defaultFields.fee_3 = String((fields as any).fee_3 ?? '');
+        defaultFields.fee_4 = String((fields as any).fee_4 ?? '');
+      }
+
+      const res = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/defaults`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ defaultFields }),
+      });
+      const j = (await res.json().catch(() => null)) as any;
+      if (!res.ok || !j?.ok) {
+        setError(j?.error || `HTTP_${res.status}`);
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'FAILED');
+        return;
+      }
+      router.refresh();
+    } finally {
+      setSavingFeesDefaultFields(false);
     }
   };
 
@@ -1759,6 +1811,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
                           − Remove
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingFeesDefaultFields}
+                          onClick={saveFeesAsDefault}
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          {savingFeesDefaultFields ? 'Saving…' : 'Save as default'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingFeesDefaultFields}
+                          onClick={saveFeesAsDefault}
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          {savingFeesDefaultFields ? 'Saving…' : 'Save as default'}
                         </button>
                       </div>
                     </div>
