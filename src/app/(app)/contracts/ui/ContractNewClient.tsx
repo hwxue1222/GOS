@@ -182,6 +182,40 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     } catch {}
     return templates[0]?.id ?? '';
   });
+
+  const QUOTATION_SERVICES_CACHE_KEY = 'contracts.new.servicesCache.quotation';
+  const readServicesPayload = (raw: string | null) => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object') return null;
+      const next = Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+      ) as Record<string, string>;
+      if (Object.keys(next).length === 0) return null;
+      return next;
+    } catch {
+      return null;
+    }
+  };
+
+  const pickServiceFields = (src: Record<string, string>) => {
+    const picked: Record<string, string> = {};
+    for (const [k, v] of Object.entries(src ?? {})) {
+      if (!k.startsWith('service_')) continue;
+      picked[k] = String(v ?? '');
+    }
+    return picked;
+  };
+
+  const applyServiceFields = (dst: Record<string, string>, src: Record<string, string>, opts?: { force?: boolean }) => {
+    const force = !!opts?.force;
+    const picked = pickServiceFields(src);
+    for (const [k, v] of Object.entries(picked)) {
+      if (!force && String(dst[k] ?? '').trim()) continue;
+      dst[k] = String(v ?? '');
+    }
+  };
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -564,9 +598,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   useEffect(() => {
     if (!isProfessionalTemplate) return;
+    if (editContractId) return;
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
+
+      try {
+        const cached = readServicesPayload(window.localStorage.getItem(QUOTATION_SERVICES_CACHE_KEY));
+        if (cached) applyServiceFields(next, cached);
+      } catch {}
 
       const tplDefaults = (tpl as any)?.defaultFields as Record<string, string> | undefined;
       if (tplDefaults && typeof tplDefaults === 'object') {
@@ -1001,6 +1041,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     return;
                   }
                   try {
+                    const currentTpl = templates.find((t) => t.id === templateId);
+                    if (currentTpl?.name === 'Quotation（报价）') {
+                      const payload = pickServiceFields(fields ?? {});
+                      window.localStorage.setItem(QUOTATION_SERVICES_CACHE_KEY, JSON.stringify(payload));
+                    }
                     if (templateId) window.localStorage.setItem(draftKeyForTemplate(templateId), JSON.stringify(fields ?? {}));
                   } catch {}
                   setTemplateId(nextId);
@@ -1211,6 +1256,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-xs font-semibold text-black/70">I. Services provided（服务内容）</div>
                       <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const next = { ...(prev ?? {}) } as Record<string, string>;
+                              try {
+                                const cached = readServicesPayload(window.localStorage.getItem(QUOTATION_SERVICES_CACHE_KEY));
+                                if (cached) applyServiceFields(next, cached, { force: true });
+                              } catch {}
+                              return next;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          Copy from Quotation
+                        </button>
                         <button
                           type="button"
                           onClick={() =>
