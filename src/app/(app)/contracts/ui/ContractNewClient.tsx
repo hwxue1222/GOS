@@ -131,9 +131,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   });
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
 
-  const [fields, setFields] = useState<Record<string, string>>({
-    date: new Date().toISOString().slice(0, 10),
-  });
+  const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const draftKeyForTemplate = (id: string) => `contracts.new.fields.${id}`;
+
+  const [fields, setFields] = useState<Record<string, string>>({ date: todayYmd });
 
   const [annualFeeCurrency, setAnnualFeeCurrency] = useState<'SGD' | 'USD' | 'RMB'>('SGD');
   const [annualFeeAmount, setAnnualFeeAmount] = useState('');
@@ -188,6 +189,34 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const v = String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
     return v;
   }, [searchParams]);
+
+  useEffect(() => {
+    if (editContractId) return;
+    if (!templateId) return;
+    try {
+      const raw = window.localStorage.getItem(draftKeyForTemplate(templateId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === 'object') {
+          const next = Object.fromEntries(
+            Object.entries(parsed as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+          ) as Record<string, string>;
+          if (!Object.prototype.hasOwnProperty.call(next, 'date')) next.date = todayYmd;
+          setFields(next);
+          return;
+        }
+      }
+    } catch {}
+    setFields({ date: todayYmd });
+  }, [editContractId, templateId, todayYmd]);
+
+  useEffect(() => {
+    if (editContractId) return;
+    if (!templateId) return;
+    try {
+      window.localStorage.setItem(draftKeyForTemplate(templateId), JSON.stringify(fields ?? {}));
+    } catch {}
+  }, [editContractId, fields, templateId]);
 
   useEffect(() => {
     if (editContractId) return;
@@ -824,7 +853,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             <div className="mt-2">
               <select
                 value={templateId}
-                onChange={(e) => setTemplateId(e.target.value)}
+                onChange={(e) => {
+                  const nextId = String(e.target.value ?? '').trim();
+                  if (editContractId) {
+                    setTemplateId(nextId);
+                    return;
+                  }
+                  try {
+                    if (templateId) window.localStorage.setItem(draftKeyForTemplate(templateId), JSON.stringify(fields ?? {}));
+                  } catch {}
+                  setTemplateId(nextId);
+                }}
                 className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
               >
                 {templates.map((t) => (
