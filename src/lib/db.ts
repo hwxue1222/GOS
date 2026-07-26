@@ -963,6 +963,7 @@ function seedContractsTemplatesV48(db: Db) {
     </div>
   </body>
 </html>`,
+    defaultFields: proIdx >= 0 ? templates[proIdx].defaultFields : undefined,
     createdAt: proIdx >= 0 ? templates[proIdx].createdAt : now,
     updatedAt: now,
   };
@@ -1068,6 +1069,7 @@ function seedContractsTemplatesV48(db: Db) {
     </div>
   </body>
 </html>`,
+    defaultFields: quotationIdx >= 0 ? templates[quotationIdx].defaultFields : undefined,
     createdAt: quotationIdx >= 0 ? templates[quotationIdx].createdAt : now,
     updatedAt: now,
   };
@@ -1804,6 +1806,7 @@ function seedContractsTemplatesV50(db: Db) {
     </div>
   </body>
 </html>`,
+    defaultFields: idx >= 0 ? templates[idx].defaultFields : undefined,
     createdAt: idx >= 0 ? templates[idx].createdAt : now,
     updatedAt: now,
   };
@@ -1975,6 +1978,7 @@ function seedContractsTemplatesV51(db: Db) {
     </div>
   </body>
 </html>`,
+    defaultFields: idx >= 0 ? templates[idx].defaultFields : undefined,
     createdAt: idx >= 0 ? templates[idx].createdAt : now,
     updatedAt: now,
   };
@@ -2157,6 +2161,7 @@ function seedContractsTemplatesV52(db: Db) {
     </div>
   </body>
 </html>`,
+    defaultFields: templates[idx].defaultFields,
     createdAt: templates[idx].createdAt,
     updatedAt: now,
   };

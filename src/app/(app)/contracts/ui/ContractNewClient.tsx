@@ -287,7 +287,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     if (editContractId) return;
     if (!templateId) return;
     try {
-      const raw = window.localStorage.getItem(draftKeyForTemplate(templateId));
+      const primaryKey = draftKeyForTemplate(templateId);
+      const legacyKey = `contracts.new.fields.${templateId}`;
+
+      let raw = window.localStorage.getItem(primaryKey);
+      if (!raw) raw = window.localStorage.getItem(legacyKey);
+      if (!raw) {
+        const prefix = `${legacyKey}.`;
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i);
+          if (!k || !k.startsWith(prefix)) continue;
+          const candidate = window.localStorage.getItem(k);
+          if (!candidate) continue;
+          raw = candidate;
+        }
+      }
+
       if (raw) {
         const parsed = JSON.parse(raw) as unknown;
         if (parsed && typeof parsed === 'object') {
@@ -296,6 +311,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           ) as Record<string, string>;
           if (!Object.prototype.hasOwnProperty.call(next, 'date')) next.date = todayYmd;
           setFields(next);
+          try {
+            window.localStorage.setItem(primaryKey, JSON.stringify(next));
+          } catch {}
           return;
         }
       }
