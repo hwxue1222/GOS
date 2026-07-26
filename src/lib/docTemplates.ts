@@ -2981,10 +2981,18 @@ export function renderContractHtml(input: {
     const feeNote = String(map.fee_note ?? '').trim();
     if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = esc(feeNote).replaceAll('\n', '<br />');
-      html = html.replace(
+      const next = html.replace(
         /(<div class="p">2\.)/,
         `\n\n          <div class=\"p fee-note\">${safe}</div>$1`,
       );
+      if (next === html) {
+        html = html.replace(
+          /(<div class="fee-items"[\s\S]*?<\/div>)/,
+          `$1\n\n          <div class=\"p fee-note\">${safe}</div>`,
+        );
+      } else {
+        html = next;
+      }
     }
   }
 

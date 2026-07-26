@@ -67,10 +67,18 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     const feeNote = String(map.fee_note ?? '').trim();
     if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = escHtml(feeNote).replaceAll('\n', '<br />');
-      html = html.replace(
+      const next = html.replace(
         /(<div class="p">2\.)/,
         `\n\n          <div class=\"p fee-note\">${safe}</div>$1`,
       );
+      if (next === html) {
+        html = html.replace(
+          /(<div class="fee-items"[\s\S]*?<\/div>)/,
+          `$1\n\n          <div class=\"p fee-note\">${safe}</div>`,
+        );
+      } else {
+        html = next;
+      }
     }
   }
 
@@ -940,6 +948,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const pdfDownloadUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=attachment` : '';
 
+  const displayTemplateName = (name: string) => {
+    if (name === 'Professional Service Agreement') return 'Professional Service Agreement（专业服务协议）';
+    return name;
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-28">
       <div className="flex items-start justify-between gap-4">
@@ -984,7 +997,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               >
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {displayTemplateName(t.name)}
                   </option>
                 ))}
               </select>
@@ -1163,7 +1176,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Agreement title（协议标题） *</div>
+                      <div className="text-xs font-medium text-black/60">
+                        Agreement title（协议标题）{requiredKeys.has('agreement_title') ? ' *' : ''}
+                      </div>
                       <input
                         value={fields.agreement_title ?? ''}
                         onChange={(e) => setFields((prev) => ({ ...prev, agreement_title: e.target.value }))}
@@ -1171,7 +1186,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期） *</div>
+                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期）{requiredKeys.has('date') ? ' *' : ''}</div>
                       <DateInputYMD
                         value={fields.date ?? ''}
                         onChange={(next) => setFields((prev) => ({ ...prev, date: next }))}
@@ -1375,7 +1390,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">II. Party B obligations（乙方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`partyB_obligation_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`partyB_obligation_${n}`] ?? ''}
                           onChange={(e) =>
@@ -1392,7 +1407,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">III. Party A obligations（甲方义务）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`partyA_obligation_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`partyA_obligation_${n}`] ?? ''}
                           onChange={(e) =>
@@ -1472,7 +1487,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div>
-                        <div className="text-xs font-medium text-black/60">2. *</div>
+                        <div className="text-xs font-medium text-black/60">2.{requiredKeys.has('fee_2') ? ' *' : ''}</div>
                         <textarea
                           value={fields.fee_2 ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
@@ -1481,7 +1496,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div>
-                        <div className="text-xs font-medium text-black/60">3. *</div>
+                        <div className="text-xs font-medium text-black/60">3.{requiredKeys.has('fee_3') ? ' *' : ''}</div>
                         <textarea
                           value={fields.fee_3 ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
@@ -1490,7 +1505,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div>
-                        <div className="text-xs font-medium text-black/60">4. *</div>
+                        <div className="text-xs font-medium text-black/60">4.{requiredKeys.has('fee_4') ? ' *' : ''}</div>
                         <textarea
                           value={fields.fee_4 ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
@@ -1503,7 +1518,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="mt-4 text-xs font-medium text-black/60">Payment details（收款信息）</div>
                     <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Beneficiary Name（收款人名称） *</div>
+                        <div className="text-xs font-medium text-black/60">
+                          Beneficiary Name（收款人名称）{requiredKeys.has('pay_beneficiary_name') ? ' *' : ''}
+                        </div>
                         <input
                           value={fields.pay_beneficiary_name ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_name: e.target.value }))}
@@ -1511,7 +1528,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Bank Name（银行名称） *</div>
+                        <div className="text-xs font-medium text-black/60">Bank Name（银行名称）{requiredKeys.has('pay_bank_name') ? ' *' : ''}</div>
                         <input
                           value={fields.pay_bank_name ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_name: e.target.value }))}
@@ -1519,7 +1536,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <div className="text-xs font-medium text-black/60">Beneficiary address（收款人地址） *</div>
+                        <div className="text-xs font-medium text-black/60">
+                          Beneficiary address（收款人地址）{requiredKeys.has('pay_beneficiary_address') ? ' *' : ''}
+                        </div>
                         <input
                           value={fields.pay_beneficiary_address ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_address: e.target.value }))}
@@ -1527,7 +1546,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Swift Code（国际汇款银行码） *</div>
+                        <div className="text-xs font-medium text-black/60">Swift Code（国际汇款银行码）{requiredKeys.has('pay_swift_code') ? ' *' : ''}</div>
                         <input
                           value={fields.pay_swift_code ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_swift_code: e.target.value }))}
@@ -1535,7 +1554,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Bank account number (SGD)（银行账号-新币） *</div>
+                        <div className="text-xs font-medium text-black/60">
+                          Bank account number (SGD)（银行账号-新币）{requiredKeys.has('pay_bank_account_number') ? ' *' : ''}
+                        </div>
                         <input
                           value={fields.pay_bank_account_number ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_account_number: e.target.value }))}
@@ -1543,7 +1564,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <div className="text-xs font-medium text-black/60">Bank address（银行地址） *</div>
+                        <div className="text-xs font-medium text-black/60">Bank address（银行地址）{requiredKeys.has('pay_bank_address') ? ' *' : ''}</div>
                         <input
                           value={fields.pay_bank_address ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_address: e.target.value }))}
@@ -1557,7 +1578,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">V. Refund policy（退费规定）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`refund_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`refund_${n}`] ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, [`refund_${n}`]: e.target.value }))}
@@ -1573,7 +1594,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">VI. Force majeure（不可抗力）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`force_majeure_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`force_majeure_${n}`] ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, [`force_majeure_${n}`]: e.target.value }))}
@@ -1588,7 +1609,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">VII. Breach（违约责任）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`breach_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`breach_${n}`] ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, [`breach_${n}`]: e.target.value }))}
@@ -1603,7 +1624,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">VIII. Effectiveness（生效条款）</div>
                     {[1, 2, 3].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`effective_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`effective_${n}`] ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, [`effective_${n}`]: e.target.value }))}
@@ -1618,7 +1639,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     <div className="text-xs font-semibold text-black/70">IX. Governing law & dispute resolution（法律及争议解决）</div>
                     {[1, 2].map((n) => (
                       <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}) *</div>
+                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`law_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`law_${n}`] ?? ''}
                           onChange={(e) => setFields((prev) => ({ ...prev, [`law_${n}`]: e.target.value }))}
@@ -1633,7 +1654,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Quotation title（报价标题） *</div>
+                      <div className="text-xs font-medium text-black/60">
+                        Quotation title（报价标题）{requiredKeys.has('agreement_title') ? ' *' : ''}
+                      </div>
                       <input
                         value={fields.agreement_title ?? ''}
                         onChange={(e) => setFields((prev) => ({ ...prev, agreement_title: e.target.value }))}
@@ -1641,7 +1664,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
                     <div className="md:col-span-1">
-                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期） *</div>
+                      <div className="text-xs font-medium text-black/60">Date (YYYY-MM-DD)（日期）{requiredKeys.has('date') ? ' *' : ''}</div>
                       <DateInputYMD
                         value={fields.date ?? ''}
                         onChange={(next) => setFields((prev) => ({ ...prev, date: next }))}
@@ -1963,7 +1986,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       {Array.from({ length: Math.max(2, Math.min(6, Number((fields as any).fee_clause_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                         (n) => (
                           <div key={n}>
-                            <div className="text-xs font-medium text-black/60">{n + 1}. {n <= 2 ? '*' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">{n + 1}.{requiredKeys.has(`fee_clause_${n}`) ? ' *' : ''}</div>
                             <textarea
                               value={(fields as any)[`fee_clause_${n}`] ?? ''}
                               onChange={(e) => setFields((prev) => ({ ...prev, [`fee_clause_${n}`]: e.target.value }))}
