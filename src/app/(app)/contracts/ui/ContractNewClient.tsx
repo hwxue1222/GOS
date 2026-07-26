@@ -347,7 +347,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const isBullet = (s: string) => /^\s*([•\u2022\-\*·])\s+/.test(s);
     const stripBullet = (s: string) => s.replace(/^\s*([•\u2022\-\*·])\s+/, '');
     const bulletStart = lines.findIndex((l) => isBullet(l));
-    if (bulletStart < 0) return { intro: stripEdgeNewlines(rawNoNote), items: [] as string[], note: stripEdgeNewlines(noteFromToken) };
+    if (bulletStart < 0) return { intro: stripEdgeNewlines(rawNoNote), items: [] as string[], note: noteFromToken };
     const intro = stripEdgeNewlines(lines.slice(0, bulletStart).join('\n'));
     const rest = lines.slice(bulletStart);
     const noteStart = rest.findIndex((l, idx) => idx > 0 && !isBullet(l) && !!l.trim());
@@ -355,8 +355,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const noteLines = noteStart < 0 ? [] : rest.slice(noteStart);
 
     const items = bulletLines.map((l) => stripBullet(l)).filter((v) => !!v);
-    let note = stripEdgeNewlines(noteLines.join('\n'));
-    if (!note && noteFromToken) note = stripEdgeNewlines(noteFromToken);
+    let note = noteLines.join('\n');
+    if (!note && noteFromToken) note = noteFromToken;
 
     if (items.length) {
       const last = items[items.length - 1];
