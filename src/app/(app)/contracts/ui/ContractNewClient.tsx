@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ContractTemplate } from '@/lib/types';
@@ -262,6 +262,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const [annualFeeCurrency, setAnnualFeeCurrency] = useState<'SGD' | 'USD' | 'RMB'>('SGD');
   const [annualFeeAmount, setAnnualFeeAmount] = useState('');
+
+  const dragItemRef = useRef<{ key: string; from: number } | null>(null);
 
   const [contractId, setContractId] = useState<string>('');
   const [contractNo, setContractNo] = useState<string>('');
@@ -1438,8 +1440,50 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                   <div className="mt-2 space-y-2">
                                     {parsed.items.length ? (
                                       parsed.items.map((v, idx) => (
-                                        <div key={idx} className="flex items-center gap-2">
-                                          <div className="text-sm text-black/60">•</div>
+                                        <div
+                                          key={idx}
+                                          className="flex items-center gap-2"
+                                          onDragOver={(e) => {
+                                            const info = dragItemRef.current;
+                                            if (!info || info.key !== key) return;
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = 'move';
+                                          }}
+                                          onDrop={(e) => {
+                                            const info = dragItemRef.current;
+                                            if (!info || info.key !== key) return;
+                                            e.preventDefault();
+                                            dragItemRef.current = null;
+                                            if (info.from === idx) return;
+                                            setFields((prev) => {
+                                              const cur = parseBulletBody((prev as any)[key] ?? '');
+                                              const nextItems = cur.items.slice();
+                                              const [moved] = nextItems.splice(info.from, 1);
+                                              nextItems.splice(idx, 0, moved);
+                                              return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                            });
+                                            requestAnimationFrame(() => {
+                                              const el = document.getElementById(itemInputId(key, idx)) as HTMLInputElement | null;
+                                              el?.focus();
+                                            });
+                                          }}
+                                        >
+                                          <div
+                                            draggable
+                                            onDragStart={(e) => {
+                                              dragItemRef.current = { key, from: idx };
+                                              e.dataTransfer.effectAllowed = 'move';
+                                              try {
+                                                e.dataTransfer.setData('text/plain', `${key}:${idx}`);
+                                              } catch {}
+                                            }}
+                                            onDragEnd={() => {
+                                              dragItemRef.current = null;
+                                            }}
+                                            className="text-sm text-black/40 select-none cursor-grab"
+                                          >
+                                            ⋮⋮
+                                          </div>
                                           <input
                                             id={itemInputId(key, idx)}
                                             value={v === EMPTY_ITEM_TOKEN ? '' : v}
@@ -1923,8 +1967,50 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                                   <div className="mt-2 space-y-2">
                                     {parsed.items.length ? (
                                       parsed.items.map((v, idx) => (
-                                        <div key={idx} className="flex items-center gap-2">
-                                          <div className="text-sm text-black/60">•</div>
+                                        <div
+                                          key={idx}
+                                          className="flex items-center gap-2"
+                                          onDragOver={(e) => {
+                                            const info = dragItemRef.current;
+                                            if (!info || info.key !== key) return;
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = 'move';
+                                          }}
+                                          onDrop={(e) => {
+                                            const info = dragItemRef.current;
+                                            if (!info || info.key !== key) return;
+                                            e.preventDefault();
+                                            dragItemRef.current = null;
+                                            if (info.from === idx) return;
+                                            setFields((prev) => {
+                                              const cur = parseBulletBody((prev as any)[key] ?? '');
+                                              const nextItems = cur.items.slice();
+                                              const [moved] = nextItems.splice(info.from, 1);
+                                              nextItems.splice(idx, 0, moved);
+                                              return { ...prev, [key]: buildBulletBody({ intro: cur.intro, items: nextItems, note: cur.note }) } as any;
+                                            });
+                                            requestAnimationFrame(() => {
+                                              const el = document.getElementById(itemInputId(key, idx)) as HTMLInputElement | null;
+                                              el?.focus();
+                                            });
+                                          }}
+                                        >
+                                          <div
+                                            draggable
+                                            onDragStart={(e) => {
+                                              dragItemRef.current = { key, from: idx };
+                                              e.dataTransfer.effectAllowed = 'move';
+                                              try {
+                                                e.dataTransfer.setData('text/plain', `${key}:${idx}`);
+                                              } catch {}
+                                            }}
+                                            onDragEnd={() => {
+                                              dragItemRef.current = null;
+                                            }}
+                                            className="text-sm text-black/40 select-none cursor-grab"
+                                          >
+                                            ⋮⋮
+                                          </div>
                                           <input
                                             id={itemInputId(key, idx)}
                                             value={v === EMPTY_ITEM_TOKEN ? '' : v}
