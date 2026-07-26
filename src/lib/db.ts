@@ -188,6 +188,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V56 = 'contracts.templates.v56';
 const SEED_KEY_CONTRACTS_TEMPLATES_V57 = 'contracts.templates.v57';
 const SEED_KEY_CONTRACTS_TEMPLATES_V58 = 'contracts.templates.v58';
 const SEED_KEY_CONTRACTS_TEMPLATES_V59 = 'contracts.templates.v59';
+const SEED_KEY_CONTRACTS_TEMPLATES_V60 = 'contracts.templates.v60';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2491,6 +2492,52 @@ function seedContractsTemplatesV59(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V59] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV60(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V60]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    let html = String(tpl.templateHtml ?? '');
+
+    html = html.replaceAll('grid-template-columns: 46px 1fr 120px;', 'grid-template-columns: 46px 1fr;');
+
+    html = html.replaceAll('.svc-price { text-align: right; font-weight: 700; }', '.svc-price { font-weight: 700; margin-left: 8px; white-space: nowrap; }');
+    if (!html.includes('.svc-price { font-weight: 700;')) {
+      html = html.replace(
+        '.svc-title { font-weight: 800; }',
+        '.svc-title { font-weight: 800; }\n      .svc-price { font-weight: 700; margin-left: 8px; white-space: nowrap; }',
+      );
+    }
+
+    for (let n = 1; n <= 10; n++) {
+      html = html.replaceAll(
+        `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}</div><div class="svc-price">{{service_price_${n}}}</div></div>`,
+        `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}<span class="svc-price">{{service_price_${n}}}</span></div></div>`,
+      );
+
+      html = html.replaceAll(
+        `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}</div></div>`,
+        `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}<span class="svc-price">{{service_price_${n}}}</span></div></div>`,
+      );
+    }
+
+    if (html !== String(tpl.templateHtml ?? '')) {
+      templates[idx] = { ...tpl, templateHtml: html, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V60] = true;
   return changed;
 }
 
@@ -7781,6 +7828,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV57(db)) changed = true;
   if (seedContractsTemplatesV58(db)) changed = true;
   if (seedContractsTemplatesV59(db)) changed = true;
+  if (seedContractsTemplatesV60(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
