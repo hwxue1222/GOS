@@ -3022,5 +3022,7 @@ export function renderContractHtml(input: {
     }
   }
 
+  html = html.replace(/<div class="p fee-(?:intro|note)">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
+
   return html;
 }

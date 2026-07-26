@@ -189,6 +189,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V57 = 'contracts.templates.v57';
 const SEED_KEY_CONTRACTS_TEMPLATES_V58 = 'contracts.templates.v58';
 const SEED_KEY_CONTRACTS_TEMPLATES_V59 = 'contracts.templates.v59';
 const SEED_KEY_CONTRACTS_TEMPLATES_V60 = 'contracts.templates.v60';
+const SEED_KEY_CONTRACTS_TEMPLATES_V61 = 'contracts.templates.v61';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2538,6 +2539,57 @@ function seedContractsTemplatesV60(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V60] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV61(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V61]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const existing = new Set((tpl.placeholders ?? []).map((p) => p.key));
+    const extra: ContractTemplate['placeholders'] = [];
+    if (!existing.has('fee_intro')) extra.push({ key: 'fee_intro', label: 'Fees intro（收费标准说明）', required: false });
+    if (!existing.has('fee_note')) extra.push({ key: 'fee_note', label: 'Fees note（收费标准备注）', required: false });
+    const placeholders = extra.length ? [...(tpl.placeholders ?? []), ...extra] : (tpl.placeholders ?? []);
+
+    let html = String(tpl.templateHtml ?? '');
+    if (!html.includes('{{fee_intro}}')) {
+      html = html.replace(
+        '<div class="section-title">II. Fees（收费标准）</div>',
+        '<div class="section-title">II. Fees（收费标准）</div>\n\n          <div class="p fee-intro">{{fee_intro}}</div>',
+      );
+    }
+    if (!html.includes('{{fee_note}}')) {
+      html = html.replace(
+        /(<div class="p">4\. \{\{fee_4\}\}<\/div>)/,
+        '$1\n\n          <div class="p fee-note">{{fee_note}}</div>',
+      );
+      if (!html.includes('{{fee_note}}')) {
+        html = html.replace(
+          /(<div class="section-title">II\. Fees（收费标准）<\/div>[\s\S]*?<\/div>\s*<div class="section">)/,
+          (m) => {
+            if (m.includes('fee-note')) return m;
+            return m.replace('</div>\n\n        <div class="section">', '\n\n          <div class="p fee-note">{{fee_note}}</div>\n        </div>\n\n        <div class="section">');
+          },
+        );
+      }
+    }
+
+    if (extra.length || html !== String(tpl.templateHtml ?? '')) {
+      templates[idx] = { ...tpl, placeholders, templateHtml: html, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V61] = true;
   return changed;
 }
 
@@ -7829,6 +7881,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV58(db)) changed = true;
   if (seedContractsTemplatesV59(db)) changed = true;
   if (seedContractsTemplatesV60(db)) changed = true;
+  if (seedContractsTemplatesV61(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

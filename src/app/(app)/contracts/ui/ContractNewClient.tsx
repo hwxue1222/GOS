@@ -61,6 +61,8 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     }
   }
 
+  html = html.replace(/<div class="p fee-(?:intro|note)">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
+
   if (html.includes('TEMPLATE: QUOTATION')) {
     const serviceCount = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(map.service_count ?? '1') || 1));
     for (let n = serviceCount + 1; n <= MAX_SERVICE_ITEMS; n++) {
@@ -1753,6 +1755,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-black/60">Intro</div>
+                      <textarea
+                        value={(fields as any).fee_intro ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, fee_intro: e.target.value }))}
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
+
                     <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
                     <div className="mt-2 grid grid-cols-1 gap-3">
                       {Array.from({ length: Math.max(1, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
@@ -1819,6 +1831,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           </div>
                         ),
                       )}
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-black/60">Note</div>
+                      <textarea
+                        value={(fields as any).fee_note ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
                     </div>
                   </div>
                 </div>
