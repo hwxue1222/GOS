@@ -29,17 +29,18 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     String(map.agreement_title ?? '').includes('Quotation') ||
     String(map.agreement_title ?? '').includes('报价');
 
-  if (isQuotation && html.includes('<div class="fee-items">')) {
-    if (!html.includes('fee-intro')) {
+  if (isQuotation) {
+    if (!html.includes('fee-intro') && html.includes('Fee items')) {
       html = html.replace(
-        '<div class="fee-items">',
-        '<div class="p fee-intro">{{fee_intro}}</div>\n\n          <div class="fee-items">',
+        /(<div class="p">1\. Fee items[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-intro">{{fee_intro}}</div>`,
       );
     }
-    if (!html.includes('fee-note')) {
+
+    if (!html.includes('fee-note') && html.includes('fee-items')) {
       html = html.replace(
-        /(<div class="fee-items">[\s\S]*?<\/div>)/,
-        `$1\n\n          <div class="p fee-note">{{fee_note}}</div>`,
+        /(<div class="fee-items"[\s\S]*?<\/div>)(\s*\n\s*<div class="p">2\.)/,
+        `$1\n\n          <div class="p fee-note">{{fee_note}}</div>$2`,
       );
     }
   }
@@ -49,6 +50,26 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     html = html.replaceAll(`{{${k}}}`, safe);
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
+
+  if (isQuotation) {
+    const feeIntro = String(map.fee_intro ?? '').trim();
+    if (feeIntro && !html.includes('fee-intro')) {
+      const safe = escHtml(feeIntro).replaceAll('\n', '<br />');
+      html = html.replace(
+        '<div class="fee-items">',
+        `<div class="p fee-intro">${safe}</div>\n\n          <div class=\"fee-items\">`,
+      );
+    }
+
+    const feeNote = String(map.fee_note ?? '').trim();
+    if (feeNote && !html.includes('fee-note')) {
+      const safe = escHtml(feeNote).replaceAll('\n', '<br />');
+      html = html.replace(
+        /(<div class="fee-items"[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-note">${safe}</div>`,
+      );
+    }
+  }
 
   html = html.replaceAll('__NOTE__', '');
   html = html.replaceAll('__EMPTY__', '');
@@ -83,6 +104,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   }
 
   html = html.replace(/<div class="p fee-(?:intro|note)">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
+  html = html.replace(/<div class="p muted quotation-notice">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
 
   if (html.includes('TEMPLATE: QUOTATION')) {
     const serviceCount = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(map.service_count ?? '1') || 1));
@@ -354,6 +376,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (isQuotationTemplate) {
         defaultFields.fee_intro = String((fields as any).fee_intro ?? '');
         defaultFields.fee_note = String((fields as any).fee_note ?? '');
+        defaultFields.quotation_notice = String((fields as any).quotation_notice ?? '');
 
         const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
         defaultFields.fee_item_count = String(feeItemCount);
@@ -728,6 +751,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       if (!String((next as any).fee_clause_3 ?? '').trim() && String((next as any).fee_4 ?? '').trim()) {
         (next as any).fee_clause_3 = String((next as any).fee_4 ?? '').trim();
+      }
+
+      if (!String((next as any).quotation_notice ?? '').trim()) {
+        (next as any).quotation_notice =
+          'This quotation is for reference only and is subject to final confirmation.（本报价仅供参考，以最终确认/发票为准。）';
       }
       return next;
     });
@@ -1891,6 +1919,18 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                       />
                     </div>
+
+                    {isQuotationTemplate ? (
+                      <div className="mt-3">
+                        <div className="text-xs font-medium text-black/60">Quotation note</div>
+                        <textarea
+                          value={(fields as any).quotation_notice ?? ''}
+                          onChange={(e) => setFields((prev) => ({ ...prev, quotation_notice: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                      </div>
+                    ) : null}
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div className="flex items-center justify-between">

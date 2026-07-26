@@ -2940,17 +2940,18 @@ export function renderContractHtml(input: {
     String(map.agreement_title ?? '').includes('Quotation') ||
     String(map.agreement_title ?? '').includes('报价');
 
-  if (isQuotation && html.includes('<div class="fee-items">')) {
-    if (!html.includes('fee-intro')) {
+  if (isQuotation) {
+    if (!html.includes('fee-intro') && html.includes('Fee items')) {
       html = html.replace(
-        '<div class="fee-items">',
-        '<div class="p fee-intro">{{fee_intro}}</div>\n\n          <div class="fee-items">',
+        /(<div class="p">1\. Fee items[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-intro">{{fee_intro}}</div>`,
       );
     }
-    if (!html.includes('fee-note')) {
+
+    if (!html.includes('fee-note') && html.includes('fee-items')) {
       html = html.replace(
-        /(<div class="fee-items">[\s\S]*?<\/div>)/,
-        `$1\n\n          <div class="p fee-note">{{fee_note}}</div>`,
+        /(<div class="fee-items"[\s\S]*?<\/div>)(\s*\n\s*<div class="p">2\.)/,
+        `$1\n\n          <div class="p fee-note">{{fee_note}}</div>$2`,
       );
     }
   }
@@ -2963,6 +2964,26 @@ export function renderContractHtml(input: {
     html = html.replaceAll(`{{${key}}}`, safe);
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
+
+  if (isQuotation) {
+    const feeIntro = String(map.fee_intro ?? '').trim();
+    if (feeIntro && !html.includes('fee-intro')) {
+      const safe = esc(feeIntro).replaceAll('\n', '<br />');
+      html = html.replace(
+        '<div class="fee-items">',
+        `<div class="p fee-intro">${safe}</div>\n\n          <div class=\"fee-items\">`,
+      );
+    }
+
+    const feeNote = String(map.fee_note ?? '').trim();
+    if (feeNote && !html.includes('fee-note')) {
+      const safe = esc(feeNote).replaceAll('\n', '<br />');
+      html = html.replace(
+        /(<div class="fee-items"[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-note">${safe}</div>`,
+      );
+    }
+  }
 
   html = html.replaceAll('__NOTE__', '');
   html = html.replaceAll('__EMPTY__', '');
@@ -3044,6 +3065,7 @@ export function renderContractHtml(input: {
   }
 
   html = html.replace(/<div class="p fee-(?:intro|note)">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
+  html = html.replace(/<div class="p muted quotation-notice">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');
 
   return html;
 }
