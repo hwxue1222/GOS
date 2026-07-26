@@ -12,13 +12,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ templateId: st
 
   const params = await ctx.params;
   const templateId = String(params?.templateId ?? '').trim();
-  const body = (await req.json().catch(() => null)) as { defaultFields?: Record<string, string> } | null;
+  const body = (await req.json().catch(() => null)) as { defaultFields?: Record<string, string>; replace?: boolean } | null;
   const defaultFields = (body?.defaultFields ?? {}) as Record<string, string>;
 
   if (!templateId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   try {
-    const tpl = await updateContractTemplateDefaultFields(templateId, defaultFields, user.id);
+    const tpl = await updateContractTemplateDefaultFields(templateId, defaultFields, {
+      actorUserId: user.id,
+      mode: body?.replace ? 'replace' : 'merge',
+      kind: 'SAVE_AS_DEFAULT',
+    });
     return NextResponse.json({ ok: true, template: tpl });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -14,6 +14,7 @@ import type {
   Contract,
   ContractTemplate,
   ContractTemplateDefaultRevision,
+  ContractTemplateDraft,
   Currency,
   Db,
   DirectorChangeRequest,
@@ -114,6 +115,7 @@ function emptyDb(): Db {
     signatureRequests: [],
     contractTemplates: [],
     contractTemplateDefaultRevisions: [],
+    contractTemplateDrafts: [],
     contracts: [],
     representativeDesignationRequests: [],
     shareTransfers: [],
@@ -250,6 +252,10 @@ function ensureContractsCollections(db: Db) {
   }
   if (!Array.isArray((db as unknown as { contractTemplateDefaultRevisions?: unknown }).contractTemplateDefaultRevisions)) {
     (db as unknown as { contractTemplateDefaultRevisions: ContractTemplateDefaultRevision[] }).contractTemplateDefaultRevisions = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { contractTemplateDrafts?: unknown }).contractTemplateDrafts)) {
+    (db as unknown as { contractTemplateDrafts: ContractTemplateDraft[] }).contractTemplateDrafts = [];
     changed = true;
   }
   if (!Array.isArray((db as unknown as { contracts?: unknown }).contracts)) {
@@ -4200,6 +4206,31 @@ function normalizeDb(parsed: Db): Db {
         .slice(-5000)
     : [];
 
+  const rawTemplateDrafts = (parsed as unknown as { contractTemplateDrafts?: unknown }).contractTemplateDrafts;
+  const contractTemplateDrafts: ContractTemplateDraft[] = Array.isArray(rawTemplateDrafts)
+    ? (rawTemplateDrafts as unknown as ContractTemplateDraft[])
+        .map((d) => {
+          const fieldsRaw = (d as any).fields;
+          const fields =
+            typeof fieldsRaw === 'object' && fieldsRaw
+              ? (Object.fromEntries(
+                  Object.entries(fieldsRaw as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+                ) as Record<string, string>)
+              : {};
+          return {
+            id: String((d as any).id ?? ''),
+            templateId: String((d as any).templateId ?? ''),
+            templateName: String((d as any).templateName ?? ''),
+            name: String((d as any).name ?? ''),
+            fields,
+            createdAt: String((d as any).createdAt ?? nowIso()),
+            createdByUserId: String((d as any).createdByUserId ?? ''),
+          };
+        })
+        .filter((d) => !!d.id && !!d.templateId && !!d.createdAt && !!d.createdByUserId)
+        .slice(-5000)
+    : [];
+
   const contracts: Contract[] = Array.isArray((parsed as unknown as { contracts?: unknown }).contracts)
     ? (((parsed as unknown as { contracts?: Contract[] }).contracts ?? []) as Contract[]).map((c) => {
         const createdAt = (c as Contract).createdAt ?? nowIso();
@@ -4234,6 +4265,7 @@ function normalizeDb(parsed: Db): Db {
     clients,
     contractTemplates,
     contractTemplateDefaultRevisions,
+    contractTemplateDrafts,
     contracts,
     invoices: normalizedInvoices,
     invoiceEmailHistories: normalizedInvoiceEmailHistories,
@@ -10315,7 +10347,7 @@ export async function listContractTemplates() {
 export async function updateContractTemplateDefaultFields(
   templateId: string,
   defaultFields: Record<string, string>,
-  actorUserId?: string,
+  opts?: { actorUserId?: string; mode?: 'merge' | 'replace'; kind?: ContractTemplateDefaultRevision['kind'] },
 ) {
   const db = await readDb();
   ensureContractsCollections(db);
@@ -10329,14 +10361,14 @@ export async function updateContractTemplateDefaultFields(
 
   const revisions = (db.contractTemplateDefaultRevisions ?? []) as ContractTemplateDefaultRevision[];
   const prevDefaults = templates[idx].defaultFields ?? {};
-  const nextDefaults = { ...prevDefaults, ...safeDefaults };
+  const nextDefaults = opts?.mode === 'replace' ? safeDefaults : { ...prevDefaults, ...safeDefaults };
   revisions.push({
     id: newId('ctdrv'),
     templateId: templates[idx].id,
     templateName: String(templates[idx].name ?? ''),
     createdAt: now,
-    actorUserId: actorUserId ? String(actorUserId) : undefined,
-    kind: 'SAVE_AS_DEFAULT',
+    actorUserId: opts?.actorUserId ? String(opts.actorUserId) : undefined,
+    kind: opts?.kind ?? 'SAVE_AS_DEFAULT',
     defaultFields: nextDefaults,
     previousDefaultFields: prevDefaults,
   });
@@ -10347,6 +10379,52 @@ export async function updateContractTemplateDefaultFields(
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   await writeDb(db);
   return templates[idx];
+}
+
+export async function listContractTemplateDrafts(templateId: string, userId: string) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const list = (db.contractTemplateDrafts ?? []) as ContractTemplateDraft[];
+  return list
+    .filter((d) => d.templateId === templateId && d.createdByUserId === userId)
+    .slice()
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+}
+
+export async function createContractTemplateDraft(input: {
+  templateId: string;
+  userId: string;
+  name: string;
+  fields: Record<string, string>;
+}) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const template = templates.find((t) => t.id === input.templateId) ?? null;
+  if (!template) throw new Error('NOT_FOUND');
+
+  const now = nowIso();
+  const safeFields = Object.fromEntries(
+    Object.entries(input.fields ?? {}).map(([k, v]) => [String(k), String(v ?? '')]),
+  ) as Record<string, string>;
+  const draft: ContractTemplateDraft = {
+    id: newId('ctd'),
+    templateId: template.id,
+    templateName: String(template.name ?? ''),
+    name: String(input.name ?? '').trim() || `Draft ${now.slice(0, 19)}`,
+    fields: safeFields,
+    createdAt: now,
+    createdByUserId: String(input.userId ?? ''),
+  };
+
+  const list = (db.contractTemplateDrafts ?? []) as ContractTemplateDraft[];
+  list.push(draft);
+  const capped = list
+    .filter((d) => !(d.templateId === draft.templateId && d.createdByUserId === draft.createdByUserId))
+    .concat(list.filter((d) => d.templateId === draft.templateId && d.createdByUserId === draft.createdByUserId).slice(-50));
+  (db as unknown as { contractTemplateDrafts: ContractTemplateDraft[] }).contractTemplateDrafts = capped;
+  await writeDb(db);
+  return draft;
 }
 
 export async function listContracts() {

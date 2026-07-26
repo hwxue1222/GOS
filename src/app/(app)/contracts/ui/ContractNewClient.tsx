@@ -10,6 +10,14 @@ type Props = {
   initialTemplates: ContractTemplate[];
 };
 
+type TemplateDraft = {
+  id: string;
+  templateId: string;
+  name: string;
+  fields: Record<string, string>;
+  createdAt: string;
+};
+
 const MAX_SERVICE_ITEMS = 10;
 
 function escHtml(s: string) {
@@ -182,6 +190,30 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     } catch {}
     return templates[0]?.id ?? '';
   });
+
+  const [templateDrafts, setTemplateDrafts] = useState<TemplateDraft[]>([]);
+  const [selectedDraftId, setSelectedDraftId] = useState<string>('');
+  const [savingNamedDefault, setSavingNamedDefault] = useState(false);
+
+  const loadTemplateDrafts = async (tplId: string) => {
+    const t = String(tplId ?? '').trim();
+    if (!t) return;
+    const res = await fetch(`/api/contracts/templates/${encodeURIComponent(t)}/drafts`, { method: 'GET' }).catch(() => null);
+    const j = (await res?.json().catch(() => null)) as any;
+    if (!res?.ok || !j?.ok || !Array.isArray(j?.drafts)) {
+      setTemplateDrafts([]);
+      return;
+    }
+    setTemplateDrafts(j.drafts as TemplateDraft[]);
+  };
+
+  useEffect(() => {
+    const isEdit = !!String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
+    if (isEdit) return;
+    if (!templateId) return;
+    loadTemplateDrafts(templateId);
+    setSelectedDraftId('');
+  }, [searchParams, templateId]);
 
   const QUOTATION_SERVICES_CACHE_KEY = 'contracts.new.servicesCache.quotation';
   const readServicesPayload = (raw: string | null) => {
@@ -1048,7 +1080,56 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-7">
           <div className="rounded-xl bg-white border border-black/5 p-4">
-            <div className="text-sm font-semibold">Template</div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm font-semibold">Template</div>
+              {tpl?.id ? (
+                <button
+                  type="button"
+                  disabled={savingNamedDefault}
+                  onClick={async () => {
+                    if (!tpl?.id) return;
+                    const name = String(window.prompt('保存为草稿（命名） / Save as draft name', '') ?? '').trim();
+                    if (!name) return;
+                    setSavingNamedDefault(true);
+                    setError(null);
+                    setErrorDetail('');
+                    try {
+                      const res1 = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/drafts`, {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ name, fields: fields ?? {} }),
+                      });
+                      const j1 = (await res1.json().catch(() => null)) as any;
+                      if (!res1.ok || !j1?.ok) {
+                        setError(j1?.error || `HTTP_${res1.status}`);
+                        setErrorDetail(j1?.message || (j1 ? JSON.stringify(j1) : '') || 'FAILED');
+                        return;
+                      }
+
+                      const res2 = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/defaults`, {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ defaultFields: fields ?? {}, replace: true }),
+                      });
+                      const j2 = (await res2.json().catch(() => null)) as any;
+                      if (!res2.ok || !j2?.ok) {
+                        setError(j2?.error || `HTTP_${res2.status}`);
+                        setErrorDetail(j2?.message || (j2 ? JSON.stringify(j2) : '') || 'FAILED');
+                        return;
+                      }
+
+                      await loadTemplateDrafts(tpl.id);
+                      router.refresh();
+                    } finally {
+                      setSavingNamedDefault(false);
+                    }
+                  }}
+                  className="h-9 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                >
+                  {savingNamedDefault ? 'Saving…' : 'Save as default'}
+                </button>
+              ) : null}
+            </div>
             <div className="mt-2">
               <select
                 value={templateId}
@@ -1077,6 +1158,46 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 ))}
               </select>
             </div>
+
+            {tpl?.id ? (
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                <div className="md:col-span-9">
+                  <select
+                    value={selectedDraftId}
+                    onChange={(e) => setSelectedDraftId(String(e.target.value ?? '').trim())}
+                    className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    <option value="">草稿清单 / Drafts</option>
+                    {templateDrafts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={!selectedDraftId}
+                    onClick={() => {
+                      const d = templateDrafts.find((x) => x.id === selectedDraftId);
+                      if (!d) return;
+                      setFields({ ...(d.fields ?? {}) });
+                    }}
+                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                  >
+                    调取 / Load
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => tpl?.id && loadTemplateDrafts(tpl.id)}
+                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
+                  >
+                    刷新
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {showClientBlock ? (

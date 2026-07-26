@@ -335,6 +335,16 @@ export type ContractTemplateDefaultRevision = {
   previousDefaultFields?: Record<string, string>;
 };
 
+export type ContractTemplateDraft = {
+  id: string;
+  templateId: string;
+  templateName: string;
+  name: string;
+  fields: Record<string, string>;
+  createdAt: string;
+  createdByUserId: string;
+};
+
 export type Contract = {
   id: string;
   contractNo: string;
@@ -752,6 +762,7 @@ export type Db = {
   signatureRequests: SignatureRequest[];
   contractTemplates?: ContractTemplate[];
   contractTemplateDefaultRevisions?: ContractTemplateDefaultRevision[];
+  contractTemplateDrafts?: ContractTemplateDraft[];
   contracts?: Contract[];
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
