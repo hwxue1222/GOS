@@ -2943,6 +2943,7 @@ export function renderContractHtml(input: {
   }
   html = html.replaceAll(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 
+  html = html.replaceAll('__NOTE__', '');
   html = html.replaceAll('__EMPTY__', '');
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
     html = html.replaceAll('•', '-').replaceAll('·', '-');
