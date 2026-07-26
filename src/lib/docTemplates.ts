@@ -2998,9 +2998,6 @@ export function renderContractHtml(input: {
 
   html = html.replaceAll('__NOTE__', '');
   html = html.replaceAll('__EMPTY__', '');
-  if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
-    html = html.replaceAll('•', '-').replaceAll('·', '-');
-  }
   html = html.replace(/[•·\-]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
   html = html.replace(/[•·\-]\s*(?=<\/)/g, '');
 
