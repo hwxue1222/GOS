@@ -2982,7 +2982,7 @@ export function renderContractHtml(input: {
     if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = esc(feeNote).replaceAll('\n', '<br />');
       html = html.replace(
-        /(\s*\n\s*<div class="p">2\.)/,
+        /(<div class="p">2\.)/,
         `\n\n          <div class=\"p fee-note\">${safe}</div>$1`,
       );
     }

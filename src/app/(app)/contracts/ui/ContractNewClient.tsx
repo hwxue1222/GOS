@@ -68,7 +68,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = escHtml(feeNote).replaceAll('\n', '<br />');
       html = html.replace(
-        /(\s*\n\s*<div class="p">2\.)/,
+        /(<div class="p">2\.)/,
         `\n\n          <div class=\"p fee-note\">${safe}</div>$1`,
       );
     }
@@ -1231,7 +1231,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       (n) => (
                         <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">({n}) Title{n === 1 ? ' *' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">({n}) Title{requiredKeys.has(`service_title_${n}`) ? ' *' : ''}</div>
                             <input
                               value={(fields as any)[`service_title_${n}`] ?? ''}
                               onChange={(e) =>
@@ -1251,7 +1251,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             </div>
                           </div>
                           <div className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">({n}) Body{requiredKeys.has(`service_body_${n}`) ? ' *' : ''}</div>
                             {(() => {
                               const key = `service_body_${n}`;
                               const parsed = parseBulletBody((fields as any)[key] ?? '');
@@ -1701,7 +1701,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       (n) => (
                         <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">({n}) Title{n === 1 ? ' *' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">({n}) Title{requiredKeys.has(`service_title_${n}`) ? ' *' : ''}</div>
                             <input
                               value={(fields as any)[`service_title_${n}`] ?? ''}
                               onChange={(e) => setFields((prev) => ({ ...prev, [`service_title_${n}`]: e.target.value }))}
@@ -1717,7 +1717,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             </div>
                           </div>
                           <div className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>
+                            <div className="text-xs font-medium text-black/60">({n}) Body{requiredKeys.has(`service_body_${n}`) ? ' *' : ''}</div>
                             {(() => {
                               const key = `service_body_${n}`;
                               const parsed = parseBulletBody((fields as any)[key] ?? '');

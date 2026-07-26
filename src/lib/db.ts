@@ -198,6 +198,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V66 = 'contracts.templates.v66';
 const SEED_KEY_CONTRACTS_TEMPLATES_V67 = 'contracts.templates.v67';
 const SEED_KEY_CONTRACTS_TEMPLATES_V68 = 'contracts.templates.v68';
 const SEED_KEY_CONTRACTS_TEMPLATES_V69 = 'contracts.templates.v69';
+const SEED_KEY_CONTRACTS_TEMPLATES_V70 = 'contracts.templates.v70';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -664,7 +665,7 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'partyA_email', label: 'Party A email（甲方邮箱）', required: true },
       { key: 'service_count', label: 'Services count（服务条目数量）', required: true },
       { key: 'service_title_1', label: 'Services provided (1) title（服务(1)标题）', required: true },
-      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: true },
+      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: false },
       { key: 'service_title_2', label: 'Services provided (2) title（服务(2)标题）', required: false },
       { key: 'service_body_2', label: 'Services provided (2) body（服务(2)正文）', required: false },
       { key: 'service_title_3', label: 'Services provided (3) title（服务(3)标题）', required: false },
@@ -1834,7 +1835,7 @@ function seedContractsTemplatesV51(db: Db) {
       { key: 'partyA_email', label: 'Party A email（甲方邮箱）', required: true },
       { key: 'service_count', label: 'Services count（服务条目数量）', required: true },
       { key: 'service_title_1', label: 'Services provided (1) title（服务(1)标题）', required: true },
-      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: true },
+      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: false },
       { key: 'service_title_2', label: 'Services provided (2) title（服务(2)标题）', required: false },
       { key: 'service_body_2', label: 'Services provided (2) body（服务(2)正文）', required: false },
       { key: 'service_title_3', label: 'Services provided (3) title（服务(3)标题）', required: false },
@@ -2009,7 +2010,7 @@ function seedContractsTemplatesV52(db: Db) {
       { key: 'partyA_email', label: 'Party A email（甲方邮箱）', required: true },
       { key: 'service_count', label: 'Services count（服务条目数量）', required: true },
       { key: 'service_title_1', label: 'Services provided (1) title（服务(1)标题）', required: true },
-      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: true },
+      { key: 'service_body_1', label: 'Services provided (1) body（服务(1)正文）', required: false },
       { key: 'service_title_2', label: 'Services provided (2) title（服务(2)标题）', required: false },
       { key: 'service_body_2', label: 'Services provided (2) body（服务(2)正文）', required: false },
       { key: 'service_title_3', label: 'Services provided (3) title（服务(3)标题）', required: false },
@@ -2859,6 +2860,33 @@ function seedContractsTemplatesV69(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V69] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV70(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V70]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const placeholders = (tpl.placeholders ?? []).map((p) => {
+      if (p.key === 'service_body_1') return { ...p, required: false };
+      return p;
+    });
+    const same = JSON.stringify(placeholders) === JSON.stringify(tpl.placeholders ?? []);
+    if (!same) {
+      templates[idx] = { ...tpl, placeholders, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V70] = true;
   return changed;
 }
 
@@ -8159,6 +8187,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV67(db)) changed = true;
   if (seedContractsTemplatesV68(db)) changed = true;
   if (seedContractsTemplatesV69(db)) changed = true;
+  if (seedContractsTemplatesV70(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
