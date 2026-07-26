@@ -1002,7 +1002,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   disabled={savingNamedDefault}
                   onClick={async () => {
                     if (!tpl?.id) return;
-                    const name = String(window.prompt('保存为草稿（命名） / Save as draft name', '') ?? '').trim();
+                    const name = String(window.prompt('Save draft name', '') ?? '').trim();
                     if (!name) return;
                     setSavingNamedDefault(true);
                     setError(null);
@@ -1081,7 +1081,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     onChange={(e) => setSelectedDraftId(String(e.target.value ?? '').trim())}
                     className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                   >
-                    <option value="">草稿清单 / Drafts</option>
+                    <option value="">Drafts</option>
                     {templateDrafts.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -1100,7 +1100,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     }}
                     className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
                   >
-                    调取 / Load
+                    Load
                   </button>
                   <button
                     type="button"
@@ -1109,7 +1109,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       if (!tpl?.id) return;
                       const d = templateDrafts.find((x) => x.id === selectedDraftId);
                       if (!d) return;
-                      const ok = window.confirm(`删除草稿 “${d.name}” ？`);
+                      const ok = window.confirm(`Delete draft "${d.name}"?`);
                       if (!ok) return;
                       setError(null);
                       setErrorDetail('');
@@ -1129,14 +1129,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     }}
                     className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
                   >
-                    删除
+                    Delete
                   </button>
                   <button
                     type="button"
                     onClick={() => tpl?.id && loadTemplateDrafts(tpl.id)}
                     className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
                   >
-                    刷新
+                    Refresh
                   </button>
                 </div>
               </div>
