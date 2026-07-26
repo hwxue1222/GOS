@@ -185,7 +185,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const tpl = useMemo(() => templates.find((t) => t.id === templateId) ?? null, [templateId, templates]);
 
   const todayYmd = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const draftKeyForTemplate = (id: string) => `contracts.new.fields.${id}`;
+  const draftKeyForTemplate = (id: string) => {
+    const t = templates.find((x) => x.id === id);
+    const version = String(t?.updatedAt ?? t?.createdAt ?? '').trim();
+    const safeVersion = version ? version.replaceAll(/[^a-zA-Z0-9]/g, '_') : '';
+    return safeVersion ? `contracts.new.fields.${id}.${safeVersion}` : `contracts.new.fields.${id}`;
+  };
 
   const [fields, setFields] = useState<Record<string, string>>({ date: todayYmd });
 
