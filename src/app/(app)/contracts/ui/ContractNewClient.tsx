@@ -299,6 +299,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       for (let i = 1; i <= count; i++) {
         defaultFields[`service_title_${i}`] = String((fields as any)[`service_title_${i}`] ?? '');
         defaultFields[`service_body_${i}`] = String((fields as any)[`service_body_${i}`] ?? '');
+        defaultFields[`service_price_${i}`] = String((fields as any)[`service_price_${i}`] ?? '');
       }
 
       const res = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/defaults`, {
@@ -1091,6 +1092,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                               for (let i = nextCount + 1; i <= MAX_SERVICE_ITEMS; i++) {
                                 delete (next as any)[`service_title_${i}`];
                                 delete (next as any)[`service_body_${i}`];
+                                delete (next as any)[`service_price_${i}`];
                               }
                               return next;
                             })
@@ -1122,6 +1124,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                               }
                               className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                             />
+                            <div className="mt-2">
+                              <div className="text-xs font-medium text-black/60">Price</div>
+                              <input
+                                value={(fields as any)[`service_price_${n}`] ?? ''}
+                                onChange={(e) =>
+                                  setFields((prev) => ({ ...prev, [`service_price_${n}`]: e.target.value }))
+                                }
+                                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
                           </div>
                           <div className="md:col-span-1">
                             <div className="text-xs font-medium text-black/60">({n}) Body{n === 1 ? ' *' : ''}</div>

@@ -187,6 +187,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V55 = 'contracts.templates.v55';
 const SEED_KEY_CONTRACTS_TEMPLATES_V56 = 'contracts.templates.v56';
 const SEED_KEY_CONTRACTS_TEMPLATES_V57 = 'contracts.templates.v57';
 const SEED_KEY_CONTRACTS_TEMPLATES_V58 = 'contracts.templates.v58';
+const SEED_KEY_CONTRACTS_TEMPLATES_V59 = 'contracts.templates.v59';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2435,6 +2436,61 @@ function seedContractsTemplatesV58(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V58] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV59(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V59]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const existing = new Set((tpl.placeholders ?? []).map((p) => p.key));
+    const extra: ContractTemplate['placeholders'] = [];
+    for (let n = 1; n <= 10; n++) {
+      if (!existing.has(`service_price_${n}`)) {
+        extra.push({ key: `service_price_${n}`, label: `Service (${n}) price（服务(${n})价格）`, required: false });
+      }
+    }
+
+    const placeholders = (() => {
+      if (!extra.length) return tpl.placeholders ?? [];
+      const list = (tpl.placeholders ?? []).slice();
+      const i = list.findIndex((p) => p.key === 'service_title_10');
+      if (i < 0) return [...list, ...extra];
+      return [...list.slice(0, i + 1), ...extra, ...list.slice(i + 1)];
+    })();
+
+    let html = String(tpl.templateHtml ?? '');
+    if (!html.includes('svc-price')) {
+      html = html.replace(
+        '.svc-head { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: baseline; }',
+        '.svc-head { display: grid; grid-template-columns: 46px 1fr 120px; gap: 8px; align-items: baseline; }',
+      );
+      html = html.replace(
+        '.svc-title { font-weight: 800; }',
+        '.svc-title { font-weight: 800; }\n      .svc-price { text-align: right; font-weight: 700; }',
+      );
+
+      for (let n = 1; n <= 10; n++) {
+        html = html.replaceAll(
+          `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}</div></div>`,
+          `<div class="svc-head"><div class="svc-no">(${n})</div><div class="svc-title">{{service_title_${n}}}</div><div class="svc-price">{{service_price_${n}}}</div></div>`,
+        );
+      }
+    }
+
+    templates[idx] = { ...tpl, placeholders, templateHtml: html, updatedAt: now };
+    changed = true;
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V59] = true;
   return changed;
 }
 
@@ -7724,6 +7780,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV56(db)) changed = true;
   if (seedContractsTemplatesV57(db)) changed = true;
   if (seedContractsTemplatesV58(db)) changed = true;
+  if (seedContractsTemplatesV59(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
