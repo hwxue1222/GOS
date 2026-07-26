@@ -319,6 +319,7 @@ export type ContractTemplate = {
   engine?: 'HTML';
   templateHtml: string;
   placeholders: Array<{ key: string; label: string; required?: boolean }>;
+  defaultFields?: Record<string, string>;
   createdAt: string;
   updatedAt?: string;
 };

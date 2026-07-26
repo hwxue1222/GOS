@@ -144,6 +144,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [packetId, setPacketId] = useState<string>('');
 
   const [saving, setSaving] = useState(false);
+  const [savingDefaultFields, setSavingDefaultFields] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -256,6 +257,36 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const signerEmail = String(fields.signer_email ?? '').trim();
 
   const pdfOpenUrl = contractId && contractNo ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
+
+  const saveQuotationServiceAsDefault = async () => {
+    if (!tpl?.id) return;
+    setSavingDefaultFields(true);
+    setError(null);
+    setErrorDetail('');
+    try {
+      const count = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(fields.service_count ?? '1') || 1));
+      const defaultFields: Record<string, string> = { service_count: String(count) };
+      for (let i = 1; i <= count; i++) {
+        defaultFields[`service_title_${i}`] = String((fields as any)[`service_title_${i}`] ?? '');
+        defaultFields[`service_body_${i}`] = String((fields as any)[`service_body_${i}`] ?? '');
+      }
+
+      const res = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/defaults`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ defaultFields }),
+      });
+      const j = (await res.json().catch(() => null)) as any;
+      if (!res.ok || !j?.ok) {
+        setError(j?.error || `HTTP_${res.status}`);
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'FAILED');
+        return;
+      }
+      router.refresh();
+    } finally {
+      setSavingDefaultFields(false);
+    }
+  };
 
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
@@ -506,6 +537,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
+
+      const tplDefaults = (tpl as any)?.defaultFields as Record<string, string> | undefined;
+      if (tplDefaults && typeof tplDefaults === 'object') {
+        for (const [k, v] of Object.entries(tplDefaults)) {
+          if (!k) continue;
+          if (hasKey(k)) continue;
+          next[k] = String(v ?? '');
+        }
+      }
+
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Quotation（报价）';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
@@ -546,7 +587,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       return next;
     });
-  }, [isQuotationTemplate]);
+  }, [isQuotationTemplate, tpl]);
 
 
   async function saveDraft() {
@@ -1433,6 +1474,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                         >
                           − Remove
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingDefaultFields}
+                          onClick={saveQuotationServiceAsDefault}
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          {savingDefaultFields ? 'Saving…' : 'Save as default'}
                         </button>
                       </div>
                     </div>

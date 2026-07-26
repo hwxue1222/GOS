@@ -3550,6 +3550,13 @@ function normalizeDb(parsed: Db): Db {
     ? (((parsed as unknown as { contractTemplates?: ContractTemplate[] }).contractTemplates ?? []) as ContractTemplate[]).map((t) => {
         const createdAt = (t as ContractTemplate).createdAt ?? nowIso();
         const updatedAt = (t as ContractTemplate).updatedAt ?? createdAt;
+        const defaultFieldsRaw = (t as unknown as { defaultFields?: unknown }).defaultFields;
+        const defaultFields =
+          typeof defaultFieldsRaw === 'object' && defaultFieldsRaw
+            ? (Object.fromEntries(
+                Object.entries(defaultFieldsRaw as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+              ) as Record<string, string>)
+            : undefined;
         return {
           ...t,
           id: String((t as ContractTemplate).id ?? ''),
@@ -3557,6 +3564,7 @@ function normalizeDb(parsed: Db): Db {
           engine: (t as ContractTemplate).engine,
           templateHtml: String((t as ContractTemplate).templateHtml ?? ''),
           placeholders: Array.isArray((t as ContractTemplate).placeholders) ? (t as ContractTemplate).placeholders : [],
+          defaultFields,
           createdAt,
           updatedAt,
         };
@@ -9657,6 +9665,22 @@ export async function listContractTemplates() {
   const db = await readDb();
   const list = (db.contractTemplates ?? []) as ContractTemplate[];
   return list.slice().sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
+}
+
+export async function updateContractTemplateDefaultFields(templateId: string, defaultFields: Record<string, string>) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const idx = templates.findIndex((t) => String(t.id ?? '').trim() === String(templateId ?? '').trim());
+  if (idx < 0) throw new Error('NOT_FOUND');
+  const now = nowIso();
+  const safeDefaults = Object.fromEntries(
+    Object.entries(defaultFields ?? {}).map(([k, v]) => [String(k), String(v ?? '')]),
+  ) as Record<string, string>;
+  templates[idx] = { ...templates[idx], defaultFields: safeDefaults, updatedAt: now };
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  await writeDb(db);
+  return templates[idx];
 }
 
 export async function listContracts() {
