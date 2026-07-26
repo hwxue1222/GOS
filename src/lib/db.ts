@@ -194,6 +194,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V62 = 'contracts.templates.v62';
 const SEED_KEY_CONTRACTS_TEMPLATES_V63 = 'contracts.templates.v63';
 const SEED_KEY_CONTRACTS_TEMPLATES_V64 = 'contracts.templates.v64';
 const SEED_KEY_CONTRACTS_TEMPLATES_V65 = 'contracts.templates.v65';
+const SEED_KEY_CONTRACTS_TEMPLATES_V66 = 'contracts.templates.v66';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -680,8 +681,8 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'service_title_10', label: 'Services provided (10) title（服务(10)标题）', required: false },
       { key: 'service_body_10', label: 'Services provided (10) body（服务(10)正文）', required: false },
       { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
-      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
-      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: false },
+      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: false },
       { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
       { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
       { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
@@ -1838,8 +1839,8 @@ function seedContractsTemplatesV51(db: Db) {
       { key: 'service_title_4', label: 'Services provided (4) title（服务(4)标题）', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body（服务(4)正文）', required: false },
       { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
-      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
-      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: false },
+      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: false },
       { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
       { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
       { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
@@ -2013,8 +2014,8 @@ function seedContractsTemplatesV52(db: Db) {
       { key: 'service_title_4', label: 'Services provided (4) title（服务(4)标题）', required: false },
       { key: 'service_body_4', label: 'Services provided (4) body（服务(4)正文）', required: false },
       { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
-      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
-      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+      { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: false },
+      { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: false },
       { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
       { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
       { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
@@ -2246,8 +2247,8 @@ function seedContractsTemplatesV55(db: Db) {
 
   const newFeePlaceholders: ContractTemplate['placeholders'] = [
     { key: 'fee_item_count', label: 'Fee items count（收费条目数量）', required: true },
-    { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: true },
-    { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: true },
+    { key: 'fee_item_1', label: 'Fee item (1)（收费条目1）', required: false },
+    { key: 'fee_item_2', label: 'Fee item (2)（收费条目2）', required: false },
     { key: 'fee_item_3', label: 'Fee item (3)（收费条目3）', required: false },
     { key: 'fee_item_4', label: 'Fee item (4)（收费条目4）', required: false },
     { key: 'fee_item_5', label: 'Fee item (5)（收费条目5）', required: false },
@@ -2730,6 +2731,36 @@ function seedContractsTemplatesV65(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V65] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV66(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V66]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const updateByName = (name: string) => {
+    const idx = templates.findIndex((t) => String(t.name ?? '').trim() === name);
+    if (idx < 0) return;
+    const tpl = templates[idx];
+    const placeholders = (tpl.placeholders ?? []).map((p) => {
+      if (p.key === 'fee_item_1' || p.key === 'fee_item_2') return { ...p, required: false };
+      return p;
+    });
+    const same = JSON.stringify(placeholders) === JSON.stringify(tpl.placeholders ?? []);
+    if (same) return;
+    templates[idx] = { ...tpl, placeholders, updatedAt: now };
+    changed = true;
+  };
+
+  updateByName('Quotation（报价）');
+  updateByName('Professional Service Agreement');
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V66] = true;
   return changed;
 }
 
@@ -8026,6 +8057,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV63(db)) changed = true;
   if (seedContractsTemplatesV64(db)) changed = true;
   if (seedContractsTemplatesV65(db)) changed = true;
+  if (seedContractsTemplatesV66(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

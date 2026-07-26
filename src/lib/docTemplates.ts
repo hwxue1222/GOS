@@ -2975,7 +2975,7 @@ export function renderContractHtml(input: {
       );
     }
 
-    const feeItemCount = Math.max(2, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '2') || 2));
+    const feeItemCount = Math.max(0, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '0') || 0));
     for (let n = feeItemCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
@@ -2999,7 +2999,7 @@ export function renderContractHtml(input: {
       );
     }
 
-    const feeItemCount = Math.max(2, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '2') || 2));
+    const feeItemCount = Math.max(0, Math.min(6, Number((input.fields ?? {}).fee_item_count ?? '0') || 0));
     for (let n = feeItemCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(

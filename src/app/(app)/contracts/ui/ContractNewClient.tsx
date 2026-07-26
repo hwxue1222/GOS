@@ -49,7 +49,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const feeItemCount = Math.max(2, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
+    const feeItemCount = Math.max(0, Math.min(6, Number(map.fee_item_count ?? '0') || 0));
     for (let n = feeItemCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
@@ -75,7 +75,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const feeItemCount = Math.max(2, Math.min(6, Number(map.fee_item_count ?? '2') || 2));
+    const feeItemCount = Math.max(0, Math.min(6, Number(map.fee_item_count ?? '0') || 0));
     for (let n = feeItemCount + 1; n <= 6; n++) {
       html = html.replace(
         new RegExp(
@@ -571,10 +571,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
 
       if (!String((next as any).fee_item_count ?? '').trim()) (next as any).fee_item_count = '2';
-      if (!String((next as any).fee_item_1 ?? '').trim()) {
+      const feeItemCount = Math.max(0, Math.min(6, Number((next as any).fee_item_count ?? '0') || 0));
+      if (feeItemCount >= 1 && !String((next as any).fee_item_1 ?? '').trim()) {
         (next as any).fee_item_1 = String((next as any).fee_1_item_1 ?? '').trim();
       }
-      if (!String((next as any).fee_item_2 ?? '').trim()) {
+      if (feeItemCount >= 2 && !String((next as any).fee_item_2 ?? '').trim()) {
         (next as any).fee_item_2 = String((next as any).fee_1_item_2 ?? '').trim();
       }
 
@@ -625,11 +626,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
 
       if (!String(next.fee_item_count ?? '').trim()) next.fee_item_count = '2';
-      if (!String((next as any).fee_item_1 ?? '').trim()) {
+      const feeItemCount = Math.max(0, Math.min(6, Number(next.fee_item_count ?? '0') || 0));
+      if (feeItemCount >= 1 && !String((next as any).fee_item_1 ?? '').trim()) {
         (next as any).fee_item_1 =
           'Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））';
       }
-      if (!String((next as any).fee_item_2 ?? '').trim()) {
+      if (feeItemCount >= 2 && !String((next as any).fee_item_2 ?? '').trim()) {
         (next as any).fee_item_2 = 'Local nominee director fee (per year)（本地挂名董事费（一年））';
       }
 
@@ -1301,7 +1303,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         type="button"
                         onClick={() =>
                           setFields((prev) => {
-                            const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                            const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
                             const nextCount = Math.min(6, cur + 1);
                             return { ...prev, fee_item_count: String(nextCount) } as any;
                           })
@@ -1314,11 +1316,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         type="button"
                         onClick={() =>
                           setFields((prev) => {
-                            const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
-                            const nextCount = Math.max(2, cur - 1);
+                            const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                            const nextCount = Math.max(0, cur - 1);
                             const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
                             for (let i = nextCount + 1; i <= 6; i++) {
                               delete (next as any)[`fee_item_${i}`];
+                              if (i === 1) delete (next as any).fee_1_item_1;
+                              if (i === 2) delete (next as any).fee_1_item_2;
                             }
                             return next;
                           })
@@ -1329,27 +1333,31 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </button>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-1 gap-3">
-                      {Array.from({ length: Math.max(2, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
-                        (n) => (
-                          <div key={n}>
-                            <div className="text-xs font-medium text-black/60">Item {n}{n <= 2 ? ' *' : ''}</div>
-                            <input
-                              value={(fields as any)[`fee_item_${n}`] ?? ''}
-                              onChange={(e) =>
-                                setFields((prev) => {
-                                  const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
-                                  if (n === 1) next.fee_1_item_1 = e.target.value;
-                                  if (n === 2) next.fee_1_item_2 = e.target.value;
-                                  return next;
-                                })
-                              }
-                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                            />
-                          </div>
-                        ),
-                      )}
-                    </div>
+                    {(() => {
+                      const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
+                      if (!feeItemCount) return <div className="mt-2 text-xs text-black/40">No items</div>;
+                      return (
+                        <div className="mt-2 grid grid-cols-1 gap-3">
+                          {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
+                            <div key={n}>
+                              <div className="text-xs font-medium text-black/60">Item {n}</div>
+                              <input
+                                value={(fields as any)[`fee_item_${n}`] ?? ''}
+                                onChange={(e) =>
+                                  setFields((prev) => {
+                                    const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
+                                    if (n === 1) next.fee_1_item_1 = e.target.value;
+                                    if (n === 2) next.fee_1_item_2 = e.target.value;
+                                    return next;
+                                  })
+                                }
+                                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div>
@@ -1726,7 +1734,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
+                              const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
                               const nextCount = Math.min(6, cur + 1);
                               return { ...prev, fee_item_count: String(nextCount) } as any;
                             })
@@ -1739,8 +1747,8 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(2, Math.min(6, Number((prev as any).fee_item_count ?? '2') || 2));
-                              const nextCount = Math.max(2, cur - 1);
+                              const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                              const nextCount = Math.max(0, cur - 1);
                               const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
                               for (let i = nextCount + 1; i <= 6; i++) {
                                 delete (next as any)[`fee_item_${i}`];
@@ -1767,20 +1775,24 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
 
-                    <div className="mt-2 grid grid-cols-1 gap-3">
-                      {Array.from({ length: Math.max(1, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
-                        (n) => (
-                          <div key={n} className="md:col-span-1">
-                            <div className="text-xs font-medium text-black/60">Item {n}{n <= 2 ? ' *' : ''}</div>
-                            <input
-                              value={(fields as any)[`fee_item_${n}`] ?? ''}
-                              onChange={(e) => setFields((prev) => ({ ...prev, [`fee_item_${n}`]: e.target.value }))}
-                              className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                            />
-                          </div>
-                        ),
-                      )}
-                    </div>
+                    {(() => {
+                      const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
+                      if (!feeItemCount) return <div className="mt-2 text-xs text-black/40">No items</div>;
+                      return (
+                        <div className="mt-2 grid grid-cols-1 gap-3">
+                          {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
+                            <div key={n} className="md:col-span-1">
+                              <div className="text-xs font-medium text-black/60">Item {n}</div>
+                              <input
+                                value={(fields as any)[`fee_item_${n}`] ?? ''}
+                                onChange={(e) => setFields((prev) => ({ ...prev, [`fee_item_${n}`]: e.target.value }))}
+                                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
 
                     <div className="mt-3">
                       <div className="text-xs font-medium text-black/60">Note</div>
