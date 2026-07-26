@@ -1820,14 +1820,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         >
                           {savingFeesDefaultFields ? 'Saving…' : 'Save as default'}
                         </button>
-                        <button
-                          type="button"
-                          disabled={savingFeesDefaultFields}
-                          onClick={saveFeesAsDefault}
-                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
-                        >
-                          {savingFeesDefaultFields ? 'Saving…' : 'Save as default'}
-                        </button>
                       </div>
                     </div>
 
