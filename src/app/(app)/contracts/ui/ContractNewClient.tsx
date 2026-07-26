@@ -1126,7 +1126,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   }}
                   className="h-9 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
                 >
-                  {savingNamedDefault ? 'Saving…' : 'Save as default'}
+                  {savingNamedDefault ? 'Saving…' : 'Save draft'}
                 </button>
               ) : null}
             </div>
