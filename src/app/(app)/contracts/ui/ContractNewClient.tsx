@@ -59,8 +59,8 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     if (feeIntro && !html.includes('class="p fee-intro"')) {
       const safe = escHtml(feeIntro).replaceAll('\n', '<br />');
       html = html.replace(
-        '<div class="fee-items">',
-        `<div class="p fee-intro">${safe}</div>\n\n          <div class=\"fee-items\">`,
+        /(<div class="p">1\. Fee items[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-intro">${safe}</div>`,
       );
     }
 
@@ -68,8 +68,8 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = escHtml(feeNote).replaceAll('\n', '<br />');
       html = html.replace(
-        /(<div class="fee-items"[\s\S]*?<\/div>)/,
-        `$1\n\n          <div class="p fee-note">${safe}</div>`,
+        /(\s*\n\s*<div class="p">2\.)/,
+        `\n\n          <div class=\"p fee-note\">${safe}</div>$1`,
       );
     }
   }
