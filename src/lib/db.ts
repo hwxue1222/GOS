@@ -201,6 +201,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V69 = 'contracts.templates.v69';
 const SEED_KEY_CONTRACTS_TEMPLATES_V70 = 'contracts.templates.v70';
 const SEED_KEY_CONTRACTS_TEMPLATES_V71 = 'contracts.templates.v71';
 const SEED_KEY_CONTRACTS_TEMPLATES_V72 = 'contracts.templates.v72';
+const SEED_KEY_CONTRACTS_TEMPLATES_V73 = 'contracts.templates.v73';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2981,6 +2982,44 @@ function seedContractsTemplatesV72(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V72] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV73(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V73]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const qIdx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  const pIdx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (qIdx >= 0 && pIdx >= 0) {
+    const quotation = templates[qIdx];
+    const psa = templates[pIdx];
+
+    const qDefaults = (quotation.defaultFields ?? {}) as Record<string, string>;
+    const psaDefaults = (psa.defaultFields ?? {}) as Record<string, string>;
+
+    const nextDefaults: Record<string, string> = { ...psaDefaults };
+    for (const k of Object.keys(nextDefaults)) {
+      if (k.startsWith('service_')) delete nextDefaults[k];
+    }
+    for (const [k, v] of Object.entries(qDefaults)) {
+      if (!k.startsWith('service_')) continue;
+      nextDefaults[k] = String(v ?? '');
+    }
+
+    const same = JSON.stringify(nextDefaults) === JSON.stringify(psaDefaults);
+    if (!same) {
+      templates[pIdx] = { ...psa, defaultFields: nextDefaults, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V73] = true;
   return changed;
 }
 
@@ -8284,6 +8323,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV70(db)) changed = true;
   if (seedContractsTemplatesV71(db)) changed = true;
   if (seedContractsTemplatesV72(db)) changed = true;
+  if (seedContractsTemplatesV73(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
