@@ -13,6 +13,7 @@ import type {
   CompanyRepresentative,
   Contract,
   ContractTemplate,
+  ContractTemplateDefaultRevision,
   Currency,
   Db,
   DirectorChangeRequest,
@@ -112,6 +113,7 @@ function emptyDb(): Db {
     signaturePackets: [],
     signatureRequests: [],
     contractTemplates: [],
+    contractTemplateDefaultRevisions: [],
     contracts: [],
     representativeDesignationRequests: [],
     shareTransfers: [],
@@ -244,6 +246,10 @@ function ensureContractsCollections(db: Db) {
   let changed = false;
   if (!Array.isArray((db as unknown as { contractTemplates?: unknown }).contractTemplates)) {
     (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = [];
+    changed = true;
+  }
+  if (!Array.isArray((db as unknown as { contractTemplateDefaultRevisions?: unknown }).contractTemplateDefaultRevisions)) {
+    (db as unknown as { contractTemplateDefaultRevisions: ContractTemplateDefaultRevision[] }).contractTemplateDefaultRevisions = [];
     changed = true;
   }
   if (!Array.isArray((db as unknown as { contracts?: unknown }).contracts)) {
@@ -4161,6 +4167,39 @@ function normalizeDb(parsed: Db): Db {
       })
     : [];
 
+  const rawTemplateDefaultRevisions = (parsed as unknown as { contractTemplateDefaultRevisions?: unknown }).contractTemplateDefaultRevisions;
+  const contractTemplateDefaultRevisions: ContractTemplateDefaultRevision[] = Array.isArray(rawTemplateDefaultRevisions)
+    ? (rawTemplateDefaultRevisions as unknown as ContractTemplateDefaultRevision[])
+        .map((r) => {
+          const safeDefaults =
+            typeof (r as any).defaultFields === 'object' && (r as any).defaultFields
+              ? (Object.fromEntries(
+                  Object.entries((r as any).defaultFields as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+                ) as Record<string, string>)
+              : {};
+          const safePrev =
+            typeof (r as any).previousDefaultFields === 'object' && (r as any).previousDefaultFields
+              ? (Object.fromEntries(
+                  Object.entries((r as any).previousDefaultFields as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+                ) as Record<string, string>)
+              : undefined;
+          return {
+            id: String((r as any).id ?? ''),
+            templateId: String((r as any).templateId ?? ''),
+            templateName: String((r as any).templateName ?? ''),
+            createdAt: String((r as any).createdAt ?? nowIso()),
+            actorUserId: typeof (r as any).actorUserId === 'string' ? String((r as any).actorUserId ?? '') : undefined,
+            kind: ((r as any).kind === 'RESTORE_DEFAULTS' ? 'RESTORE_DEFAULTS' : 'SAVE_AS_DEFAULT') as
+              | 'SAVE_AS_DEFAULT'
+              | 'RESTORE_DEFAULTS',
+            defaultFields: safeDefaults,
+            previousDefaultFields: safePrev,
+          };
+        })
+        .filter((r) => !!r.id && !!r.templateId && !!r.createdAt)
+        .slice(-5000)
+    : [];
+
   const contracts: Contract[] = Array.isArray((parsed as unknown as { contracts?: unknown }).contracts)
     ? (((parsed as unknown as { contracts?: Contract[] }).contracts ?? []) as Contract[]).map((c) => {
         const createdAt = (c as Contract).createdAt ?? nowIso();
@@ -4194,6 +4233,7 @@ function normalizeDb(parsed: Db): Db {
     passwordResets,
     clients,
     contractTemplates,
+    contractTemplateDefaultRevisions,
     contracts,
     invoices: normalizedInvoices,
     invoiceEmailHistories: normalizedInvoiceEmailHistories,
@@ -10272,7 +10312,11 @@ export async function listContractTemplates() {
   return list.slice().sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
 }
 
-export async function updateContractTemplateDefaultFields(templateId: string, defaultFields: Record<string, string>) {
+export async function updateContractTemplateDefaultFields(
+  templateId: string,
+  defaultFields: Record<string, string>,
+  actorUserId?: string,
+) {
   const db = await readDb();
   ensureContractsCollections(db);
   const templates = (db.contractTemplates ?? []) as ContractTemplate[];
@@ -10282,7 +10326,24 @@ export async function updateContractTemplateDefaultFields(templateId: string, de
   const safeDefaults = Object.fromEntries(
     Object.entries(defaultFields ?? {}).map(([k, v]) => [String(k), String(v ?? '')]),
   ) as Record<string, string>;
-  templates[idx] = { ...templates[idx], defaultFields: safeDefaults, updatedAt: now };
+
+  const revisions = (db.contractTemplateDefaultRevisions ?? []) as ContractTemplateDefaultRevision[];
+  const prevDefaults = templates[idx].defaultFields ?? {};
+  const nextDefaults = { ...prevDefaults, ...safeDefaults };
+  revisions.push({
+    id: newId('ctdrv'),
+    templateId: templates[idx].id,
+    templateName: String(templates[idx].name ?? ''),
+    createdAt: now,
+    actorUserId: actorUserId ? String(actorUserId) : undefined,
+    kind: 'SAVE_AS_DEFAULT',
+    defaultFields: nextDefaults,
+    previousDefaultFields: prevDefaults,
+  });
+  const capped = revisions.filter((r) => r.templateId !== templates[idx].id).concat(revisions.filter((r) => r.templateId === templates[idx].id).slice(-50));
+  (db as unknown as { contractTemplateDefaultRevisions: ContractTemplateDefaultRevision[] }).contractTemplateDefaultRevisions = capped;
+
+  templates[idx] = { ...templates[idx], defaultFields: nextDefaults, updatedAt: now };
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   await writeDb(db);
   return templates[idx];

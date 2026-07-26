@@ -18,7 +18,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ templateId: st
   if (!templateId) return NextResponse.json({ ok: false, error: 'INVALID_INPUT' }, { status: 400 });
 
   try {
-    const tpl = await updateContractTemplateDefaultFields(templateId, defaultFields);
+    const tpl = await updateContractTemplateDefaultFields(templateId, defaultFields, user.id);
     return NextResponse.json({ ok: true, template: tpl });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -26,4 +26,3 @@ export async function POST(req: Request, ctx: { params: Promise<{ templateId: st
     return NextResponse.json({ ok: false, error: 'FAILED', message: msg }, { status: 500 });
   }
 }
-

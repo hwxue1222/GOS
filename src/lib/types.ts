@@ -324,6 +324,17 @@ export type ContractTemplate = {
   updatedAt?: string;
 };
 
+export type ContractTemplateDefaultRevision = {
+  id: string;
+  templateId: string;
+  templateName: string;
+  createdAt: string;
+  actorUserId?: string;
+  kind: 'SAVE_AS_DEFAULT' | 'RESTORE_DEFAULTS';
+  defaultFields: Record<string, string>;
+  previousDefaultFields?: Record<string, string>;
+};
+
 export type Contract = {
   id: string;
   contractNo: string;
@@ -740,6 +751,7 @@ export type Db = {
   signaturePackets: SignaturePacket[];
   signatureRequests: SignatureRequest[];
   contractTemplates?: ContractTemplate[];
+  contractTemplateDefaultRevisions?: ContractTemplateDefaultRevision[];
   contracts?: Contract[];
   representativeDesignationRequests: RepresentativeDesignationRequest[];
   shareTransfers: ShareTransfer[];
