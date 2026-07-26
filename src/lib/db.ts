@@ -199,6 +199,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V67 = 'contracts.templates.v67';
 const SEED_KEY_CONTRACTS_TEMPLATES_V68 = 'contracts.templates.v68';
 const SEED_KEY_CONTRACTS_TEMPLATES_V69 = 'contracts.templates.v69';
 const SEED_KEY_CONTRACTS_TEMPLATES_V70 = 'contracts.templates.v70';
+const SEED_KEY_CONTRACTS_TEMPLATES_V71 = 'contracts.templates.v71';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2887,6 +2888,59 @@ function seedContractsTemplatesV70(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V70] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV71(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V71]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+
+    const existing = new Set((tpl.placeholders ?? []).map((p) => p.key));
+    const extra: ContractTemplate['placeholders'] = [];
+    if (!existing.has('fee_intro')) extra.push({ key: 'fee_intro', label: 'Fees intro（收费标准说明）', required: false });
+    if (!existing.has('fee_note')) extra.push({ key: 'fee_note', label: 'Fees note（收费标准备注）', required: false });
+    const placeholders = extra.length ? [...(tpl.placeholders ?? []), ...extra] : (tpl.placeholders ?? []);
+
+    const before = String(tpl.templateHtml ?? '');
+    let after = before;
+
+    if (!after.includes('.fee-intro') && after.includes('.fee-item')) {
+      after = after.replace(
+        '.fee-item { margin: 6px 0; padding-left: 14px; }',
+        '.fee-item { margin: 6px 0; padding-left: 14px; }\n      .fee-intro, .fee-note { padding-left: 14px; }',
+      );
+    }
+
+    if (!after.includes('{{fee_intro}}')) {
+      after = after.replace(
+        '<div class="p"><b>1.</b> Party B\'s fee standard is as follows:（乙方收费标准如下：）</div>',
+        '<div class="p"><b>1.</b> Party B\'s fee standard is as follows:（乙方收费标准如下：）</div>\n          <div class="p fee-intro">{{fee_intro}}</div>',
+      );
+    }
+
+    if (!after.includes('{{fee_note}}')) {
+      after = after.replace(
+        '</div>\n          <div class="p"><b>2.</b> {{fee_2}}</div>',
+        '</div>\n          <div class="p fee-note">{{fee_note}}</div>\n          <div class="p"><b>2.</b> {{fee_2}}</div>',
+      );
+    }
+
+    if (extra.length || after !== before) {
+      templates[idx] = { ...tpl, placeholders, templateHtml: after, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V71] = true;
   return changed;
 }
 
@@ -8188,6 +8242,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV68(db)) changed = true;
   if (seedContractsTemplatesV69(db)) changed = true;
   if (seedContractsTemplatesV70(db)) changed = true;
+  if (seedContractsTemplatesV71(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

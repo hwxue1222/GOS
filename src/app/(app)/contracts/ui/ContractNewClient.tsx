@@ -401,6 +401,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           defaultFields[`fee_clause_${i}`] = String((fields as any)[`fee_clause_${i}`] ?? '');
         }
       } else {
+        defaultFields.fee_intro = String((fields as any).fee_intro ?? '');
+        defaultFields.fee_note = String((fields as any).fee_note ?? '');
+
         const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
         defaultFields.fee_item_count = String(feeItemCount);
         for (let i = 1; i <= feeItemCount; i++) {
@@ -1203,7 +1206,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '2') || 2));
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '1') || 1));
                               const nextCount = Math.min(MAX_SERVICE_ITEMS, cur + 1);
                               return { ...prev, service_count: String(nextCount) };
                             })
@@ -1216,7 +1219,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           type="button"
                           onClick={() =>
                             setFields((prev) => {
-                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '2') || 2));
+                              const cur = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(prev.service_count ?? '1') || 1));
                               const nextCount = Math.max(1, cur - 1);
                               const next = { ...prev, service_count: String(nextCount) } as Record<string, string>;
                               for (let i = nextCount + 1; i <= MAX_SERVICE_ITEMS; i++) {
@@ -1242,7 +1245,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
-                    {Array.from({ length: Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(fields.service_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
+                    {Array.from({ length: Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(fields.service_count ?? '1') || 1)) }, (_, idx) => idx + 1).map(
                       (n) => (
                         <div key={n} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="md:col-span-1">
@@ -1421,9 +1424,30 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={savingFeesDefaultFields}
+                          onClick={saveFeesAsDefault}
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          {savingFeesDefaultFields ? 'Saving…' : 'Save as default'}
+                        </button>
+                      </div>
+                    </div>
 
                     <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（收费项目）</div>
+                    <div className="mt-2">
+                      <div className="text-xs font-medium text-black/60">Intro</div>
+                      <textarea
+                        value={(fields as any).fee_intro ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, fee_intro: e.target.value }))}
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
                     <div className="mt-2 flex justify-end gap-2">
                       <button
                         type="button"
@@ -1484,6 +1508,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         </div>
                       );
                     })()}
+
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-black/60">Note</div>
+                      <textarea
+                        value={(fields as any).fee_note ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
 
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div>
