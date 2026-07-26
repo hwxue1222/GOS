@@ -410,7 +410,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
     const partyAIdLabel = partyAEntityType === 'individual' ? 'ID（证件号）' : 'UEN / Registration No.（注册号）';
     const isQuotation = tpl.name === 'Quotation（报价）';
-    return renderPreview(tpl.templateHtml, {
+    let templateHtml = tpl.templateHtml;
+    if (tpl.name === 'Quotation（报价）') {
+      templateHtml = templateHtml.replaceAll('<div class="subtitle">（报价）</div>', '');
+      templateHtml = templateHtml.replaceAll('<div class="subtitle">(报价)</div>', '');
+    }
+
+    return renderPreview(templateHtml, {
       contract_no: isQuotation ? '' : contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,

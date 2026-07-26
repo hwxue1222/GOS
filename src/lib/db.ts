@@ -196,6 +196,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V64 = 'contracts.templates.v64';
 const SEED_KEY_CONTRACTS_TEMPLATES_V65 = 'contracts.templates.v65';
 const SEED_KEY_CONTRACTS_TEMPLATES_V66 = 'contracts.templates.v66';
 const SEED_KEY_CONTRACTS_TEMPLATES_V67 = 'contracts.templates.v67';
+const SEED_KEY_CONTRACTS_TEMPLATES_V68 = 'contracts.templates.v68';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2788,6 +2789,33 @@ function seedContractsTemplatesV67(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V67] = true;
+  return changed;
+}
+
+
+function seedContractsTemplatesV68(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V68]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const before = String(tpl.templateHtml ?? '');
+    let after = before;
+    after = after.replaceAll('<div class="subtitle">（报价）</div>', '');
+    after = after.replaceAll('<div class="subtitle">(报价)</div>', '');
+    if (after !== before) {
+      templates[idx] = { ...tpl, templateHtml: after, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V68] = true;
   return changed;
 }
 
@@ -8086,6 +8114,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV65(db)) changed = true;
   if (seedContractsTemplatesV66(db)) changed = true;
   if (seedContractsTemplatesV67(db)) changed = true;
+  if (seedContractsTemplatesV68(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
