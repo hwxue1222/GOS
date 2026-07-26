@@ -1944,7 +1944,7 @@ function seedContractsTemplatesV51(db: Db) {
 
         <div class="section">
           <div class="section-title">II. Fees（收费标准）</div>
-          <div class="p">1. Fee items（乙方收费标准如下：）</div>
+          <div class="p">1. Fee items（收费项目）</div>
           <div class="fee-items">
             <div class="fee-item" data-fee-item="1">• {{fee_item_1}}</div><!-- END_FEE_ITEM_1 -->
             <div class="fee-item" data-fee-item="2">• {{fee_item_2}}</div><!-- END_FEE_ITEM_2 -->

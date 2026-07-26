@@ -1295,7 +1295,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   <div className="rounded-lg border border-black/10 p-3">
                     <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
 
-                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
+                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（收费项目）</div>
                     <div className="mt-2 flex justify-end gap-2">
                       <button
                         type="button"
