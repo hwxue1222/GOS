@@ -24,16 +24,21 @@ function escHtml(s: string) {
 function renderPreview(templateHtml: string, map: Record<string, string>) {
   let html = templateHtml;
 
-  if (html.includes('TEMPLATE: QUOTATION')) {
+  const isQuotation =
+    html.includes('TEMPLATE: QUOTATION') ||
+    String(map.agreement_title ?? '').includes('Quotation') ||
+    String(map.agreement_title ?? '').includes('报价');
+
+  if (isQuotation && html.includes('<div class="fee-items">')) {
     if (!html.includes('fee-intro')) {
       html = html.replace(
-        /(<div class="p">1\. Fee items[^<]*<\/div>)/,
-        `$1\n\n          <div class="p fee-intro">{{fee_intro}}</div>`,
+        '<div class="fee-items">',
+        '<div class="p fee-intro">{{fee_intro}}</div>\n\n          <div class="fee-items">',
       );
     }
     if (!html.includes('fee-note')) {
       html = html.replace(
-        /(<div class="fee-items"[\s\S]*?<\/div>)/,
+        /(<div class="fee-items">[\s\S]*?<\/div>)/,
         `$1\n\n          <div class="p fee-note">{{fee_note}}</div>`,
       );
     }
@@ -404,8 +409,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const partyALabel =
       partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
     const partyAIdLabel = partyAEntityType === 'individual' ? 'ID（证件号）' : 'UEN / Registration No.（注册号）';
+    const isQuotation = tpl.name === 'Quotation（报价）';
     return renderPreview(tpl.templateHtml, {
-      contract_no: contractNo || 'BBYYYYMM001X',
+      contract_no: isQuotation ? '' : contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,
       generated_date: String((fields as any).generated_date ?? '').trim() || new Date().toISOString().slice(0, 10),
@@ -2114,7 +2120,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             <div className="px-4 py-3 border-b border-black/5">
               <div className="text-sm font-semibold">Preview</div>
               <div className="text-xs text-black/60 mt-1">
-                {contractNo ? `Contract No: ${contractNo}` : 'Contract No will be generated after Generate'}
+                {tpl?.name === 'Quotation（报价）'
+                  ? `Date: ${String((fields as any).date ?? '').trim() || new Date().toISOString().slice(0, 10)}`
+                  : contractNo
+                    ? `Contract No: ${contractNo}`
+                    : 'Contract No will be generated after Generate'}
               </div>
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
