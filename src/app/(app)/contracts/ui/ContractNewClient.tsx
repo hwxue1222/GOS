@@ -29,15 +29,18 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     String(map.agreement_title ?? '').includes('Quotation') ||
     String(map.agreement_title ?? '').includes('报价');
 
+  const hasFeeIntroBlock = html.includes('class="p fee-intro"') || html.includes('{{fee_intro}}');
+  const hasFeeNoteBlock = html.includes('class="p fee-note"') || html.includes('{{fee_note}}');
+
   if (isQuotation) {
-    if (!html.includes('fee-intro') && html.includes('Fee items')) {
+    if (!hasFeeIntroBlock && html.includes('Fee items')) {
       html = html.replace(
         /(<div class="p">1\. Fee items[\s\S]*?<\/div>)/,
         `$1\n\n          <div class="p fee-intro">{{fee_intro}}</div>`,
       );
     }
 
-    if (!html.includes('fee-note') && html.includes('fee-items')) {
+    if (!hasFeeNoteBlock && html.includes('fee-items')) {
       html = html.replace(
         /(<div class="fee-items"[\s\S]*?<\/div>)(\s*\n\s*<div class="p">2\.)/,
         `$1\n\n          <div class="p fee-note">{{fee_note}}</div>$2`,
@@ -53,7 +56,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
 
   if (isQuotation) {
     const feeIntro = String(map.fee_intro ?? '').trim();
-    if (feeIntro && !html.includes('fee-intro')) {
+    if (feeIntro && !html.includes('class="p fee-intro"')) {
       const safe = escHtml(feeIntro).replaceAll('\n', '<br />');
       html = html.replace(
         '<div class="fee-items">',
@@ -62,7 +65,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     }
 
     const feeNote = String(map.fee_note ?? '').trim();
-    if (feeNote && !html.includes('fee-note')) {
+    if (feeNote && !html.includes('class="p fee-note"')) {
       const safe = escHtml(feeNote).replaceAll('\n', '<br />');
       html = html.replace(
         /(<div class="fee-items"[\s\S]*?<\/div>)/,
