@@ -190,6 +190,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V58 = 'contracts.templates.v58';
 const SEED_KEY_CONTRACTS_TEMPLATES_V59 = 'contracts.templates.v59';
 const SEED_KEY_CONTRACTS_TEMPLATES_V60 = 'contracts.templates.v60';
 const SEED_KEY_CONTRACTS_TEMPLATES_V61 = 'contracts.templates.v61';
+const SEED_KEY_CONTRACTS_TEMPLATES_V62 = 'contracts.templates.v62';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -2590,6 +2591,42 @@ function seedContractsTemplatesV61(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V61] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV62(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V62]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    let html = String(tpl.templateHtml ?? '');
+    const noteBlock = '<div class="p fee-note">{{fee_note}}</div>';
+
+    if (html.includes('fee-note')) {
+      html = html.replaceAll(noteBlock, '');
+    }
+
+    if (!html.includes(noteBlock)) {
+      html = html.replace(
+        /(<div class="fee-items"[\s\S]*?<\/div>)(\s*\n\s*<div class="p">2\.)/,
+        `$1\n\n          ${noteBlock}$2`,
+      );
+    }
+
+    if (html !== String(tpl.templateHtml ?? '')) {
+      templates[idx] = { ...tpl, templateHtml: html, updatedAt: now };
+      changed = true;
+    }
+  }
+
+  (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V62] = true;
   return changed;
 }
 
@@ -7882,6 +7919,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV59(db)) changed = true;
   if (seedContractsTemplatesV60(db)) changed = true;
   if (seedContractsTemplatesV61(db)) changed = true;
+  if (seedContractsTemplatesV62(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

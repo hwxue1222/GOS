@@ -1781,6 +1781,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       )}
                     </div>
 
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-black/60">Note</div>
+                      <textarea
+                        value={(fields as any).fee_note ?? ''}
+                        onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
+                        rows={2}
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                      />
+                    </div>
+
                     <div className="mt-3 grid grid-cols-1 gap-3">
                       <div className="flex items-center justify-between">
                         <div className="text-xs font-medium text-black/60">2–{Number((fields as any).fee_clause_count ?? '2') + 1}.</div>
@@ -1831,16 +1841,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           </div>
                         ),
                       )}
-                    </div>
-
-                    <div className="mt-3">
-                      <div className="text-xs font-medium text-black/60">Note</div>
-                      <textarea
-                        value={(fields as any).fee_note ?? ''}
-                        onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
-                        rows={2}
-                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                      />
                     </div>
                   </div>
                 </div>
