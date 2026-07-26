@@ -574,7 +574,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
-      if (!hasKey('service_body_1')) {
+      if (!String(next.service_body_1 ?? '').trim()) {
         next.service_body_1 =
           'Corporate secretary services are included as below:（公司秘书服务包括：）\n\n' +
           '• Maintain various registers（维护各类公司登记册）\n' +
@@ -585,6 +585,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           '• Prepare AGM and minutes and submit annual return（准备年股东大会文件和年度申报）\n\n' +
           'Extra charges may apply for special transactions.（特殊事项可能产生额外费用。）';
       }
+
+      if (!String((next as any).fee_intro ?? '').trim()) (next as any).fee_intro = '';
+      if (!String((next as any).fee_note ?? '').trim()) (next as any).fee_note = '';
       if (!String(next.fee_1_item_1 ?? '').trim()) {
         next.fee_1_item_1 = 'Company incorporation fee (one-time, includes the first year of corporate secretary service)（公司注册费（一次性，送第一年公司秘书服务））';
       }
