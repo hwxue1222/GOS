@@ -2934,6 +2934,22 @@ export function renderContractHtml(input: {
   }
 
   let html = String(input.templateHtml ?? '');
+
+  if (html.includes('TEMPLATE: QUOTATION')) {
+    if (!html.includes('fee-intro')) {
+      html = html.replace(
+        /(<div class="p">1\. Fee items[^<]*<\/div>)/,
+        `$1\n\n          <div class="p fee-intro">{{fee_intro}}</div>`,
+      );
+    }
+    if (!html.includes('fee-note')) {
+      html = html.replace(
+        /(<div class="fee-items"[\s\S]*?<\/div>)/,
+        `$1\n\n          <div class="p fee-note">{{fee_note}}</div>`,
+      );
+    }
+  }
+
   for (const [k, v] of Object.entries(map)) {
     const key = String(k ?? '').trim();
     if (!key) continue;
