@@ -258,7 +258,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const pdfOpenUrl = contractId && contractNo ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
 
-  const saveQuotationServiceAsDefault = async () => {
+  const saveServicesAsDefault = async () => {
     if (!tpl?.id) return;
     setSavingDefaultFields(true);
     setError(null);
@@ -395,6 +395,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
+
+      const tplDefaults = (tpl as any)?.defaultFields as Record<string, string> | undefined;
+      if (tplDefaults && typeof tplDefaults === 'object') {
+        for (const [k, v] of Object.entries(tplDefaults)) {
+          if (!k) continue;
+          if (hasKey(k)) continue;
+          next[k] = String(v ?? '');
+        }
+      }
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
@@ -530,7 +539,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       return next;
     });
-  }, [isProfessionalTemplate]);
+  }, [isProfessionalTemplate, tpl]);
 
   useEffect(() => {
     if (!isQuotationTemplate) return;
@@ -1030,6 +1039,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         >
                           − Remove
                         </button>
+                        <button
+                          type="button"
+                          disabled={savingDefaultFields}
+                          onClick={saveServicesAsDefault}
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                        >
+                          {savingDefaultFields ? 'Saving…' : 'Save as default'}
+                        </button>
                       </div>
                     </div>
 
@@ -1478,7 +1495,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         <button
                           type="button"
                           disabled={savingDefaultFields}
-                          onClick={saveQuotationServiceAsDefault}
+                          onClick={saveServicesAsDefault}
                           className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
                         >
                           {savingDefaultFields ? 'Saving…' : 'Save as default'}
