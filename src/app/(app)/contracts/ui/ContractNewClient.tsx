@@ -1755,7 +1755,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       </div>
                     </div>
 
-                    <div className="mt-3">
+                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
+
+                    <div className="mt-2">
                       <div className="text-xs font-medium text-black/60">Intro</div>
                       <textarea
                         value={(fields as any).fee_intro ?? ''}
@@ -1765,7 +1767,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       />
                     </div>
 
-                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（乙方收费标准如下：）</div>
                     <div className="mt-2 grid grid-cols-1 gap-3">
                       {Array.from({ length: Math.max(1, Math.min(6, Number((fields as any).fee_item_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                         (n) => (
