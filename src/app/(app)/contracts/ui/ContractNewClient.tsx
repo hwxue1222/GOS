@@ -559,6 +559,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   useEffect(() => {
     if (!isProfessionalTemplate) return;
+    if (editContractId) return;
+
+    const quotationTpl = templates.find((t) => t.name === 'Quotation（报价）') as any;
+    const quotationDefaults =
+      quotationTpl && typeof quotationTpl.defaultFields === 'object' && quotationTpl.defaultFields
+        ? (quotationTpl.defaultFields as Record<string, string>)
+        : null;
+
+    const copyIfEmpty = (next: Record<string, string>, key: string) => {
+      if (!quotationDefaults) return;
+      const v = String(quotationDefaults[key] ?? '').trim();
+      if (!v) return;
+      if (String(next[key] ?? '').trim()) return;
+      next[key] = v;
+    };
+
     setFields((prev) => {
       const next = { ...(prev ?? {}) } as Record<string, string>;
       const hasKey = (k: string) => Object.prototype.hasOwnProperty.call(next, k);
@@ -571,6 +587,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           next[k] = String(v ?? '');
         }
       }
+
+      copyIfEmpty(next, 'service_count');
+      for (let i = 1; i <= MAX_SERVICE_ITEMS; i++) {
+        copyIfEmpty(next, `service_title_${i}`);
+        copyIfEmpty(next, `service_body_${i}`);
+        copyIfEmpty(next, `service_price_${i}`);
+      }
+      copyIfEmpty(next, 'fee_intro');
+      copyIfEmpty(next, 'fee_note');
+      copyIfEmpty(next, 'fee_item_count');
+      for (let i = 1; i <= 6; i++) copyIfEmpty(next, `fee_item_${i}`);
       if (!String(next.agreement_title ?? '').trim()) next.agreement_title = 'Professional Service Agreement';
       if (!String(next.service_count ?? '').trim()) next.service_count = '1';
       if (!String(next.service_title_1 ?? '').trim()) next.service_title_1 = 'CORPORATE SECRETARY SERVICE';
