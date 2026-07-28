@@ -945,7 +945,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setErrorDetail('');
       return;
     }
-    if (!clientOk) return;
     setError(null);
     setErrorDetail('');
     setDownloading(true);
@@ -984,7 +983,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setErrorDetail('');
       return;
     }
-    if (!clientOk) return;
     setError(null);
     setErrorDetail('');
     setDownloading(true);
@@ -2621,7 +2619,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <button
                 type="button"
                 onClick={() => void downloadPdf()}
-                disabled={downloading || !tpl || !clientOk}
+                disabled={downloading || !tpl}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] disabled:opacity-50"
               >
                 {downloading ? 'Downloading…' : 'Download PDF'}
@@ -2664,7 +2662,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <button
                 type="button"
                 onClick={() => void openPdf()}
-                disabled={downloading || !tpl || !clientOk}
+                disabled={downloading || !tpl}
                 className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium inline-flex items-center hover:bg-black/[0.02] disabled:opacity-50"
               >
                 Open PDF
