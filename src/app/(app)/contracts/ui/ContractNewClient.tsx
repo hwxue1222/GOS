@@ -314,6 +314,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return v;
   }, [searchParams]);
 
+  const editTemplateOverrideKey = useMemo(() => {
+    if (!editContractId) return '';
+    return `contracts.edit.templateId.${editContractId}`;
+  }, [editContractId]);
+
   useEffect(() => {
     if (editContractId) return;
     if (!templateId) return;
@@ -409,7 +414,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       };
       setContractId(String(c.id));
       setContractNo(String(c.contractNo ?? ''));
-      setTemplateId(String(c.templateId ?? ''));
+      const overrideTplId = (() => {
+        if (!editTemplateOverrideKey) return '';
+        try {
+          return String(window.localStorage.getItem(editTemplateOverrideKey) ?? '').trim();
+        } catch {
+          return '';
+        }
+      })();
+      setTemplateId(overrideTplId || String(c.templateId ?? ''));
       setFields((prev) => {
         const next = { ...(prev ?? {}) } as Record<string, string>;
         const base = (c.fields ?? {}) as Record<string, string>;
@@ -426,7 +439,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [editContractId]);
+  }, [editContractId, editTemplateOverrideKey]);
 
   const clientName = showClientBlock ? String(fields[clientNameKey] ?? '').trim() : String(fields.company ?? '').trim();
   const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
@@ -1116,6 +1129,11 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   setErrorDetail('');
 
                   if (editContractId) {
+                    if (editTemplateOverrideKey) {
+                      try {
+                        window.localStorage.setItem(editTemplateOverrideKey, nextId);
+                      } catch {}
+                    }
                     setTemplateId(nextId);
                     return;
                   }
