@@ -1089,7 +1089,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="md:col-span-8">
                   <select
                     value={selectedDraftId}
-                    onChange={(e) => setSelectedDraftId(String(e.target.value ?? '').trim())}
+                    onChange={(e) => {
+                      const id = String(e.target.value ?? '').trim();
+                      setSelectedDraftId(id);
+                      if (!id) {
+                        setFields({ date: todayYmd });
+                        setError(null);
+                        setErrorDetail('');
+                        return;
+                      }
+                      const d = templateDrafts.find((x) => x.id === id);
+                      if (!d) return;
+                      const next = { ...(d.fields ?? {}) } as Record<string, string>;
+                      if (!Object.prototype.hasOwnProperty.call(next, 'date') || !String((next as any).date ?? '').trim()) {
+                        (next as any).date = todayYmd;
+                      }
+                      setFields(next);
+                      setError(null);
+                      setErrorDetail('');
+                    }}
                     className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                   >
                     <option value="">Draft</option>
