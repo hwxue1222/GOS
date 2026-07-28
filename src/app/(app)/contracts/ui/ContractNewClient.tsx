@@ -94,6 +94,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
   html = html.replaceAll('__EMPTY__', '');
   html = html.replace(/[•·\-]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
   html = html.replace(/[•·\-]\s*(?=<\/)/g, '');
+  html = html.replace(/(<br\s*\/?>(?:\s*)?){3,}/g, '<br /><br />');
 
   if (html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) {
     const count = Math.max(1, Math.min(MAX_SERVICE_ITEMS, Number(map.service_count ?? '1') || 1));
@@ -527,10 +528,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const note = String(input.note ?? '');
     const bullets = items.map((x) => `- ${x}`).join('\n');
     const noteBlock = note ? `${NOTE_TOKEN}\n${note}` : '';
-    if (intro && bullets && noteBlock) return `${intro}\n\n${bullets}\n\n${noteBlock}`;
+    if (intro && bullets && noteBlock) return `${intro}\n\n${bullets}\n${noteBlock}`;
     if (intro && bullets) return `${intro}\n\n${bullets}`;
-    if (bullets && noteBlock) return `${bullets}\n\n${noteBlock}`;
-    if (intro && noteBlock) return `${intro}\n\n${noteBlock}`;
+    if (bullets && noteBlock) return `${bullets}\n${noteBlock}`;
+    if (intro && noteBlock) return `${intro}\n${noteBlock}`;
     if (noteBlock) return noteBlock;
     return intro || bullets;
   };
@@ -1020,20 +1021,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         return;
                       }
 
-                      const res2 = await fetch(`/api/contracts/templates/${encodeURIComponent(tpl.id)}/defaults`, {
-                        method: 'POST',
-                        headers: { 'content-type': 'application/json' },
-                        body: JSON.stringify({ defaultFields: fields ?? {}, replace: true }),
-                      });
-                      const j2 = (await res2.json().catch(() => null)) as any;
-                      if (!res2.ok || !j2?.ok) {
-                        setError(j2?.error || `HTTP_${res2.status}`);
-                        setErrorDetail(j2?.message || (j2 ? JSON.stringify(j2) : '') || 'FAILED');
-                        return;
-                      }
-
                       await loadTemplateDrafts(tpl.id);
-                      router.refresh();
+                      const newId = String(j1?.draft?.id ?? '').trim();
+                      if (newId) setSelectedDraftId(newId);
                     } finally {
                       setSavingNamedDefault(false);
                     }
