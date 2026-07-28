@@ -798,9 +798,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       return null;
     }
     if (showClientBlock) {
-      if (!clientName || !clientEmail) {
+      if (!clientName) {
         setError('CLIENT_REQUIRED');
-        setErrorDetail('请先填写甲方公司名称与甲方邮箱（用于生成合同与发送签署）。');
+        setErrorDetail('请先填写甲方名称（用于生成合同与发送签署）。');
         return null;
       }
     } else {
@@ -1071,7 +1071,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     onChange={(e) => setSelectedDraftId(String(e.target.value ?? '').trim())}
                     className="h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                   >
-                    <option value="">Drafts</option>
+                    <option value="">Draft</option>
                     {templateDrafts.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -2513,7 +2513,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Save draft'}
+                {saving ? 'Saving…' : 'Save'}
               </button>
               <button
                 onClick={() => void generateDocument()}
