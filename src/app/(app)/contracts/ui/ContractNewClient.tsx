@@ -434,7 +434,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
-    const ignoreKeys = new Set(['contract_no', 'client_name', 'client_email']);
+    const ignoreKeys = new Set(['contract_no', 'client_name', 'client_email', 'partyA_email']);
     const required = (tpl.placeholders ?? []).filter((p) => p.required && !ignoreKeys.has(p.key));
     const missing = required.filter((p) => !String((fields as any)?.[p.key] ?? '').trim());
     return missing.map((p) => ({ key: p.key, label: p.label }));
@@ -470,7 +470,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
   const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
   const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
-  const clientOk = showClientBlock ? !!clientName && !!clientEmail : !!clientName;
+  const clientOk = !!clientName;
 
   const EMPTY_ITEM_TOKEN = '__EMPTY__';
   const NOTE_TOKEN = '__NOTE__';
@@ -1188,7 +1188,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               <div className="md:col-span-1">
                 <div className="text-xs font-medium text-black/60">
                   {tpl?.placeholders?.some((p) => p.key === 'partyA_email') ? '电邮地址 / Email' : 'Email'}
-                  {requiredKeys.has(clientEmailKey) ? ' *' : ''}
                 </div>
                 <input
                   value={fields[clientEmailKey] ?? ''}
