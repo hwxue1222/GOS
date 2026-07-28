@@ -3080,6 +3080,18 @@ export function renderContractHtml(input: {
         '',
       );
     }
+
+    for (let n = 1; n <= feeClauseCount; n++) {
+      const v = String((input.fields ?? {})[`fee_clause_${n}`] ?? '').trim();
+      if (v) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="fee-clause"\\s+data-fee-clause="${n}">[\\s\\S]*?<!--\\s*END_FEE_CLAUSE_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
   }
 
   html = html.replace(/<div class="p fee-(?:intro|note)">(?:\s|<br\s*\/?>(?:\s*)?)*<\/div>/g, '');

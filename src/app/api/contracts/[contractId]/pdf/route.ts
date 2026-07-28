@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import fs from 'node:fs';
+import path from 'node:path';
 import type { Browser } from 'puppeteer-core';
 import {
   findContractById,
@@ -37,6 +38,35 @@ function injectBaseHref(html: string, origin: string) {
   const baseTag = `<base href="${origin.replace(/\/$/, '')}/" />`;
   if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, (m) => `${m}${baseTag}`);
   return `${baseTag}${html}`;
+}
+
+function injectInlinePdfFonts(html: string) {
+  const g = globalThis as unknown as { __gosInlinePdfFontCss?: string };
+  if (!g.__gosInlinePdfFontCss) {
+    try {
+      const regularPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansSC-Regular.otf');
+      const boldPath = path.join(process.cwd(), 'public', 'fonts', 'NotoSansSC-Bold.otf');
+      const regular = fs.existsSync(regularPath) ? fs.readFileSync(regularPath).toString('base64') : '';
+      const bold = fs.existsSync(boldPath) ? fs.readFileSync(boldPath).toString('base64') : '';
+      const faces = [
+        regular
+          ? `@font-face{font-family:'NotoSansSC_Inline';src:url('data:font/otf;base64,${regular}') format('opentype');font-weight:400;font-style:normal;}`
+          : '',
+        bold
+          ? `@font-face{font-family:'NotoSansSC_Inline';src:url('data:font/otf;base64,${bold}') format('opentype');font-weight:700;font-style:normal;}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('');
+      g.__gosInlinePdfFontCss = `<style>${faces}body,body *{font-family:var(--gos-font,'Times New Roman','NotoSansSC_Inline','NotoSansSC','Noto Sans SC','PingFang SC','Microsoft YaHei',serif) !important;}</style>`;
+    } catch {
+      g.__gosInlinePdfFontCss = '';
+    }
+  }
+
+  if (!g.__gosInlinePdfFontCss) return html;
+  if (html.includes('</head>')) return html.replace('</head>', `${g.__gosInlinePdfFontCss}</head>`);
+  return `${g.__gosInlinePdfFontCss}${html}`;
 }
 
 async function inlineContractAssets(html: string, origin: string) {
@@ -179,6 +209,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
   const origin = requestOrigin(req);
   const htmlWithBase = injectBaseHref(html, origin);
   const htmlWithAssets = await inlineContractAssets(htmlWithBase, origin);
+  const htmlWithFonts = injectInlinePdfFonts(htmlWithAssets);
   const title = `Contract ${contract.contractNo} - ${contract.clientName}`;
 
   const contentDisposition = url.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
@@ -189,7 +220,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(htmlWithAssets, { waitUntil: ['domcontentloaded'], timeout: 45000 });
+      await page.setContent(htmlWithFonts, { waitUntil: ['domcontentloaded'], timeout: 45000 });
       await page.waitForNetworkIdle({ idleTime: 500, timeout: 45000 }).catch(() => null);
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready;
