@@ -2935,6 +2935,15 @@ export function renderContractHtml(input: {
 
   let html = String(input.templateHtml ?? '');
 
+  const fontCss =
+    '<style>' +
+    "@font-face{font-family:'NotoSansSC';src:url('fonts/NotoSansSC-Regular.otf') format('opentype');font-weight:400;font-style:normal;}" +
+    "@font-face{font-family:'NotoSansSC';src:url('fonts/NotoSansSC-Bold.otf') format('opentype');font-weight:700;font-style:normal;}" +
+    "body,body *{font-family:var(--gos-font,'Times New Roman','NotoSansSC','Noto Sans SC','PingFang SC','Microsoft YaHei',serif) !important;}" +
+    '</style>';
+  if (html.includes('</head>')) html = html.replace('</head>', `${fontCss}</head>`);
+  else html = `${fontCss}${html}`;
+
   const isQuotation =
     html.includes('TEMPLATE: QUOTATION') ||
     String(map.agreement_title ?? '').includes('Quotation') ||
