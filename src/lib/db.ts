@@ -206,6 +206,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V70 = 'contracts.templates.v70';
 const SEED_KEY_CONTRACTS_TEMPLATES_V71 = 'contracts.templates.v71';
 const SEED_KEY_CONTRACTS_TEMPLATES_V72 = 'contracts.templates.v72';
 const SEED_KEY_CONTRACTS_TEMPLATES_V73 = 'contracts.templates.v73';
+const SEED_KEY_CONTRACTS_TEMPLATES_V74 = 'contracts.templates.v74';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -3037,6 +3038,30 @@ function seedContractsTemplatesV73(db: Db) {
 
   (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V73] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV74(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V74]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Quotation（报价）');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const placeholders = (tpl.placeholders ?? []).map((p) => {
+      if (p.key === 'fee_clause_2') return { ...p, required: false };
+      return p;
+    });
+    templates[idx] = { ...tpl, placeholders, updatedAt: now };
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V74] = true;
   return changed;
 }
 
@@ -8401,6 +8426,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV71(db)) changed = true;
   if (seedContractsTemplatesV72(db)) changed = true;
   if (seedContractsTemplatesV73(db)) changed = true;
+  if (seedContractsTemplatesV74(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

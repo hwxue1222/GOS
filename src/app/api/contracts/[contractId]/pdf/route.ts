@@ -19,7 +19,14 @@ function requestOrigin(req: Request) {
   const h = req.headers;
   const proto = (h.get('x-forwarded-proto') ?? h.get('x-forwarded-protocol') ?? '').trim();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '').trim();
-  const p = proto || 'https';
+  const urlProto = (() => {
+    try {
+      return new URL(req.url).protocol.replace(':', '');
+    } catch {
+      return '';
+    }
+  })();
+  const p = proto || urlProto || 'https';
   if (!host) return '';
   return `${p}://${host}`;
 }
