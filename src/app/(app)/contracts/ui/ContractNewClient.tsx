@@ -409,20 +409,24 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       };
       setContractId(String(c.id));
       setContractNo(String(c.contractNo ?? ''));
-      setTemplateId(String(c.templateId ?? templateId));
+      setTemplateId(String(c.templateId ?? ''));
       setFields((prev) => {
         const next = { ...(prev ?? {}) } as Record<string, string>;
         const base = (c.fields ?? {}) as Record<string, string>;
         for (const [k, v] of Object.entries(base)) next[k] = String(v ?? '');
-        next[clientNameKey] = String(c.clientName ?? '');
-        next[clientEmailKey] = String(c.clientEmail ?? '');
+        const cn = String(c.clientName ?? '');
+        const ce = String(c.clientEmail ?? '');
+        next.client_name = cn;
+        next.client_email = ce;
+        next.partyA_name = cn;
+        next.partyA_email = ce;
         return next;
       });
     })();
     return () => {
       cancelled = true;
     };
-  }, [clientEmailKey, clientNameKey, editContractId, templateId]);
+  }, [editContractId]);
 
   const clientName = showClientBlock ? String(fields[clientNameKey] ?? '').trim() : String(fields.company ?? '').trim();
   const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
