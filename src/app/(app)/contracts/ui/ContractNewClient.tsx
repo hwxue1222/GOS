@@ -432,7 +432,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
   const signerEmail = String(fields.signer_email ?? '').trim();
 
-  const pdfOpenUrl = contractId && contractNo ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=inline` : '';
+  const pdfOpenUrl = '';
 
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
@@ -977,6 +977,41 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function openPdf() {
+    if (!tpl?.id) {
+      setError('TEMPLATE_REQUIRED');
+      setErrorDetail('');
+      return;
+    }
+    if (!clientOk || missingRequired.length > 0) {
+      setError('MISSING_REQUIRED_FIELDS');
+      setErrorDetail(missingRequired.map((x) => x.label).join('\n'));
+      return;
+    }
+    setError(null);
+    setErrorDetail('');
+    setDownloading(true);
+    try {
+      const res = await fetch('/api/contracts/pdf', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ templateId: tpl.id, clientName, clientEmail, fields }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        const j = (await res?.json().catch(() => null)) as any;
+        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } finally {
       setDownloading(false);
     }
@@ -2635,18 +2670,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
             </div>
-            {pdfOpenUrl ? (
-              <div className="px-4 py-3 border-t border-black/5">
-                <a
-                  href={pdfOpenUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium inline-flex items-center hover:bg-black/[0.02]"
-                >
-                  Open PDF
-                </a>
-              </div>
-            ) : null}
+            <div className="px-4 py-3 border-t border-black/5">
+              <button
+                type="button"
+                onClick={() => void openPdf()}
+                disabled={downloading || !tpl || !clientOk || missingRequired.length > 0}
+                className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium inline-flex items-center hover:bg-black/[0.02] disabled:opacity-50"
+              >
+                Open PDF
+              </button>
+            </div>
           </div>
         </div>
       </div>
