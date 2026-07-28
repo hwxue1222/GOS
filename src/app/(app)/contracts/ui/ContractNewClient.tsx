@@ -1653,20 +1653,66 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       return (
                         <div className="mt-2 grid grid-cols-1 gap-3">
                           {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
-                            <div key={n}>
-                              <div className="text-xs font-medium text-black/60">Item {n}</div>
-                              <input
-                                value={(fields as any)[`fee_item_${n}`] ?? ''}
-                                onChange={(e) =>
-                                  setFields((prev) => {
-                                    const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
-                                    if (n === 1) next.fee_1_item_1 = e.target.value;
-                                    if (n === 2) next.fee_1_item_2 = e.target.value;
-                                    return next;
-                                  })
-                                }
-                                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                              />
+                            <div
+                              key={n}
+                              className="flex items-start gap-2"
+                              onDragOver={(e) => {
+                                const info = dragItemRef.current;
+                                if (!info || info.key !== 'fee_items') return;
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                              }}
+                              onDrop={(e) => {
+                                const info = dragItemRef.current;
+                                if (!info || info.key !== 'fee_items') return;
+                                e.preventDefault();
+                                dragItemRef.current = null;
+                                const to = n - 1;
+                                if (info.from === to) return;
+                                setFields((prev) => {
+                                  const count = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                                  const values = Array.from({ length: count }, (_, i) => String((prev as any)[`fee_item_${i + 1}`] ?? ''));
+                                  const [moved] = values.splice(info.from, 1);
+                                  values.splice(to, 0, moved);
+                                  const next = { ...prev } as any;
+                                  for (let i = 0; i < count; i++) next[`fee_item_${i + 1}`] = values[i] ?? '';
+                                  if (count >= 1) next.fee_1_item_1 = values[0] ?? '';
+                                  if (count >= 2) next.fee_1_item_2 = values[1] ?? '';
+                                  return next;
+                                });
+                              }}
+                            >
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  dragItemRef.current = { key: 'fee_items', from: n - 1 };
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  try {
+                                    e.dataTransfer.setData('text/plain', `fee_items:${n - 1}`);
+                                  } catch {}
+                                }}
+                                onDragEnd={() => {
+                                  dragItemRef.current = null;
+                                }}
+                                className="mt-7 text-sm text-black/40 select-none cursor-grab"
+                              >
+                                ⋮⋮
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium text-black/60">Item {n}</div>
+                                <input
+                                  value={(fields as any)[`fee_item_${n}`] ?? ''}
+                                  onChange={(e) =>
+                                    setFields((prev) => {
+                                      const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
+                                      if (n === 1) next.fee_1_item_1 = e.target.value;
+                                      if (n === 2) next.fee_1_item_2 = e.target.value;
+                                      return next;
+                                    })
+                                  }
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2147,13 +2193,57 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       return (
                         <div className="mt-2 grid grid-cols-1 gap-3">
                           {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
-                            <div key={n} className="md:col-span-1">
-                              <div className="text-xs font-medium text-black/60">Item {n}</div>
-                              <input
-                                value={(fields as any)[`fee_item_${n}`] ?? ''}
-                                onChange={(e) => setFields((prev) => ({ ...prev, [`fee_item_${n}`]: e.target.value }))}
-                                className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                              />
+                            <div
+                              key={n}
+                              className="flex items-start gap-2"
+                              onDragOver={(e) => {
+                                const info = dragItemRef.current;
+                                if (!info || info.key !== 'quotation_fee_items') return;
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                              }}
+                              onDrop={(e) => {
+                                const info = dragItemRef.current;
+                                if (!info || info.key !== 'quotation_fee_items') return;
+                                e.preventDefault();
+                                dragItemRef.current = null;
+                                const to = n - 1;
+                                if (info.from === to) return;
+                                setFields((prev) => {
+                                  const count = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                                  const values = Array.from({ length: count }, (_, i) => String((prev as any)[`fee_item_${i + 1}`] ?? ''));
+                                  const [moved] = values.splice(info.from, 1);
+                                  values.splice(to, 0, moved);
+                                  const next = { ...prev } as any;
+                                  for (let i = 0; i < count; i++) next[`fee_item_${i + 1}`] = values[i] ?? '';
+                                  return next;
+                                });
+                              }}
+                            >
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  dragItemRef.current = { key: 'quotation_fee_items', from: n - 1 };
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  try {
+                                    e.dataTransfer.setData('text/plain', `quotation_fee_items:${n - 1}`);
+                                  } catch {}
+                                }}
+                                onDragEnd={() => {
+                                  dragItemRef.current = null;
+                                }}
+                                className="mt-7 text-sm text-black/40 select-none cursor-grab"
+                              >
+                                ⋮⋮
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium text-black/60">Item {n}</div>
+                                <input
+                                  value={(fields as any)[`fee_item_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`fee_item_${n}`]: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2209,14 +2299,58 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
                       {Array.from({ length: Math.max(2, Math.min(6, Number((fields as any).fee_clause_count ?? '2') || 2)) }, (_, idx) => idx + 1).map(
                         (n) => (
-                          <div key={n}>
-                            <div className="text-xs font-medium text-black/60">{n + 1}.{requiredKeys.has(`fee_clause_${n}`) ? ' *' : ''}</div>
-                            <textarea
-                              value={(fields as any)[`fee_clause_${n}`] ?? ''}
-                              onChange={(e) => setFields((prev) => ({ ...prev, [`fee_clause_${n}`]: e.target.value }))}
-                              rows={2}
-                              className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                            />
+                          <div
+                            key={n}
+                            className="flex items-start gap-2"
+                            onDragOver={(e) => {
+                              const info = dragItemRef.current;
+                              if (!info || info.key !== 'quotation_fee_clauses') return;
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                            }}
+                            onDrop={(e) => {
+                              const info = dragItemRef.current;
+                              if (!info || info.key !== 'quotation_fee_clauses') return;
+                              e.preventDefault();
+                              dragItemRef.current = null;
+                              const to = n - 1;
+                              if (info.from === to) return;
+                              setFields((prev) => {
+                                const count = Math.max(2, Math.min(6, Number((prev as any).fee_clause_count ?? '2') || 2));
+                                const values = Array.from({ length: count }, (_, i) => String((prev as any)[`fee_clause_${i + 1}`] ?? ''));
+                                const [moved] = values.splice(info.from, 1);
+                                values.splice(to, 0, moved);
+                                const next = { ...prev } as any;
+                                for (let i = 0; i < count; i++) next[`fee_clause_${i + 1}`] = values[i] ?? '';
+                                return next;
+                              });
+                            }}
+                          >
+                            <div
+                              draggable
+                              onDragStart={(e) => {
+                                dragItemRef.current = { key: 'quotation_fee_clauses', from: n - 1 };
+                                e.dataTransfer.effectAllowed = 'move';
+                                try {
+                                  e.dataTransfer.setData('text/plain', `quotation_fee_clauses:${n - 1}`);
+                                } catch {}
+                              }}
+                              onDragEnd={() => {
+                                dragItemRef.current = null;
+                              }}
+                              className="mt-7 text-sm text-black/40 select-none cursor-grab"
+                            >
+                              ⋮⋮
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-black/60">{n + 1}.{requiredKeys.has(`fee_clause_${n}`) ? ' *' : ''}</div>
+                              <textarea
+                                value={(fields as any)[`fee_clause_${n}`] ?? ''}
+                                onChange={(e) => setFields((prev) => ({ ...prev, [`fee_clause_${n}`]: e.target.value }))}
+                                rows={2}
+                                className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
                           </div>
                         ),
                       )}
