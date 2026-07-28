@@ -790,7 +790,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   }, [isQuotationTemplate, tpl]);
 
 
-  async function saveDraft() {
+  async function saveDraft(opts?: { asNew?: boolean }) {
     setError(null);
     setErrorDetail('');
     if (!tpl) {
@@ -818,7 +818,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     const payload = { templateId: tpl.id, clientName, clientEmail, fields };
     setSaving(true);
     try {
-      if (!contractId) {
+      if (!contractId || opts?.asNew) {
         const res = await fetch('/api/contracts', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -832,6 +832,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         }
         setContractId(j.contract.id);
         setContractNo(j.contract.contractNo);
+        setDocumentId('');
+        setDocumentSha('');
+        setPacketId('');
         return j.contract as { id: string };
       }
 
@@ -2513,8 +2516,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
                 className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? 'Saving…' : contractId ? 'Update' : 'Save'}
               </button>
+              {contractId ? (
+                <button
+                  onClick={() => void saveDraft({ asNew: true })}
+                  disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
+                  className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                >
+                  Save as new
+                </button>
+              ) : null}
               <button
                 onClick={() => void generateDocument()}
                 disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
