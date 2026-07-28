@@ -1075,7 +1075,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
             {tpl?.id ? (
               <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-                <div className="md:col-span-9">
+                <div className="md:col-span-8">
                   <select
                     value={selectedDraftId}
                     onChange={(e) => setSelectedDraftId(String(e.target.value ?? '').trim())}
@@ -1089,7 +1089,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     ))}
                   </select>
                 </div>
-                <div className="md:col-span-3 flex gap-2">
+                <div className="md:col-span-4 flex flex-wrap justify-end gap-2">
                   <button
                     type="button"
                     disabled={!selectedDraftId}
@@ -1098,7 +1098,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       if (!d) return;
                       setFields({ ...(d.fields ?? {}) });
                     }}
-                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                    className="h-10 px-2 rounded-lg border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
                   >
                     Load
                   </button>
@@ -1127,14 +1127,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       setSelectedDraftId('');
                       await loadTemplateDrafts(tpl.id);
                     }}
-                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-60"
+                    className="h-10 px-2 rounded-lg border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
                   >
                     Delete
                   </button>
                   <button
                     type="button"
                     onClick={() => tpl?.id && loadTemplateDrafts(tpl.id)}
-                    className="h-10 px-3 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02]"
+                    className="h-10 px-2 rounded-lg border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                   >
                     Refresh
                   </button>
