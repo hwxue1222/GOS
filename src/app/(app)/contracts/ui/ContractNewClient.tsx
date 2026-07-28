@@ -209,8 +209,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   };
 
   useEffect(() => {
-    const isEdit = !!String(searchParams?.get('contractId') ?? searchParams?.get('id') ?? '').trim();
-    if (isEdit) return;
     if (!templateId) return;
     loadTemplateDrafts(templateId);
     setSelectedDraftId('');
@@ -938,12 +936,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   }
 
   async function downloadPdf() {
-    if (!pdfDownloadUrl) return;
+    if (!tpl?.id) {
+      setError('TEMPLATE_REQUIRED');
+      setErrorDetail('');
+      return;
+    }
+    if (!clientOk || missingRequired.length > 0) {
+      setError('MISSING_REQUIRED_FIELDS');
+      setErrorDetail(missingRequired.map((x) => x.label).join('\n'));
+      return;
+    }
     setError(null);
     setErrorDetail('');
     setDownloading(true);
     try {
-      const res = await fetch(pdfDownloadUrl).catch(() => null);
+      const res = await fetch('/api/contracts/pdf', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ templateId: tpl.id, clientName, clientEmail, fields }),
+      }).catch(() => null);
       if (!res?.ok) {
         const j = (await res?.json().catch(() => null)) as any;
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
@@ -954,7 +965,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = contractNo ? `Contract-${contractNo}.pdf` : 'Contract.pdf';
+      const date = String((fields as any).date ?? '').trim() || new Date().toISOString().slice(0, 10);
+      const title = String((fields as any).agreement_title ?? '').trim() || tpl.name;
+      const base = title.includes('Quotation') || title.includes('报价') ? `Quotation-${date}` : `${title}-${date}`;
+      a.download = `${base}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -966,7 +980,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   
 
-  const pdfDownloadUrl = contractId ? `/api/contracts/${encodeURIComponent(contractId)}/pdf?disposition=attachment` : '';
+  const pdfDownloadUrl = '';
 
   const displayTemplateName = (name: string) => {
     if (name === 'Professional Service Agreement') return 'Professional Service Agreement（专业服务协议）';
@@ -2528,19 +2542,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 </button>
               ) : null}
               <button
-                onClick={() => void generateDocument()}
-                disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
-                className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
-              >
-                {rendering ? 'Generating…' : 'Generate'}
-              </button>
-              <button
                 type="button"
                 onClick={() => void downloadPdf()}
-                disabled={!pdfDownloadUrl || downloading}
-                className={`h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] ${
-                  pdfDownloadUrl ? '' : 'pointer-events-none opacity-50'
-                }`}
+                disabled={downloading || !tpl || !clientOk || missingRequired.length > 0}
+                className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] disabled:opacity-50"
               >
                 {downloading ? 'Downloading…' : 'Download PDF'}
               </button>
@@ -2567,7 +2572,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   ? `Date: ${String((fields as any).date ?? '').trim() || new Date().toISOString().slice(0, 10)}`
                   : contractNo
                     ? `Contract No: ${contractNo}`
-                    : 'Contract No will be generated after Generate'}
+                    : 'Contract No: -'}
               </div>
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
