@@ -3010,6 +3010,7 @@ export function renderContractHtml(input: {
   html = html.replace(/[•·\-]\s*(?:<br\s*\/?>(?:\s*)?)+/g, '');
   html = html.replace(/[•·\-]\s*(?=<\/)/g, '');
   html = html.replace(/(<br\s*\/?>(?:\s*)?){3,}/g, '<br /><br />');
+  html = html.replace(/<div class="p" style="margin-top:10px;"><b>Payment details:<\/b><\/div>\s*/g, '');
 
   if (html.includes('NOMINEE SERVICES INDEMNITY AGREEMENT')) {
     html = html.replace(
