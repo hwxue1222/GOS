@@ -1861,8 +1861,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         />
                       </div>
                     </div>
-
-                    <div className="mt-4 text-xs font-medium text-black/60">Payment details（收款信息）</div>
                     <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-1">
                         <div className="text-xs font-medium text-black/60">
