@@ -6,7 +6,12 @@ import { createContractTemplateDraft, deleteContractTemplateDraft, listContractT
 export async function GET(_req: Request, ctx: { params: Promise<{ templateId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'contracts', 'viewAssigned') && !hasPermission(user, 'contracts', 'viewAll')) {
+  if (
+    !hasPermission(user, 'contracts', 'viewAssigned') &&
+    !hasPermission(user, 'contracts', 'viewAll') &&
+    !hasPermission(user, 'contracts', 'create') &&
+    !hasPermission(user, 'contracts', 'update')
+  ) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -21,7 +26,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ templateId: st
 export async function POST(req: Request, ctx: { params: Promise<{ templateId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'contracts', 'update')) {
+  if (!hasPermission(user, 'contracts', 'create') && !hasPermission(user, 'contracts', 'update')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
@@ -47,7 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ templateId: st
 export async function DELETE(req: Request, ctx: { params: Promise<{ templateId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'contracts', 'update')) {
+  if (!hasPermission(user, 'contracts', 'create') && !hasPermission(user, 'contracts', 'update')) {
     return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
 
