@@ -1060,6 +1060,36 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 value={templateId}
                 onChange={(e) => {
                   const nextId = String(e.target.value ?? '').trim();
+                  const preserve = {
+                    client_name: String((fields as any).client_name ?? ''),
+                    client_email: String((fields as any).client_email ?? ''),
+                    partyA_name: String((fields as any).partyA_name ?? ''),
+                    partyA_email: String((fields as any).partyA_email ?? ''),
+                    partyA_entity_type: String((fields as any).partyA_entity_type ?? ''),
+                  } as Record<string, string>;
+
+                  const loadDraftForTemplate = (tplId: string) => {
+                    try {
+                      const raw = window.localStorage.getItem(draftKeyForTemplate(tplId));
+                      if (!raw) return null;
+                      const parsed = JSON.parse(raw) as unknown;
+                      if (!parsed || typeof parsed !== 'object') return null;
+                      return Object.fromEntries(
+                        Object.entries(parsed as Record<string, unknown>).map(([k, v]) => [String(k), String(v ?? '')]),
+                      ) as Record<string, string>;
+                    } catch {
+                      return null;
+                    }
+                  };
+
+                  const base = loadDraftForTemplate(nextId) ?? ({ date: todayYmd } as Record<string, string>);
+                  const next = { ...base, ...preserve } as Record<string, string>;
+                  if (!String(next.date ?? '').trim()) next.date = todayYmd;
+                  setFields(next);
+                  setSelectedDraftId('');
+                  setError(null);
+                  setErrorDetail('');
+
                   if (editContractId) {
                     setTemplateId(nextId);
                     return;
