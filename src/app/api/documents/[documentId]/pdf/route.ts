@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
+import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 import { digitallySignPdfIfEnabled, isPdfPkiEnabled } from '@/lib/pdfPki';
 import type { Browser } from 'puppeteer-core';
 
@@ -281,6 +282,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     return out;
   })();
 
+  const normalizedHtml = normalizeDocumentHtml(html);
+
   const isAgmDoc = doc.type === 'AGM_MIN' || doc.type === 'AGM_NOTICE' || doc.type === 'AGM_DIR_STMT';
   const agmKey = (() => {
     if (!isAgmDoc) return '';
@@ -292,7 +295,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     const noticeDmy = noticeYmd ? ymdToDmy(noticeYmd) : '';
     return [fiscalYearEnd ? `fye:${fiscalYearEnd}` : '', noticeDmy ? `notice:${noticeDmy}` : ''].filter(Boolean).join('|');
   })();
-  const renderVersion = isAgmDoc ? 'v4' : 'v1';
+  const renderVersion = isAgmDoc ? 'v5' : 'v2';
   const cacheKey = `docPdf:${renderVersion}:${agmKey}:${documentId}:${doc.sha256}:${packetId}:${sigVersion}`;
   const cached = cacheGet(cacheKey);
   if (cached) {
@@ -312,7 +315,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
     const page = await browser.newPage();
     try {
       await page.emulateMediaType('print');
-      await page.setContent(html, { waitUntil: ['domcontentloaded'] });
+      await page.setContent(normalizedHtml, { waitUntil: ['domcontentloaded'] });
       const signed = packetReqs
         .filter((r) => r.status === 'SIGNED' && !!r.signedAt)
         .map((r) => ({
