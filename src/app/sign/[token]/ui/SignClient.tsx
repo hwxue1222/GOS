@@ -372,16 +372,6 @@ export default function SignClient(props: {
           )}
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-hidden">
-          <div className="px-6 py-3 border-b border-black/5 text-sm font-medium">Document</div>
-          <div className="p-6">
-            <iframe
-              title="document"
-              srcDoc={htmlWithSignature}
-              className="w-full h-[70vh] rounded-lg border border-black/10 bg-white"
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
