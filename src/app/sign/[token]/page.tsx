@@ -34,6 +34,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
       requestEmail={ctx.request.email}
       requestStatus={ctx.request.status}
       expiresAt={ctx.request.expiresAt}
+      signedAt={ctx.request.signedAt ?? ''}
       expired={expired}
       packetKind={ctx.packet.kind}
       requiresRepresentative={requiresRepresentative}

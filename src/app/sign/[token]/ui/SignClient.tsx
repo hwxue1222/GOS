@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function SignClient(props: {
   token: string;
@@ -11,6 +11,7 @@ export default function SignClient(props: {
   requestEmail: string;
   requestStatus: string;
   expiresAt: string;
+  signedAt: string;
   expired: boolean;
   packetKind: string;
   requiresRepresentative: boolean;
@@ -32,6 +33,7 @@ export default function SignClient(props: {
     requestEmail,
     requestStatus,
     expiresAt,
+    signedAt,
     expired,
     packetKind,
     requiresRepresentative,
@@ -61,6 +63,86 @@ export default function SignClient(props: {
 
   const isRorcDecl = packetKind === 'RORC_DECL';
   const isContract = packetKind === 'CONTRACT';
+  const isSigned = requestStatus === 'SIGNED';
+
+  const htmlWithSignature = useMemo(() => {
+    if (!isSigned) return html;
+    const payload = {
+      email: String(requestEmail ?? '').trim(),
+      name: String(signerFullName ?? '').trim(),
+      title: String(signerTitle ?? '').trim(),
+      signedAt: String(signedAt ?? '').trim(),
+    };
+
+    const js = `(() => {
+  const data = ${JSON.stringify(payload)};
+  const toYmdHm = (iso) => {
+    const d = new Date(String(iso || ''));
+    if (Number.isNaN(d.getTime())) return String(iso || '');
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  };
+  const signedAtText = toYmdHm(data.signedAt);
+  const key = String(data.email || '').toLowerCase();
+
+  const placeholders = Array.from(document.querySelectorAll('[data-signer]'));
+  const nameEls = Array.from(document.querySelectorAll('[data-signer-full-name]'));
+  const titleEls = Array.from(document.querySelectorAll('[data-signer-title]'));
+  const timeEls = Array.from(document.querySelectorAll('[data-signer-signed-at]'));
+  if (placeholders.length && key) {
+    for (const el of placeholders) {
+      const k = String(el.getAttribute('data-signer') || '').toLowerCase();
+      if (k !== key) continue;
+      const parts = [];
+      parts.push(signedAtText ? 'Signed ' + signedAtText : 'Signed');
+      if (data.name) parts.push('- ' + data.name);
+      if (data.title) parts.push('(' + data.title + ')');
+      if (data.email) parts.push('(' + data.email + ')');
+      el.textContent = parts.join(' ');
+    }
+    for (const el of nameEls) {
+      const k = String(el.getAttribute('data-signer-full-name') || '').toLowerCase();
+      if (k !== key) continue;
+      el.textContent = data.name || '';
+    }
+    for (const el of titleEls) {
+      const k = String(el.getAttribute('data-signer-title') || '').toLowerCase();
+      if (k !== key) continue;
+      el.textContent = data.title || '';
+    }
+    for (const el of timeEls) {
+      const k = String(el.getAttribute('data-signer-signed-at') || '').toLowerCase();
+      if (k !== key) continue;
+      el.textContent = signedAtText;
+    }
+    return;
+  }
+
+  const existing = document.getElementById('gos-signed-stamp');
+  if (existing) return;
+  const stamp = document.createElement('div');
+  stamp.id = 'gos-signed-stamp';
+  stamp.style.position = 'fixed';
+  stamp.style.left = '16px';
+  stamp.style.bottom = '12px';
+  stamp.style.fontSize = '11px';
+  stamp.style.color = '#111';
+  stamp.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+  stamp.style.whiteSpace = 'pre-wrap';
+  stamp.style.opacity = '0.9';
+  const line =
+    (signedAtText ? 'Signed ' + signedAtText : 'Signed') +
+    (data.name ? ' - ' + data.name : '') +
+    (data.title ? ' (' + data.title + ')' : '') +
+    (data.email ? ' (' + data.email + ')' : '');
+  stamp.textContent = line;
+  document.body.appendChild(stamp);
+})();`;
+
+    const scriptTag = `<script>${js}<\/script>`;
+    if (html.includes('</body>')) return html.replace('</body>', `${scriptTag}</body>`);
+    return `${html}${scriptTag}`;
+  }, [html, isSigned, requestEmail, signedAt, signerFullName, signerTitle]);
 
   async function requestOtp() {
     setError(null);
@@ -255,35 +337,39 @@ export default function SignClient(props: {
             {pdfUrl ? (
               <iframe title="document" src={pdfUrl} className="w-full" style={{ height: '70vh' }} />
             ) : (
-              <iframe title="document" srcDoc={html} className="w-full" style={{ height: '70vh' }} />
+              <iframe title="document" srcDoc={htmlWithSignature} className="w-full" style={{ height: '70vh' }} />
             )}
           </div>
 
           {error ? <div className="mt-4 text-sm text-red-600">{error}</div> : null}
           {info ? <div className="mt-4 text-sm text-green-700">{info}</div> : null}
 
-          <div className="mt-5 flex flex-col sm:flex-row gap-2 sm:items-center">
-            <button
-              disabled={sending || expired}
-              onClick={() => void requestOtp()}
-              className="rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {sending ? 'Sending...' : 'Request OTP'}
-            </button>
-            <input
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="Enter OTP"
-              className="w-full sm:max-w-[220px] rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
-            />
-            <button
-              disabled={signing || expired}
-              onClick={() => void sign()}
-              className="rounded-full bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {signing ? 'Signing...' : 'Sign'}
-            </button>
-          </div>
+          {isSigned ? (
+            <div className="mt-5 text-sm text-black/60">SIGNED</div>
+          ) : (
+            <div className="mt-5 flex flex-col sm:flex-row gap-2 sm:items-center">
+              <button
+                disabled={sending || expired}
+                onClick={() => void requestOtp()}
+                className="rounded-full bg-black text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {sending ? 'Sending...' : 'Request OTP'}
+              </button>
+              <input
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="Enter OTP"
+                className="w-full sm:max-w-[220px] rounded-lg border border-black/10 px-3 py-2 text-sm outline-none"
+              />
+              <button
+                disabled={signing || expired}
+                onClick={() => void sign()}
+                className="rounded-full bg-[#2f7bdc] text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {signing ? 'Signing...' : 'Sign'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-hidden">
@@ -291,7 +377,7 @@ export default function SignClient(props: {
           <div className="p-6">
             <iframe
               title="document"
-              srcDoc={html}
+              srcDoc={htmlWithSignature}
               className="w-full h-[70vh] rounded-lg border border-black/10 bg-white"
             />
           </div>
