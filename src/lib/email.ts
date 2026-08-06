@@ -220,13 +220,14 @@ export async function sendSigningInvite(input: {
   const salutation = 'Dear Sir/Madam,';
   const subject = `${companyName || 'Company'}_${applicationName || 'Signing'}`;
 
-  const signerCompanyName = (() => {
-    if (!signerRole) return '';
-    const m = signerRole.match(/\bof\s+(.+)$/i);
-    return String(m?.[1] ?? '').trim();
+  const roleDisplay = (() => {
+    const role = String(signerRole ?? '').trim();
+    if (!role) return '';
+    if (/\bof\b/i.test(role)) return role;
+    if (companyName) return `${role} of ${companyName}`;
+    return role;
   })();
-  const roleDisplay = signerRole || (signerCompanyName ? `Director of ${signerCompanyName}` : 'Director');
-  const greetingLine = signerCompanyName
+  const greetingLine = roleDisplay
     ? `Dear Sir/Madam, please open the link below to sign the document as <strong>${escHtml(roleDisplay)}</strong>.`
     : `Dear Sir/Madam, please open the link below to sign the document.`;
 
