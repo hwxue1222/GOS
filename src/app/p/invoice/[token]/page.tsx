@@ -48,12 +48,14 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
           <ScaleToFitClient baseWidth={860}>
             <div
               id="invoice-print-root"
-              className="bg-white px-8 py-8 min-h-[297mm] flex flex-col"
+              className="bg-white"
               style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}
             >
               <link rel="preconnect" href="https://fonts.googleapis.com" />
               <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
               <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
+
+              <div className="px-8 py-8 min-h-[297mm] flex flex-col">
 
               <div className="flex items-start justify-between gap-6">
                 <div className="flex items-center gap-3">
@@ -212,6 +214,28 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                   </div>
                 </div>
               </div>
+
+            </div>
+
+              {cfg.issuer === 'BBY_SG' && cfg.remittancePage ? (
+                <div
+                  className="px-8 py-10 min-h-[297mm]"
+                  style={{ pageBreakBefore: 'always', breakBefore: 'page' }}
+                >
+                  <div className="text-2xl font-semibold">{cfg.remittancePage.title}</div>
+                  <div className="mt-8 text-base font-semibold">{cfg.remittancePage.subtitle}</div>
+                  <table className="mt-3 w-full text-sm border border-black/20 border-collapse">
+                    <tbody>
+                      {cfg.remittancePage.rows.map((r) => (
+                        <tr key={r.label}>
+                          <td className="w-1/2 px-3 py-3 border border-black/20 font-semibold">{r.label}</td>
+                          <td className="px-3 py-3 border border-black/20 whitespace-pre-wrap">{r.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
           </ScaleToFitClient>
         </div>
@@ -228,7 +252,8 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
 
       <div className="px-3 sm:px-4 py-3 sm:py-4 print:p-0">
         <ScaleToFitClient baseWidth={860}>
-          <div className="bg-white px-8 py-8 min-h-[297mm] flex flex-col">
+          <div className="bg-white">
+            <div className="px-8 py-8 min-h-[297mm] flex flex-col">
             <div className="flex items-start justify-between gap-6">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-md bg-red-600 text-white flex items-center justify-center font-semibold text-2xl">
@@ -377,6 +402,24 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
               </div>
             </div>
             </div>
+            </div>
+
+            {cfg.issuer === 'BBY_SG' && cfg.remittancePage ? (
+              <div className="px-8 py-10 min-h-[297mm]" style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
+                <div className="text-2xl font-semibold">{cfg.remittancePage.title}</div>
+                <div className="mt-8 text-base font-semibold">{cfg.remittancePage.subtitle}</div>
+                <table className="mt-3 w-full text-sm border border-black/20 border-collapse">
+                  <tbody>
+                    {cfg.remittancePage.rows.map((r) => (
+                      <tr key={r.label}>
+                        <td className="w-1/2 px-3 py-3 border border-black/20 font-semibold">{r.label}</td>
+                        <td className="px-3 py-3 border border-black/20 whitespace-pre-wrap">{r.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </div>
         </ScaleToFitClient>
       </div>

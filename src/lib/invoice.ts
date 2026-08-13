@@ -12,6 +12,11 @@ export type InvoiceIssuerConfig = {
   website?: string;
   paymentMethodsTitle?: string;
   paymentMethods: string[];
+  remittancePage?: {
+    title: string;
+    subtitle: string;
+    rows: Array<{ label: string; value: string }>;
+  };
 };
 
 export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConfig {
@@ -32,6 +37,21 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
         '人民币汇款：收款人：薛宏伟，收款银行：招商银行南京城西支行，收款账号：6225 8812 5777 1831',
         'Scan Paynow QR code or Paynow to UEN: 201608450W',
       ],
+      remittancePage: {
+        title: 'Bank details for remittance from overseas: 国际汇款信息',
+        subtitle: 'Bank account details in Singapore:',
+        rows: [
+          { label: "Beneficiary's A/C No 收款人账号", value: '04011569555 (SGD)' },
+          { label: "Beneficiary's Name 收款人名称", value: 'BBY.SG PTE LTD' },
+          {
+            label: "Beneficiary's Address 收款人地址",
+            value: '10 Anson Road#10-13A International Plaza Singapore 079903',
+          },
+          { label: 'SWIFT Code 国际汇款号', value: 'MBBESGS2' },
+          { label: 'Bank Name 银行名称', value: 'Maybank Singapore Limited' },
+          { label: 'Bank Address 银行地址', value: '2 Battery Road\nMaybank Tower\nSingapore 049907' },
+        ],
+      },
     };
   }
   if (issuer === 'BYBRIDGE') {

@@ -53,7 +53,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           <PrintButtonClient />
         </div>
 
-        <div className="max-w-[860px] mx-auto bg-white px-8 py-8 min-h-[297mm] flex flex-col">
+      <div className="max-w-[860px] mx-auto bg-white">
+        <div className="px-8 py-8 min-h-[297mm] flex flex-col">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-3">
               <img
@@ -169,7 +170,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-            <div className="mt-auto pt-6 break-inside-avoid">
+          <div className="mt-auto pt-6 break-inside-avoid">
               <div className="flex items-stretch gap-6">
               <div className="flex-1 border border-black/30">
                 <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20 whitespace-pre-line">
@@ -218,6 +219,27 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </div>
           </div>
         </div>
+
+        {cfg.issuer === 'BBY_SG' && cfg.remittancePage ? (
+          <div
+            className="px-8 py-10 min-h-[297mm]"
+            style={{ pageBreakBefore: 'always', breakBefore: 'page' }}
+          >
+            <div className="text-2xl font-semibold">{cfg.remittancePage.title}</div>
+            <div className="mt-8 text-base font-semibold">{cfg.remittancePage.subtitle}</div>
+            <table className="mt-3 w-full text-sm border border-black/20 border-collapse">
+              <tbody>
+                {cfg.remittancePage.rows.map((r) => (
+                  <tr key={r.label}>
+                    <td className="w-1/2 px-3 py-3 border border-black/20 font-semibold">{r.label}</td>
+                    <td className="px-3 py-3 border border-black/20 whitespace-pre-wrap">{r.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
       </div>
     );
   }
