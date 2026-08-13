@@ -45,7 +45,7 @@ export function getInvoiceIssuerConfig(issuer: InvoiceIssuer): InvoiceIssuerConf
           { label: "Beneficiary's Name 收款人名称", value: 'BBY.SG PTE LTD' },
           {
             label: "Beneficiary's Address 收款人地址",
-            value: '10 Anson Road#10-13A International Plaza Singapore 079903',
+            value: '8 Burn Road#15-03 Trivex Singapore 369977',
           },
           { label: 'SWIFT Code 国际汇款号', value: 'MBBESGS2' },
           { label: 'Bank Name 银行名称', value: 'Maybank Singapore Limited' },
