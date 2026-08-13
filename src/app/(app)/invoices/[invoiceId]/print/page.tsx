@@ -3,6 +3,7 @@ import { findInvoiceById, findClientById } from '@/lib/db';
 import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/lib/invoice';
 import type { InvoiceBillTo } from '@/lib/types';
 import PrintButtonClient from '@/app/(app)/invoices/[invoiceId]/print/PrintButtonClient';
+import { renderQrSvg } from '@/lib/qr';
 
 function formatDateDmy(ymd: string) {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -27,6 +28,10 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
   const cfg = getInvoiceIssuerConfig(invoice.issuer);
   const fx = computeInvoiceFxTotals(invoice);
+  const paynowQrSvg =
+    cfg.uen && cfg.paymentMethods.some((x) => /paynow/i.test(String(x)))
+      ? await renderQrSvg({ text: `PAYNOW:${cfg.uen}`, size: 170 })
+      : '';
 
   const billTo = invoice.billTo;
   const client =
@@ -169,22 +174,35 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           </div>
 
           <div className="mt-auto pt-6 break-inside-avoid">
-            <div className="border border-black/30">
-              <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20 whitespace-pre-line">
-                {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
-              </div>
-              <div className="text-sm">
-                {cfg.paymentMethods.map((line, idx) => (
-                  <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10" style={{ borderStyle: 'dotted' }}>
-                    <div className="px-3 py-2 border-r border-black/10" style={{ borderStyle: 'dotted' }}>
-                      {idx + 1}
+            <div className="flex items-stretch gap-6">
+              <div className="flex-1 border border-black/30">
+                <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20 whitespace-pre-line">
+                  {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
+                </div>
+                <div className="text-sm">
+                  {cfg.paymentMethods.map((line, idx) => (
+                    <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10" style={{ borderStyle: 'dotted' }}>
+                      <div className="px-3 py-2 border-r border-black/10" style={{ borderStyle: 'dotted' }}>
+                        {idx + 1}
+                      </div>
+                      <div className="px-3 py-2 whitespace-pre-wrap" style={{ borderStyle: 'dotted' }}>
+                        {line}
+                      </div>
                     </div>
-                    <div className="px-3 py-2 whitespace-pre-wrap" style={{ borderStyle: 'dotted' }}>
-                      {line}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+              {paynowQrSvg ? (
+                <div className="w-[190px] flex flex-col items-center justify-center">
+                  <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
+                  <div
+                    className="mt-2"
+                    style={{ width: 170, height: 170 }}
+                    dangerouslySetInnerHTML={{ __html: paynowQrSvg }}
+                  />
+                  {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-5 text-xs italic text-black/70 text-center">
@@ -332,23 +350,32 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="mt-auto pt-6 break-inside-avoid">
-          <div className="border border-black/30">
-            <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20">
-              {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
+          <div className="flex items-stretch gap-6">
+            <div className="flex-1 border border-black/30">
+              <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20">
+                {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
+              </div>
+              <div className="text-sm">
+                {cfg.paymentMethods
+                  .filter((line) => {
+                    if (invoice.currency === 'CNY') return true;
+                    return !line.includes('人民币汇款');
+                  })
+                  .map((line, idx) => (
+                    <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
+                      <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
+                      <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
+                    </div>
+                  ))}
+              </div>
             </div>
-            <div className="text-sm">
-              {cfg.paymentMethods
-                .filter((line) => {
-                  if (invoice.currency === 'CNY') return true;
-                  return !line.includes('人民币汇款');
-                })
-                .map((line, idx) => (
-                  <div key={idx} className="grid grid-cols-[30px_1fr] border-b border-black/10">
-                    <div className="px-3 py-2 border-r border-black/10">{idx + 1}</div>
-                    <div className="px-3 py-2 whitespace-pre-wrap">{line}</div>
-                  </div>
-                ))}
-            </div>
+            {paynowQrSvg ? (
+              <div className="w-[190px] flex flex-col items-center justify-center">
+                <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
+                <div className="mt-2" style={{ width: 170, height: 170 }} dangerouslySetInnerHTML={{ __html: paynowQrSvg }} />
+                {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-5 text-xs italic text-black/70">
