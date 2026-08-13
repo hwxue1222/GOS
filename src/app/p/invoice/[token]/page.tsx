@@ -186,10 +186,8 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                     </div>
                   </div>
                   {paynowQrUrl ? (
-                    <div className="w-[190px] flex flex-col items-center justify-center">
-                      <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                      <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
-                      {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
+                    <div className="w-[190px] flex items-center justify-center">
+                      <img src={paynowQrUrl} alt="PayNow QR" style={{ width: 180, height: 180 }} />
                     </div>
                   ) : null}
                 </div>
@@ -356,10 +354,8 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                   </div>
                 </div>
                 {paynowQrUrl ? (
-                  <div className="w-[190px] flex flex-col items-center justify-center">
-                    <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                    <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
-                    {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
+                  <div className="w-[190px] flex items-center justify-center">
+                    <img src={paynowQrUrl} alt="PayNow QR" style={{ width: 180, height: 180 }} />
                   </div>
                 ) : null}
               </div>
