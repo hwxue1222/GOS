@@ -3,7 +3,6 @@ import { findInvoiceById, findClientById } from '@/lib/db';
 import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/lib/invoice';
 import type { InvoiceBillTo } from '@/lib/types';
 import PrintButtonClient from '@/app/(app)/invoices/[invoiceId]/print/PrintButtonClient';
-import { renderQrSvg } from '@/lib/qr';
 
 function formatDateDmy(ymd: string) {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -28,10 +27,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
   const cfg = getInvoiceIssuerConfig(invoice.issuer);
   const fx = computeInvoiceFxTotals(invoice);
-  const paynowQrSvg =
-    cfg.uen && cfg.paymentMethods.some((x) => /paynow/i.test(String(x)))
-      ? await renderQrSvg({ text: `PAYNOW:${cfg.uen}`, size: 170 })
-      : '';
+  const paynowQrUrl = cfg.issuer === 'BBY_SG' ? '/paynow-qr.png' : '';
 
   const billTo = invoice.billTo;
   const client =
@@ -173,8 +169,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="mt-auto pt-6 break-inside-avoid">
-            <div className="flex items-stretch gap-6">
+            <div className="mt-auto pt-6 break-inside-avoid">
+              <div className="flex items-stretch gap-6">
               <div className="flex-1 border border-black/30">
                 <div className="px-3 py-2 text-sm font-semibold bg-black/[0.02] border-b border-black/20 whitespace-pre-line">
                   {cfg.paymentMethodsTitle ?? 'Payment Methods:'}
@@ -192,14 +188,10 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                   ))}
                 </div>
               </div>
-              {paynowQrSvg ? (
+              {paynowQrUrl ? (
                 <div className="w-[190px] flex flex-col items-center justify-center">
                   <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                  <div
-                    className="mt-2"
-                    style={{ width: 170, height: 170 }}
-                    dangerouslySetInnerHTML={{ __html: paynowQrSvg }}
-                  />
+                  <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
                   {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
                 </div>
               ) : null}
@@ -369,10 +361,10 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                   ))}
               </div>
             </div>
-            {paynowQrSvg ? (
+            {paynowQrUrl ? (
               <div className="w-[190px] flex flex-col items-center justify-center">
                 <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                <div className="mt-2" style={{ width: 170, height: 170 }} dangerouslySetInnerHTML={{ __html: paynowQrSvg }} />
+                <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
                 {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
               </div>
             ) : null}

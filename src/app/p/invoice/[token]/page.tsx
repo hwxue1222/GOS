@@ -3,7 +3,6 @@ import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/l
 import type { InvoiceBillTo } from '@/lib/types';
 import PrintButtonClient from '@/app/(app)/invoices/[invoiceId]/print/PrintButtonClient';
 import ScaleToFitClient from '@/components/ScaleToFitClient';
-import { renderQrSvg } from '@/lib/qr';
 
 function formatDateDmy(ymd: string) {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -26,10 +25,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
 
   const cfg = getInvoiceIssuerConfig(invoice.issuer);
   const fx = computeInvoiceFxTotals(invoice);
-  const paynowQrSvg =
-    cfg.uen && cfg.paymentMethods.some((x) => /paynow/i.test(String(x)))
-      ? await renderQrSvg({ text: `PAYNOW:${cfg.uen}`, size: 170 })
-      : '';
+  const paynowQrUrl = cfg.issuer === 'BBY_SG' ? '/paynow-qr.png' : '';
 
   const billTo = invoice.billTo;
   const client =
@@ -189,10 +185,10 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                       ))}
                     </div>
                   </div>
-                  {paynowQrSvg ? (
+                  {paynowQrUrl ? (
                     <div className="w-[190px] flex flex-col items-center justify-center">
                       <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                      <div className="mt-2" style={{ width: 170, height: 170 }} dangerouslySetInnerHTML={{ __html: paynowQrSvg }} />
+                      <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
                       {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
                     </div>
                   ) : null}
@@ -359,10 +355,10 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
                       ))}
                   </div>
                 </div>
-                {paynowQrSvg ? (
+                {paynowQrUrl ? (
                   <div className="w-[190px] flex flex-col items-center justify-center">
                     <div className="text-[11px] text-black/50 tracking-wider uppercase">{cfg.displayName}</div>
-                    <div className="mt-2" style={{ width: 170, height: 170 }} dangerouslySetInnerHTML={{ __html: paynowQrSvg }} />
+                    <img src={paynowQrUrl} alt="PayNow QR" className="mt-2" style={{ width: 170, height: 170 }} />
                     {cfg.uen ? <div className="mt-2 text-[11px] text-black/50 tracking-wider uppercase">{cfg.uen}</div> : null}
                   </div>
                 ) : null}
