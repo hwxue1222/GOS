@@ -12,6 +12,7 @@ export default function SignClient(props: {
   requestStatus: string;
   expiresAt: string;
   signedAt: string;
+  signedItems: Array<{ email: string; name: string; title: string; signedAt: string }>;
   expired: boolean;
   packetKind: string;
   requiresRepresentative: boolean;
@@ -34,6 +35,7 @@ export default function SignClient(props: {
     requestStatus,
     expiresAt,
     signedAt,
+    signedItems,
     expired,
     packetKind,
     requiresRepresentative,
@@ -67,53 +69,62 @@ export default function SignClient(props: {
 
   const htmlWithSignature = useMemo(() => {
     if (!isSigned) return html;
-    const payload = {
-      email: String(requestEmail ?? '').trim(),
-      name: String(signerFullName ?? '').trim(),
-      title: String(signerTitle ?? '').trim(),
-      signedAt: String(signedAt ?? '').trim(),
-    };
+    const items = Array.isArray(signedItems) ? signedItems : [];
+    const payload = items
+      .map((x) => ({
+        email: String(x.email ?? '').trim(),
+        name: String(x.name ?? '').trim(),
+        title: String(x.title ?? '').trim(),
+        signedAt: String(x.signedAt ?? '').trim(),
+      }))
+      .filter((x) => !!x.email && !!x.signedAt);
 
     const js = `(() => {
-  const data = ${JSON.stringify(payload)};
+  const items = ${JSON.stringify(payload)};
   const toYmdHm = (iso) => {
     const d = new Date(String(iso || ''));
     if (Number.isNaN(d.getTime())) return String(iso || '');
     const pad = (n) => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   };
-  const signedAtText = toYmdHm(data.signedAt);
-  const key = String(data.email || '').toLowerCase();
+  const normalizeKey = (v) => String(v || '').trim().toLowerCase();
 
   const placeholders = Array.from(document.querySelectorAll('[data-signer]'));
   const nameEls = Array.from(document.querySelectorAll('[data-signer-full-name]'));
   const titleEls = Array.from(document.querySelectorAll('[data-signer-title]'));
   const timeEls = Array.from(document.querySelectorAll('[data-signer-signed-at]'));
-  if (placeholders.length && key) {
+  if (placeholders.length && items.length) {
+    const byEmail = new Map();
+    for (const it of items) byEmail.set(normalizeKey(it.email), it);
     for (const el of placeholders) {
-      const k = String(el.getAttribute('data-signer') || '').toLowerCase();
-      if (k !== key) continue;
+      const k = normalizeKey(el.getAttribute('data-signer'));
+      const it = byEmail.get(k);
+      if (!it) continue;
+      const signedAtText = toYmdHm(it.signedAt);
       const parts = [];
       parts.push(signedAtText ? 'Signed ' + signedAtText : 'Signed');
-      if (data.name) parts.push('- ' + data.name);
-      if (data.title) parts.push('(' + data.title + ')');
-      if (data.email) parts.push('(' + data.email + ')');
+      if (it.name) parts.push('- ' + it.name);
+      if (it.title) parts.push('(' + it.title + ')');
+      if (it.email) parts.push('(' + it.email + ')');
       el.textContent = parts.join(' ');
     }
     for (const el of nameEls) {
-      const k = String(el.getAttribute('data-signer-full-name') || '').toLowerCase();
-      if (k !== key) continue;
-      el.textContent = data.name || '';
+      const k = normalizeKey(el.getAttribute('data-signer-full-name'));
+      const it = byEmail.get(k);
+      if (!it) continue;
+      el.textContent = it.name || '';
     }
     for (const el of titleEls) {
-      const k = String(el.getAttribute('data-signer-title') || '').toLowerCase();
-      if (k !== key) continue;
-      el.textContent = data.title || '';
+      const k = normalizeKey(el.getAttribute('data-signer-title'));
+      const it = byEmail.get(k);
+      if (!it) continue;
+      el.textContent = it.title || '';
     }
     for (const el of timeEls) {
-      const k = String(el.getAttribute('data-signer-signed-at') || '').toLowerCase();
-      if (k !== key) continue;
-      el.textContent = signedAtText;
+      const k = normalizeKey(el.getAttribute('data-signer-signed-at'));
+      const it = byEmail.get(k);
+      if (!it) continue;
+      el.textContent = toYmdHm(it.signedAt);
     }
     return;
   }
@@ -130,19 +141,30 @@ export default function SignClient(props: {
   stamp.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
   stamp.style.whiteSpace = 'pre-wrap';
   stamp.style.opacity = '0.9';
-  const line =
-    (signedAtText ? 'Signed ' + signedAtText : 'Signed') +
-    (data.name ? ' - ' + data.name : '') +
-    (data.title ? ' (' + data.title + ')' : '') +
-    (data.email ? ' (' + data.email + ')' : '');
-  stamp.textContent = line;
+  if (!items.length) return;
+  const title = document.createElement('div');
+  title.style.fontWeight = '700';
+  title.textContent = 'Signatures';
+  stamp.appendChild(title);
+  for (const it of items) {
+    const row = document.createElement('div');
+    row.style.marginTop = '6px';
+    const signedAtText = toYmdHm(it.signedAt);
+    const line =
+      (signedAtText ? 'Signed ' + signedAtText : 'Signed') +
+      (it.name ? ' - ' + it.name : '') +
+      (it.title ? ' (' + it.title + ')' : '') +
+      (it.email ? ' (' + it.email + ')' : '');
+    row.textContent = line;
+    stamp.appendChild(row);
+  }
   document.body.appendChild(stamp);
 })();`;
 
     const scriptTag = `<script>${js}<\/script>`;
     if (html.includes('</body>')) return html.replace('</body>', `${scriptTag}</body>`);
     return `${html}${scriptTag}`;
-  }, [html, isSigned, requestEmail, signedAt, signerFullName, signerTitle]);
+  }, [html, isSigned, signedItems]);
 
   async function requestOtp() {
     setError(null);

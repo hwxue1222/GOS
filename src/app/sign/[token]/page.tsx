@@ -1,5 +1,5 @@
 import SignClient from '@/app/sign/[token]/ui/SignClient';
-import { getSignatureContextByToken } from '@/lib/db';
+import { getSignatureContextByToken, readDb } from '@/lib/db';
 import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
@@ -26,6 +26,22 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   const pdfUrl = ctx.packet.kind === 'CONTRACT' ? `/api/sign/${encodeURIComponent(token)}/pdf?disposition=inline` : undefined;
   const html = normalizeDocumentHtml(ctx.document.html);
 
+  const signedItemsResolved =
+    ctx.request.status === 'SIGNED'
+      ? (await (async () => {
+          const db = await readDb();
+          return db.signatureRequests
+            .filter((r) => r.packetId === ctx.packet.id && r.status === 'SIGNED' && !!r.signedAt)
+            .map((r) => ({
+              email: String(r.email ?? '').trim(),
+              name: String(r.signerFullName ?? r.rdrRepresentativeName ?? '').trim(),
+              title: String(r.signerTitle ?? '').trim(),
+              signedAt: String(r.signedAt ?? ''),
+            }))
+            .filter((x) => !!x.email && !!x.signedAt);
+        })())
+      : [];
+
   return (
     <SignClient
       token={token}
@@ -37,6 +53,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
       requestStatus={ctx.request.status}
       expiresAt={ctx.request.expiresAt}
       signedAt={ctx.request.signedAt ?? ''}
+      signedItems={signedItemsResolved}
       expired={expired}
       packetKind={ctx.packet.kind}
       requiresRepresentative={requiresRepresentative}
