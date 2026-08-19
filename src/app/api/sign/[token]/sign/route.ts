@@ -35,5 +35,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     signerPhone: typeof body?.signerPhone === 'string' ? body.signerPhone : undefined,
   });
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, signedAt: result.signedAt, signedItems: result.signedItems });
 }

@@ -63,13 +63,24 @@ export default function SignClient(props: {
   const [signerIdNo, setSignerIdNo] = useState(initialSignerIdNo);
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
 
+  const [status, setStatus] = useState(requestStatus);
+  const [signedAtState, setSignedAtState] = useState(signedAt);
+  const [signedItemsState, setSignedItemsState] = useState(signedItems);
+  const [pdfNonce, setPdfNonce] = useState(0);
+
   const isRorcDecl = packetKind === 'RORC_DECL';
   const isContract = packetKind === 'CONTRACT';
-  const isSigned = requestStatus === 'SIGNED';
+  const isSigned = status === 'SIGNED';
+
+  const pdfUrlWithNonce = useMemo(() => {
+    if (!pdfUrl) return undefined;
+    const sep = pdfUrl.includes('?') ? '&' : '?';
+    return `${pdfUrl}${sep}nonce=${pdfNonce}`;
+  }, [pdfNonce, pdfUrl]);
 
   const htmlWithSignature = useMemo(() => {
     if (!isSigned) return html;
-    const items = Array.isArray(signedItems) ? signedItems : [];
+    const items = Array.isArray(signedItemsState) ? signedItemsState : [];
     const payload = items
       .map((x) => ({
         email: String(x.email ?? '').trim(),
@@ -164,7 +175,7 @@ export default function SignClient(props: {
     const scriptTag = `<script>${js}<\/script>`;
     if (html.includes('</body>')) return html.replace('</body>', `${scriptTag}</body>`);
     return `${html}${scriptTag}`;
-  }, [html, isSigned, signedItems]);
+  }, [html, isSigned, signedItemsState]);
 
   async function requestOtp() {
     setError(null);
@@ -234,7 +245,23 @@ export default function SignClient(props: {
         setError(j?.error ?? `HTTP_${res.status}`);
         return;
       }
+      const nextSignedAt = typeof j?.signedAt === 'string' ? j.signedAt : '';
+      const nextSignedItems = Array.isArray(j?.signedItems) ? j.signedItems : [];
+      setStatus('SIGNED');
+      setSignedAtState(nextSignedAt);
+      setSignedItemsState(
+        nextSignedItems
+          .map((x: any) => ({
+            email: String(x?.email ?? '').trim(),
+            name: String(x?.name ?? '').trim(),
+            title: String(x?.title ?? '').trim(),
+            signedAt: String(x?.signedAt ?? '').trim(),
+          }))
+          .filter((x: any) => !!x.email && !!x.signedAt),
+      );
+      setOtp('');
       setInfo('SIGNED');
+      if (pdfUrl) setPdfNonce(Date.now());
     } finally {
       setSigning(false);
     }
@@ -246,7 +273,7 @@ export default function SignClient(props: {
         <div className="rounded-xl bg-white border border-black/5 p-6">
           <div className="text-lg font-semibold break-words">{title}</div>
           <div className="mt-1 text-sm text-black/60 break-words">{requestEmail}</div>
-          <div className="mt-1 text-xs text-black/50 break-words">{`Status: ${requestStatus}`}</div>
+          <div className="mt-1 text-xs text-black/50 break-words">{`Status: ${status}`}</div>
           <div className="mt-1 text-xs text-black/50 break-words">{`Expires: ${new Date(expiresAt).toLocaleString()}`}</div>
           <div className="mt-1 text-xs text-black/50 break-words">{`Document hash: ${sha256}`}</div>
 
@@ -356,8 +383,8 @@ export default function SignClient(props: {
           ) : null}
 
           <div className="mt-6 rounded-lg border border-black/10 overflow-hidden bg-white">
-            {pdfUrl ? (
-              <iframe title="document" src={pdfUrl} className="w-full" style={{ height: '70vh' }} />
+            {pdfUrlWithNonce ? (
+              <iframe title="document" src={pdfUrlWithNonce} className="w-full" style={{ height: '70vh' }} />
             ) : (
               <iframe title="document" srcDoc={htmlWithSignature} className="w-full" style={{ height: '70vh' }} />
             )}

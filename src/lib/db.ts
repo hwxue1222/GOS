@@ -10981,7 +10981,17 @@ export async function signByToken(input: {
   }
 
   await writeDb(db);
-  return { ok: true as const };
+  const signedItems = db.signatureRequests
+    .filter((r) => r.packetId === packet.id && r.status === 'SIGNED' && !!r.signedAt)
+    .map((r) => ({
+      email: String(r.email ?? '').trim(),
+      name: String(r.signerFullName ?? r.rdrRepresentativeName ?? '').trim(),
+      title: String(r.signerTitle ?? '').trim(),
+      signedAt: String(r.signedAt ?? ''),
+    }))
+    .filter((x) => !!x.email && !!x.signedAt);
+
+  return { ok: true as const, signedAt: now, packetId: packet.id, signedItems };
 }
 
 export async function listShareTransfers() {
