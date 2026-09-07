@@ -19,7 +19,22 @@ export default function AgmClient() {
   const shareholderPersons = shareholders.filter((s) => (s as any)?.entity?.type === 'PERSON') as Array<
     (typeof shareholders)[number] & { entity: { type: 'PERSON'; person: { fullName: string } } }
   >;
+  const shareholderCompanies = shareholders.filter((s) => (s as any)?.entity?.type === 'COMPANY') as Array<
+    (typeof shareholders)[number] & { entity: { type: 'COMPANY'; company: { id: string; name: string } } }
+  >;
   const directors = roles?.directors ?? [];
+  const directorsByName = useMemo(() => {
+    const m = new Map<string, { fullName: string; email?: string }>();
+    for (const d of directors) {
+      const fullName = String(d.entity.person.fullName ?? '').trim();
+      if (!fullName) continue;
+      m.set(fullName, { fullName, email: d.entity.person.email });
+    }
+    return m;
+  }, [directors]);
+  const hasDirectors = directors.length > 0;
+  const needsManualDirectorSigner = !hasDirectors;
+  const needsCorporateRepresentative = shareholderPersons.length === 0 && shareholderCompanies.length > 0;
 
   const [meetingDate, setMeetingDate] = useState(todayYmd);
   const [meetingTime, setMeetingTime] = useState('10:00');
@@ -28,6 +43,10 @@ export default function AgmClient() {
   const prevManualVenueRef = useRef<string>('');
   const [chairman, setChairman] = useState('');
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
+  const [corporateRepresentativeName, setCorporateRepresentativeName] = useState('');
+  const [corporateRepresentativeEmail, setCorporateRepresentativeEmail] = useState('');
+  const [directorSignerName, setDirectorSignerName] = useState('');
+  const [directorSignerEmail, setDirectorSignerEmail] = useState('');
   const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | 'AUDITED' | ''>('');
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -67,11 +86,23 @@ export default function AgmClient() {
     const md = meetingDate.trim();
     const mt = meetingTime.trim();
     const mv = meetingVenue.trim();
-    const ch = chairman.trim();
-    const nd = directorSendingNotice.trim();
+    const corpRepName = corporateRepresentativeName.trim();
+    const corpRepEmail = corporateRepresentativeEmail.trim();
+    const resolvedChairman = (needsCorporateRepresentative ? corpRepName : chairman).trim();
+    const signerName = directorSignerName.trim();
+    const signerEmail = directorSignerEmail.trim();
+    const nd = (hasDirectors ? directorSendingNotice : signerName).trim();
     const fy = fiscalYearReport.trim();
-    if (!md || !mt || !mv || !ch || !nd || !companyCategory || !fy) {
+    if (!md || !mt || !mv || !resolvedChairman || !nd || !companyCategory || !fy) {
       setSubmitError('Please fill in required fields.');
+      return;
+    }
+    if (needsCorporateRepresentative && (!corpRepName || !corpRepEmail)) {
+      setSubmitError('Please fill in corporate representative name and email.');
+      return;
+    }
+    if ((needsCorporateRepresentative || needsManualDirectorSigner) && (!signerName || !signerEmail)) {
+      setSubmitError('Please fill in director signer name and email.');
       return;
     }
 
@@ -101,8 +132,12 @@ export default function AgmClient() {
           meetingDate: md,
           meetingTime: mt,
           meetingVenue: mv,
-          chairman: ch,
+          chairman: resolvedChairman,
           directorSendingNotice: nd,
+          corporateRepresentativeName: needsCorporateRepresentative ? corpRepName : undefined,
+          corporateRepresentativeEmail: needsCorporateRepresentative ? corpRepEmail : undefined,
+          directorSignerName: needsCorporateRepresentative || needsManualDirectorSigner ? signerName : undefined,
+          directorSignerEmail: needsCorporateRepresentative || needsManualDirectorSigner ? signerEmail : undefined,
           companyCategory: companyCategory || undefined,
           fiscalYearReport: fy,
           useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
@@ -137,38 +172,138 @@ export default function AgmClient() {
               <div className="text-black">
                 <span className="text-red-500">*</span> Chairman
               </div>
-              <select
-                value={chairman}
-                onChange={(e) => setChairman(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Select</option>
-                {shareholderPersons.map((s) => (
-                  <option key={s.role.id} value={s.entity.person.fullName}>
-                    {s.entity.person.fullName}
-                  </option>
-                ))}
-              </select>
+              {needsCorporateRepresentative ? (
+                hasDirectors ? (
+                  <select
+                    value={corporateRepresentativeName}
+                    onChange={(e) => {
+                      const nextName = e.target.value;
+                      setCorporateRepresentativeName(nextName);
+                      const email = (directorsByName.get(nextName)?.email ?? '').trim();
+                      if (email) setCorporateRepresentativeEmail(email);
+                    }}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Select</option>
+                    {directors.map((d) => (
+                      <option key={d.role.id} value={d.entity.person.fullName}>
+                        {d.entity.person.fullName}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={corporateRepresentativeName}
+                    onChange={(e) => setCorporateRepresentativeName(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    placeholder="Corporate representative name"
+                  />
+                )
+              ) : (
+                <select
+                  value={chairman}
+                  onChange={(e) => setChairman(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Select</option>
+                  {shareholderPersons.map((s) => (
+                    <option key={s.role.id} value={s.entity.person.fullName}>
+                      {s.entity.person.fullName}
+                    </option>
+                  ))}
+                </select>
+              )}
             </label>
 
             <label className="text-sm">
               <div className="text-black">
                 <span className="text-red-500">*</span> Director sending notice
               </div>
-              <select
-                value={directorSendingNotice}
-                onChange={(e) => setDirectorSendingNotice(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Select</option>
-                {directors.map((d) => (
-                  <option key={d.role.id} value={d.entity.person.fullName}>
-                    {d.entity.person.fullName}
-                  </option>
-                ))}
-              </select>
+              {hasDirectors ? (
+                <select
+                  value={directorSendingNotice}
+                  onChange={(e) => setDirectorSendingNotice(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Select</option>
+                  {directors.map((d) => (
+                    <option key={d.role.id} value={d.entity.person.fullName}>
+                      {d.entity.person.fullName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-1 w-full rounded-lg border border-black/10 bg-black/5 px-3 py-2 text-sm text-black/60">Use director signer below</div>
+              )}
             </label>
           </div>
+
+          {needsCorporateRepresentative ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="text-sm">
+                <div className="text-black">
+                  <span className="text-red-500">*</span> Corporate representative email
+                </div>
+                <input
+                  type="email"
+                  value={corporateRepresentativeEmail}
+                  onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  placeholder="name@email.com"
+                />
+              </label>
+              <div />
+            </div>
+          ) : null}
+
+          {needsCorporateRepresentative || needsManualDirectorSigner ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="text-sm">
+                <div className="text-black">
+                  <span className="text-red-500">*</span> Director signer name
+                </div>
+                {hasDirectors ? (
+                  <select
+                    value={directorSignerName}
+                    onChange={(e) => {
+                      const nextName = e.target.value;
+                      setDirectorSignerName(nextName);
+                      const email = (directorsByName.get(nextName)?.email ?? '').trim();
+                      if (email) setDirectorSignerEmail(email);
+                    }}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Select</option>
+                    {directors.map((d) => (
+                      <option key={d.role.id} value={d.entity.person.fullName}>
+                        {d.entity.person.fullName}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={directorSignerName}
+                    onChange={(e) => setDirectorSignerName(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    placeholder="Director signer name"
+                  />
+                )}
+              </label>
+
+              <label className="text-sm">
+                <div className="text-black">
+                  <span className="text-red-500">*</span> Director signer email
+                </div>
+                <input
+                  type="email"
+                  value={directorSignerEmail}
+                  onChange={(e) => setDirectorSignerEmail(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  placeholder="name@email.com"
+                />
+              </label>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm text-black/80">

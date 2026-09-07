@@ -623,6 +623,10 @@ export type AnnualGeneralMeetingRequest = {
   meetingTime?: string;
   meetingVenue: string;
   chairman: string;
+  corporateRepresentativeName?: string;
+  corporateRepresentativeEmail?: string;
+  directorSignerName?: string;
+  directorSignerEmail?: string;
   directorSendingNotice?: string;
   companyCategory?: string;
   fiscalYearReport?: string;

@@ -14622,6 +14622,10 @@ export async function createAnnualGeneralMeetingRequest(input: {
   meetingVenue: string;
   chairman: string;
   noticeDirector: string;
+  corporateRepresentativeName?: string;
+  corporateRepresentativeEmail?: string;
+  directorSignerName?: string;
+  directorSignerEmail?: string;
   companyCategory?: string;
   fiscalYearReport: string;
   useByBridgeRegisteredOfficeAddress?: boolean;
@@ -14635,10 +14639,14 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const meetingVenue = input.meetingVenue.trim();
   const chairman = input.chairman.trim();
   const noticeDirector = input.noticeDirector.trim();
+  const corporateRepresentativeName = typeof input.corporateRepresentativeName === 'string' ? input.corporateRepresentativeName.trim() || undefined : undefined;
+  const corporateRepresentativeEmail = typeof input.corporateRepresentativeEmail === 'string' ? input.corporateRepresentativeEmail.trim() || undefined : undefined;
+  const directorSignerName = typeof input.directorSignerName === 'string' ? input.directorSignerName.trim() || undefined : undefined;
+  const directorSignerEmail = typeof input.directorSignerEmail === 'string' ? input.directorSignerEmail.trim() || undefined : undefined;
   const fiscalYearReport = input.fiscalYearReport.trim();
   const companyCategory = typeof input.companyCategory === 'string' ? input.companyCategory.trim() || undefined : undefined;
   const useByBridgeRegisteredOfficeAddress = !!input.useByBridgeRegisteredOfficeAddress;
-  if (!meetingDate || !meetingVenue || !chairman || !noticeDirector || !fiscalYearReport) {
+  if (!meetingDate || !meetingVenue || !chairman || !fiscalYearReport) {
     return { ok: false as const, error: 'INVALID_INPUT' as const };
   }
 
@@ -14663,20 +14671,49 @@ export async function createAnnualGeneralMeetingRequest(input: {
   };
 
   const directors = await listClientDirectors(input.clientId);
+  const hasDirectors = directors.length > 0;
   const directorsByName = new Map(directors.map((d) => [d.person.fullName.trim(), d.person]));
-  const signerEmails = Array.from(
-    new Set(
-      directors
-        .map((d) => (d.person.email ?? '').trim())
-        .filter(Boolean)
-        .map((e) => e.toLowerCase()),
-    ),
-  );
-  if (signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+  const signerEmails = hasDirectors
+    ? Array.from(
+        new Set(
+          directors
+            .map((d) => (d.person.email ?? '').trim())
+            .filter(Boolean)
+            .map((e) => e.toLowerCase()),
+        ),
+      )
+    : [];
+  if (hasDirectors && signerEmails.length !== directors.length) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
-  const noticeSigner = directorsByName.get(noticeDirector) ?? null;
-  if (!noticeSigner?.email?.trim()) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
-  const chairmanSigner = directorsByName.get(chairman) ?? noticeSigner;
+  if (hasDirectors && !noticeDirector) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const noticeSigner = (() => {
+    if (hasDirectors) {
+      const v = directorsByName.get(noticeDirector) ?? null;
+      if (!v?.email?.trim()) return null;
+      return v;
+    }
+    const fullName = String(directorSignerName ?? '').trim();
+    const email = String(directorSignerEmail ?? '').trim();
+    if (!fullName || !email) return null;
+    return { fullName, email };
+  })();
+  const noticeSignerResolved = (() => {
+    const fullName = String(noticeSigner?.fullName ?? '').trim();
+    const email = String(noticeSigner?.email ?? '').trim();
+    if (!fullName || !email) return null;
+    return { fullName, email };
+  })();
+  if (!noticeSignerResolved) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+
+  const chairmanSignerResolved = (() => {
+    if (!hasDirectors) return noticeSignerResolved;
+    const preferred = directorSignerName ? directorsByName.get(directorSignerName) ?? null : null;
+    if (preferred?.email?.trim()) return { fullName: preferred.fullName, email: preferred.email.trim() };
+    const byChairman = directorsByName.get(chairman) ?? null;
+    if (byChairman?.email?.trim()) return { fullName: byChairman.fullName, email: byChairman.email.trim() };
+    return noticeSignerResolved;
+  })();
 
   const partyById = new Map(db.parties.map((p) => [p.id, p]));
   const personById = new Map(db.persons.map((p) => [p.id, p]));
@@ -14787,14 +14824,14 @@ export async function createAnnualGeneralMeetingRequest(input: {
     noticeDateYmd: addDaysYmd(meetingDate, -14) || now.slice(0, 10),
     companyCategory,
     fiscalYearEndYmd: fiscalYearEndYmd || undefined,
-    signer: { fullName: noticeSigner.fullName, email: noticeSigner.email },
+    signer: { fullName: noticeSignerResolved.fullName, email: noticeSignerResolved.email },
   });
   await createDocAndPacket({
     kind: 'AGM_NOTICE',
     documentType: 'AGM_NOTICE',
     title: `AGM Notice - ${client.name}`,
     html: noticeHtml,
-    signerEmails: [noticeSigner.email.trim().toLowerCase()],
+    signerEmails: [noticeSignerResolved.email.trim().toLowerCase()],
   });
 
   const minutesHtml = templates.renderAnnualGeneralMeetingMinutesHtml({
@@ -14807,14 +14844,14 @@ export async function createAnnualGeneralMeetingRequest(input: {
     companyCategory,
     fiscalYearEndYmd: fiscalYearEndYmd || undefined,
     registrableControllerNames,
-    signer: { fullName: chairmanSigner.fullName, email: chairmanSigner.email },
+    signer: { fullName: chairmanSignerResolved.fullName, email: chairmanSignerResolved.email },
   });
   const minutesPacket = await createDocAndPacket({
     kind: 'AGM_MIN',
     documentType: 'AGM_MIN',
     title: `AGM Minutes - ${client.name}`,
     html: minutesHtml,
-    signerEmails: [String(chairmanSigner.email).trim().toLowerCase()],
+    signerEmails: [chairmanSignerResolved.email.trim().toLowerCase()],
   });
 
   const dirStmtHtml = templates.renderAnnualGeneralMeetingDirectorStatementHtml({
@@ -14822,17 +14859,20 @@ export async function createAnnualGeneralMeetingRequest(input: {
     companyRegistrationNo: client.companyRegistrationNo,
     dateYmd: meetingDate,
     companyCategory,
-    signers: directors
-      .map((d) => ({ fullName: d.person.fullName, email: d.person.email }))
-      .filter((s): s is { fullName: string; email: string } => !!s.email?.trim())
-      .map((s) => ({ fullName: s.fullName.trim(), email: s.email.trim().toLowerCase() })),
+    signers: (hasDirectors
+      ? directors
+          .map((d) => ({ fullName: d.person.fullName, email: d.person.email }))
+          .filter((s): s is { fullName: string; email: string } => !!s.email?.trim())
+          .map((s) => ({ fullName: s.fullName.trim(), email: s.email.trim().toLowerCase() }))
+      : [{ fullName: chairmanSignerResolved.fullName.trim(), email: chairmanSignerResolved.email.trim().toLowerCase() }]
+    ).filter(Boolean),
   });
   await createDocAndPacket({
     kind: 'AGM_DIR_STMT',
     documentType: 'AGM_DIR_STMT',
     title: `AGM Director Statement - ${client.name}`,
     html: dirStmtHtml,
-    signerEmails,
+    signerEmails: signerEmails.length ? signerEmails : [chairmanSignerResolved.email.trim().toLowerCase()],
   });
 
   const request: AnnualGeneralMeetingRequest = {
@@ -14843,6 +14883,10 @@ export async function createAnnualGeneralMeetingRequest(input: {
     meetingTime,
     meetingVenue,
     chairman,
+    corporateRepresentativeName,
+    corporateRepresentativeEmail,
+    directorSignerName,
+    directorSignerEmail,
     directorSendingNotice: noticeDirector,
     fiscalYearReport,
     companyCategory,

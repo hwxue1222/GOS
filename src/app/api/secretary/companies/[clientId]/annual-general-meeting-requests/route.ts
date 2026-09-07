@@ -74,6 +74,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         meetingVenue?: string;
         chairman?: string;
         directorSendingNotice?: string;
+        corporateRepresentativeName?: string;
+        corporateRepresentativeEmail?: string;
+        directorSignerName?: string;
+        directorSignerEmail?: string;
         companyCategory?: string;
         fiscalYearReport?: string;
         useByBridgeRegisteredOfficeAddress?: boolean;
@@ -85,6 +89,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const meetingVenue = typeof body?.meetingVenue === 'string' ? body.meetingVenue.trim() : '';
   const chairman = typeof body?.chairman === 'string' ? body.chairman.trim() : '';
   const noticeDirector = typeof body?.directorSendingNotice === 'string' ? body.directorSendingNotice.trim() : '';
+  const corporateRepresentativeName = typeof body?.corporateRepresentativeName === 'string' ? body.corporateRepresentativeName.trim() : '';
+  const corporateRepresentativeEmail = typeof body?.corporateRepresentativeEmail === 'string' ? body.corporateRepresentativeEmail.trim() : '';
+  const directorSignerName = typeof body?.directorSignerName === 'string' ? body.directorSignerName.trim() : '';
+  const directorSignerEmail = typeof body?.directorSignerEmail === 'string' ? body.directorSignerEmail.trim() : '';
   const companyCategory = typeof body?.companyCategory === 'string' ? body.companyCategory.trim() : undefined;
   const fiscalYearReport = typeof body?.fiscalYearReport === 'string' ? body.fiscalYearReport.trim() : '';
   const useByBridgeRegisteredOfficeAddress = !!body?.useByBridgeRegisteredOfficeAddress;
@@ -97,6 +105,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     meetingVenue,
     chairman,
     noticeDirector,
+    corporateRepresentativeName: corporateRepresentativeName || undefined,
+    corporateRepresentativeEmail: corporateRepresentativeEmail || undefined,
+    directorSignerName: directorSignerName || undefined,
+    directorSignerEmail: directorSignerEmail || undefined,
     companyCategory,
     fiscalYearReport,
     useByBridgeRegisteredOfficeAddress,

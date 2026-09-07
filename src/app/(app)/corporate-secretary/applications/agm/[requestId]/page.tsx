@@ -99,6 +99,16 @@ export default async function AgmApplicationDetailPage({ params }: { params: Pro
     { label: 'Meeting date', value: r.meetingDate },
     ...(r.meetingTime ? [{ label: 'Meeting time', value: r.meetingTime }] : []),
     { label: 'Chairman', value: r.chairman },
+    ...((r as any).corporateRepresentativeName
+      ? [{ label: 'Corporate representative', value: String((r as any).corporateRepresentativeName) }]
+      : []),
+    ...((r as any).corporateRepresentativeEmail
+      ? [{ label: 'Corporate representative email', value: String((r as any).corporateRepresentativeEmail) }]
+      : []),
+    ...((r as any).directorSignerName ? [{ label: 'Director signer', value: String((r as any).directorSignerName) }] : []),
+    ...((r as any).directorSignerEmail
+      ? [{ label: 'Director signer email', value: String((r as any).directorSignerEmail) }]
+      : []),
     ...(r.directorSendingNotice ? [{ label: 'Director sending notice', value: r.directorSendingNotice }] : []),
     ...(r.fiscalYearReport ? [{ label: 'Fiscal Financial Year Report', value: r.fiscalYearReport }] : []),
     ...(r.companyCategory ? [{ label: 'Company Category', value: r.companyCategory }] : []),
