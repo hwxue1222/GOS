@@ -73,6 +73,7 @@ export default function AgmClient() {
   const [corporateRepresentativeName, setCorporateRepresentativeName] = useState('');
   const [corporateRepresentativeEmail, setCorporateRepresentativeEmail] = useState('');
   const [corporateRepresentativeAddress, setCorporateRepresentativeAddress] = useState('');
+  const [corporateRepresentativeIdType, setCorporateRepresentativeIdType] = useState<'NRIC' | 'PASSPORT'>('NRIC');
   const [corporateRepresentativeIdNo, setCorporateRepresentativeIdNo] = useState('');
   const [directorSignerName, setDirectorSignerName] = useState('');
   const [directorSignerEmail, setDirectorSignerEmail] = useState('');
@@ -119,6 +120,7 @@ export default function AgmClient() {
     const corpRepEmail = corporateRepresentativeEmail.trim();
     const corpRepAddress = corporateRepresentativeAddress.trim();
     const corpRepIdNo = corporateRepresentativeIdNo.trim();
+    const corpRepIdType = corporateRepresentativeIdType;
     const resolvedChairman = (
       needsCorporateRepresentative
         ? needsNewCorporateRepresentative
@@ -180,6 +182,7 @@ export default function AgmClient() {
           corporateRepresentativeName: needsNewCorporateRepresentative ? corpRepName : undefined,
           corporateRepresentativeEmail: needsNewCorporateRepresentative ? corpRepEmail : undefined,
           corporateRepresentativeAddress: needsNewCorporateRepresentative ? corpRepAddress : undefined,
+          corporateRepresentativeIdType: needsNewCorporateRepresentative ? corpRepIdType : undefined,
           corporateRepresentativeIdNo: needsNewCorporateRepresentative ? corpRepIdNo : undefined,
           directorSignerName: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerName : undefined,
           directorSignerEmail: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerEmail : undefined,
@@ -226,6 +229,7 @@ export default function AgmClient() {
                   setCorporateRepresentativeName('');
                   setCorporateRepresentativeEmail('');
                   setCorporateRepresentativeAddress('');
+                  setCorporateRepresentativeIdType('NRIC');
                   setCorporateRepresentativeIdNo('');
                   setDirectorSignerName('');
                   setDirectorSignerEmail('');
@@ -269,6 +273,7 @@ export default function AgmClient() {
                         setCorporateRepresentativeName('');
                         setCorporateRepresentativeEmail('');
                       setCorporateRepresentativeAddress('');
+                      setCorporateRepresentativeIdType('NRIC');
                       setCorporateRepresentativeIdNo('');
                         setDirectorSignerName('');
                         setDirectorSignerEmail('');
@@ -286,6 +291,7 @@ export default function AgmClient() {
                         setCorporateRepresentativeName('');
                         setCorporateRepresentativeEmail('');
                       setCorporateRepresentativeAddress('');
+                      setCorporateRepresentativeIdType('NRIC');
                       setCorporateRepresentativeIdNo('');
                         setDirectorSignerName('');
                         setDirectorSignerEmail('');
@@ -342,12 +348,22 @@ export default function AgmClient() {
                     <div className="text-black">
                       <span className="text-red-500">*</span> Corporate representative ID number
                     </div>
-                    <input
-                      value={corporateRepresentativeIdNo}
-                      onChange={(e) => setCorporateRepresentativeIdNo(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      placeholder="NRIC/Passport No."
-                    />
+                    <div className="mt-1 flex gap-2">
+                      <select
+                        value={corporateRepresentativeIdType}
+                        onChange={(e) => setCorporateRepresentativeIdType((e.target.value as 'NRIC' | 'PASSPORT') || 'NRIC')}
+                        className="w-[140px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="NRIC">NRIC</option>
+                        <option value="PASSPORT">Passport</option>
+                      </select>
+                      <input
+                        value={corporateRepresentativeIdNo}
+                        onChange={(e) => setCorporateRepresentativeIdNo(e.target.value)}
+                        className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                        placeholder="ID number"
+                      />
+                    </div>
                   </label>
                 </div>
               ) : null}

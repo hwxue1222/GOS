@@ -628,6 +628,7 @@ export type AnnualGeneralMeetingRequest = {
   corporateRepresentativeName?: string;
   corporateRepresentativeEmail?: string;
   corporateRepresentativeAddress?: string;
+  corporateRepresentativeIdType?: 'NRIC' | 'PASSPORT';
   corporateRepresentativeIdNo?: string;
   directorSignerName?: string;
   directorSignerEmail?: string;

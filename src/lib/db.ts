@@ -14627,6 +14627,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
   corporateRepresentativeName?: string;
   corporateRepresentativeEmail?: string;
   corporateRepresentativeAddress?: string;
+  corporateRepresentativeIdType?: 'NRIC' | 'PASSPORT' | string;
   corporateRepresentativeIdNo?: string;
   directorSignerName?: string;
   directorSignerEmail?: string;
@@ -14649,6 +14650,9 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const corporateRepresentativeName = typeof input.corporateRepresentativeName === 'string' ? input.corporateRepresentativeName.trim() || undefined : undefined;
   const corporateRepresentativeEmail = typeof input.corporateRepresentativeEmail === 'string' ? input.corporateRepresentativeEmail.trim() || undefined : undefined;
   const corporateRepresentativeAddress = typeof input.corporateRepresentativeAddress === 'string' ? input.corporateRepresentativeAddress.trim() || undefined : undefined;
+  const corporateRepresentativeIdTypeRaw = typeof input.corporateRepresentativeIdType === 'string' ? input.corporateRepresentativeIdType.trim() : '';
+  const corporateRepresentativeIdType =
+    corporateRepresentativeIdTypeRaw === 'PASSPORT' ? ('PASSPORT' as const) : ('NRIC' as const);
   const corporateRepresentativeIdNo = typeof input.corporateRepresentativeIdNo === 'string' ? input.corporateRepresentativeIdNo.trim() || undefined : undefined;
   const directorSignerName = typeof input.directorSignerName === 'string' ? input.directorSignerName.trim() || undefined : undefined;
   const directorSignerEmail = typeof input.directorSignerEmail === 'string' ? input.directorSignerEmail.trim() || undefined : undefined;
@@ -14813,6 +14817,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     const name = String(corporateRepresentativeName ?? '').trim();
     const email = String(corporateRepresentativeEmail ?? '').trim();
     const address = String(corporateRepresentativeAddress ?? '').trim();
+    const idType = corporateRepresentativeIdType;
     const idNo = String(corporateRepresentativeIdNo ?? '').trim();
     const directorName = String(directorSignerName ?? '').trim();
     const directorEmail = String(directorSignerEmail ?? '').trim();
@@ -14830,6 +14835,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
       name,
       email,
       address,
+      idType,
       idNo,
       directorName,
       directorEmail,
@@ -14987,6 +14993,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
       representativeEmail: resolvedCorporateRep.email,
       representativeAddress: (resolvedCorporateRep as any).address ?? '',
       representativeIdNo: (resolvedCorporateRep as any).idNo ?? '',
+      representativeIdType: (resolvedCorporateRep as any).idType ?? 'NRIC',
       matter,
       directorSigners: [{ fullName: directorName, email: directorEmail }],
       dateYmd: meetingDate,
@@ -15139,6 +15146,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
     corporateRepresentativeEmail: resolvedCorporateRep?.ok ? resolvedCorporateRep.email : corporateRepresentativeEmail,
     corporateRepresentativeAddress:
       resolvedCorporateRep?.ok && corporateMode === 'NEW' ? (resolvedCorporateRep as any).address : corporateRepresentativeAddress,
+    corporateRepresentativeIdType:
+      resolvedCorporateRep?.ok && corporateMode === 'NEW' ? (resolvedCorporateRep as any).idType : corporateRepresentativeIdType,
     corporateRepresentativeIdNo:
       resolvedCorporateRep?.ok && corporateMode === 'NEW' ? (resolvedCorporateRep as any).idNo : corporateRepresentativeIdNo,
     directorSignerName: resolvedCorporateRep?.ok && corporateMode === 'NEW' ? resolvedCorporateRep.directorName : directorSignerName,

@@ -79,6 +79,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         corporateRepresentativeName?: string;
         corporateRepresentativeEmail?: string;
         corporateRepresentativeAddress?: string;
+        corporateRepresentativeIdType?: string;
         corporateRepresentativeIdNo?: string;
         directorSignerName?: string;
         directorSignerEmail?: string;
@@ -98,6 +99,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const corporateRepresentativeName = typeof body?.corporateRepresentativeName === 'string' ? body.corporateRepresentativeName.trim() : '';
   const corporateRepresentativeEmail = typeof body?.corporateRepresentativeEmail === 'string' ? body.corporateRepresentativeEmail.trim() : '';
   const corporateRepresentativeAddress = typeof body?.corporateRepresentativeAddress === 'string' ? body.corporateRepresentativeAddress.trim() : '';
+  const corporateRepresentativeIdType = typeof body?.corporateRepresentativeIdType === 'string' ? body.corporateRepresentativeIdType.trim() : '';
   const corporateRepresentativeIdNo = typeof body?.corporateRepresentativeIdNo === 'string' ? body.corporateRepresentativeIdNo.trim() : '';
   const directorSignerName = typeof body?.directorSignerName === 'string' ? body.directorSignerName.trim() : '';
   const directorSignerEmail = typeof body?.directorSignerEmail === 'string' ? body.directorSignerEmail.trim() : '';
@@ -118,6 +120,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     corporateRepresentativeName: corporateRepresentativeName || undefined,
     corporateRepresentativeEmail: corporateRepresentativeEmail || undefined,
     corporateRepresentativeAddress: corporateRepresentativeAddress || undefined,
+    corporateRepresentativeIdType: corporateRepresentativeIdType || undefined,
     corporateRepresentativeIdNo: corporateRepresentativeIdNo || undefined,
     directorSignerName: directorSignerName || undefined,
     directorSignerEmail: directorSignerEmail || undefined,
