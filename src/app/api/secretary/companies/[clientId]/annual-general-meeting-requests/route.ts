@@ -78,6 +78,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         corporateRepresentativeMode?: 'EXISTING' | 'NEW' | string;
         corporateRepresentativeName?: string;
         corporateRepresentativeEmail?: string;
+        corporateRepresentativeAddress?: string;
+        corporateRepresentativeIdNo?: string;
         directorSignerName?: string;
         directorSignerEmail?: string;
         companyCategory?: string;
@@ -95,6 +97,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const corporateRepresentativeMode = typeof body?.corporateRepresentativeMode === 'string' ? body.corporateRepresentativeMode.trim() : '';
   const corporateRepresentativeName = typeof body?.corporateRepresentativeName === 'string' ? body.corporateRepresentativeName.trim() : '';
   const corporateRepresentativeEmail = typeof body?.corporateRepresentativeEmail === 'string' ? body.corporateRepresentativeEmail.trim() : '';
+  const corporateRepresentativeAddress = typeof body?.corporateRepresentativeAddress === 'string' ? body.corporateRepresentativeAddress.trim() : '';
+  const corporateRepresentativeIdNo = typeof body?.corporateRepresentativeIdNo === 'string' ? body.corporateRepresentativeIdNo.trim() : '';
   const directorSignerName = typeof body?.directorSignerName === 'string' ? body.directorSignerName.trim() : '';
   const directorSignerEmail = typeof body?.directorSignerEmail === 'string' ? body.directorSignerEmail.trim() : '';
   const companyCategory = typeof body?.companyCategory === 'string' ? body.companyCategory.trim() : undefined;
@@ -113,6 +117,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     corporateRepresentativeMode: corporateRepresentativeMode || undefined,
     corporateRepresentativeName: corporateRepresentativeName || undefined,
     corporateRepresentativeEmail: corporateRepresentativeEmail || undefined,
+    corporateRepresentativeAddress: corporateRepresentativeAddress || undefined,
+    corporateRepresentativeIdNo: corporateRepresentativeIdNo || undefined,
     directorSignerName: directorSignerName || undefined,
     directorSignerEmail: directorSignerEmail || undefined,
     companyCategory,

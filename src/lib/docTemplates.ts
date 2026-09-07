@@ -1372,6 +1372,7 @@ export function renderRdrAuthorizationHtml(input: {
   representativeName?: string;
   representativeEmail?: string;
   representativeAddress?: string;
+  representativeIdNo?: string;
   matter?: string;
   directorSigners: Array<{ fullName: string; email?: string }>;
   dateYmd: string;
@@ -1386,6 +1387,7 @@ export function renderRdrAuthorizationHtml(input: {
   const representativeNameEsc = representativeNameRaw ? esc(representativeNameRaw) : '________________';
   const representativeEmail = String(input.representativeEmail ?? '').trim();
   const representativeAddress = String(input.representativeAddress ?? '').trim() ? esc(String(input.representativeAddress ?? '')) : '______________________________';
+  const representativeIdNo = String(input.representativeIdNo ?? '').trim() ? esc(String(input.representativeIdNo ?? '')) : '';
   const repSig = signatureLineBlocks({
     signers: [{ fullName: representativeNameRaw || '________________', email: representativeEmail || undefined }],
   });
@@ -1445,9 +1447,9 @@ export function renderRdrAuthorizationHtml(input: {
         <div>Signature of authorised representative</div>
         ${repSig}
         <div class="mt2">Name:&nbsp;&nbsp;${representativeNameEsc}</div>
-        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;${representativeIdNo}</div>
         <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
-        <div class="mt2">Email:&nbsp;&nbsp;</div>
+        <div class="mt2">Email:&nbsp;&nbsp;${esc(representativeEmail)}</div>
       </div>
       <div>
         <div>Witnessed by</div>

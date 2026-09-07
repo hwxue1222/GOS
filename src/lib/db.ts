@@ -14626,6 +14626,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
   corporateRepresentativeMode?: 'EXISTING' | 'NEW' | string;
   corporateRepresentativeName?: string;
   corporateRepresentativeEmail?: string;
+  corporateRepresentativeAddress?: string;
+  corporateRepresentativeIdNo?: string;
   directorSignerName?: string;
   directorSignerEmail?: string;
   companyCategory?: string;
@@ -14646,6 +14648,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
   const corporateRepresentativeMode = corporateRepresentativeModeRaw === 'NEW' ? ('NEW' as const) : corporateRepresentativeModeRaw === 'EXISTING' ? ('EXISTING' as const) : undefined;
   const corporateRepresentativeName = typeof input.corporateRepresentativeName === 'string' ? input.corporateRepresentativeName.trim() || undefined : undefined;
   const corporateRepresentativeEmail = typeof input.corporateRepresentativeEmail === 'string' ? input.corporateRepresentativeEmail.trim() || undefined : undefined;
+  const corporateRepresentativeAddress = typeof input.corporateRepresentativeAddress === 'string' ? input.corporateRepresentativeAddress.trim() || undefined : undefined;
+  const corporateRepresentativeIdNo = typeof input.corporateRepresentativeIdNo === 'string' ? input.corporateRepresentativeIdNo.trim() || undefined : undefined;
   const directorSignerName = typeof input.directorSignerName === 'string' ? input.directorSignerName.trim() || undefined : undefined;
   const directorSignerEmail = typeof input.directorSignerEmail === 'string' ? input.directorSignerEmail.trim() || undefined : undefined;
   const fiscalYearReport = input.fiscalYearReport.trim();
@@ -14808,9 +14812,11 @@ export async function createAnnualGeneralMeetingRequest(input: {
 
     const name = String(corporateRepresentativeName ?? '').trim();
     const email = String(corporateRepresentativeEmail ?? '').trim();
+    const address = String(corporateRepresentativeAddress ?? '').trim();
+    const idNo = String(corporateRepresentativeIdNo ?? '').trim();
     const directorName = String(directorSignerName ?? '').trim();
     const directorEmail = String(directorSignerEmail ?? '').trim();
-    if (!name || !email || !directorName || !directorEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!name || !email || !address || !idNo || !directorName || !directorEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
     const companyCode = String((corporateCompany as any)?.companyCode ?? '').trim();
     return {
       ok: true as const,
@@ -14823,6 +14829,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
       companyAddress: corporateCompany.companyAddress,
       name,
       email,
+      address,
+      idNo,
       directorName,
       directorEmail,
     };
@@ -14977,7 +14985,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
       companyAddress: resolvedCorporateRep.companyAddress,
       representativeName: resolvedCorporateRep.name,
       representativeEmail: resolvedCorporateRep.email,
-      representativeAddress: '',
+      representativeAddress: (resolvedCorporateRep as any).address ?? '',
+      representativeIdNo: (resolvedCorporateRep as any).idNo ?? '',
       matter,
       directorSigners: [{ fullName: directorName, email: directorEmail }],
       dateYmd: meetingDate,
@@ -15128,6 +15137,10 @@ export async function createAnnualGeneralMeetingRequest(input: {
     corporateRepresentativeMode: corporateChairmanCompanyId ? corporateMode : undefined,
     corporateRepresentativeName: resolvedCorporateRep?.ok ? resolvedCorporateRep.name : corporateRepresentativeName,
     corporateRepresentativeEmail: resolvedCorporateRep?.ok ? resolvedCorporateRep.email : corporateRepresentativeEmail,
+    corporateRepresentativeAddress:
+      resolvedCorporateRep?.ok && corporateMode === 'NEW' ? (resolvedCorporateRep as any).address : corporateRepresentativeAddress,
+    corporateRepresentativeIdNo:
+      resolvedCorporateRep?.ok && corporateMode === 'NEW' ? (resolvedCorporateRep as any).idNo : corporateRepresentativeIdNo,
     directorSignerName: resolvedCorporateRep?.ok && corporateMode === 'NEW' ? resolvedCorporateRep.directorName : directorSignerName,
     directorSignerEmail: resolvedCorporateRep?.ok && corporateMode === 'NEW' ? resolvedCorporateRep.directorEmail : directorSignerEmail,
     directorSendingNotice: noticeDirector,

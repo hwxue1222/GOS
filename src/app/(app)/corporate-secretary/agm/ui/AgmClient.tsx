@@ -72,6 +72,8 @@ export default function AgmClient() {
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [corporateRepresentativeName, setCorporateRepresentativeName] = useState('');
   const [corporateRepresentativeEmail, setCorporateRepresentativeEmail] = useState('');
+  const [corporateRepresentativeAddress, setCorporateRepresentativeAddress] = useState('');
+  const [corporateRepresentativeIdNo, setCorporateRepresentativeIdNo] = useState('');
   const [directorSignerName, setDirectorSignerName] = useState('');
   const [directorSignerEmail, setDirectorSignerEmail] = useState('');
   const [companyCategory, setCompanyCategory] = useState<'SME' | 'DORMANT' | 'AUDITED' | ''>('');
@@ -115,6 +117,8 @@ export default function AgmClient() {
     const mv = meetingVenue.trim();
     const corpRepName = corporateRepresentativeName.trim();
     const corpRepEmail = corporateRepresentativeEmail.trim();
+    const corpRepAddress = corporateRepresentativeAddress.trim();
+    const corpRepIdNo = corporateRepresentativeIdNo.trim();
     const resolvedChairman = (
       needsCorporateRepresentative
         ? needsNewCorporateRepresentative
@@ -132,6 +136,10 @@ export default function AgmClient() {
     }
     if (needsNewCorporateRepresentative && (!corpRepName || !corpRepEmail)) {
       setSubmitError('Please fill in corporate representative name and email.');
+      return;
+    }
+    if (needsNewCorporateRepresentative && (!corpRepAddress || !corpRepIdNo)) {
+      setSubmitError('Please fill in corporate representative address and ID number.');
       return;
     }
     if ((needsNewCorporateRepresentative || needsManualDirectorSigner) && (!signerName || !signerEmail)) {
@@ -171,6 +179,8 @@ export default function AgmClient() {
           corporateRepresentativeMode: selectedChairman.kind === 'COMPANY' ? corporateRepresentativeMode : undefined,
           corporateRepresentativeName: needsNewCorporateRepresentative ? corpRepName : undefined,
           corporateRepresentativeEmail: needsNewCorporateRepresentative ? corpRepEmail : undefined,
+          corporateRepresentativeAddress: needsNewCorporateRepresentative ? corpRepAddress : undefined,
+          corporateRepresentativeIdNo: needsNewCorporateRepresentative ? corpRepIdNo : undefined,
           directorSignerName: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerName : undefined,
           directorSignerEmail: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerEmail : undefined,
           companyCategory: companyCategory || undefined,
@@ -215,6 +225,8 @@ export default function AgmClient() {
                   setCorporateRepresentativeMode('EXISTING');
                   setCorporateRepresentativeName('');
                   setCorporateRepresentativeEmail('');
+                  setCorporateRepresentativeAddress('');
+                  setCorporateRepresentativeIdNo('');
                   setDirectorSignerName('');
                   setDirectorSignerEmail('');
                 }}
@@ -256,6 +268,8 @@ export default function AgmClient() {
                         setCorporateRepresentativeMode('EXISTING');
                         setCorporateRepresentativeName('');
                         setCorporateRepresentativeEmail('');
+                      setCorporateRepresentativeAddress('');
+                      setCorporateRepresentativeIdNo('');
                         setDirectorSignerName('');
                         setDirectorSignerEmail('');
                       }}
@@ -271,6 +285,8 @@ export default function AgmClient() {
                         setCorporateRepresentativeMode('NEW');
                         setCorporateRepresentativeName('');
                         setCorporateRepresentativeEmail('');
+                      setCorporateRepresentativeAddress('');
+                      setCorporateRepresentativeIdNo('');
                         setDirectorSignerName('');
                         setDirectorSignerEmail('');
                       }}
@@ -307,6 +323,30 @@ export default function AgmClient() {
                       onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
                       className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
                       placeholder="name@email.com"
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Corporate representative address
+                    </div>
+                    <input
+                      value={corporateRepresentativeAddress}
+                      onChange={(e) => setCorporateRepresentativeAddress(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      placeholder="Address"
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Corporate representative ID number
+                    </div>
+                    <input
+                      value={corporateRepresentativeIdNo}
+                      onChange={(e) => setCorporateRepresentativeIdNo(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      placeholder="NRIC/Passport No."
                     />
                   </label>
                 </div>

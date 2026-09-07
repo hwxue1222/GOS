@@ -627,6 +627,8 @@ export type AnnualGeneralMeetingRequest = {
   corporateRepresentativeMode?: 'EXISTING' | 'NEW';
   corporateRepresentativeName?: string;
   corporateRepresentativeEmail?: string;
+  corporateRepresentativeAddress?: string;
+  corporateRepresentativeIdNo?: string;
   directorSignerName?: string;
   directorSignerEmail?: string;
   directorSendingNotice?: string;
