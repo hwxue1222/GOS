@@ -74,6 +74,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
         meetingVenue?: string;
         chairman?: string;
         directorSendingNotice?: string;
+        chairmanCompanyId?: string;
+        corporateRepresentativeMode?: 'EXISTING' | 'NEW' | string;
         corporateRepresentativeName?: string;
         corporateRepresentativeEmail?: string;
         directorSignerName?: string;
@@ -89,6 +91,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const meetingVenue = typeof body?.meetingVenue === 'string' ? body.meetingVenue.trim() : '';
   const chairman = typeof body?.chairman === 'string' ? body.chairman.trim() : '';
   const noticeDirector = typeof body?.directorSendingNotice === 'string' ? body.directorSendingNotice.trim() : '';
+  const chairmanCompanyId = typeof body?.chairmanCompanyId === 'string' ? body.chairmanCompanyId.trim() : '';
+  const corporateRepresentativeMode = typeof body?.corporateRepresentativeMode === 'string' ? body.corporateRepresentativeMode.trim() : '';
   const corporateRepresentativeName = typeof body?.corporateRepresentativeName === 'string' ? body.corporateRepresentativeName.trim() : '';
   const corporateRepresentativeEmail = typeof body?.corporateRepresentativeEmail === 'string' ? body.corporateRepresentativeEmail.trim() : '';
   const directorSignerName = typeof body?.directorSignerName === 'string' ? body.directorSignerName.trim() : '';
@@ -105,6 +109,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
     meetingVenue,
     chairman,
     noticeDirector,
+    chairmanCompanyId: chairmanCompanyId || undefined,
+    corporateRepresentativeMode: corporateRepresentativeMode || undefined,
     corporateRepresentativeName: corporateRepresentativeName || undefined,
     corporateRepresentativeEmail: corporateRepresentativeEmail || undefined,
     directorSignerName: directorSignerName || undefined,
@@ -129,16 +135,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
   const baseUrl = resolveBaseUrl(req);
   const db = await readDb();
   const client = db.clients.find((c) => c.id === clientId) ?? null;
-  const companyName = client?.name ?? clientId;
+  const defaultCompanyName = client?.name ?? clientId;
   await Promise.all(
     r.signLinks.map((l) =>
       sendSigningInvite({
         to: l.email,
         url: `${baseUrl}${l.url}`,
-        companyName,
-        applicationName: 'Annual General Meeting',
+        companyName: l.companyName ?? defaultCompanyName,
+        applicationName: l.applicationName ?? 'Annual General Meeting',
         documentTitle: l.documentTitle,
-        signerRole: `Director of ${companyName}`,
+        signerRole: l.signerRole ?? `Director of ${defaultCompanyName}`,
       }),
     ),
   );

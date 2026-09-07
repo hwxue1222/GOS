@@ -36,6 +36,7 @@ export default function AgmClient() {
   const needsManualDirectorSigner = !hasDirectors;
 
   const [chairmanSelection, setChairmanSelection] = useState('');
+  const [corporateRepresentativeMode, setCorporateRepresentativeMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
   const selectedChairman = useMemo(() => {
     const raw = String(chairmanSelection ?? '').trim();
     const m = raw.match(/^(PERSON|COMPANY)\:(.*)$/);
@@ -48,6 +49,7 @@ export default function AgmClient() {
     return { kind, companyId: idOrName, companyName: company?.entity.company.name ?? '' };
   }, [chairmanSelection, shareholderCompanies]);
   const needsCorporateRepresentative = selectedChairman.kind === 'COMPANY';
+  const needsNewCorporateRepresentative = needsCorporateRepresentative && corporateRepresentativeMode === 'NEW';
 
   const [meetingDate, setMeetingDate] = useState(todayYmd);
   const [meetingTime, setMeetingTime] = useState('10:00');
@@ -100,20 +102,26 @@ export default function AgmClient() {
     const mv = meetingVenue.trim();
     const corpRepName = corporateRepresentativeName.trim();
     const corpRepEmail = corporateRepresentativeEmail.trim();
-    const resolvedChairman = (needsCorporateRepresentative ? corpRepName : (selectedChairman as any).personName || '').trim();
+    const resolvedChairman = (
+      needsCorporateRepresentative
+        ? corporateRepresentativeMode === 'NEW'
+          ? corpRepName
+          : ''
+        : (selectedChairman as any).personName || ''
+    ).trim();
     const signerName = directorSignerName.trim();
     const signerEmail = directorSignerEmail.trim();
     const nd = (hasDirectors ? directorSendingNotice : signerName).trim();
     const fy = fiscalYearReport.trim();
-    if (!md || !mt || !mv || !resolvedChairman || !nd || !companyCategory || !fy) {
+    if (!md || !mt || !mv || (!needsCorporateRepresentative && !resolvedChairman) || !nd || !companyCategory || !fy) {
       setSubmitError('Please fill in required fields.');
       return;
     }
-    if (needsCorporateRepresentative && (!corpRepName || !corpRepEmail)) {
+    if (needsNewCorporateRepresentative && (!corpRepName || !corpRepEmail)) {
       setSubmitError('Please fill in corporate representative name and email.');
       return;
     }
-    if (needsManualDirectorSigner && (!signerName || !signerEmail)) {
+    if ((needsNewCorporateRepresentative || needsManualDirectorSigner) && (!signerName || !signerEmail)) {
       setSubmitError('Please fill in director signer name and email.');
       return;
     }
@@ -146,10 +154,12 @@ export default function AgmClient() {
           meetingVenue: mv,
           chairman: resolvedChairman,
           directorSendingNotice: nd,
-          corporateRepresentativeName: needsCorporateRepresentative ? corpRepName : undefined,
-          corporateRepresentativeEmail: needsCorporateRepresentative ? corpRepEmail : undefined,
-          directorSignerName: needsManualDirectorSigner ? signerName : undefined,
-          directorSignerEmail: needsManualDirectorSigner ? signerEmail : undefined,
+          chairmanCompanyId: selectedChairman.kind === 'COMPANY' ? selectedChairman.companyId : undefined,
+          corporateRepresentativeMode: selectedChairman.kind === 'COMPANY' ? corporateRepresentativeMode : undefined,
+          corporateRepresentativeName: needsNewCorporateRepresentative ? corpRepName : undefined,
+          corporateRepresentativeEmail: needsNewCorporateRepresentative ? corpRepEmail : undefined,
+          directorSignerName: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerName : undefined,
+          directorSignerEmail: needsNewCorporateRepresentative || needsManualDirectorSigner ? signerEmail : undefined,
           companyCategory: companyCategory || undefined,
           fiscalYearReport: fy,
           useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
@@ -189,8 +199,11 @@ export default function AgmClient() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setChairmanSelection(v);
+                  setCorporateRepresentativeMode('EXISTING');
                   setCorporateRepresentativeName('');
                   setCorporateRepresentativeEmail('');
+                  setDirectorSignerName('');
+                  setDirectorSignerEmail('');
                 }}
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
@@ -240,88 +253,86 @@ export default function AgmClient() {
           </div>
 
           {needsCorporateRepresentative ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> Corporate representative
-                </div>
-                {hasDirectors ? (
-                  <select
-                    value={corporateRepresentativeName}
-                    onChange={(e) => {
-                      const nextName = e.target.value;
-                      setCorporateRepresentativeName(nextName);
-                      const email = (directorsByName.get(nextName)?.email ?? '').trim();
-                      if (email) setCorporateRepresentativeEmail(email);
-                    }}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="">Select</option>
-                    {directors.map((d) => (
-                      <option key={d.role.id} value={d.entity.person.fullName}>
-                        {d.entity.person.fullName}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 text-sm text-black/80">
                   <input
-                    value={corporateRepresentativeName}
-                    onChange={(e) => setCorporateRepresentativeName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                    placeholder="Corporate representative name"
+                    type="radio"
+                    name="corporateRepresentativeMode"
+                    checked={corporateRepresentativeMode === 'EXISTING'}
+                    onChange={() => {
+                      setCorporateRepresentativeMode('EXISTING');
+                      setCorporateRepresentativeName('');
+                      setCorporateRepresentativeEmail('');
+                      setDirectorSignerName('');
+                      setDirectorSignerEmail('');
+                    }}
                   />
-                )}
-                {selectedChairman.kind === 'COMPANY' && selectedChairman.companyName ? (
-                  <div className="mt-1 text-xs text-black/50">Shareholder: {selectedChairman.companyName}</div>
-                ) : null}
-              </label>
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> Corporate representative email
+                  Use existing corporate representative
+                </label>
+                <label className="flex items-center gap-2 text-sm text-black/80">
+                  <input
+                    type="radio"
+                    name="corporateRepresentativeMode"
+                    checked={corporateRepresentativeMode === 'NEW'}
+                    onChange={() => {
+                      setCorporateRepresentativeMode('NEW');
+                      setCorporateRepresentativeName('');
+                      setCorporateRepresentativeEmail('');
+                      setDirectorSignerName('');
+                      setDirectorSignerEmail('');
+                    }}
+                  />
+                  New corporate representative
+                </label>
+              </div>
+
+              {needsNewCorporateRepresentative ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Corporate representative
+                    </div>
+                    <input
+                      value={corporateRepresentativeName}
+                      onChange={(e) => setCorporateRepresentativeName(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      placeholder="Corporate representative name"
+                    />
+                    {selectedChairman.kind === 'COMPANY' && selectedChairman.companyName ? (
+                      <div className="mt-1 text-xs text-black/50">Shareholder: {selectedChairman.companyName}</div>
+                    ) : null}
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Corporate representative email
+                    </div>
+                    <input
+                      type="email"
+                      value={corporateRepresentativeEmail}
+                      onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                      placeholder="name@email.com"
+                    />
+                  </label>
                 </div>
-                <input
-                  type="email"
-                  value={corporateRepresentativeEmail}
-                  onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  placeholder="name@email.com"
-                />
-              </label>
+              ) : null}
             </div>
           ) : null}
 
-          {needsManualDirectorSigner ? (
+          {needsNewCorporateRepresentative || needsManualDirectorSigner ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="text-sm">
                 <div className="text-black">
                   <span className="text-red-500">*</span> Director signer name
                 </div>
-                {hasDirectors ? (
-                  <select
-                    value={directorSignerName}
-                    onChange={(e) => {
-                      const nextName = e.target.value;
-                      setDirectorSignerName(nextName);
-                      const email = (directorsByName.get(nextName)?.email ?? '').trim();
-                      if (email) setDirectorSignerEmail(email);
-                    }}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="">Select</option>
-                    {directors.map((d) => (
-                      <option key={d.role.id} value={d.entity.person.fullName}>
-                        {d.entity.person.fullName}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={directorSignerName}
-                    onChange={(e) => setDirectorSignerName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                    placeholder="Director signer name"
-                  />
-                )}
+                <input
+                  value={directorSignerName}
+                  onChange={(e) => setDirectorSignerName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                  placeholder="Director signer name"
+                />
               </label>
 
               <label className="text-sm">
