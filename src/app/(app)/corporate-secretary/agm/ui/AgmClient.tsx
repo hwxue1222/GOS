@@ -55,7 +55,7 @@ export default function AgmClient() {
   }, [chairmanSelection, shareholderCompanies]);
   const needsCorporateRepresentative = selectedChairman.kind === 'COMPANY';
   const isExternalShareholderCompany = selectedChairman.kind === 'COMPANY' && selectedChairman.companyCode === 'EXTERNAL';
-  const needsNewCorporateRepresentative = needsCorporateRepresentative && corporateRepresentativeMode === 'NEW';
+  const needsNewCorporateRepresentative = needsCorporateRepresentative && (isExternalShareholderCompany || corporateRepresentativeMode === 'NEW');
 
   useEffect(() => {
     if (!isExternalShareholderCompany) return;
@@ -265,39 +265,40 @@ export default function AgmClient() {
 
           {needsCorporateRepresentative ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="radio"
-                    name="corporateRepresentativeMode"
-                    checked={corporateRepresentativeMode === 'EXISTING'}
-                    disabled={isExternalShareholderCompany}
-                    onChange={() => {
-                      setCorporateRepresentativeMode('EXISTING');
-                      setCorporateRepresentativeName('');
-                      setCorporateRepresentativeEmail('');
-                      setDirectorSignerName('');
-                      setDirectorSignerEmail('');
-                    }}
-                  />
-                  Use existing corporate representative
-                </label>
-                <label className="flex items-center gap-2 text-sm text-black/80">
-                  <input
-                    type="radio"
-                    name="corporateRepresentativeMode"
-                    checked={corporateRepresentativeMode === 'NEW'}
-                    onChange={() => {
-                      setCorporateRepresentativeMode('NEW');
-                      setCorporateRepresentativeName('');
-                      setCorporateRepresentativeEmail('');
-                      setDirectorSignerName('');
-                      setDirectorSignerEmail('');
-                    }}
-                  />
-                  New corporate representative
-                </label>
-              </div>
+              {!isExternalShareholderCompany ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="flex items-center gap-2 text-sm text-black/80">
+                    <input
+                      type="radio"
+                      name="corporateRepresentativeMode"
+                      checked={corporateRepresentativeMode === 'EXISTING'}
+                      onChange={() => {
+                        setCorporateRepresentativeMode('EXISTING');
+                        setCorporateRepresentativeName('');
+                        setCorporateRepresentativeEmail('');
+                        setDirectorSignerName('');
+                        setDirectorSignerEmail('');
+                      }}
+                    />
+                    Use existing corporate representative
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-black/80">
+                    <input
+                      type="radio"
+                      name="corporateRepresentativeMode"
+                      checked={corporateRepresentativeMode === 'NEW'}
+                      onChange={() => {
+                        setCorporateRepresentativeMode('NEW');
+                        setCorporateRepresentativeName('');
+                        setCorporateRepresentativeEmail('');
+                        setDirectorSignerName('');
+                        setDirectorSignerEmail('');
+                      }}
+                    />
+                    New corporate representative
+                  </label>
+                </div>
+              ) : null}
 
               {needsNewCorporateRepresentative ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

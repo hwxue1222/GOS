@@ -14984,12 +14984,13 @@ export async function createAnnualGeneralMeetingRequest(input: {
     };
     db.documents.unshift(repDoc);
 
-    const rdrId = newId('rdr');
+    const isExternalCompany = resolvedCorporateRep.companyKind === 'EXTERNAL';
+    const rdrId = isExternalCompany ? '' : newId('rdr');
     const repPacket: SignaturePacket = {
       id: newId('spk'),
-      kind: 'RDR',
-      relatedType: 'RDR',
-      relatedId: rdrId,
+      kind: isExternalCompany ? 'AGM_NOTICE' : 'RDR',
+      relatedType: isExternalCompany ? 'ANNUAL_GENERAL_MEETING' : 'RDR',
+      relatedId: isExternalCompany ? id : rdrId,
       documentId: repDoc.id,
       status: 'SIGNING',
       createdAt: now,
@@ -14998,21 +14999,23 @@ export async function createAnnualGeneralMeetingRequest(input: {
     db.signaturePackets.unshift(repPacket);
     packetIds.push(repPacket.id);
 
-    const rdr: RepresentativeDesignationRequest = {
-      id: rdrId,
-      triggerType: 'MANUAL_MAINTENANCE',
-      companyPartyId: resolvedCorporateRep.companyPartyId,
-      representativeName: resolvedCorporateRep.name,
-      representativeEmail: resolvedCorporateRep.email,
-      matter,
-      appointmentDateYmd: meetingDate,
-      createdByUserId: input.createdByUserId,
-      packetId: repPacket.id,
-      status: 'SIGNING',
-      createdAt: now,
-      updatedAt: now,
-    };
-    db.representativeDesignationRequests.unshift(rdr);
+    if (!isExternalCompany) {
+      const rdr: RepresentativeDesignationRequest = {
+        id: rdrId,
+        triggerType: 'MANUAL_MAINTENANCE',
+        companyPartyId: resolvedCorporateRep.companyPartyId,
+        representativeName: resolvedCorporateRep.name,
+        representativeEmail: resolvedCorporateRep.email,
+        matter,
+        appointmentDateYmd: meetingDate,
+        createdByUserId: input.createdByUserId,
+        packetId: repPacket.id,
+        status: 'SIGNING',
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.representativeDesignationRequests.unshift(rdr);
+    }
 
     const repEmails = Array.from(
       new Set([directorEmail, resolvedCorporateRep.email].map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)),
