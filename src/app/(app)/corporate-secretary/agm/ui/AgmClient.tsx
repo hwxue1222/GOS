@@ -239,28 +239,6 @@ export default function AgmClient() {
                 ) : null}
               </select>
             </label>
-
-            <label className="text-sm">
-              <div className="text-black">
-                <span className="text-red-500">*</span> Director sending notice
-              </div>
-              {hasDirectors ? (
-                <select
-                  value={directorSendingNotice}
-                  onChange={(e) => setDirectorSendingNotice(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">Select</option>
-                  {directors.map((d) => (
-                    <option key={d.role.id} value={d.entity.person.fullName}>
-                      {d.entity.person.fullName}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="mt-1 w-full rounded-lg border border-black/10 bg-black/5 px-3 py-2 text-sm text-black/60">Use director signer below</div>
-              )}
-            </label>
           </div>
 
           {needsCorporateRepresentative ? (
@@ -391,6 +369,31 @@ export default function AgmClient() {
               />
               Audited company
             </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="text-sm">
+              <div className="text-black">
+                <span className="text-red-500">*</span> Director sending notice
+              </div>
+              {hasDirectors ? (
+                <select
+                  value={directorSendingNotice}
+                  onChange={(e) => setDirectorSendingNotice(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Select</option>
+                  {directors.map((d) => (
+                    <option key={d.role.id} value={d.entity.person.fullName}>
+                      {d.entity.person.fullName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-1 w-full rounded-lg border border-black/10 bg-black/5 px-3 py-2 text-sm text-black/60">Use director signer below</div>
+              )}
+            </label>
+            <div />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
