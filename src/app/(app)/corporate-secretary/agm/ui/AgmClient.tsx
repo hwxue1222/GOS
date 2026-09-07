@@ -20,7 +20,7 @@ export default function AgmClient() {
     (typeof shareholders)[number] & { entity: { type: 'PERSON'; person: { fullName: string } } }
   >;
   const shareholderCompanies = shareholders.filter((s) => (s as any)?.entity?.type === 'COMPANY') as Array<
-    (typeof shareholders)[number] & { entity: { type: 'COMPANY'; company: { id: string; name: string } } }
+    (typeof shareholders)[number] & { entity: { type: 'COMPANY'; company: { id: string; name: string; code?: string } } }
   >;
   const directors = roles?.directors ?? [];
   const directorsByName = useMemo(() => {
@@ -46,10 +46,21 @@ export default function AgmClient() {
     if (!idOrName) return { kind: '' as const };
     if (kind === 'PERSON') return { kind, personName: idOrName };
     const company = shareholderCompanies.find((c) => String(c.entity.company.id) === idOrName) ?? null;
-    return { kind, companyId: idOrName, companyName: company?.entity.company.name ?? '' };
+    return {
+      kind,
+      companyId: idOrName,
+      companyName: company?.entity.company.name ?? '',
+      companyCode: String(company?.entity.company.code ?? '').trim(),
+    };
   }, [chairmanSelection, shareholderCompanies]);
   const needsCorporateRepresentative = selectedChairman.kind === 'COMPANY';
+  const isExternalShareholderCompany = selectedChairman.kind === 'COMPANY' && selectedChairman.companyCode === 'EXTERNAL';
   const needsNewCorporateRepresentative = needsCorporateRepresentative && corporateRepresentativeMode === 'NEW';
+
+  useEffect(() => {
+    if (!isExternalShareholderCompany) return;
+    if (corporateRepresentativeMode !== 'NEW') setCorporateRepresentativeMode('NEW');
+  }, [corporateRepresentativeMode, isExternalShareholderCompany]);
 
   const [meetingDate, setMeetingDate] = useState(todayYmd);
   const [meetingTime, setMeetingTime] = useState('10:00');
@@ -260,6 +271,7 @@ export default function AgmClient() {
                     type="radio"
                     name="corporateRepresentativeMode"
                     checked={corporateRepresentativeMode === 'EXISTING'}
+                    disabled={isExternalShareholderCompany}
                     onChange={() => {
                       setCorporateRepresentativeMode('EXISTING');
                       setCorporateRepresentativeName('');

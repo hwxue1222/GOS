@@ -14692,22 +14692,67 @@ export async function createAnnualGeneralMeetingRequest(input: {
 
   if (hasDirectors && !noticeDirector) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
-  const getOrCreateCompanyPartyForClientInDb = (clientId: string) => {
-    const shareholderClient = db.clients.find((c) => c.id === clientId) ?? null;
-    if (!shareholderClient || shareholderClient.deletedAt) return null;
-    const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === clientId) ?? null;
-    if (hit) return hit;
+  const getOrCreateCompanyPartyForChairmanCompanyInDb = (companyId: string) => {
+    const shareholderClient = db.clients.find((c) => c.id === companyId) ?? null;
+    if (shareholderClient && !shareholderClient.deletedAt) {
+      const hit = db.parties.find((p) => p.type === 'COMPANY' && p.clientId === companyId) ?? null;
+      if (hit) {
+        return {
+          party: hit,
+          kind: 'CLIENT' as const,
+          companyName: shareholderClient.name,
+          companyRegistrationNo: shareholderClient.companyRegistrationNo,
+          companyAddress: String((shareholderClient as any).registeredOfficeAddress ?? shareholderClient.address ?? '').trim(),
+        };
+      }
+      const createdAt = nowIso();
+      const party: Party = {
+        id: newId('pty'),
+        type: 'COMPANY',
+        displayName: shareholderClient.name,
+        clientId: companyId,
+        createdAt,
+        updatedAt: createdAt,
+      };
+      db.parties.unshift(party);
+      return {
+        party,
+        kind: 'CLIENT' as const,
+        companyName: shareholderClient.name,
+        companyRegistrationNo: shareholderClient.companyRegistrationNo,
+        companyAddress: String((shareholderClient as any).registeredOfficeAddress ?? shareholderClient.address ?? '').trim(),
+      };
+    }
+
+    const ext = (db.externalCompanies ?? []).find((c) => c.id === companyId) ?? null;
+    if (!ext) return null;
+    const hit = db.parties.find((p) => p.type === 'COMPANY' && p.externalCompanyId === companyId) ?? null;
+    if (hit) {
+      return {
+        party: hit,
+        kind: 'EXTERNAL' as const,
+        companyName: ext.name,
+        companyRegistrationNo: ext.registrationNo,
+        companyAddress: String(ext.address ?? '').trim(),
+      };
+    }
     const createdAt = nowIso();
     const party: Party = {
       id: newId('pty'),
       type: 'COMPANY',
-      displayName: shareholderClient.name,
-      clientId,
+      displayName: ext.name,
+      externalCompanyId: companyId,
       createdAt,
       updatedAt: createdAt,
     };
     db.parties.unshift(party);
-    return party;
+    return {
+      party,
+      kind: 'EXTERNAL' as const,
+      companyName: ext.name,
+      companyRegistrationNo: ext.registrationNo,
+      companyAddress: String(ext.address ?? '').trim(),
+    };
   };
 
   const getActiveCompanyRepresentativeInDb = (companyPartyId: string) => {
@@ -14722,12 +14767,18 @@ export async function createAnnualGeneralMeetingRequest(input: {
   };
 
   const corporateChairmanCompanyId = chairmanCompanyId;
-  const corporateMode: 'EXISTING' | 'NEW' = corporateChairmanCompanyId ? corporateRepresentativeMode || 'EXISTING' : 'EXISTING';
+  const corporateCompany = corporateChairmanCompanyId ? getOrCreateCompanyPartyForChairmanCompanyInDb(corporateChairmanCompanyId) : null;
+  if (corporateChairmanCompanyId && !corporateCompany) return { ok: false as const, error: 'INVALID_INPUT' as const };
+
+  const corporateMode: 'EXISTING' | 'NEW' = (() => {
+    if (!corporateChairmanCompanyId) return 'EXISTING';
+    if (corporateCompany?.kind === 'EXTERNAL') return 'NEW';
+    return corporateRepresentativeMode || 'EXISTING';
+  })();
 
   const resolvedCorporateRep = (() => {
-    if (!corporateChairmanCompanyId) return null;
-    const companyParty = getOrCreateCompanyPartyForClientInDb(corporateChairmanCompanyId);
-    if (!companyParty) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    if (!corporateChairmanCompanyId || !corporateCompany) return null;
+    const companyParty = corporateCompany.party;
 
     if (corporateMode === 'EXISTING') {
       const active = getActiveCompanyRepresentativeInDb(companyParty.id);
@@ -14735,7 +14786,17 @@ export async function createAnnualGeneralMeetingRequest(input: {
       const name = String(active.person.fullName ?? '').trim();
       const email = String(active.person.email ?? '').trim();
       if (!name || !email) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
-      return { ok: true as const, companyPartyId: companyParty.id, companyClientId: corporateChairmanCompanyId, name, email };
+      return {
+        ok: true as const,
+        companyPartyId: companyParty.id,
+        companyId: corporateChairmanCompanyId,
+        companyKind: corporateCompany.kind,
+        companyName: corporateCompany.companyName,
+        companyRegistrationNo: corporateCompany.companyRegistrationNo,
+        companyAddress: corporateCompany.companyAddress,
+        name,
+        email,
+      };
     }
 
     const name = String(corporateRepresentativeName ?? '').trim();
@@ -14746,7 +14807,11 @@ export async function createAnnualGeneralMeetingRequest(input: {
     return {
       ok: true as const,
       companyPartyId: companyParty.id,
-      companyClientId: corporateChairmanCompanyId,
+      companyId: corporateChairmanCompanyId,
+      companyKind: corporateCompany.kind,
+      companyName: corporateCompany.companyName,
+      companyRegistrationNo: corporateCompany.companyRegistrationNo,
+      companyAddress: corporateCompany.companyAddress,
       name,
       email,
       directorName,
@@ -14892,26 +14957,27 @@ export async function createAnnualGeneralMeetingRequest(input: {
   }
 
   if (resolvedCorporateRep?.ok && corporateMode === 'NEW') {
-    const shareholderClient = db.clients.find((c) => c.id === resolvedCorporateRep.companyClientId) ?? null;
-    if (!shareholderClient || shareholderClient.deletedAt) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const directorName = String((resolvedCorporateRep as any).directorName ?? '').trim();
+    const directorEmail = String((resolvedCorporateRep as any).directorEmail ?? '').trim();
+    if (!directorName || !directorEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     const matter = `Appointment of Corporate Representative for AGM of ${client.name}`.slice(0, 200);
-    const repHtml = (templates as any).renderRdrAuthorizationHtml({
-      companyName: shareholderClient.name,
-      companyRegistrationNo: shareholderClient.companyRegistrationNo,
-      companyAddress: String((shareholderClient as any).registeredOfficeAddress ?? (shareholderClient as any).address ?? '').trim(),
+    const repHtml = templates.renderRdrAuthorizationHtml({
+      companyName: resolvedCorporateRep.companyName,
+      companyRegistrationNo: resolvedCorporateRep.companyRegistrationNo,
+      companyAddress: resolvedCorporateRep.companyAddress,
       representativeName: resolvedCorporateRep.name,
       representativeEmail: resolvedCorporateRep.email,
       representativeAddress: '',
       matter,
-      directorSigners: [{ fullName: resolvedCorporateRep.directorName, email: resolvedCorporateRep.directorEmail }],
+      directorSigners: [{ fullName: directorName, email: directorEmail }],
       dateYmd: meetingDate,
-    }) as string;
+    });
 
     const repDoc: Document = {
       id: newId('doc'),
       type: 'RDR_AUTH',
-      title: `Appointment of Corporate Representative - ${shareholderClient.name}`,
+      title: `Appointment of Corporate Representative - ${resolvedCorporateRep.companyName}`,
       html: repHtml,
       sha256: sha256Hex(repHtml),
       createdAt: now,
@@ -14949,7 +15015,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     db.representativeDesignationRequests.unshift(rdr);
 
     const repEmails = Array.from(
-      new Set([resolvedCorporateRep.directorEmail, resolvedCorporateRep.email].map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)),
+      new Set([directorEmail, resolvedCorporateRep.email].map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)),
     );
     for (const emailKey of repEmails) {
       const token = newToken();
@@ -14968,12 +15034,12 @@ export async function createAnnualGeneralMeetingRequest(input: {
         email: emailKey,
         url: `/sign/${token}`,
         documentTitle: repDoc.title,
-        companyName: shareholderClient.name,
+        companyName: resolvedCorporateRep.companyName,
         applicationName: 'Appointment of Corporate Representative',
         signerRole:
           emailKey === String(resolvedCorporateRep.email).trim().toLowerCase()
-            ? `Corporate Representative of ${shareholderClient.name}`
-            : `Director of ${shareholderClient.name}`,
+            ? `Corporate Representative of ${resolvedCorporateRep.companyName}`
+            : `Director of ${resolvedCorporateRep.companyName}`,
       });
     }
   }
