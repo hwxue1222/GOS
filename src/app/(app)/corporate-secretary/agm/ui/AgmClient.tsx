@@ -54,7 +54,9 @@ export default function AgmClient() {
     };
   }, [chairmanSelection, shareholderCompanies]);
   const needsCorporateRepresentative = selectedChairman.kind === 'COMPANY';
-  const isExternalShareholderCompany = selectedChairman.kind === 'COMPANY' && selectedChairman.companyCode === 'EXTERNAL';
+  const isExternalShareholderCompany =
+    selectedChairman.kind === 'COMPANY' &&
+    (selectedChairman.companyCode === 'EXTERNAL' || !String(selectedChairman.companyCode ?? '').trim());
   const needsNewCorporateRepresentative = needsCorporateRepresentative && (isExternalShareholderCompany || corporateRepresentativeMode === 'NEW');
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function AgmClient() {
     const corpRepEmail = corporateRepresentativeEmail.trim();
     const resolvedChairman = (
       needsCorporateRepresentative
-        ? corporateRepresentativeMode === 'NEW'
+        ? needsNewCorporateRepresentative
           ? corpRepName
           : ''
         : (selectedChairman as any).personName || ''
