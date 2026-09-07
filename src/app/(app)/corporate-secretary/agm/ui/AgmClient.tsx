@@ -56,7 +56,7 @@ export default function AgmClient() {
   const needsCorporateRepresentative = selectedChairman.kind === 'COMPANY';
   const isExternalShareholderCompany =
     selectedChairman.kind === 'COMPANY' &&
-    (selectedChairman.companyCode === 'EXTERNAL' || !String(selectedChairman.companyCode ?? '').trim());
+    (selectedChairman.companyCode === 'EXTERNAL' || /^sc\d+/i.test(String(selectedChairman.companyCode ?? '').trim()) || !String(selectedChairman.companyCode ?? '').trim());
   const needsNewCorporateRepresentative = needsCorporateRepresentative && (isExternalShareholderCompany || corporateRepresentativeMode === 'NEW');
 
   useEffect(() => {

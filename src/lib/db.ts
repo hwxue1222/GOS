@@ -14700,6 +14700,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
         return {
           party: hit,
           kind: 'CLIENT' as const,
+          companyCode: String((shareholderClient as any).code ?? '').trim(),
           companyName: shareholderClient.name,
           companyRegistrationNo: shareholderClient.companyRegistrationNo,
           companyAddress: String((shareholderClient as any).registeredOfficeAddress ?? shareholderClient.address ?? '').trim(),
@@ -14718,6 +14719,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
       return {
         party,
         kind: 'CLIENT' as const,
+        companyCode: String((shareholderClient as any).code ?? '').trim(),
         companyName: shareholderClient.name,
         companyRegistrationNo: shareholderClient.companyRegistrationNo,
         companyAddress: String((shareholderClient as any).registeredOfficeAddress ?? shareholderClient.address ?? '').trim(),
@@ -14731,6 +14733,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
       return {
         party: hit,
         kind: 'EXTERNAL' as const,
+        companyCode: 'EXTERNAL',
         companyName: ext.name,
         companyRegistrationNo: ext.registrationNo,
         companyAddress: String(ext.address ?? '').trim(),
@@ -14749,6 +14752,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     return {
       party,
       kind: 'EXTERNAL' as const,
+      companyCode: 'EXTERNAL',
       companyName: ext.name,
       companyRegistrationNo: ext.registrationNo,
       companyAddress: String(ext.address ?? '').trim(),
@@ -14772,7 +14776,8 @@ export async function createAnnualGeneralMeetingRequest(input: {
 
   const corporateMode: 'EXISTING' | 'NEW' = (() => {
     if (!corporateChairmanCompanyId) return 'EXISTING';
-    if (corporateCompany?.kind === 'EXTERNAL') return 'NEW';
+    const code = String((corporateCompany as any)?.companyCode ?? '').trim();
+    if (corporateCompany?.kind === 'EXTERNAL' || /^sc\d+/i.test(code) || !code) return 'NEW';
     return corporateRepresentativeMode || 'EXISTING';
   })();
 
@@ -14786,11 +14791,13 @@ export async function createAnnualGeneralMeetingRequest(input: {
       const name = String(active.person.fullName ?? '').trim();
       const email = String(active.person.email ?? '').trim();
       if (!name || !email) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
+      const companyCode = String((corporateCompany as any)?.companyCode ?? '').trim();
       return {
         ok: true as const,
         companyPartyId: companyParty.id,
         companyId: corporateChairmanCompanyId,
         companyKind: corporateCompany.kind,
+        isExternalLike: corporateCompany.kind === 'EXTERNAL' || /^sc\d+/i.test(companyCode) || !companyCode,
         companyName: corporateCompany.companyName,
         companyRegistrationNo: corporateCompany.companyRegistrationNo,
         companyAddress: corporateCompany.companyAddress,
@@ -14804,11 +14811,13 @@ export async function createAnnualGeneralMeetingRequest(input: {
     const directorName = String(directorSignerName ?? '').trim();
     const directorEmail = String(directorSignerEmail ?? '').trim();
     if (!name || !email || !directorName || !directorEmail) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const companyCode = String((corporateCompany as any)?.companyCode ?? '').trim();
     return {
       ok: true as const,
       companyPartyId: companyParty.id,
       companyId: corporateChairmanCompanyId,
       companyKind: corporateCompany.kind,
+      isExternalLike: corporateCompany.kind === 'EXTERNAL' || /^sc\d+/i.test(companyCode) || !companyCode,
       companyName: corporateCompany.companyName,
       companyRegistrationNo: corporateCompany.companyRegistrationNo,
       companyAddress: corporateCompany.companyAddress,
@@ -14984,7 +14993,7 @@ export async function createAnnualGeneralMeetingRequest(input: {
     };
     db.documents.unshift(repDoc);
 
-    const isExternalCompany = resolvedCorporateRep.companyKind === 'EXTERNAL';
+    const isExternalCompany = Boolean((resolvedCorporateRep as any).isExternalLike);
     const rdrId = isExternalCompany ? '' : newId('rdr');
     const repPacket: SignaturePacket = {
       id: newId('spk'),
