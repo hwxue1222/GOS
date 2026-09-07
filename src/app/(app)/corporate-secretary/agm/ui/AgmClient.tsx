@@ -215,189 +215,243 @@ export default function AgmClient() {
 
       {!loading && client ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="text-sm">
-              <div className="text-black">
-                <span className="text-red-500">*</span> Chairman
-              </div>
-              <select
-                value={chairmanSelection}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setChairmanSelection(v);
-                  setCorporateRepresentativeMode('EXISTING');
-                  setCorporateRepresentativeName('');
-                  setCorporateRepresentativeEmail('');
-                  setCorporateRepresentativeAddress('');
-                  setCorporateRepresentativeIdType('NRIC');
-                  setCorporateRepresentativeIdNo('');
-                  setDirectorSignerName('');
-                  setDirectorSignerEmail('');
-                }}
-                className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Select</option>
-                {shareholderPersons.length ? (
-                  <optgroup label="Individual shareholder">
-                    {shareholderPersons.map((s) => (
-                      <option key={s.role.id} value={`PERSON:${s.entity.person.fullName}`}>
-                        {s.entity.person.fullName}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {shareholderCompanies.length ? (
-                  <optgroup label="Corporate shareholder">
-                    {shareholderCompanies.map((s) => (
-                      <option key={s.role.id} value={`COMPANY:${s.entity.company.id}`}>
-                        {s.entity.company.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-              </select>
-            </label>
-          </div>
-
           {needsCorporateRepresentative ? (
-            <div className="space-y-3">
-              {!isExternalShareholderCompany ? (
+            <div className="rounded-xl border border-black/10 bg-black/[0.02] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-sm font-medium text-black">Corporate shareholder details</div>
+                {selectedChairman.kind === 'COMPANY' && selectedChairman.companyName ? (
+                  <div className="text-xs text-black/50">Shareholder company: {selectedChairman.companyName}</div>
+                ) : null}
+              </div>
+
+              <div className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex items-center gap-2 text-sm text-black/80">
-                    <input
-                      type="radio"
-                      name="corporateRepresentativeMode"
-                      checked={corporateRepresentativeMode === 'EXISTING'}
-                      onChange={() => {
+                  <label className="text-sm">
+                    <div className="text-black">
+                      <span className="text-red-500">*</span> Chairman
+                    </div>
+                    <select
+                      value={chairmanSelection}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setChairmanSelection(v);
                         setCorporateRepresentativeMode('EXISTING');
                         setCorporateRepresentativeName('');
                         setCorporateRepresentativeEmail('');
-                      setCorporateRepresentativeAddress('');
-                      setCorporateRepresentativeIdType('NRIC');
-                      setCorporateRepresentativeIdNo('');
+                        setCorporateRepresentativeAddress('');
+                        setCorporateRepresentativeIdType('NRIC');
+                        setCorporateRepresentativeIdNo('');
                         setDirectorSignerName('');
                         setDirectorSignerEmail('');
                       }}
-                    />
-                    Use existing corporate representative
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-black/80">
-                    <input
-                      type="radio"
-                      name="corporateRepresentativeMode"
-                      checked={corporateRepresentativeMode === 'NEW'}
-                      onChange={() => {
-                        setCorporateRepresentativeMode('NEW');
-                        setCorporateRepresentativeName('');
-                        setCorporateRepresentativeEmail('');
-                      setCorporateRepresentativeAddress('');
-                      setCorporateRepresentativeIdType('NRIC');
-                      setCorporateRepresentativeIdNo('');
-                        setDirectorSignerName('');
-                        setDirectorSignerEmail('');
-                      }}
-                    />
-                    New corporate representative
+                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="">Select</option>
+                      {shareholderPersons.length ? (
+                        <optgroup label="Individual shareholder">
+                          {shareholderPersons.map((s) => (
+                            <option key={s.role.id} value={`PERSON:${s.entity.person.fullName}`}>
+                              {s.entity.person.fullName}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : null}
+                      {shareholderCompanies.length ? (
+                        <optgroup label="Corporate shareholder">
+                          {shareholderCompanies.map((s) => (
+                            <option key={s.role.id} value={`COMPANY:${s.entity.company.id}`}>
+                              {s.entity.company.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : null}
+                    </select>
                   </label>
                 </div>
-              ) : null}
 
-              {needsNewCorporateRepresentative ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="text-sm">
-                    <div className="text-black">
-                      <span className="text-red-500">*</span> Corporate representative name
+                <div className="space-y-3">
+                  {!isExternalShareholderCompany ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className="flex items-center gap-2 text-sm text-black/80">
+                        <input
+                          type="radio"
+                          name="corporateRepresentativeMode"
+                          checked={corporateRepresentativeMode === 'EXISTING'}
+                          onChange={() => {
+                            setCorporateRepresentativeMode('EXISTING');
+                            setCorporateRepresentativeName('');
+                            setCorporateRepresentativeEmail('');
+                            setCorporateRepresentativeAddress('');
+                            setCorporateRepresentativeIdType('NRIC');
+                            setCorporateRepresentativeIdNo('');
+                            setDirectorSignerName('');
+                            setDirectorSignerEmail('');
+                          }}
+                        />
+                        Use existing corporate representative
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-black/80">
+                        <input
+                          type="radio"
+                          name="corporateRepresentativeMode"
+                          checked={corporateRepresentativeMode === 'NEW'}
+                          onChange={() => {
+                            setCorporateRepresentativeMode('NEW');
+                            setCorporateRepresentativeName('');
+                            setCorporateRepresentativeEmail('');
+                            setCorporateRepresentativeAddress('');
+                            setCorporateRepresentativeIdType('NRIC');
+                            setCorporateRepresentativeIdNo('');
+                            setDirectorSignerName('');
+                            setDirectorSignerEmail('');
+                          }}
+                        />
+                        New corporate representative
+                      </label>
                     </div>
-                    <input
-                      value={corporateRepresentativeName}
-                      onChange={(e) => setCorporateRepresentativeName(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      placeholder="Corporate representative name"
-                    />
-                    {selectedChairman.kind === 'COMPANY' && selectedChairman.companyName ? (
-                      <div className="mt-1 text-xs text-black/50">Shareholder: {selectedChairman.companyName}</div>
-                    ) : null}
-                  </label>
+                  ) : null}
 
-                  <label className="text-sm">
-                    <div className="text-black">
-                      <span className="text-red-500">*</span> Corporate representative email
-                    </div>
-                    <input
-                      type="email"
-                      value={corporateRepresentativeEmail}
-                      onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      placeholder="name@email.com"
-                    />
-                  </label>
+                  {needsNewCorporateRepresentative ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className="text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Corporate representative name
+                        </div>
+                        <input
+                          value={corporateRepresentativeName}
+                          onChange={(e) => setCorporateRepresentativeName(e.target.value)}
+                          className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          placeholder="Corporate representative name"
+                        />
+                      </label>
 
-                  <label className="text-sm">
-                    <div className="text-black">
-                      <span className="text-red-500">*</span> Corporate representative address
-                    </div>
-                    <input
-                      value={corporateRepresentativeAddress}
-                      onChange={(e) => setCorporateRepresentativeAddress(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      placeholder="Address"
-                    />
-                  </label>
+                      <label className="text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Corporate representative email
+                        </div>
+                        <input
+                          type="email"
+                          value={corporateRepresentativeEmail}
+                          onChange={(e) => setCorporateRepresentativeEmail(e.target.value)}
+                          className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          placeholder="name@email.com"
+                        />
+                      </label>
 
-                  <label className="text-sm">
-                    <div className="text-black">
-                      <span className="text-red-500">*</span> Corporate representative ID number
+                      <label className="text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Corporate representative address
+                        </div>
+                        <input
+                          value={corporateRepresentativeAddress}
+                          onChange={(e) => setCorporateRepresentativeAddress(e.target.value)}
+                          className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          placeholder="Address"
+                        />
+                      </label>
+
+                      <label className="text-sm">
+                        <div className="text-black">
+                          <span className="text-red-500">*</span> Corporate representative ID number
+                        </div>
+                        <div className="mt-1 flex gap-2">
+                          <select
+                            value={corporateRepresentativeIdType}
+                            onChange={(e) =>
+                              setCorporateRepresentativeIdType((e.target.value as 'NRIC' | 'PASSPORT') || 'NRIC')
+                            }
+                            className="w-[140px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="NRIC">NRIC</option>
+                            <option value="PASSPORT">Passport</option>
+                          </select>
+                          <input
+                            value={corporateRepresentativeIdNo}
+                            onChange={(e) => setCorporateRepresentativeIdNo(e.target.value)}
+                            className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                            placeholder="ID number"
+                          />
+                        </div>
+                      </label>
                     </div>
-                    <div className="mt-1 flex gap-2">
-                      <select
-                        value={corporateRepresentativeIdType}
-                        onChange={(e) => setCorporateRepresentativeIdType((e.target.value as 'NRIC' | 'PASSPORT') || 'NRIC')}
-                        className="w-[140px] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                      >
-                        <option value="NRIC">NRIC</option>
-                        <option value="PASSPORT">Passport</option>
-                      </select>
+                  ) : null}
+                </div>
+
+                {needsNewCorporateRepresentative || needsManualDirectorSigner ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Director signer name
+                      </div>
                       <input
-                        value={corporateRepresentativeIdNo}
-                        onChange={(e) => setCorporateRepresentativeIdNo(e.target.value)}
-                        className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                        placeholder="ID number"
+                        value={directorSignerName}
+                        onChange={(e) => setDirectorSignerName(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                        placeholder="Director signer name"
                       />
-                    </div>
-                  </label>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                    </label>
 
-          {needsNewCorporateRepresentative || needsManualDirectorSigner ? (
+                    <label className="text-sm">
+                      <div className="text-black">
+                        <span className="text-red-500">*</span> Director signer email
+                      </div>
+                      <input
+                        type="email"
+                        value={directorSignerEmail}
+                        onChange={(e) => setDirectorSignerEmail(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
+                        placeholder="name@email.com"
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="text-sm">
                 <div className="text-black">
-                  <span className="text-red-500">*</span> Director signer name
+                  <span className="text-red-500">*</span> Chairman
                 </div>
-                <input
-                  value={directorSignerName}
-                  onChange={(e) => setDirectorSignerName(e.target.value)}
+                <select
+                  value={chairmanSelection}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setChairmanSelection(v);
+                    setCorporateRepresentativeMode('EXISTING');
+                    setCorporateRepresentativeName('');
+                    setCorporateRepresentativeEmail('');
+                    setCorporateRepresentativeAddress('');
+                    setCorporateRepresentativeIdType('NRIC');
+                    setCorporateRepresentativeIdNo('');
+                    setDirectorSignerName('');
+                    setDirectorSignerEmail('');
+                  }}
                   className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  placeholder="Director signer name"
-                />
-              </label>
-
-              <label className="text-sm">
-                <div className="text-black">
-                  <span className="text-red-500">*</span> Director signer email
-                </div>
-                <input
-                  type="email"
-                  value={directorSignerEmail}
-                  onChange={(e) => setDirectorSignerEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-                  placeholder="name@email.com"
-                />
+                >
+                  <option value="">Select</option>
+                  {shareholderPersons.length ? (
+                    <optgroup label="Individual shareholder">
+                      {shareholderPersons.map((s) => (
+                        <option key={s.role.id} value={`PERSON:${s.entity.person.fullName}`}>
+                          {s.entity.person.fullName}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {shareholderCompanies.length ? (
+                    <optgroup label="Corporate shareholder">
+                      {shareholderCompanies.map((s) => (
+                        <option key={s.role.id} value={`COMPANY:${s.entity.company.id}`}>
+                          {s.entity.company.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
               </label>
             </div>
-          ) : null}
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm text-black/80">
