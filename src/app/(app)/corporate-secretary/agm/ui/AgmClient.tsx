@@ -306,7 +306,7 @@ export default function AgmClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="text-sm">
                     <div className="text-black">
-                      <span className="text-red-500">*</span> Corporate representative
+                      <span className="text-red-500">*</span> Corporate representative name
                     </div>
                     <input
                       value={corporateRepresentativeName}
