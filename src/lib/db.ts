@@ -13273,6 +13273,7 @@ export async function createCompanyUpdateRequest(input: {
     const minutesSignerEmails = new Set<string>();
     const minutesSignerRoleByEmail = new Map<string, string>();
     const personShareholderNames = new Set<string>();
+    const companyShareholderRepresentativeNames = new Set<string>();
 
     for (const r of shareholderRoles) {
       const party = partyById.get(r.partyId);
@@ -13310,6 +13311,8 @@ export async function createCompanyUpdateRequest(input: {
         ) {
           return { ok: false as const, error: 'INVALID_INPUT' as const };
         }
+
+        companyShareholderRepresentativeNames.add(rep.representativeName.trim());
         const repEmail = rep.representativeEmail.trim().toLowerCase();
         if (!repEmail) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
@@ -13410,7 +13413,8 @@ export async function createCompanyUpdateRequest(input: {
       }
     }
 
-    if (!personShareholderNames.has(chairman)) return { ok: false as const, error: 'INVALID_INPUT' as const };
+    const allowedChairmanNames = new Set<string>([...personShareholderNames, ...companyShareholderRepresentativeNames]);
+    if (!allowedChairmanNames.has(chairman)) return { ok: false as const, error: 'INVALID_INPUT' as const };
 
     const noticeSignerEmail =
       (directorSendingNotice
@@ -14992,8 +14996,6 @@ export async function createAnnualGeneralMeetingRequest(input: {
       representativeName: resolvedCorporateRep.name,
       representativeEmail: resolvedCorporateRep.email,
       representativeAddress: (resolvedCorporateRep as any).address ?? '',
-      representativeIdNo: (resolvedCorporateRep as any).idNo ?? '',
-      representativeIdType: (resolvedCorporateRep as any).idType ?? 'NRIC',
       matter,
       directorSigners: [{ fullName: directorName, email: directorEmail }],
       dateYmd: meetingDate,

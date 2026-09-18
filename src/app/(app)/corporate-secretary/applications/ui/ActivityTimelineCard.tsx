@@ -14,14 +14,14 @@ function formatTs(ts: string) {
   return formatDateTimeDMY(s);
 }
 
-export default function ActivityTimelineCard(props: { items: TimelineItem[] }) {
+export default function ActivityTimelineCard(props: { items: TimelineItem[]; title?: string; subtitle?: string }) {
   const items = props.items
     .filter((x) => !!String(x.ts ?? '').trim())
     .slice()
     .sort((a, b) => b.ts.localeCompare(a.ts));
 
   return (
-    <SectionCard title="Activity" subtitle="Timeline of submissions, signatures, and decisions.">
+    <SectionCard title={props.title ?? 'Activity'} subtitle={props.subtitle ?? 'Timeline of submissions, signatures, and decisions.'}>
       {items.length ? (
         <ol className="space-y-3">
           {items.map((it) => (

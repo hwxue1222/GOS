@@ -6,6 +6,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import ssic from '@/data/ssic.json';
 import PortalCorporateSecretaryServicesClient from '@/app/(app)/portal/companies/[clientId]/ui/PortalCorporateSecretaryServicesClient';
+import ActivityTimelineCard from '@/app/(app)/corporate-secretary/applications/ui/ActivityTimelineCard';
+import { auditLogsToTimelineItems } from '@/app/(app)/corporate-secretary/applications/ui/timeline';
 
 type SsicRow = { code: string; description: string };
 const SSIC_ROWS = (Array.isArray(ssic) ? ssic : []) as unknown as SsicRow[];
@@ -155,6 +157,14 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
   const shareholders = byRole('SHAREHOLDER');
   const rorc = byRole('RORC');
 
+  const auditLogs = (db.auditLogs ?? [])
+    .filter((l) => String(l.entityType ?? '').trim() === 'client')
+    .filter((l) => String(l.entityId ?? '').trim() === clientId)
+    .slice()
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
+    .slice(0, 30);
+  const auditItems = auditLogsToTimelineItems({ logs: auditLogs, titlePrefix: '' });
+
   return (
     <div className="min-h-screen flex flex-col">
       <FrontTopNavClient active="dashboard" user={{ id: me.id, name: me.name, email: me.email, role: me.role }} companies={companies} />
@@ -232,6 +242,8 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                   </div>
                 </div>
               </div>
+
+              <ActivityTimelineCard title="Change history" subtitle="Recent updates for this company." items={auditItems} />
             </div>
           </div>
         </div>

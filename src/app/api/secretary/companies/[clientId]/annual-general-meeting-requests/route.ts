@@ -150,10 +150,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ clientId: stri
       sendSigningInvite({
         to: l.email,
         url: `${baseUrl}${l.url}`,
-        companyName: l.companyName ?? defaultCompanyName,
-        applicationName: l.applicationName ?? 'Annual General Meeting',
+        companyName: defaultCompanyName,
+        applicationName: 'Annual General Meeting',
         documentTitle: l.documentTitle,
-        signerRole: l.signerRole ?? `Director of ${defaultCompanyName}`,
+        signerRole: `Director of ${defaultCompanyName}`,
       }),
     ),
   );

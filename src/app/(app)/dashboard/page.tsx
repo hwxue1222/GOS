@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { readDb } from '@/lib/db';
 import Link from 'next/link';
 import ClientCompanyDetailsCard from '@/app/(app)/dashboard/ui/ClientCompanyDetailsCard';
+import ClientCompanyAuditLogCard from '@/app/(app)/dashboard/ui/ClientCompanyAuditLogCard';
 
 export default async function DashboardPage() {
   const me = await getCurrentUser();
@@ -52,6 +53,12 @@ export default async function DashboardPage() {
           {me.role === 'client' ? (
             <div className="mt-6">
               <ClientCompanyDetailsCard companies={clientCompanies} initialCompanyId={clientCompanies[0]?.id} />
+            </div>
+          ) : null}
+
+          {me.role === 'client' ? (
+            <div className="mt-4">
+              <ClientCompanyAuditLogCard limit={30} />
             </div>
           ) : null}
 

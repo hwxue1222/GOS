@@ -1061,7 +1061,7 @@ export function renderShareTransferCertificateOfAppointmentOfCorporateRepresenta
     <div class="block">Mr / Ms</div>
     <div class="block">of address:</div>
 
-    <div class="block">as our representative at all general meetings of the Company and at any adjournments thereof with full authority to sign, execute and exercise the same powers on our behalf as we could exercise if we were an individual member of the Company including, without limitation to the foregoing, the power to accept shorter notice or to waive notice of any such general meetings of the Company, and to act on, vote on, sign and execute, on our behalf, all relevant documents recording members’ resolutions.</div>
+    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to ${matter}.</div>
     <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
 
     <div class="block">Dated this ${esc(datedLong)}</div>
@@ -1372,8 +1372,6 @@ export function renderRdrAuthorizationHtml(input: {
   representativeName?: string;
   representativeEmail?: string;
   representativeAddress?: string;
-  representativeIdNo?: string;
-  representativeIdType?: 'NRIC' | 'PASSPORT' | string;
   matter?: string;
   directorSigners: Array<{ fullName: string; email?: string }>;
   dateYmd: string;
@@ -1388,9 +1386,6 @@ export function renderRdrAuthorizationHtml(input: {
   const representativeNameEsc = representativeNameRaw ? esc(representativeNameRaw) : '________________';
   const representativeEmail = String(input.representativeEmail ?? '').trim();
   const representativeAddress = String(input.representativeAddress ?? '').trim() ? esc(String(input.representativeAddress ?? '')) : '______________________________';
-  const representativeIdNo = String(input.representativeIdNo ?? '').trim() ? esc(String(input.representativeIdNo ?? '')) : '';
-  const representativeIdTypeRaw = String(input.representativeIdType ?? '').trim();
-  const representativeIdLabel = representativeIdTypeRaw === 'PASSPORT' ? 'Passport No.' : 'NRIC No.';
   const repSig = signatureLineBlocks({
     signers: [{ fullName: representativeNameRaw || '________________', email: representativeEmail || undefined }],
   });
@@ -1433,7 +1428,7 @@ export function renderRdrAuthorizationHtml(input: {
     <div class="block">Mr / Ms</div>
     <div class="block">of address:</div>
 
-    <div class="block">as our representative at all general meetings of the Company and at any adjournments thereof with full authority to sign, execute and exercise the same powers on our behalf as we could exercise if we were an individual member of the Company including, without limitation to the foregoing, the power to accept shorter notice or to waive notice of any such general meetings of the Company, and to act on, vote on, sign and execute, on our behalf, all relevant documents recording members’ resolutions.</div>
+    <div class="block">as our representative with full authority to sign, execute and exercise the same powers on our behalf to act on, vote on, sign and execute, on our behalf, all relevant documents relating to ${matter}.</div>
     <div class="block">The authorisation conferred by this Certificate shall continue to have effect until revoked by us by notice in writing to the Company or by the issue of a subsequent Certificate.</div>
 
     <div class="block">Dated this ${esc(datedLong)}</div>
@@ -1450,9 +1445,9 @@ export function renderRdrAuthorizationHtml(input: {
         <div>Signature of authorised representative</div>
         ${repSig}
         <div class="mt2">Name:&nbsp;&nbsp;${representativeNameEsc}</div>
-        <div class="mt2">${representativeIdLabel}:&nbsp;&nbsp;${representativeIdNo}</div>
+        <div class="mt2">NRIC/Passport No.:&nbsp;&nbsp;</div>
         <div class="mt2">Phone No.:&nbsp;&nbsp;</div>
-        <div class="mt2">Email:&nbsp;&nbsp;${esc(representativeEmail)}</div>
+        <div class="mt2">Email:&nbsp;&nbsp;</div>
       </div>
       <div>
         <div>Witnessed by</div>

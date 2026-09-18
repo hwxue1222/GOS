@@ -40,7 +40,7 @@ export default function ChangeCompanyNameClient() {
 
   const [newCompanyNameBase, setNewCompanyNameBase] = useState('');
   const [newCompanyNameSuffix, setNewCompanyNameSuffix] = useState<CompanyNameSuffixOption>('Pte Ltd');
-  const [chairman, setChairman] = useState('');
+  const [chairmanSelection, setChairmanSelection] = useState('');
   const [directorSendingNotice, setDirectorSendingNotice] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
@@ -198,7 +198,7 @@ export default function ChangeCompanyNameClient() {
   async function onSubmit() {
     setSubmitError(null);
     const nextName = proposedNewName;
-    const nextChairman = chairman.trim();
+    const chairmanRaw = chairmanSelection.trim();
     const nextDirectorSendingNotice = directorSendingNotice.trim() || directors[0]?.entity.person.fullName?.trim() || '';
     const nextMeetingDate = meetingDate.trim();
     const nextNoticeDate = noticeDate.trim();
@@ -216,13 +216,46 @@ export default function ChangeCompanyNameClient() {
       setSubmitError('Please check name availability and ensure it is available before submitting.');
       return;
     }
-    if (!nextChairman) {
+
+    const parseChairmanSelection = () => {
+      const m = chairmanRaw.match(/^(PERSON|COMPANY)\:(.*)$/);
+      if (!m) return { kind: '' as const };
+      const kind = m[1] as 'PERSON' | 'COMPANY';
+      const value = String(m[2] ?? '').trim();
+      if (!value) return { kind: '' as const };
+      if (kind === 'PERSON') return { kind, personName: value };
+      return { kind, companyId: value };
+    };
+
+    const selectedChairman = parseChairmanSelection();
+    const nextChairman = (() => {
+      if (selectedChairman.kind === 'PERSON') return selectedChairman.personName.trim();
+      if (selectedChairman.kind === 'COMPANY') {
+        const d = corporateRepresentatives[selectedChairman.companyId];
+        return String(d?.representativeName ?? '').trim();
+      }
+      return '';
+    })();
+
+    if (!selectedChairman.kind) {
       setSubmitError('Chairman is required.');
       return;
     }
-    if (!shareholderPersonNames.some((n) => n.trim() === nextChairman)) {
+    if (selectedChairman.kind === 'PERSON' && !shareholderPersonNames.some((n) => n.trim() === nextChairman)) {
       setSubmitError('Chairman must be a shareholder.');
       return;
+    }
+    if (selectedChairman.kind === 'COMPANY') {
+      const isValidCompanyShareholder = shareholderCompanies.some((s) => s.entity.company.id === selectedChairman.companyId);
+      if (!isValidCompanyShareholder) {
+        setSubmitError('Chairman must be a shareholder.');
+        return;
+      }
+      if (!nextChairman) {
+        const companyName = shareholderCompanies.find((s) => s.entity.company.id === selectedChairman.companyId)?.entity.company.name ?? 'the selected shareholder company';
+        setSubmitError(`Corporate representative name is required for ${companyName}.`);
+        return;
+      }
     }
 
     for (const s of shareholderCompanies) {
@@ -521,14 +554,23 @@ export default function ChangeCompanyNameClient() {
                 <span className="text-red-500">*</span> Chairman :
               </div>
               <select
-                value={chairman}
-                onChange={(e) => setChairman(e.target.value)}
+                value={chairmanSelection}
+                onChange={(e) => setChairmanSelection(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Select</option>
-                {(shareholders.filter((s) => (s as any)?.entity?.type === 'PERSON') as Array<any>).map((s) => (
-                  <option key={s.role.id} value={s.entity.person.fullName}>
-                    {s.entity.person.fullName}
+                {(shareholders.filter((s) => (s as any)?.entity?.type === 'PERSON') as Array<any>).map((s) => {
+                  const name = String(s?.entity?.person?.fullName ?? '').trim();
+                  if (!name) return null;
+                  return (
+                    <option key={`p:${s.role.id}`} value={`PERSON:${name}`}>
+                      {name}
+                    </option>
+                  );
+                })}
+                {shareholderCompanies.map((s) => (
+                  <option key={`c:${s.entity.company.id}`} value={`COMPANY:${s.entity.company.id}`}>
+                    {s.entity.company.name}
                   </option>
                 ))}
               </select>

@@ -624,11 +624,11 @@ export type AnnualGeneralMeetingRequest = {
   meetingVenue: string;
   chairman: string;
   chairmanCompanyId?: string;
-  corporateRepresentativeMode?: 'EXISTING' | 'NEW';
+  corporateRepresentativeMode?: string;
   corporateRepresentativeName?: string;
   corporateRepresentativeEmail?: string;
   corporateRepresentativeAddress?: string;
-  corporateRepresentativeIdType?: 'NRIC' | 'PASSPORT';
+  corporateRepresentativeIdType?: string;
   corporateRepresentativeIdNo?: string;
   directorSignerName?: string;
   directorSignerEmail?: string;
