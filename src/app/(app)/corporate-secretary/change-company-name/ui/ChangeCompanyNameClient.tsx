@@ -16,6 +16,8 @@ type CorporateRepresentativeDraft = {
   representativeAddress: string;
   representativeEmail: string;
   representativePhone: string;
+  directorSignerName?: string;
+  directorSignerEmail?: string;
 };
 
 const COMPANY_NAME_SUFFIX_OPTIONS = ['Pte Ltd', '(Pte) Ltd', 'Private Limited', '(Private) Limited'] as const;
@@ -46,6 +48,9 @@ export default function ChangeCompanyNameClient() {
   const [noticeDate, setNoticeDate] = useState('');
   const [meetingVenue, setMeetingVenue] = useState('');
   const [corporateRepresentatives, setCorporateRepresentatives] = useState<Record<string, CorporateRepresentativeDraft>>({});
+  const [shareholderDirectorSignersByCompanyId, setShareholderDirectorSignersByCompanyId] = useState<
+    Record<string, Array<{ fullName: string; email: string }>>
+  >({});
   const [useByBridgeAddress, setUseByBridgeAddress] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -142,6 +147,45 @@ export default function ChangeCompanyNameClient() {
       }
       return next;
     });
+  }, [shareholderCompanies.map((s) => s.entity.company.id).join('|')]);
+
+  useEffect(() => {
+    if (!shareholderCompanies.length) return;
+
+    let cancelled = false;
+    async function run() {
+      for (const s of shareholderCompanies) {
+        const shareholderCompanyId = s.entity.company.id;
+        const res = await fetch(`/api/secretary/companies/${encodeURIComponent(shareholderCompanyId)}/directors?t=${Date.now()}`, {
+          cache: 'no-store',
+        }).catch(() => null);
+        const j = (await res?.json().catch(() => null)) as
+          | {
+              ok: boolean;
+              directors?: Array<{ person: { fullName: string; email?: string | null } }>;
+            }
+          | null;
+        if (cancelled) return;
+        if (!res?.ok || !j?.ok) continue;
+
+        const signers = (j.directors ?? [])
+          .map((d) => ({
+            fullName: String(d?.person?.fullName ?? '').trim(),
+            email: String(d?.person?.email ?? '').trim(),
+          }))
+          .filter((x) => !!x.fullName && !!x.email)
+          .map((x) => ({ fullName: x.fullName, email: x.email.toLowerCase() }));
+
+        setShareholderDirectorSignersByCompanyId((prev) => ({
+          ...prev,
+          [shareholderCompanyId]: signers,
+        }));
+      }
+    }
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [shareholderCompanies.map((s) => s.entity.company.id).join('|')]);
 
   useEffect(() => {
@@ -284,6 +328,20 @@ export default function ChangeCompanyNameClient() {
         setSubmitError(`Corporate representative email is required for ${s.entity.company.name}.`);
         return;
       }
+
+      const knownDirectorSigners = shareholderDirectorSignersByCompanyId[s.entity.company.id] ?? [];
+      const needsManualDirectorSigner = !knownDirectorSigners.length;
+      if (needsManualDirectorSigner) {
+        if (!String(d.directorSignerName ?? '').trim()) {
+          setSubmitError(`Director signer name is required for ${s.entity.company.name}.`);
+          return;
+        }
+        const email = String(d.directorSignerEmail ?? '').trim();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+          setSubmitError(`Director signer email is required for ${s.entity.company.name}.`);
+          return;
+        }
+      }
     }
     if (!nextDirectorSendingNotice) {
       setSubmitError('Director sending notice is required.');
@@ -346,6 +404,8 @@ export default function ChangeCompanyNameClient() {
             useByBridgeRegisteredOfficeAddress: useByBridgeAddress,
             corporateRepresentatives: shareholderCompanies.map((s) => {
               const d = corporateRepresentatives[s.entity.company.id];
+              const knownDirectorSigners = shareholderDirectorSignersByCompanyId[s.entity.company.id] ?? [];
+              const needsManualDirectorSigner = !knownDirectorSigners.length;
               return {
                 shareholderCompanyClientId: s.entity.company.id,
                 representativeName: String(d?.representativeName ?? '').trim(),
@@ -354,6 +414,8 @@ export default function ChangeCompanyNameClient() {
                 representativeAddress: String(d?.representativeAddress ?? '').trim(),
                 representativeEmail: String(d?.representativeEmail ?? '').trim(),
                 representativePhone: String(d?.representativePhone ?? '').trim(),
+                directorSignerName: needsManualDirectorSigner ? String(d?.directorSignerName ?? '').trim() : undefined,
+                directorSignerEmail: needsManualDirectorSigner ? String(d?.directorSignerEmail ?? '').trim() : undefined,
               };
             }),
           },
@@ -389,6 +451,8 @@ export default function ChangeCompanyNameClient() {
             <div className="space-y-3">
               {shareholderCompanies.map((s) => {
                 const company = s.entity.company;
+                const knownDirectorSigners = shareholderDirectorSignersByCompanyId[company.id] ?? [];
+                const needsManualDirectorSigner = !knownDirectorSigners.length;
                 const d = corporateRepresentatives[company.id] ?? {
                   shareholderCompanyClientId: company.id,
                   representativeName: '',
@@ -397,6 +461,8 @@ export default function ChangeCompanyNameClient() {
                   representativeAddress: '',
                   representativeEmail: '',
                   representativePhone: '',
+                  directorSignerName: '',
+                  directorSignerEmail: '',
                 };
                 return (
                   <div key={company.id} className="rounded-lg border border-black/10 p-4">
@@ -494,6 +560,44 @@ export default function ChangeCompanyNameClient() {
                           className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                         />
                       </label>
+
+                      {needsManualDirectorSigner ? (
+                        <>
+                          <div className="sm:col-span-12 text-xs text-black/50">
+                            This shareholder company has no director email on file. Please provide a director signer for the corporate representative appointment.
+                          </div>
+                          <label className="sm:col-span-6 text-sm">
+                            <div className="text-black">
+                              <span className="text-red-500">*</span> Director signer name
+                            </div>
+                            <input
+                              value={String(d.directorSignerName ?? '')}
+                              onChange={(e) =>
+                                setCorporateRepresentatives((prev) => ({
+                                  ...prev,
+                                  [company.id]: { ...d, directorSignerName: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="sm:col-span-6 text-sm">
+                            <div className="text-black">
+                              <span className="text-red-500">*</span> Director signer email
+                            </div>
+                            <input
+                              value={String(d.directorSignerEmail ?? '')}
+                              onChange={(e) =>
+                                setCorporateRepresentatives((prev) => ({
+                                  ...prev,
+                                  [company.id]: { ...d, directorSignerEmail: e.target.value },
+                                }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 );

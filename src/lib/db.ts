@@ -13256,6 +13256,8 @@ export async function createCompanyUpdateRequest(input: {
             representativeAddress: String(x?.representativeAddress ?? '').trim(),
             representativeEmail: String(x?.representativeEmail ?? '').trim(),
             representativePhone: String(x?.representativePhone ?? '').trim(),
+            directorSignerName: String(x?.directorSignerName ?? '').trim(),
+            directorSignerEmail: String(x?.directorSignerEmail ?? '').trim(),
           }))
           .filter((x) => !!x.shareholderCompanyClientId))
       : [];
@@ -13337,7 +13339,9 @@ export async function createCompanyUpdateRequest(input: {
           })
           .filter(Boolean) as Array<{ fullName: string; email: string }>;
 
-        const directorSigner = shareholderDirectors[0] ?? null;
+        const manualDirectorSignerName = String(rep.directorSignerName ?? '').trim();
+        const manualDirectorSignerEmail = String(rep.directorSignerEmail ?? '').trim().toLowerCase();
+        const directorSigner = shareholderDirectors[0] ?? (manualDirectorSignerEmail && manualDirectorSignerName ? { fullName: manualDirectorSignerName, email: manualDirectorSignerEmail } : null);
         if (!directorSigner) return { ok: false as const, error: 'MISSING_SIGNER_EMAIL' as const };
 
         const shareholderCompanyAddress =
@@ -13390,7 +13394,8 @@ export async function createCompanyUpdateRequest(input: {
         };
         db.signaturePackets.unshift(certPacket);
 
-        for (const dir of shareholderDirectors) {
+        const certSigners = shareholderDirectors.length ? shareholderDirectors : [directorSigner];
+        for (const dir of certSigners) {
           const token = newToken();
           const req: SignatureRequest = {
             id: newId('sgr'),

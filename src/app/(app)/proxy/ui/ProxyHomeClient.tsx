@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
+import CompanySearchSelectClient from '@/app/(app)/proxy/ui/CompanySearchSelectClient';
 
 export type ProxyHomeCompanyRow = {
   id: string;
@@ -64,23 +65,12 @@ export default function ProxyHomeClient(props: { companies: ProxyHomeCompanyRow[
         {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              const id = e.target.value;
-              if (!id) return;
-              router.push(`/proxy/${encodeURIComponent(id)}`);
-            }}
-            className="w-full sm:max-w-[520px] truncate rounded-lg border border-black/10 bg-white px-3 py-2 text-sm"
-          >
-            <option value="">请选择公司（Select a company）</option>
-            {props.companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-          </select>
-          <div className="text-xs text-black/50">选中后会自动进入该公司 Proxy</div>
+          <CompanySearchSelectClient
+            items={props.companies}
+            placeholder="请选择公司（Select a company）"
+            helperText="选中后会自动进入该公司 Proxy"
+            onSelect={(id) => router.push(`/proxy/${encodeURIComponent(id)}`)}
+          />
         </div>
       </div>
 
