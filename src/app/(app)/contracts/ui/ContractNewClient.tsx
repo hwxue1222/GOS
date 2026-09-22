@@ -501,6 +501,19 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
   const clientOk = !!clientName;
 
+  const sendDisabled = saving || rendering || sending || !clientOk || missingRequired.length > 0;
+  const sendDisabledHint = useMemo(() => {
+    if (!sendDisabled) return '';
+    if (!tpl) return '请选择模板。';
+    if (!clientOk) return '请先填写甲方名称。';
+    if (missingRequired.length) {
+      const labels = missingRequired.map((m) => m.label || m.key).filter(Boolean).slice(0, 4);
+      const more = missingRequired.length > labels.length ? ` …(+${missingRequired.length - labels.length})` : '';
+      return `请先填写必填项：${labels.join('、')}${more}`;
+    }
+    return '当前状态无法发送。';
+  }, [clientOk, missingRequired, sendDisabled, tpl]);
+
   const EMPTY_ITEM_TOKEN = '__EMPTY__';
   const NOTE_TOKEN = '__NOTE__';
 
@@ -1249,13 +1262,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     className="h-10 px-2 rounded-lg border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-60"
                   >
                     Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => tpl?.id && loadTemplateDrafts(tpl.id)}
-                    className="h-10 px-2 rounded-lg border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                  >
-                    Refresh
                   </button>
                 </div>
               </div>
@@ -2665,13 +2671,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 {downloading ? 'Downloading…' : 'Download PDF'}
               </button>
               {showSigningBlock || isNomineeTemplate ? (
-                <button
-                  onClick={() => void sendForSigning()}
-                  disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
-                  className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
-                >
-                  {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
-                </button>
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => void sendForSigning()}
+                    disabled={sendDisabled}
+                    className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
+                  >
+                    {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
+                  </button>
+                  {sendDisabledHint ? <div className="mt-1 text-[11px] text-black/50">{sendDisabledHint}</div> : null}
+                </div>
               ) : null}
             </div>
             </div>
