@@ -163,7 +163,7 @@ export default async function CorporateSecretaryApplicationsPage({
         sourceId: r.sourceId,
       };
     }),
-  ].sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+  ].sort((a, b) => (b.applicationDate ?? '').localeCompare(a.applicationDate ?? '') || String(b.id).localeCompare(String(a.id)));
 
   let visibleRows = allRows;
   if (filterCompanyId) visibleRows = visibleRows.filter((r) => r.companyId === filterCompanyId);

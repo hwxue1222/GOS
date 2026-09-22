@@ -208,6 +208,8 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V72 = 'contracts.templates.v72';
 const SEED_KEY_CONTRACTS_TEMPLATES_V73 = 'contracts.templates.v73';
 const SEED_KEY_CONTRACTS_TEMPLATES_V74 = 'contracts.templates.v74';
 const SEED_KEY_CONTRACTS_TEMPLATES_V75 = 'contracts.templates.v75';
+const SEED_KEY_CONTRACTS_TEMPLATES_V76 = 'contracts.templates.v76';
+const SEED_KEY_CONTRACTS_TEMPLATES_V77 = 'contracts.templates.v77';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -476,7 +478,7 @@ function seedContractsTemplatesV48(db: Db) {
         <div class="row"><div class="k">乙方 / Party B</div><div class="v">BBY.SG PTE LTD</div></div>
         <div class="row"><div class="k">UEN / Registration No. / ID（注册号/证件号）</div><div class="v">201608450W</div></div>
         <div class="row"><div class="k">地址 / Address</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-        <div class="row"><div class="k">电话 / Contact</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
+        <div class="row"><div class="k">电话 / Contact</div><div class="v">(+65)62215600</div></div>
         <div class="row"><div class="k">邮箱 / Email</div><div class="v">service@bybridge.com.sg</div></div>
         </div>
 
@@ -587,7 +589,7 @@ function seedContractsTemplatesV48(db: Db) {
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">姓名 / Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">职位 / Title:</div><div class="sigvalue">Director</div></div>
-              <div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{generated_date}}</div></div>
+              <div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{partyB_sign_date}}</div></div>
             </div>
           </div>
         </div>
@@ -740,6 +742,7 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'signer_full_name', label: 'Signer name（签署人姓名）', required: true },
       { key: 'signer_title', label: 'Signer title（签署人职位）', required: true },
       { key: 'signer_date', label: 'Signer date (YYYY-MM-DD)（签署日期）', required: true },
+      { key: 'partyB_sign_date', label: 'Party B date (YYYY-MM-DD)（乙方日期）', required: false },
       { key: 'signer_email', label: 'Signing email（签署邮箱）', required: true },
     ],
     templateHtml: `<!doctype html>
@@ -831,7 +834,7 @@ function seedContractsTemplatesV48(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No. / ID（注册号/证件号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526685 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
           <div class="row"><div class="k">Email（邮箱）</div><div class="v">service@bybridge.com.sg</div></div>
         </div>
 
@@ -968,7 +971,7 @@ function seedContractsTemplatesV48(db: Db) {
             <div class="sigmeta">
               <div class="sigrow"><div class="siglabel">Name:</div><div class="sigvalue">XUE HONGWEI</div></div>
               <div class="sigrow"><div class="siglabel">Title:</div><div class="sigvalue">Director</div></div>
-              <div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{generated_date}}</div></div>
+              <div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{partyB_sign_date}}</div></div>
             </div>
           </div>
         </div>
@@ -1062,7 +1065,7 @@ function seedContractsTemplatesV48(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
         </div>
 
         <div class="section">
@@ -1684,7 +1687,7 @@ function seedContractsTemplatesV49(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
         </div>
 
         <div class="section">
@@ -1799,7 +1802,7 @@ function seedContractsTemplatesV50(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
         </div>
 
         <div class="section">
@@ -1940,7 +1943,7 @@ function seedContractsTemplatesV51(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
         </div>
 
         <div class="section">
@@ -2120,7 +2123,7 @@ function seedContractsTemplatesV52(db: Db) {
           <div class="row"><div class="k">Party B</div><div class="v">BBY.SG PTE LTD</div></div>
           <div class="row"><div class="k">UEN / Registration No.（注册号）</div><div class="v">201608450W</div></div>
           <div class="row"><div class="k">Address（地址）</div><div class="v">8 Burn Road#15-03 Trivex Singapore 369977</div></div>
-          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65) 62215600/91526688 (Luke)</div></div>
+          <div class="row"><div class="k">Contact（电话）</div><div class="v">(+65)62215600</div></div>
         </div>
 
         <div class="section">
@@ -3089,6 +3092,75 @@ function seedContractsTemplatesV75(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V75] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV76(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V76]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const html = String(tpl.templateHtml ?? '');
+    const nextHtml = html
+      .replaceAll('<div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{generated_date}}</div></div>', '<div class="sigrow"><div class="siglabel">时间 / Date:</div><div class="sigvalue">{{partyB_sign_date}}</div></div>')
+      .replaceAll('<div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{generated_date}}</div></div>', '<div class="sigrow"><div class="siglabel">Date:</div><div class="sigvalue">{{partyB_sign_date}}</div></div>');
+
+    const placeholders = (tpl.placeholders ?? []) as Array<{ key: string; label: string; required?: boolean }>;
+    const hasKey = new Set(placeholders.map((p) => String(p.key ?? '').trim()));
+    const nextPlaceholders = hasKey.has('partyB_sign_date')
+      ? placeholders
+      : [
+          ...placeholders,
+          { key: 'partyB_sign_date', label: 'Party B date (YYYY-MM-DD)（乙方日期）', required: false },
+        ];
+
+    if (nextHtml !== html || nextPlaceholders !== placeholders) {
+      templates[idx] = { ...tpl, templateHtml: nextHtml, placeholders: nextPlaceholders as any, updatedAt: now };
+      (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+      changed = true;
+    }
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V76] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV77(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V77]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    const html = String(tpl.templateHtml ?? '');
+    const nextHtml = html
+      .replaceAll('(+65) 62215600/91526685 (Luke)', '(+65)62215600')
+      .replaceAll('(+65) 62215600/91526688 (Luke)', '(+65)62215600')
+      .replaceAll('(+65)62215600/91526685 (Luke)', '(+65)62215600')
+      .replaceAll('(+65)62215600/91526688 (Luke)', '(+65)62215600');
+    if (nextHtml !== html) {
+      templates[i] = { ...tpl, templateHtml: nextHtml, updatedAt: now };
+      mutated = true;
+    }
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V77] = true;
   return changed;
 }
 
@@ -8455,6 +8527,8 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV73(db)) changed = true;
   if (seedContractsTemplatesV74(db)) changed = true;
   if (seedContractsTemplatesV75(db)) changed = true;
+  if (seedContractsTemplatesV76(db)) changed = true;
+  if (seedContractsTemplatesV77(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

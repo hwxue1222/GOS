@@ -2916,11 +2916,14 @@ export function renderContractHtml(input: {
     String((input.fields ?? {}).partyA_email ?? '').trim() ||
     String(input.clientEmail ?? '').trim();
 
+  const generatedDate = String((input.fields ?? {}).generated_date ?? '').trim() || new Date().toISOString().slice(0, 10);
+
   const map: Record<string, string> = {
     contract_no: input.contractNo,
     client_name: input.clientName,
     client_email: input.clientEmail,
     signer_email: signerEmail,
+    generated_date: generatedDate,
     partyA_label: partyALabel,
     partyA_id_label: partyAIdLabel,
     ...(input.fields ?? {}),
@@ -2931,6 +2934,7 @@ export function renderContractHtml(input: {
     if (!String(map.fee_item_count ?? '').trim()) map.fee_item_count = String((f as any).fee_item_count ?? '').trim() || '2';
     if (!String(map.fee_item_1 ?? '').trim()) map.fee_item_1 = String((f as any).fee_1_item_1 ?? '').trim();
     if (!String(map.fee_item_2 ?? '').trim()) map.fee_item_2 = String((f as any).fee_1_item_2 ?? '').trim();
+    if (!String(map.partyB_sign_date ?? '').trim()) map.partyB_sign_date = generatedDate;
   }
 
   let html = String(input.templateHtml ?? '');

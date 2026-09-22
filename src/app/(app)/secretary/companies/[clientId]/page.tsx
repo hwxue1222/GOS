@@ -175,7 +175,7 @@ export default async function SecretaryCompanyPage({ params }: { params: Promise
         detailsHref: map.detailsHref,
       };
     })
-    .sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+    .sort((a, b) => (b.applicationDate ?? '').localeCompare(a.applicationDate ?? '') || String(b.id).localeCompare(String(a.id)));
 
   return (
     <div className="min-h-screen flex flex-col">

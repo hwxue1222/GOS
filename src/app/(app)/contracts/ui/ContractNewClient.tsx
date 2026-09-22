@@ -29,6 +29,14 @@ function escHtml(s: string) {
     .replaceAll("'", '&#39;');
 }
 
+function hashString(s: string) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) {
+    h = (h * 33) ^ s.charCodeAt(i);
+  }
+  return (h >>> 0).toString(36);
+}
+
 function renderPreview(templateHtml: string, map: Record<string, string>) {
   let html = templateHtml;
 
@@ -482,6 +490,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     });
   }, [clientEmail, clientName, contractNo, fields, tpl]);
 
+  const previewIframeKey = useMemo(() => {
+    const tplId = String(tpl?.id ?? '');
+    const draftId = String(selectedDraftId ?? '');
+    return `${tplId}:${draftId}:${hashString(previewHtml || '')}`;
+  }, [previewHtml, selectedDraftId, tpl?.id]);
+
   const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
   const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
   const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
@@ -733,6 +747,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
 
       if (!String(next.signer_date ?? '').trim()) next.signer_date = String(next.date ?? '').trim() || new Date().toISOString().slice(0, 10);
+      if (!String((next as any).partyB_sign_date ?? '').trim()) {
+        (next as any).partyB_sign_date = String((next as any).generated_date ?? '').trim() || new Date().toISOString().slice(0, 10);
+      }
       if (!String(next.signer_email ?? '').trim()) {
         const pe = String(next.partyA_email ?? '').trim();
         if (pe) next.signer_email = pe;
@@ -1391,6 +1408,17 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>
+
+              {isProfessionalTemplate ? (
+                <div className="md:col-span-1">
+                  <div className="text-xs font-medium text-black/60">乙方日期 / Party B date (BBY.SG PTE LTD)</div>
+                  <DateInputYMD
+                    value={(fields as any).partyB_sign_date ?? ''}
+                    onChange={(next) => setFields((prev) => ({ ...(prev ?? {}), partyB_sign_date: next }))}
+                    inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              ) : null}
 
               <div className="md:col-span-2">
                 <div className="text-xs font-medium text-black/60">
@@ -2671,7 +2699,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </div>
             <div className="h-[70vh]">
               {previewHtml ? (
-                <iframe title="preview" srcDoc={previewHtml} className="w-full h-full" scrolling="yes" />
+                <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" scrolling="yes" />
               ) : (
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}

@@ -150,7 +150,7 @@ export default async function SecretaryAcraFilingPage({
       };
     })
     .filter((r) => (!filterCompanyId ? true : r.companyId === filterCompanyId))
-    .sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+    .sort((a, b) => (b.applicationDate ?? '').localeCompare(a.applicationDate ?? '') || String(b.id).localeCompare(String(a.id)));
 
   const rdrRows = rdrs
     .filter((r) => r && r.triggerType === 'MANUAL_MAINTENANCE')
@@ -179,7 +179,7 @@ export default async function SecretaryAcraFilingPage({
     .filter(Boolean) as any[];
 
   const mergedCsRows = [...csRows, ...rdrRows].sort(
-    (a, b) => (String(b.editDate ?? '')).localeCompare(String(a.editDate ?? '')) || (String(b.applicationDate ?? '')).localeCompare(String(a.applicationDate ?? '')),
+    (a, b) => (String(b.applicationDate ?? '')).localeCompare(String(a.applicationDate ?? '')) || String(b.id).localeCompare(String(a.id)),
   );
 
   const incRows = buildIncorporationApplications(db, allowedClientIds, null)

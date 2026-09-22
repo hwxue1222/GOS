@@ -261,7 +261,7 @@ export default async function ProxyCompanyPickerPage() {
       .filter(Boolean) as ProxySubmittedRecordRow[];
 
     const all = [...secApps, ...rdrRows];
-    all.sort((a, b) => (b.editDate ?? '').localeCompare(a.editDate ?? '') || (b.applicationDate ?? '').localeCompare(a.applicationDate ?? ''));
+    all.sort((a, b) => (b.applicationDate ?? '').localeCompare(a.applicationDate ?? '') || String(b.id).localeCompare(String(a.id)));
     return all;
   })();
 
