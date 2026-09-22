@@ -1409,17 +1409,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
               </div>
 
-              {isProfessionalTemplate ? (
-                <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">乙方日期 / Party B date (BBY.SG PTE LTD)</div>
-                  <DateInputYMD
-                    value={(fields as any).partyB_sign_date ?? ''}
-                    onChange={(next) => setFields((prev) => ({ ...(prev ?? {}), partyB_sign_date: next }))}
-                    inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </div>
-              ) : null}
-
               <div className="md:col-span-2">
                 <div className="text-xs font-medium text-black/60">
                   签署邮箱 / Signing email
@@ -1433,6 +1422,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                 />
                 <div className="mt-1 text-xs text-black/50">用于发送签署链接/OTP。</div>
               </div>
+              </div>
+            </div>
+          ) : null}
+
+          {isProfessionalTemplate ? (
+            <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+              <div className="text-sm font-semibold">乙方信息 / Party B (BBY.SG PTE LTD)</div>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-1">
+                  <div className="text-xs font-medium text-black/60">乙方日期 / Party B date</div>
+                  <DateInputYMD
+                    value={(fields as any).partyB_sign_date ?? ''}
+                    onChange={(next) => setFields((prev) => ({ ...(prev ?? {}), partyB_sign_date: next }))}
+                    inputClassName="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
               </div>
             </div>
           ) : null}
