@@ -6,6 +6,8 @@ import {
   findContractById,
   listContractTemplates,
   createDocument,
+  nextContractNo,
+  readDb,
   updateContract,
 } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -26,7 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   }
 
   const { contractId } = await params;
-  const contract = await findContractById(contractId);
+  let contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   const templateId = contract.templateId;
@@ -52,10 +54,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   const tpl = templates.find((t) => t.id === templateId) ?? null;
   if (!tpl) return NextResponse.json({ ok: false, error: 'TEMPLATE_NOT_FOUND' }, { status: 404 });
 
-  const contractNo = String(contract.contractNo ?? '').trim();
+  let contractNo = String(contract.contractNo ?? '').trim();
   if (!contractNo) {
-    return NextResponse.json({ ok: false, error: 'CONTRACT_NOT_GENERATED' }, { status: 409 });
+    const db = await readDb();
+    contractNo = nextContractNo(db, contract.createdAt ? new Date(contract.createdAt) : new Date());
+    const updated = await updateContract(contractId, { contractNo });
+    if (updated) contract = updated;
   }
+
+  const generatedDate = new Date().toISOString().slice(0, 10);
+
+  const partyAEntityType =
+    String((contract.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual' ? 'individual' : 'company';
+  const partyALabel = partyAEntityType === 'individual' ? 'Party A (Individual)（甲方-个人）' : 'Party A (Company)（甲方-公司）';
+  const partyAIdLabel = partyAEntityType === 'individual' ? 'ID（证件号）' : 'UEN / Registration No.（注册号）';
 
   let documentId = contract.documentId;
   if (!documentId) {
@@ -64,7 +76,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
       contractNo: contractNo || contract.contractNo,
       clientName: contract.clientName,
       clientEmail: contract.clientEmail,
-      fields: contract.fields ?? {},
+      fields: {
+        ...(contract.fields ?? {}),
+        generated_date: generatedDate,
+        partyA_label: partyALabel,
+        partyA_id_label: partyAIdLabel,
+      },
     });
     const title = `Contract ${contractNo || contract.contractNo || '-'} - ${contract.clientName}`;
     const doc = await createDocument({ type: 'CONTRACT', title, html });

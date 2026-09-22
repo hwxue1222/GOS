@@ -933,6 +933,22 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
     setSending(true);
     try {
+      setRendering(true);
+      try {
+        const r = await fetch(`/api/contracts/${encodeURIComponent(id)}/render`, { method: 'POST' }).catch(() => null);
+        const jr = (await r?.json().catch(() => null)) as any;
+        if (!r?.ok || !jr?.documentId) {
+          setError(jr?.error || `HTTP_${r?.status ?? 'NETWORK'}`);
+          setErrorDetail(jr?.message || (jr ? JSON.stringify(jr) : '') || 'NETWORK_ERROR');
+          return;
+        }
+        setDocumentId(String(jr.documentId));
+        setDocumentSha(String(jr.documentSha256 ?? ''));
+        if (jr?.contract?.contractNo) setContractNo(String(jr.contract.contractNo));
+      } finally {
+        setRendering(false);
+      }
+
       const nomineeEmails = isNomineeTemplate
         ? [String((fields as any).company_signatory_email ?? '').trim(), String((fields as any).principal_signatory_email ?? '').trim()].filter(
             (x) => !!x,
@@ -953,11 +969,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       const j = (await res?.json().catch(() => null)) as any;
       if (!res?.ok || !j?.packetId) {
         setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        if (j?.error === 'CONTRACT_NOT_GENERATED') {
-          setErrorDetail('请先点击 Generate 生成合同（生成合同编号和文档）后再发送签署。');
-        } else {
-          setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
-        }
+        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
         return;
       }
       setPacketId(String(j.packetId));
@@ -2682,7 +2694,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     disabled={sendDisabled}
                     className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
                   >
-                    {sending ? 'Sending…' : packetId ? 'Resend signing' : 'Send for signing'}
+                    {sending && rendering
+                      ? 'Generating…'
+                      : sending
+                        ? 'Sending…'
+                        : packetId
+                          ? 'Resend signing'
+                          : 'Send for signing'}
                   </button>
                   {sendDisabledHint ? <div className="mt-1 text-[11px] text-black/50">{sendDisabledHint}</div> : null}
                 </div>
