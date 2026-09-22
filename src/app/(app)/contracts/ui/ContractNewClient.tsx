@@ -284,7 +284,14 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [buildInfo, setBuildInfo] = useState<string>('');
+
+  useEffect(() => {
+    if (!success) return;
+    const t = window.setTimeout(() => setSuccess(''), 4000);
+    return () => window.clearTimeout(t);
+  }, [success]);
 
   const clientNameKey = useMemo(() => {
     const keys = new Set((tpl?.placeholders ?? []).map((p) => p.key));
@@ -419,7 +426,13 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         clientName: string;
         clientEmail: string;
         fields?: Record<string, string>;
+        status?: string;
       };
+      const st = String(c.status ?? '').trim().toUpperCase();
+      if (st && st !== 'DRAFT' && st !== 'READY') {
+        router.push(`/contracts/${encodeURIComponent(String(c.id))}`);
+        return;
+      }
       setContractId(String(c.id));
       setContractNo(String(c.contractNo ?? ''));
       const overrideTplId = (() => {
@@ -447,7 +460,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [editContractId, editTemplateOverrideKey]);
+  }, [editContractId, editTemplateOverrideKey, router]);
 
   const clientName = showClientBlock ? String(fields[clientNameKey] ?? '').trim() : String(fields.company ?? '').trim();
   const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
@@ -925,6 +938,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   }
 
   async function sendForSigning() {
+    setSuccess('');
     setError(null);
     setErrorDetail('');
     const c = await saveDraft();
@@ -974,6 +988,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       }
       setPacketId(String(j.packetId));
       if (j.contract?.documentId) setDocumentId(String(j.contract.documentId));
+      const n = Array.isArray(j?.signLinks) ? j.signLinks.length : 1;
+      setSuccess(`发送成功：已向 ${n} 位签署人发送签署链接。`);
+      setTimeout(() => router.push('/contracts?sent=1'), 600);
     } finally {
       setSending(false);
     }
@@ -1088,6 +1105,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         </div>
       </div>
 
+      {success ? (
+        <div className="mt-4 rounded-xl bg-green-50 border border-green-100 p-3 text-sm text-green-700">{success}</div>
+      ) : null}
       {error ? <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div> : null}
       {errorDetail ? (
         <pre className="mt-2 rounded-xl bg-white border border-black/5 p-3 text-xs text-black/70 overflow-auto">{errorDetail}</pre>

@@ -20,6 +20,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ contra
   const current = await findContractById(contractId);
   if (!current) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, current)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (current.status !== 'DRAFT' && current.status !== 'READY') {
+    return NextResponse.json({ ok: false, error: 'CANNOT_EDIT' }, { status: 409 });
+  }
 
   const body = (await req.json().catch(() => null)) as
     | { clientName?: string; clientEmail?: string; fields?: Record<string, string>; status?: string }

@@ -10714,6 +10714,44 @@ export async function deleteContract(contractId: string) {
   return contract;
 }
 
+export async function voidContract(contractId: string) {
+  const db = await readDb();
+  ensureContractsCollections(db);
+  const list = (db.contracts ?? []) as Contract[];
+  const idx = list.findIndex((c) => c.id === contractId);
+  if (idx < 0) return null;
+  const current = list[idx];
+
+  if (String(current.signedAt ?? '').trim() || current.status === 'SIGNED') {
+    throw new Error('CANNOT_VOID_SIGNED');
+  }
+
+  const packets = (db.signaturePackets ?? []).filter((p) => p.relatedType === 'CONTRACT' && p.relatedId === current.id);
+  const packetIds = new Set<string>(packets.map((p) => p.id));
+  if (String(current.packetId ?? '').trim()) packetIds.add(String(current.packetId));
+  const reqs = (db.signatureRequests ?? []).filter((r) => packetIds.has(r.packetId));
+  if (reqs.some((r) => r.status === 'SIGNED' || !!r.signedAt)) {
+    throw new Error('CANNOT_VOID_SIGNED');
+  }
+
+  const now = nowIso();
+  list[idx] = { ...current, status: 'VOID', voidedAt: now, updatedAt: now };
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+
+  if (packetIds.size) {
+    db.signatureRequests = (db.signatureRequests ?? []).map((r) => {
+      if (!packetIds.has(r.packetId)) return r;
+      if (r.status === 'SIGNED') return r;
+      if (r.status === 'REVOKED') return r;
+      return { ...r, status: 'REVOKED', updatedAt: now };
+    });
+    db.signaturePackets = (db.signaturePackets ?? []).map((p) => (packetIds.has(p.id) ? { ...p, updatedAt: now } : p));
+  }
+
+  await writeDb(db);
+  return list[idx];
+}
+
 export async function createSignaturePacket(input: {
   kind: SignaturePacket['kind'];
   relatedType: SignaturePacket['relatedType'];

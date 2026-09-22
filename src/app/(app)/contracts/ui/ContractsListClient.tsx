@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePersistedState } from '@/lib/usePersistedState';
 import { formatDateDMY } from '@/lib/date';
 import type { Contract, ContractStatus } from '@/lib/types';
@@ -36,10 +36,24 @@ function monthKeyFromIso(iso: string) {
 
 export default function ContractsListClient({ initialRows }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = usePersistedState('gos.contracts.search', '');
   const [status, setStatus] = usePersistedState<ContractStatus | ''>('gos.contracts.status', '');
   const [month, setMonth] = usePersistedState('gos.contracts.month', '');
   const [deletingId, setDeletingId] = useState<string>('');
+
+  const banner = useMemo(() => {
+    if (!searchParams) return '';
+    if (searchParams.get('sent') === '1') return '发送成功：签署链接已发送。';
+    if (searchParams.get('void') === '1') return '已作废：该合同不可再签署或修改。';
+    return '';
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!banner) return;
+    const t = window.setTimeout(() => router.replace('/contracts'), 2500);
+    return () => window.clearTimeout(t);
+  }, [banner, router]);
 
   const rows = useMemo(() => {
     const q = search.trim();
@@ -115,6 +129,10 @@ export default function ContractsListClient({ initialRows }: Props) {
         </div>
       </div>
 
+      {banner ? (
+        <div className="mt-4 rounded-xl bg-green-50 border border-green-100 p-3 text-sm text-green-700">{banner}</div>
+      ) : null}
+
       <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-hidden">
         <div className="grid grid-cols-12 px-4 py-3 text-xs font-semibold text-black/60 border-b border-black/5">
           <div className="col-span-3">Contract No</div>
@@ -128,9 +146,9 @@ export default function ContractsListClient({ initialRows }: Props) {
         ) : (
           rows.map((r) => {
             const st = statusLabel(r.contract.status);
-            const canDelete =
-              (r.contract.status === 'DRAFT' || r.contract.status === 'READY') &&
-              !String((r.contract as any).packetId ?? '').trim() &&
+            const canVoid =
+              r.contract.status !== 'SIGNED' &&
+              r.contract.status !== 'VOID' &&
               !String((r.contract as any).signedAt ?? '').trim();
             const href =
               r.contract.status === 'DRAFT' || r.contract.status === 'READY'
@@ -151,7 +169,7 @@ export default function ContractsListClient({ initialRows }: Props) {
                 <div className="col-span-2 truncate">{formatDateDMY(r.contract.createdAt)}</div>
                 <div className="col-span-2 flex items-center justify-between gap-2">
                   <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${st.cls}`}>{st.text}</span>
-                  {canDelete ? (
+                  {canVoid ? (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -159,15 +177,16 @@ export default function ContractsListClient({ initialRows }: Props) {
                         e.stopPropagation();
                         if (deletingId) return;
                         const no = String(r.contract.contractNo ?? '').trim();
-                        if (!confirm(`Delete this draft${no ? ` (${no})` : ''}?`)) return;
+                        if (!confirm(`Void this contract${no ? ` (${no})` : ''}?`)) return;
                         setDeletingId(r.contract.id);
-                        void fetch(`/api/contracts/${encodeURIComponent(r.contract.id)}`, { method: 'DELETE' })
+                        void fetch(`/api/contracts/${encodeURIComponent(r.contract.id)}/void`, { method: 'POST' })
                           .then((res) => res.json().catch(() => null).then((j) => ({ res, j })))
                           .then(({ res, j }) => {
                             if (!res.ok || !j?.ok) {
                               alert(String(j?.error ?? `HTTP_${res.status}`));
                               return;
                             }
+                            router.push('/contracts?void=1');
                             router.refresh();
                           })
                           .finally(() => setDeletingId(''));
@@ -175,7 +194,7 @@ export default function ContractsListClient({ initialRows }: Props) {
                       disabled={deletingId === r.contract.id}
                       className="text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
                     >
-                      {deletingId === r.contract.id ? 'Deleting…' : 'Delete'}
+                      {deletingId === r.contract.id ? 'Voiding…' : 'Void'}
                     </button>
                   ) : null}
                 </div>

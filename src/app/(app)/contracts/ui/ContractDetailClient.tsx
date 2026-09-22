@@ -29,6 +29,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const [contract, setContract] = useState<Contract>(initialContract);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [rendering, setRendering] = useState(false);
   const [sending, setSending] = useState(false);
   const [signerEmail, setSignerEmail] = useState<string>(String((initialContract as any)?.fields?.signer_email ?? '').trim());
@@ -61,6 +62,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
   const pdfDownloadUrl = `/api/contracts/${encodeURIComponent(contract.id)}/pdf?disposition=attachment`;
 
   async function renderDoc() {
+    setSuccess('');
     setError(null);
     setErrorDetail('');
     setRendering(true);
@@ -79,6 +81,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
   }
 
   async function sendSign() {
+    setSuccess('');
     setError(null);
     setErrorDetail('');
     setSending(true);
@@ -102,9 +105,27 @@ export default function ContractDetailClient({ initialContract, templateName, do
       setSignerEmail(String((j.contract as any)?.fields?.signer_email ?? signerEmail).trim());
       setSignerFullName(String((j.contract as any)?.fields?.signer_full_name ?? signerFullName).trim());
       setSignerTitle(String((j.contract as any)?.fields?.signer_title ?? signerTitle).trim());
+      setSuccess('发送成功：已发起签署并发送链接。');
     } finally {
       setSending(false);
     }
+  }
+
+  async function voidThis() {
+    if (!confirm('Void this contract?')) return;
+    setSuccess('');
+    setError(null);
+    setErrorDetail('');
+    const res = await fetch(`/api/contracts/${encodeURIComponent(contract.id)}/void`, { method: 'POST' }).catch(() => null);
+    const j = (await res?.json().catch(() => null)) as any;
+    if (!res?.ok || !j?.contract?.id) {
+      setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
+      setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
+      return;
+    }
+    setContract(j.contract as Contract);
+    setSuccess('已作废：签署链接已失效。');
+    setTimeout(() => router.push('/contracts?void=1'), 600);
   }
 
   async function checkPdf() {
@@ -137,6 +158,12 @@ export default function ContractDetailClient({ initialContract, templateName, do
     return (signatureRequests ?? []).slice().sort((a, b) => a.email.localeCompare(b.email));
   }, [signatureRequests]);
 
+  const hasAnySigned = useMemo(() => {
+    return reqs.some((r) => String(r.status).toUpperCase() === 'SIGNED' || !!r.signedAt);
+  }, [reqs]);
+
+  const canVoid = contract.status !== 'SIGNED' && contract.status !== 'VOID' && !String(contract.signedAt ?? '').trim() && !hasAnySigned;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-start justify-between gap-4">
@@ -165,6 +192,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
         </div>
       </div>
 
+      {success ? <div className="mt-4 rounded-xl bg-green-50 border border-green-100 p-3 text-sm text-green-700">{success}</div> : null}
       {error ? <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700">{error}</div> : null}
       {errorDetail ? (
         <pre className="mt-2 rounded-xl bg-white border border-black/5 p-3 text-xs text-black/70 overflow-auto">{errorDetail}</pre>
@@ -252,20 +280,18 @@ export default function ContractDetailClient({ initialContract, templateName, do
             <div className="mt-3 flex flex-col gap-2">
               <button
                 onClick={() => void renderDoc()}
-                disabled={rendering || sending}
+                disabled={rendering || sending || contract.status === 'VOID' || contract.status === 'SIGNED'}
                 className="h-10 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
               >
                 {rendering ? 'Rendering…' : 'Render document'}
               </button>
-              {(contract.status === 'DRAFT' || contract.status === 'READY') && !String(contract.packetId ?? '').trim() && !String(contract.signedAt ?? '').trim() ? (
-                <button
-                  onClick={() => void deleteDraft()}
-                  disabled={rendering || sending}
-                  className="h-10 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                >
-                  Delete draft
-                </button>
-              ) : null}
+              <button
+                onClick={() => void voidThis()}
+                disabled={rendering || sending || !canVoid}
+                className="h-10 px-4 rounded-lg border border-red-200 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              >
+                {canVoid ? 'Void contract' : 'Cannot void'}
+              </button>
               <a
                 href={pdfDownloadUrl}
                 download
@@ -286,7 +312,7 @@ export default function ContractDetailClient({ initialContract, templateName, do
               ) : null}
               <button
                 onClick={() => void sendSign()}
-                disabled={rendering || sending}
+                disabled={rendering || sending || contract.status === 'VOID' || contract.status === 'SIGNED'}
                 className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
               >
                 {sending ? 'Sending…' : contract.packetId ? 'Resend signing' : 'Send for signing'}

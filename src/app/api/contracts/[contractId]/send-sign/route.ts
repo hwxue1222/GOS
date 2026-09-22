@@ -31,6 +31,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
   let contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
   if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  if (contract.status === 'VOID' || String(contract.voidedAt ?? '').trim()) {
+    return NextResponse.json({ ok: false, error: 'CONTRACT_VOIDED' }, { status: 409 });
+  }
+  if (contract.status === 'SIGNED' || String(contract.signedAt ?? '').trim()) {
+    return NextResponse.json({ ok: false, error: 'CONTRACT_SIGNED' }, { status: 409 });
+  }
   const templateId = contract.templateId;
 
   const body = (await req.json().catch(() => null)) as
