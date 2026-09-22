@@ -1341,10 +1341,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               ) : null}
               {tpl?.placeholders?.some((p) => p.key === 'partyA_contact') ? (
                 <div className="md:col-span-1">
-                  <div className="text-xs font-medium text-black/60">
-                    联系电话 / Contact Number
-                    {requiredKeys.has('partyA_contact') ? ' *' : ''}
-                  </div>
+                  <div className="text-xs font-medium text-black/60">联系电话 / Contact Number</div>
                   <input
                     value={fields.partyA_contact ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_contact: e.target.value }))}
@@ -1355,10 +1352,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
               {tpl?.placeholders?.some((p) => p.key === 'partyA_address') ? (
                 <div className="md:col-span-2">
-                  <div className="text-xs font-medium text-black/60">
-                    联系地址 / Address
-                    {requiredKeys.has('partyA_address') ? ' *' : ''}
-                  </div>
+                  <div className="text-xs font-medium text-black/60">联系地址 / Address</div>
                   <input
                     value={fields.partyA_address ?? ''}
                     onChange={(e) => setFields((prev) => ({ ...prev, partyA_address: e.target.value }))}
