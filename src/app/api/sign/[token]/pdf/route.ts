@@ -31,9 +31,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   }
 
   if (contract.documentId) {
-    const disposition = new URL(req.url).searchParams.get('disposition');
-    const q = disposition ? `?disposition=${encodeURIComponent(disposition)}` : '';
-    return NextResponse.redirect(`/api/documents/${encodeURIComponent(contract.documentId)}/pdf${q}`, 302);
+    const url = new URL(req.url);
+    const disposition = url.searchParams.get('disposition');
+    const qs = new URLSearchParams();
+    if (disposition) qs.set('disposition', disposition);
+    qs.set('signToken', token);
+    const q = qs.toString();
+    return NextResponse.redirect(`/api/documents/${encodeURIComponent(contract.documentId)}/pdf${q ? `?${q}` : ''}`, 302);
   }
 
   return NextResponse.json({ ok: false, error: 'DOCUMENT_REQUIRED' }, { status: 400 });

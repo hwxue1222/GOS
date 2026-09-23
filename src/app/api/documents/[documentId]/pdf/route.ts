@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { getCurrentUser } from '@/lib/auth';
-import { readDb } from '@/lib/db';
+import { getSignatureContextByToken, readDb } from '@/lib/db';
 import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 import { digitallySignPdfIfEnabled, isPdfPkiEnabled } from '@/lib/pdfPki';
 import type { Browser } from 'puppeteer-core';
@@ -187,11 +187,27 @@ async function canClientAccessDocument(user: { email: string }, documentId: stri
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ documentId: string }> }) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-
   const { documentId } = await ctx.params;
   const url = new URL(req.url);
+  const signToken = String(url.searchParams.get('signToken') ?? '').trim();
+
+  const user = await getCurrentUser();
+  const allowBySignToken = await (async () => {
+    if (user) return false;
+    if (!signToken) return false;
+
+    const sigCtx = await getSignatureContextByToken(signToken);
+    if (!sigCtx) return false;
+    if (String(sigCtx.document.id ?? '').trim() !== documentId) return false;
+
+    const status = String(sigCtx.request.status ?? '').trim().toUpperCase();
+    if (status === 'REVOKED') return false;
+    if (new Date(String(sigCtx.request.expiresAt ?? '')).getTime() < Date.now()) return false;
+    return true;
+  })();
+
+  if (!user && !allowBySignToken) return NextResponse.json({ ok: false }, { status: 401 });
+
   const dispositionParam = (url.searchParams.get('disposition') ?? '').toLowerCase();
   const inlineParam = (url.searchParams.get('inline') ?? '').toLowerCase();
   const downloadParam = (url.searchParams.get('download') ?? '').toLowerCase();
@@ -202,7 +218,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
   const doc = db.documents.find((d) => d.id === documentId) ?? null;
   if (!doc) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
 
-  if (user.role === 'client') {
+  if (user && user.role === 'client') {
     const ok = await canClientAccessDocument(user, documentId);
     if (!ok) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
   }
