@@ -94,8 +94,7 @@ export default function ClientDetailClient({ initialMe, initialClient, initialJo
     return [...jobs]
       .filter((it) => {
         if (it.job.deletedAt) return false;
-        const isComplete =
-          !!it.job.completed || it.job.status === 'Complete' || (it.tasks.total > 0 && it.tasks.done === it.tasks.total);
+        const isComplete = !!it.job.completed;
         if (jobView === 'complete') {
           if (!isComplete) return false;
         } else {

@@ -193,7 +193,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const filtered = useMemo(() => {
     return items.filter((it) => {
       const isDeleted = !!it.job.deletedAt;
-      const isComplete = !!it.job.completed || it.job.status === 'Complete';
+      const isComplete = !!it.job.completed;
       if (view === 'delete') {
         if (!isDeleted) return false;
       } else {
@@ -527,7 +527,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   setFilterClientId(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+                className="w-full rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Client: All</option>
                 {clients.map((c) => (
@@ -542,7 +542,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   setFilterManagerUserId(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+                className="w-full lg:col-span-2 rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Manager in charge: All</option>
                 <option value="__none__">(none)</option>
@@ -558,7 +558,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   setFilterJobName(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
+                className="w-full rounded-md border border-black/10 px-2 py-2 text-sm bg-white"
               >
                 <option value="">Job name: All</option>
                 {jobNameOptions.map((n) => (
@@ -567,7 +567,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
                   </option>
                 ))}
               </select>
-              <div className="hidden lg:block col-span-2" />
+              <div className="hidden lg:block col-span-1" />
               <div className="col-span-2 sm:col-span-4 lg:col-span-3">
                 <PaginationControls
                   total={total}
