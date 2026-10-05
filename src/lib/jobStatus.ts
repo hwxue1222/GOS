@@ -7,4 +7,3 @@ export function computeJobStatus(tasks: JobTask[]): JobStatus {
   if (done === tasks.length) return 'Complete';
   return 'Processing';
 }
-

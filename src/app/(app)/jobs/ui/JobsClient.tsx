@@ -193,7 +193,7 @@ export default function JobsClient({ initialItems, initialClients, initialUsers,
   const filtered = useMemo(() => {
     return items.filter((it) => {
       const isDeleted = !!it.job.deletedAt;
-      const isComplete = !!it.job.completed;
+      const isComplete = !!it.job.completed || it.job.status === 'Complete';
       if (view === 'delete') {
         if (!isDeleted) return false;
       } else {
