@@ -2900,6 +2900,7 @@ export function renderContractHtml(input: {
   fields: Record<string, string>;
 }) {
   const MAX_SERVICE_ITEMS = 10;
+  const MAX_OBLIGATION_ITEMS = 10;
   const partyAEntityType = String((input.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual'
     ? 'individual'
     : 'company';
@@ -2935,6 +2936,13 @@ export function renderContractHtml(input: {
     if (!String(map.fee_item_1 ?? '').trim()) map.fee_item_1 = String((f as any).fee_1_item_1 ?? '').trim();
     if (!String(map.fee_item_2 ?? '').trim()) map.fee_item_2 = String((f as any).fee_1_item_2 ?? '').trim();
     if (!String(map.partyB_sign_date ?? '').trim()) map.partyB_sign_date = generatedDate;
+
+    if (!String(map.section_fees_title ?? '').trim()) map.section_fees_title = 'IV. Fees（收费标准）';
+    if (!String(map.section_refund_title ?? '').trim()) map.section_refund_title = 'V. Refund policy（退费规定）';
+    if (!String(map.section_force_majeure_title ?? '').trim()) map.section_force_majeure_title = 'VI. Force majeure（不可抗力）';
+    if (!String(map.section_breach_title ?? '').trim()) map.section_breach_title = 'VII. Breach（违约责任）';
+    if (!String(map.section_effective_title ?? '').trim()) map.section_effective_title = 'VIII. Effectiveness（生效条款）';
+    if (!String(map.section_law_title ?? '').trim()) map.section_law_title = 'IX. Governing law & dispute resolution（法律及争议解决）';
   }
 
   let html = String(input.templateHtml ?? '');
@@ -3045,6 +3053,97 @@ export function renderContractHtml(input: {
       html = html.replace(
         new RegExp(
           `<div\\s+class="fee-item"\\s+data-fee-item="${n}">[\\s\\S]*?<!--\\s*END_FEE_ITEM_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const partyBCount = Math.max(
+      3,
+      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyB_obligation_count ?? '3') || 3),
+    );
+    for (let n = partyBCount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyB"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PB_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+    for (let n = 4; n <= partyBCount; n++) {
+      const v = String((input.fields ?? {})[`partyB_obligation_${n}`] ?? '').trim();
+      if (v) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyB"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PB_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const partyACount = Math.max(
+      3,
+      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyA_obligation_count ?? '3') || 3),
+    );
+    for (let n = partyACount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyA"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PA_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+    for (let n = 4; n <= partyACount; n++) {
+      const v = String((input.fields ?? {})[`partyA_obligation_${n}`] ?? '').trim();
+      if (v) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyA"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PA_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const isDisabled = (k: string) => String((input.fields ?? {})[k] ?? '').trim() === '0';
+    const removeSection = (id: string, endKey: string) => {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="section"\\s+data-section="${id}">[\\s\\S]*?<!--\\s*${endKey}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    };
+
+    if (isDisabled('section_fees_enabled')) removeSection('fees', 'END_SECTION_FEES');
+    if (isDisabled('section_refund_enabled')) removeSection('refund', 'END_SECTION_REFUND');
+    if (isDisabled('section_force_majeure_enabled')) removeSection('force_majeure', 'END_SECTION_FORCE_MAJEURE');
+    if (isDisabled('section_breach_enabled')) removeSection('breach', 'END_SECTION_BREACH');
+    if (isDisabled('section_effective_enabled')) removeSection('effective', 'END_SECTION_EFFECTIVE');
+    if (isDisabled('section_law_enabled')) removeSection('law', 'END_SECTION_LAW');
+
+    const customCount = Math.max(0, Math.min(5, Number((input.fields ?? {}).custom_section_count ?? '0') || 0));
+    for (let n = customCount + 1; n <= 5; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="section\\s+custom-section"\\s+data-custom-section="${n}">[\\s\\S]*?<!--\\s*END_CUSTOM_SECTION_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+    for (let n = 1; n <= customCount; n++) {
+      const title = String((input.fields ?? {})[`custom_section_title_${n}`] ?? '').trim();
+      const body = String((input.fields ?? {})[`custom_section_body_${n}`] ?? '').trim();
+      if (title || body) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="section\\s+custom-section"\\s+data-custom-section="${n}">[\\s\\S]*?<!--\\s*END_CUSTOM_SECTION_${n}\\s*-->\\s*`,
           'g',
         ),
         '',

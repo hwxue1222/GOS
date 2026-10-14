@@ -211,6 +211,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V75 = 'contracts.templates.v75';
 const SEED_KEY_CONTRACTS_TEMPLATES_V76 = 'contracts.templates.v76';
 const SEED_KEY_CONTRACTS_TEMPLATES_V77 = 'contracts.templates.v77';
 const SEED_KEY_CONTRACTS_TEMPLATES_V78 = 'contracts.templates.v78';
+const SEED_KEY_CONTRACTS_TEMPLATES_V79 = 'contracts.templates.v79';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -678,6 +679,12 @@ function seedContractsTemplatesV48(db: Db) {
     placeholders: [
       { key: 'agreement_title', label: 'Agreement title（协议标题）', required: true },
       { key: 'date', label: 'Date (YYYY-MM-DD)（日期）', required: true },
+      { key: 'section_fees_title', label: 'Section title: Fees（收费标准标题）', required: false },
+      { key: 'section_refund_title', label: 'Section title: Refund（退费规定标题）', required: false },
+      { key: 'section_force_majeure_title', label: 'Section title: Force majeure（不可抗力标题）', required: false },
+      { key: 'section_breach_title', label: 'Section title: Breach（违约责任标题）', required: false },
+      { key: 'section_effective_title', label: 'Section title: Effectiveness（生效条款标题）', required: false },
+      { key: 'section_law_title', label: 'Section title: Governing law（法律及争议解决标题）', required: false },
       { key: 'partyA_name', label: 'Party A (Company name)（甲方公司名称）', required: true },
       { key: 'partyA_uen', label: 'Party A UEN / Registration number（甲方注册号）', required: true },
       { key: 'partyA_address', label: 'Party A address（甲方地址）', required: false },
@@ -727,9 +734,23 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
       { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: true },
       { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: true },
+      { key: 'partyB_obligation_4', label: 'Party B obligations (4)（乙方义务4）', required: false },
+      { key: 'partyB_obligation_5', label: 'Party B obligations (5)（乙方义务5）', required: false },
+      { key: 'partyB_obligation_6', label: 'Party B obligations (6)（乙方义务6）', required: false },
+      { key: 'partyB_obligation_7', label: 'Party B obligations (7)（乙方义务7）', required: false },
+      { key: 'partyB_obligation_8', label: 'Party B obligations (8)（乙方义务8）', required: false },
+      { key: 'partyB_obligation_9', label: 'Party B obligations (9)（乙方义务9）', required: false },
+      { key: 'partyB_obligation_10', label: 'Party B obligations (10)（乙方义务10）', required: false },
       { key: 'partyA_obligation_1', label: 'Party A obligations (1)（甲方义务1）', required: true },
       { key: 'partyA_obligation_2', label: 'Party A obligations (2)（甲方义务2）', required: true },
       { key: 'partyA_obligation_3', label: 'Party A obligations (3)（甲方义务3）', required: true },
+      { key: 'partyA_obligation_4', label: 'Party A obligations (4)（甲方义务4）', required: false },
+      { key: 'partyA_obligation_5', label: 'Party A obligations (5)（甲方义务5）', required: false },
+      { key: 'partyA_obligation_6', label: 'Party A obligations (6)（甲方义务6）', required: false },
+      { key: 'partyA_obligation_7', label: 'Party A obligations (7)（甲方义务7）', required: false },
+      { key: 'partyA_obligation_8', label: 'Party A obligations (8)（甲方义务8）', required: false },
+      { key: 'partyA_obligation_9', label: 'Party A obligations (9)（甲方义务9）', required: false },
+      { key: 'partyA_obligation_10', label: 'Party A obligations (10)（甲方义务10）', required: false },
       { key: 'force_majeure_1', label: 'Force majeure (1)（不可抗力1）', required: true },
       { key: 'force_majeure_2', label: 'Force majeure (2)（不可抗力2）', required: true },
       { key: 'force_majeure_3', label: 'Force majeure (3)（不可抗力3）', required: true },
@@ -740,6 +761,16 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'effective_3', label: 'Effectiveness (3)（生效条款3）', required: true },
       { key: 'law_1', label: 'Governing law & disputes (1)（法律与争议1）', required: true },
       { key: 'law_2', label: 'Governing law & disputes (2)（法律与争议2）', required: true },
+      { key: 'custom_section_title_1', label: 'Custom section (1) title（自定义条款1标题）', required: false },
+      { key: 'custom_section_body_1', label: 'Custom section (1) body（自定义条款1正文）', required: false },
+      { key: 'custom_section_title_2', label: 'Custom section (2) title（自定义条款2标题）', required: false },
+      { key: 'custom_section_body_2', label: 'Custom section (2) body（自定义条款2正文）', required: false },
+      { key: 'custom_section_title_3', label: 'Custom section (3) title（自定义条款3标题）', required: false },
+      { key: 'custom_section_body_3', label: 'Custom section (3) body（自定义条款3正文）', required: false },
+      { key: 'custom_section_title_4', label: 'Custom section (4) title（自定义条款4标题）', required: false },
+      { key: 'custom_section_body_4', label: 'Custom section (4) body（自定义条款4正文）', required: false },
+      { key: 'custom_section_title_5', label: 'Custom section (5) title（自定义条款5标题）', required: false },
+      { key: 'custom_section_body_5', label: 'Custom section (5) body（自定义条款5正文）', required: false },
       { key: 'signer_full_name', label: 'Signer name（签署人姓名）', required: true },
       { key: 'signer_title', label: 'Signer title（签署人职位）', required: true },
       { key: 'signer_date', label: 'Signer date (YYYY-MM-DD)（签署日期）', required: true },
@@ -889,20 +920,34 @@ function seedContractsTemplatesV48(db: Db) {
 
         <div class="section">
           <div class="section-title">II. PARTY B OBLIGATIONS（乙方义务）</div>
-          <div class="p"><b>1.</b> {{partyB_obligation_1}}</div>
-          <div class="p"><b>2.</b> {{partyB_obligation_2}}</div>
-          <div class="p"><b>3.</b> {{partyB_obligation_3}}</div>
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="1"><b>1.</b> {{partyB_obligation_1}}</div><!-- END_OBL_PB_1 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="2"><b>2.</b> {{partyB_obligation_2}}</div><!-- END_OBL_PB_2 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="3"><b>3.</b> {{partyB_obligation_3}}</div><!-- END_OBL_PB_3 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="4"><b>4.</b> {{partyB_obligation_4}}</div><!-- END_OBL_PB_4 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="5"><b>5.</b> {{partyB_obligation_5}}</div><!-- END_OBL_PB_5 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="6"><b>6.</b> {{partyB_obligation_6}}</div><!-- END_OBL_PB_6 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="7"><b>7.</b> {{partyB_obligation_7}}</div><!-- END_OBL_PB_7 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="8"><b>8.</b> {{partyB_obligation_8}}</div><!-- END_OBL_PB_8 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="9"><b>9.</b> {{partyB_obligation_9}}</div><!-- END_OBL_PB_9 -->
+          <div class="p obligation" data-obligation="partyB" data-obligation-item="10"><b>10.</b> {{partyB_obligation_10}}</div><!-- END_OBL_PB_10 -->
         </div>
 
         <div class="section">
           <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>
-          <div class="p"><b>1.</b> {{partyA_obligation_1}}</div>
-          <div class="p"><b>2.</b> {{partyA_obligation_2}}</div>
-          <div class="p"><b>3.</b> {{partyA_obligation_3}}</div>
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="1"><b>1.</b> {{partyA_obligation_1}}</div><!-- END_OBL_PA_1 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="2"><b>2.</b> {{partyA_obligation_2}}</div><!-- END_OBL_PA_2 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="3"><b>3.</b> {{partyA_obligation_3}}</div><!-- END_OBL_PA_3 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="4"><b>4.</b> {{partyA_obligation_4}}</div><!-- END_OBL_PA_4 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="5"><b>5.</b> {{partyA_obligation_5}}</div><!-- END_OBL_PA_5 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="6"><b>6.</b> {{partyA_obligation_6}}</div><!-- END_OBL_PA_6 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="7"><b>7.</b> {{partyA_obligation_7}}</div><!-- END_OBL_PA_7 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="8"><b>8.</b> {{partyA_obligation_8}}</div><!-- END_OBL_PA_8 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="9"><b>9.</b> {{partyA_obligation_9}}</div><!-- END_OBL_PA_9 -->
+          <div class="p obligation" data-obligation="partyA" data-obligation-item="10"><b>10.</b> {{partyA_obligation_10}}</div><!-- END_OBL_PA_10 -->
         </div>
 
-        <div class="section">
-          <div class="section-title">IV. FEES（收费标准）</div>
+        <div class="section" data-section="fees">
+          <div class="section-title">{{section_fees_title}}</div>
           <div class="p"><b>1.</b> Party B's fee standard is as follows:（乙方收费标准如下：）</div>
           <div class="fee-items">
             <div class="fee-item" data-fee-item="1">○ {{fee_item_1}}</div><!-- END_FEE_ITEM_1 -->
@@ -922,39 +967,60 @@ function seedContractsTemplatesV48(db: Db) {
           <div class="p"><b>Swift Code（国际汇款银行码）：</b> {{pay_swift_code}}</div>
           <div class="p"><b>Bank account number (SGD)（银行账号-新币）：</b> {{pay_bank_account_number}}</div>
           <div class="p"><b>Bank address（银行地址）：</b> {{pay_bank_address}}</div>
-        </div>
+        </div><!-- END_SECTION_FEES -->
 
-        <div class="section">
-          <div class="section-title">V. REFUND POLICY（退费规定）</div>
+        <div class="section" data-section="refund">
+          <div class="section-title">{{section_refund_title}}</div>
           <div class="p"><b>1.</b> {{refund_1}}</div>
           <div class="p"><b>2.</b> {{refund_2}}</div>
-        </div>
+        </div><!-- END_SECTION_REFUND -->
 
-        <div class="section">
-          <div class="section-title">VI. FORCE MAJEURE（不可抗力）</div>
+        <div class="section" data-section="force_majeure">
+          <div class="section-title">{{section_force_majeure_title}}</div>
           <div class="p"><b>1.</b> {{force_majeure_1}}</div>
           <div class="p"><b>2.</b> {{force_majeure_2}}</div>
           <div class="p"><b>3.</b> {{force_majeure_3}}</div>
-        </div>
+        </div><!-- END_SECTION_FORCE_MAJEURE -->
 
-        <div class="section">
-          <div class="section-title">VII. BREACH（违约责任）</div>
+        <div class="section" data-section="breach">
+          <div class="section-title">{{section_breach_title}}</div>
           <div class="p"><b>1.</b> {{breach_1}}</div>
           <div class="p"><b>2.</b> {{breach_2}}</div>
-        </div>
+        </div><!-- END_SECTION_BREACH -->
 
-        <div class="section">
-          <div class="section-title">VIII. EFFECTIVENESS（生效条款）</div>
+        <div class="section" data-section="effective">
+          <div class="section-title">{{section_effective_title}}</div>
           <div class="p"><b>1.</b> {{effective_1}}</div>
           <div class="p"><b>2.</b> {{effective_2}}</div>
           <div class="p"><b>3.</b> {{effective_3}}</div>
-        </div>
+        </div><!-- END_SECTION_EFFECTIVE -->
 
-        <div class="section">
-          <div class="section-title">IX. GOVERNING LAW AND DISPUTE RESOLUTION（适用法律及争议解决）</div>
+        <div class="section" data-section="law">
+          <div class="section-title">{{section_law_title}}</div>
           <div class="p"><b>1.</b> {{law_1}}</div>
           <div class="p"><b>2.</b> {{law_2}}</div>
-        </div>
+        </div><!-- END_SECTION_LAW -->
+
+        <div class="section custom-section" data-custom-section="1">
+          <div class="section-title">{{custom_section_title_1}}</div>
+          <div class="p">{{custom_section_body_1}}</div>
+        </div><!-- END_CUSTOM_SECTION_1 -->
+        <div class="section custom-section" data-custom-section="2">
+          <div class="section-title">{{custom_section_title_2}}</div>
+          <div class="p">{{custom_section_body_2}}</div>
+        </div><!-- END_CUSTOM_SECTION_2 -->
+        <div class="section custom-section" data-custom-section="3">
+          <div class="section-title">{{custom_section_title_3}}</div>
+          <div class="p">{{custom_section_body_3}}</div>
+        </div><!-- END_CUSTOM_SECTION_3 -->
+        <div class="section custom-section" data-custom-section="4">
+          <div class="section-title">{{custom_section_title_4}}</div>
+          <div class="p">{{custom_section_body_4}}</div>
+        </div><!-- END_CUSTOM_SECTION_4 -->
+        <div class="section custom-section" data-custom-section="5">
+          <div class="section-title">{{custom_section_title_5}}</div>
+          <div class="p">{{custom_section_body_5}}</div>
+        </div><!-- END_CUSTOM_SECTION_5 -->
 
         <div class="sig">
           <div class="sigbox">
@@ -3193,6 +3259,130 @@ function seedContractsTemplatesV78(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V78] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV79(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V79]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  const idx = templates.findIndex((t) => String(t.name ?? '').trim() === 'Professional Service Agreement');
+  if (idx >= 0) {
+    const tpl = templates[idx];
+    const html = String(tpl.templateHtml ?? '');
+    const placeholders = (tpl.placeholders ?? []) as Array<{ key: string; label: string; required?: boolean }>;
+
+    const requiredKeys = new Set(['partyB_obligation_1', 'partyB_obligation_2', 'partyB_obligation_3', 'partyA_obligation_1', 'partyA_obligation_2', 'partyA_obligation_3']);
+
+    const nextPlaceholders = placeholders
+      .filter((p) => {
+        const key = String(p.key ?? '').trim();
+        if (/^partyB_obligation_(\d+)$/.test(key)) return true;
+        if (/^partyA_obligation_(\d+)$/.test(key)) return true;
+        return true;
+      })
+      .map((p) => {
+        const key = String(p.key ?? '').trim();
+        if (requiredKeys.has(key)) return { ...p, required: true };
+        if (key.startsWith('partyB_obligation_') || key.startsWith('partyA_obligation_')) return { ...p, required: false };
+        return p;
+      });
+
+    const keys = new Set(nextPlaceholders.map((p) => String(p.key ?? '').trim()));
+    const ensurePlaceholder = (key: string, label: string, required?: boolean) => {
+      const k = String(key ?? '').trim();
+      if (!k) return;
+      if (keys.has(k)) return;
+      nextPlaceholders.push({ key: k, label, required });
+      keys.add(k);
+    };
+    for (let n = 4; n <= 10; n++) {
+      const k1 = `partyB_obligation_${n}`;
+      if (!keys.has(k1)) {
+        nextPlaceholders.push({ key: k1, label: `Party B obligations (${n})（乙方义务${n}）`, required: false });
+        keys.add(k1);
+      }
+      const k2 = `partyA_obligation_${n}`;
+      if (!keys.has(k2)) {
+        nextPlaceholders.push({ key: k2, label: `Party A obligations (${n})（甲方义务${n}）`, required: false });
+        keys.add(k2);
+      }
+    }
+
+    ensurePlaceholder('section_fees_title', 'Section title: Fees（收费标准标题）', false);
+    ensurePlaceholder('section_refund_title', 'Section title: Refund（退费规定标题）', false);
+    ensurePlaceholder('section_force_majeure_title', 'Section title: Force majeure（不可抗力标题）', false);
+    ensurePlaceholder('section_breach_title', 'Section title: Breach（违约责任标题）', false);
+    ensurePlaceholder('section_effective_title', 'Section title: Effectiveness（生效条款标题）', false);
+    ensurePlaceholder('section_law_title', 'Section title: Governing law（法律及争议解决标题）', false);
+
+    for (let n = 1; n <= 5; n++) {
+      ensurePlaceholder(`custom_section_title_${n}`, `Custom section (${n}) title（自定义条款${n}标题）`, false);
+      ensurePlaceholder(`custom_section_body_${n}`, `Custom section (${n}) body（自定义条款${n}正文）`, false);
+    }
+
+    let nextHtml = html;
+    if (!nextHtml.includes('data-obligation="partyB"')) {
+      nextHtml = nextHtml
+        .replace(
+          /<div class="section">\s*\n\s*<div class="section-title">II\. PARTY B OBLIGATIONS（乙方义务）<\/div>[\s\S]*?<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">III\. PARTY A OBLIGATIONS（甲方义务）<\/div>/,
+          `<div class="section">\n          <div class="section-title">II. PARTY B OBLIGATIONS（乙方义务）</div>\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="1"><b>1.</b> {{partyB_obligation_1}}</div><!-- END_OBL_PB_1 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="2"><b>2.</b> {{partyB_obligation_2}}</div><!-- END_OBL_PB_2 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="3"><b>3.</b> {{partyB_obligation_3}}</div><!-- END_OBL_PB_3 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="4"><b>4.</b> {{partyB_obligation_4}}</div><!-- END_OBL_PB_4 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="5"><b>5.</b> {{partyB_obligation_5}}</div><!-- END_OBL_PB_5 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="6"><b>6.</b> {{partyB_obligation_6}}</div><!-- END_OBL_PB_6 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="7"><b>7.</b> {{partyB_obligation_7}}</div><!-- END_OBL_PB_7 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="8"><b>8.</b> {{partyB_obligation_8}}</div><!-- END_OBL_PB_8 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="9"><b>9.</b> {{partyB_obligation_9}}</div><!-- END_OBL_PB_9 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="10"><b>10.</b> {{partyB_obligation_10}}</div><!-- END_OBL_PB_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>`,
+        )
+        .replace(
+          /<div class="section">\s*\n\s*<div class="section-title">III\. PARTY A OBLIGATIONS（甲方义务）<\/div>[\s\S]*?<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">IV\. FEES（收费标准）<\/div>/,
+          `<div class="section">\n          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="1"><b>1.</b> {{partyA_obligation_1}}</div><!-- END_OBL_PA_1 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="2"><b>2.</b> {{partyA_obligation_2}}</div><!-- END_OBL_PA_2 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="3"><b>3.</b> {{partyA_obligation_3}}</div><!-- END_OBL_PA_3 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="4"><b>4.</b> {{partyA_obligation_4}}</div><!-- END_OBL_PA_4 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="5"><b>5.</b> {{partyA_obligation_5}}</div><!-- END_OBL_PA_5 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="6"><b>6.</b> {{partyA_obligation_6}}</div><!-- END_OBL_PA_6 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="7"><b>7.</b> {{partyA_obligation_7}}</div><!-- END_OBL_PA_7 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="8"><b>8.</b> {{partyA_obligation_8}}</div><!-- END_OBL_PA_8 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="9"><b>9.</b> {{partyA_obligation_9}}</div><!-- END_OBL_PA_9 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="10"><b>10.</b> {{partyA_obligation_10}}</div><!-- END_OBL_PA_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">IV. FEES（收费标准）</div>`,
+        );
+    }
+
+    if (!nextHtml.includes('{{section_fees_title}}')) {
+      nextHtml = nextHtml
+        .replace(
+          /<div class="section">\s*\n\s*<div class="section-title">IV\. FEES（收费标准）<\/div>/,
+          `<div class="section" data-section="fees">\n          <div class="section-title">{{section_fees_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">V\. REFUND POLICY（退费规定）<\/div>/,
+          `</div><!-- END_SECTION_FEES -->\n\n        <div class="section" data-section="refund">\n          <div class="section-title">{{section_refund_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">VI\. FORCE MAJEURE（不可抗力）<\/div>/,
+          `</div><!-- END_SECTION_REFUND -->\n\n        <div class="section" data-section="force_majeure">\n          <div class="section-title">{{section_force_majeure_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">VII\. BREACH（违约责任）<\/div>/,
+          `</div><!-- END_SECTION_FORCE_MAJEURE -->\n\n        <div class="section" data-section="breach">\n          <div class="section-title">{{section_breach_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">VIII\. EFFECTIVENESS（生效条款）<\/div>/,
+          `</div><!-- END_SECTION_BREACH -->\n\n        <div class="section" data-section="effective">\n          <div class="section-title">{{section_effective_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">IX\. GOVERNING LAW AND DISPUTE RESOLUTION（适用法律及争议解决）<\/div>/,
+          `</div><!-- END_SECTION_EFFECTIVE -->\n\n        <div class="section" data-section="law">\n          <div class="section-title">{{section_law_title}}</div>`,
+        )
+        .replace(
+          /<\/div>\s*\n\s*<div class="sig">/,
+          `</div><!-- END_SECTION_LAW -->\n\n        <div class="section custom-section" data-custom-section="1">\n          <div class="section-title">{{custom_section_title_1}}</div>\n          <div class="p">{{custom_section_body_1}}</div>\n        </div><!-- END_CUSTOM_SECTION_1 -->\n        <div class="section custom-section" data-custom-section="2">\n          <div class="section-title">{{custom_section_title_2}}</div>\n          <div class="p">{{custom_section_body_2}}</div>\n        </div><!-- END_CUSTOM_SECTION_2 -->\n        <div class="section custom-section" data-custom-section="3">\n          <div class="section-title">{{custom_section_title_3}}</div>\n          <div class="p">{{custom_section_body_3}}</div>\n        </div><!-- END_CUSTOM_SECTION_3 -->\n        <div class="section custom-section" data-custom-section="4">\n          <div class="section-title">{{custom_section_title_4}}</div>\n          <div class="p">{{custom_section_body_4}}</div>\n        </div><!-- END_CUSTOM_SECTION_4 -->\n        <div class="section custom-section" data-custom-section="5">\n          <div class="section-title">{{custom_section_title_5}}</div>\n          <div class="p">{{custom_section_body_5}}</div>\n        </div><!-- END_CUSTOM_SECTION_5 -->\n\n        <div class="sig">`,
+        );
+    } else if (!nextHtml.includes('data-custom-section="1"')) {
+      nextHtml = nextHtml.replace(
+        /<div class="sig">/,
+        `<div class="section custom-section" data-custom-section="1">\n          <div class="section-title">{{custom_section_title_1}}</div>\n          <div class="p">{{custom_section_body_1}}</div>\n        </div><!-- END_CUSTOM_SECTION_1 -->\n        <div class="section custom-section" data-custom-section="2">\n          <div class="section-title">{{custom_section_title_2}}</div>\n          <div class="p">{{custom_section_body_2}}</div>\n        </div><!-- END_CUSTOM_SECTION_2 -->\n        <div class="section custom-section" data-custom-section="3">\n          <div class="section-title">{{custom_section_title_3}}</div>\n          <div class="p">{{custom_section_body_3}}</div>\n        </div><!-- END_CUSTOM_SECTION_3 -->\n        <div class="section custom-section" data-custom-section="4">\n          <div class="section-title">{{custom_section_title_4}}</div>\n          <div class="p">{{custom_section_body_4}}</div>\n        </div><!-- END_CUSTOM_SECTION_4 -->\n        <div class="section custom-section" data-custom-section="5">\n          <div class="section-title">{{custom_section_title_5}}</div>\n          <div class="p">{{custom_section_body_5}}</div>\n        </div><!-- END_CUSTOM_SECTION_5 -->\n\n        <div class="sig">`,
+      );
+    }
+
+    if (nextHtml !== html || JSON.stringify(nextPlaceholders) !== JSON.stringify(placeholders)) {
+      templates[idx] = { ...tpl, templateHtml: nextHtml, placeholders: nextPlaceholders as any, updatedAt: now };
+      (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+      changed = true;
+    }
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V79] = true;
   return changed;
 }
 
@@ -8562,6 +8752,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV76(db)) changed = true;
   if (seedContractsTemplatesV77(db)) changed = true;
   if (seedContractsTemplatesV78(db)) changed = true;
+  if (seedContractsTemplatesV79(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

@@ -471,6 +471,42 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
     const ignoreKeys = new Set(['contract_no', 'client_name', 'client_email', 'partyA_email']);
+
+    if (isProfessionalTemplate) {
+      const isDisabled = (k: string) => String((fields as any)[k] ?? '').trim() === '0';
+
+      const addMany = (keys: string[]) => {
+        for (const k of keys) ignoreKeys.add(k);
+      };
+
+      if (isDisabled('section_fees_enabled')) {
+        addMany([
+          'fee_item_count',
+          'fee_item_1',
+          'fee_item_2',
+          'fee_item_3',
+          'fee_item_4',
+          'fee_item_5',
+          'fee_item_6',
+          'fee_1_item_1',
+          'fee_1_item_2',
+          'fee_2',
+          'fee_3',
+          'fee_4',
+          'pay_beneficiary_name',
+          'pay_beneficiary_address',
+          'pay_bank_name',
+          'pay_swift_code',
+          'pay_bank_account_number',
+          'pay_bank_address',
+        ]);
+      }
+      if (isDisabled('section_refund_enabled')) addMany(['refund_1', 'refund_2']);
+      if (isDisabled('section_force_majeure_enabled')) addMany(['force_majeure_1', 'force_majeure_2', 'force_majeure_3']);
+      if (isDisabled('section_breach_enabled')) addMany(['breach_1', 'breach_2']);
+      if (isDisabled('section_effective_enabled')) addMany(['effective_1', 'effective_2', 'effective_3']);
+      if (isDisabled('section_law_enabled')) addMany(['law_1', 'law_2']);
+    }
     const required = (tpl.placeholders ?? []).filter((p) => p.required && !ignoreKeys.has(p.key));
     const missing = required.filter((p) => !String((fields as any)?.[p.key] ?? '').trim());
     return missing.map((p) => ({ key: p.key, label: p.label }));
@@ -529,6 +565,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const EMPTY_ITEM_TOKEN = '__EMPTY__';
   const NOTE_TOKEN = '__NOTE__';
+
+  const MAX_OBLIGATION_ITEMS = 10;
+  const MIN_OBLIGATION_ITEMS = 3;
 
   const parseBulletBody = (rawInput: string) => {
     const raw = String(rawInput ?? '').replaceAll('\r', '');
@@ -683,6 +722,25 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String(next.pay_bank_address ?? '').trim()) {
         next.pay_bank_address = '2 BATTERY ROAD, MAYBANK TOWER, #01-01, Singapore 049907';
       }
+
+      if (!String((next as any).partyB_obligation_count ?? '').trim()) (next as any).partyB_obligation_count = '3';
+      if (!String((next as any).partyA_obligation_count ?? '').trim()) (next as any).partyA_obligation_count = '3';
+
+      if (!String((next as any).section_fees_enabled ?? '').trim()) (next as any).section_fees_enabled = '1';
+      if (!String((next as any).section_refund_enabled ?? '').trim()) (next as any).section_refund_enabled = '1';
+      if (!String((next as any).section_force_majeure_enabled ?? '').trim()) (next as any).section_force_majeure_enabled = '1';
+      if (!String((next as any).section_breach_enabled ?? '').trim()) (next as any).section_breach_enabled = '1';
+      if (!String((next as any).section_effective_enabled ?? '').trim()) (next as any).section_effective_enabled = '1';
+      if (!String((next as any).section_law_enabled ?? '').trim()) (next as any).section_law_enabled = '1';
+
+      if (!String((next as any).section_fees_title ?? '').trim()) (next as any).section_fees_title = 'IV. Fees（收费标准）';
+      if (!String((next as any).section_refund_title ?? '').trim()) (next as any).section_refund_title = 'V. Refund policy（退费规定）';
+      if (!String((next as any).section_force_majeure_title ?? '').trim()) (next as any).section_force_majeure_title = 'VI. Force majeure（不可抗力）';
+      if (!String((next as any).section_breach_title ?? '').trim()) (next as any).section_breach_title = 'VII. Breach（违约责任）';
+      if (!String((next as any).section_effective_title ?? '').trim()) (next as any).section_effective_title = 'VIII. Effectiveness（生效条款）';
+      if (!String((next as any).section_law_title ?? '').trim()) (next as any).section_law_title = 'IX. Governing law & dispute resolution（法律及争议解决）';
+
+      if (!String((next as any).custom_section_count ?? '').trim()) (next as any).custom_section_count = '0';
 
 
       if (!String(next.refund_1 ?? '').trim()) {
@@ -1089,7 +1147,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 pb-28">
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-28">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-lg font-semibold">{contractId ? 'Edit contract' : 'New contract'}</div>
@@ -1114,7 +1172,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       ) : null}
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-6 xl:col-span-5">
           <div className="rounded-xl bg-white border border-black/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="text-sm font-semibold">Template</div>
@@ -1742,15 +1800,68 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">II. Party B obligations（乙方义务）</div>
-                    {[1, 2, 3].map((n) => (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold text-black/70">II. Party B obligations（乙方义务）</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(
+                                MIN_OBLIGATION_ITEMS,
+                                Math.min(MAX_OBLIGATION_ITEMS, Number((prev as any).partyB_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                              );
+                              const nextCount = Math.min(MAX_OBLIGATION_ITEMS, cur + 1);
+                              return { ...prev, partyB_obligation_count: String(nextCount) } as any;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(
+                                MIN_OBLIGATION_ITEMS,
+                                Math.min(MAX_OBLIGATION_ITEMS, Number((prev as any).partyB_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                              );
+                              const nextCount = Math.max(MIN_OBLIGATION_ITEMS, cur - 1);
+                              const next = { ...prev, partyB_obligation_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= MAX_OBLIGATION_ITEMS; i++) {
+                                delete (next as any)[`partyB_obligation_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          disabled={
+                            Math.max(
+                              MIN_OBLIGATION_ITEMS,
+                              Math.min(MAX_OBLIGATION_ITEMS, Number((fields as any).partyB_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                            ) <= MIN_OBLIGATION_ITEMS
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                        >
+                          - Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {Array.from(
+                      {
+                        length: Math.max(
+                          MIN_OBLIGATION_ITEMS,
+                          Math.min(MAX_OBLIGATION_ITEMS, Number((fields as any).partyB_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                        ),
+                      },
+                      (_, i) => i + 1,
+                    ).map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`partyB_obligation_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`partyB_obligation_${n}`] ?? ''}
-                          onChange={(e) =>
-                            setFields((prev) => ({ ...prev, [`partyB_obligation_${n}`]: e.target.value }))
-                          }
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`partyB_obligation_${n}`]: e.target.value }))}
                           rows={2}
                           className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                         />
@@ -1759,15 +1870,68 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                   </div>
 
                   <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">III. Party A obligations（甲方义务）</div>
-                    {[1, 2, 3].map((n) => (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold text-black/70">III. Party A obligations（甲方义务）</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(
+                                MIN_OBLIGATION_ITEMS,
+                                Math.min(MAX_OBLIGATION_ITEMS, Number((prev as any).partyA_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                              );
+                              const nextCount = Math.min(MAX_OBLIGATION_ITEMS, cur + 1);
+                              return { ...prev, partyA_obligation_count: String(nextCount) } as any;
+                            })
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFields((prev) => {
+                              const cur = Math.max(
+                                MIN_OBLIGATION_ITEMS,
+                                Math.min(MAX_OBLIGATION_ITEMS, Number((prev as any).partyA_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                              );
+                              const nextCount = Math.max(MIN_OBLIGATION_ITEMS, cur - 1);
+                              const next = { ...prev, partyA_obligation_count: String(nextCount) } as Record<string, string>;
+                              for (let i = nextCount + 1; i <= MAX_OBLIGATION_ITEMS; i++) {
+                                delete (next as any)[`partyA_obligation_${i}`];
+                              }
+                              return next;
+                            })
+                          }
+                          disabled={
+                            Math.max(
+                              MIN_OBLIGATION_ITEMS,
+                              Math.min(MAX_OBLIGATION_ITEMS, Number((fields as any).partyA_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                            ) <= MIN_OBLIGATION_ITEMS
+                          }
+                          className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                        >
+                          - Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {Array.from(
+                      {
+                        length: Math.max(
+                          MIN_OBLIGATION_ITEMS,
+                          Math.min(MAX_OBLIGATION_ITEMS, Number((fields as any).partyA_obligation_count ?? '0') || MIN_OBLIGATION_ITEMS),
+                        ),
+                      },
+                      (_, i) => i + 1,
+                    ).map((n) => (
                       <div key={n} className="mt-3">
                         <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`partyA_obligation_${n}`) ? ' *' : ''}</div>
                         <textarea
                           value={(fields as any)[`partyA_obligation_${n}`] ?? ''}
-                          onChange={(e) =>
-                            setFields((prev) => ({ ...prev, [`partyA_obligation_${n}`]: e.target.value }))
-                          }
+                          onChange={(e) => setFields((prev) => ({ ...prev, [`partyA_obligation_${n}`]: e.target.value }))}
                           rows={2}
                           className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                         />
@@ -1775,298 +1939,582 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     ))}
                   </div>
 
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">IV. Fees（收费标准）</div>
-
-                    <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（收费项目）</div>
-                    <div className="mt-2">
-                      <div className="text-xs font-medium text-black/60">Intro</div>
-                      <textarea
-                        value={(fields as any).fee_intro ?? ''}
-                        onChange={(e) => setFields((prev) => ({ ...prev, fee_intro: e.target.value }))}
-                        rows={2}
-                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                      />
-                    </div>
-                    <div className="mt-2 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFields((prev) => {
-                            const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
-                            const nextCount = Math.min(6, cur + 1);
-                            return { ...prev, fee_item_count: String(nextCount) } as any;
-                          })
-                        }
-                        className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                      >
-                        + Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFields((prev) => {
-                            const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
-                            const nextCount = Math.max(0, cur - 1);
-                            const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
-                            for (let i = nextCount + 1; i <= 6; i++) {
-                              delete (next as any)[`fee_item_${i}`];
-                              if (i === 1) delete (next as any).fee_1_item_1;
-                              if (i === 2) delete (next as any).fee_1_item_2;
-                            }
-                            return next;
-                          })
-                        }
-                        className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
-                      >
-                        − Remove
-                      </button>
-                    </div>
-
-                    {(() => {
-                      const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
-                      if (!feeItemCount) return <div className="mt-2 text-xs text-black/40">No items</div>;
-                      return (
-                        <div className="mt-2 grid grid-cols-1 gap-3">
-                          {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
-                            <div
-                              key={n}
-                              className="flex items-start gap-2"
-                              onDragOver={(e) => {
-                                const info = dragItemRef.current;
-                                if (!info || info.key !== 'fee_items') return;
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                              }}
-                              onDrop={(e) => {
-                                const info = dragItemRef.current;
-                                if (!info || info.key !== 'fee_items') return;
-                                e.preventDefault();
-                                dragItemRef.current = null;
-                                const to = n - 1;
-                                if (info.from === to) return;
-                                setFields((prev) => {
-                                  const count = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
-                                  const values = Array.from({ length: count }, (_, i) => String((prev as any)[`fee_item_${i + 1}`] ?? ''));
-                                  const [moved] = values.splice(info.from, 1);
-                                  values.splice(to, 0, moved);
-                                  const next = { ...prev } as any;
-                                  for (let i = 0; i < count; i++) next[`fee_item_${i + 1}`] = values[i] ?? '';
-                                  if (count >= 1) next.fee_1_item_1 = values[0] ?? '';
-                                  if (count >= 2) next.fee_1_item_2 = values[1] ?? '';
-                                  return next;
-                                });
-                              }}
+                  {(() => {
+                    const enabled = String((fields as any).section_fees_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_fees_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_fees_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_fees_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
                             >
-                              <div
-                                draggable
-                                onDragStart={(e) => {
-                                  dragItemRef.current = { key: 'fee_items', from: n - 1 };
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  try {
-                                    e.dataTransfer.setData('text/plain', `fee_items:${n - 1}`);
-                                  } catch {}
-                                }}
-                                onDragEnd={() => {
-                                  dragItemRef.current = null;
-                                }}
-                                className="mt-7 text-sm text-black/40 select-none cursor-grab"
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_fees_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
+                        </div>
+
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            <div className="mt-3 text-xs font-medium text-black/60">1. Fee items（收费项目）</div>
+                            <div className="mt-2">
+                              <div className="text-xs font-medium text-black/60">Intro</div>
+                              <textarea
+                                value={(fields as any).fee_intro ?? ''}
+                                onChange={(e) => setFields((prev) => ({ ...prev, fee_intro: e.target.value }))}
+                                rows={2}
+                                className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
+                            <div className="mt-2 flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFields((prev) => {
+                                    const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                                    const nextCount = Math.min(6, cur + 1);
+                                    return { ...prev, fee_item_count: String(nextCount) } as any;
+                                  })
+                                }
+                                className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
                               >
-                                ⋮⋮
+                                + Add
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFields((prev) => {
+                                    const cur = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                                    const nextCount = Math.max(0, cur - 1);
+                                    const next = { ...prev, fee_item_count: String(nextCount) } as Record<string, string>;
+                                    for (let i = nextCount + 1; i <= 6; i++) {
+                                      delete (next as any)[`fee_item_${i}`];
+                                      if (i === 1) delete (next as any).fee_1_item_1;
+                                      if (i === 2) delete (next as any).fee_1_item_2;
+                                    }
+                                    return next;
+                                  })
+                                }
+                                className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02]"
+                              >
+                                − Remove
+                              </button>
+                            </div>
+
+                            {(() => {
+                              const feeItemCount = Math.max(0, Math.min(6, Number((fields as any).fee_item_count ?? '0') || 0));
+                              if (!feeItemCount) return <div className="mt-2 text-xs text-black/40">No items</div>;
+                              return (
+                                <div className="mt-2 grid grid-cols-1 gap-3">
+                                  {Array.from({ length: feeItemCount }, (_, idx) => idx + 1).map((n) => (
+                                    <div
+                                      key={n}
+                                      className="flex items-start gap-2"
+                                      onDragOver={(e) => {
+                                        const info = dragItemRef.current;
+                                        if (!info || info.key !== 'fee_items') return;
+                                        e.preventDefault();
+                                        e.dataTransfer.dropEffect = 'move';
+                                      }}
+                                      onDrop={(e) => {
+                                        const info = dragItemRef.current;
+                                        if (!info || info.key !== 'fee_items') return;
+                                        e.preventDefault();
+                                        dragItemRef.current = null;
+                                        const to = n - 1;
+                                        if (info.from === to) return;
+                                        setFields((prev) => {
+                                          const count = Math.max(0, Math.min(6, Number((prev as any).fee_item_count ?? '0') || 0));
+                                          const values = Array.from({ length: count }, (_, i) => String((prev as any)[`fee_item_${i + 1}`] ?? ''));
+                                          const [moved] = values.splice(info.from, 1);
+                                          values.splice(to, 0, moved);
+                                          const next = { ...prev } as any;
+                                          for (let i = 0; i < count; i++) next[`fee_item_${i + 1}`] = values[i] ?? '';
+                                          if (count >= 1) next.fee_1_item_1 = values[0] ?? '';
+                                          if (count >= 2) next.fee_1_item_2 = values[1] ?? '';
+                                          return next;
+                                        });
+                                      }}
+                                    >
+                                      <div
+                                        draggable
+                                        onDragStart={(e) => {
+                                          dragItemRef.current = { key: 'fee_items', from: n - 1 };
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          try {
+                                            e.dataTransfer.setData('text/plain', `fee_items:${n - 1}`);
+                                          } catch {}
+                                        }}
+                                        onDragEnd={() => {
+                                          dragItemRef.current = null;
+                                        }}
+                                        className="mt-7 text-sm text-black/40 select-none cursor-grab"
+                                      >
+                                        ⋮⋮
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="text-xs font-medium text-black/60">Item {n}</div>
+                                        <input
+                                          value={(fields as any)[`fee_item_${n}`] ?? ''}
+                                          onChange={(e) =>
+                                            setFields((prev) => {
+                                              const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
+                                              if (n === 1) next.fee_1_item_1 = e.target.value;
+                                              if (n === 2) next.fee_1_item_2 = e.target.value;
+                                              return next;
+                                            })
+                                          }
+                                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
+                            <div className="mt-3">
+                              <div className="text-xs font-medium text-black/60">Note</div>
+                              <textarea
+                                value={(fields as any).fee_note ?? ''}
+                                onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
+                                rows={2}
+                                className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                              />
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-1 gap-3">
+                              <div>
+                                <div className="text-xs font-medium text-black/60">2.{requiredKeys.has('fee_2') ? ' *' : ''}</div>
+                                <textarea
+                                  value={fields.fee_2 ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
                               </div>
-                              <div className="flex-1">
-                                <div className="text-xs font-medium text-black/60">Item {n}</div>
+                              <div>
+                                <div className="text-xs font-medium text-black/60">3.{requiredKeys.has('fee_3') ? ' *' : ''}</div>
+                                <textarea
+                                  value={fields.fee_3 ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-black/60">4.{requiredKeys.has('fee_4') ? ' *' : ''}</div>
+                                <textarea
+                                  value={fields.fee_4 ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="md:col-span-1">
+                                <div className="text-xs font-medium text-black/60">
+                                  Beneficiary Name（收款人名称）{requiredKeys.has('pay_beneficiary_name') ? ' *' : ''}
+                                </div>
                                 <input
-                                  value={(fields as any)[`fee_item_${n}`] ?? ''}
-                                  onChange={(e) =>
-                                    setFields((prev) => {
-                                      const next = { ...prev, [`fee_item_${n}`]: e.target.value } as any;
-                                      if (n === 1) next.fee_1_item_1 = e.target.value;
-                                      if (n === 2) next.fee_1_item_2 = e.target.value;
-                                      return next;
-                                    })
-                                  }
+                                  value={fields.pay_beneficiary_name ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_name: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div className="md:col-span-1">
+                                <div className="text-xs font-medium text-black/60">Bank Name（银行名称）{requiredKeys.has('pay_bank_name') ? ' *' : ''}</div>
+                                <input
+                                  value={fields.pay_bank_name ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_name: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <div className="text-xs font-medium text-black/60">
+                                  Beneficiary address（收款人地址）{requiredKeys.has('pay_beneficiary_address') ? ' *' : ''}
+                                </div>
+                                <input
+                                  value={fields.pay_beneficiary_address ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_address: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div className="md:col-span-1">
+                                <div className="text-xs font-medium text-black/60">Swift Code（国际汇款银行码）{requiredKeys.has('pay_swift_code') ? ' *' : ''}</div>
+                                <input
+                                  value={fields.pay_swift_code ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_swift_code: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div className="md:col-span-1">
+                                <div className="text-xs font-medium text-black/60">
+                                  Bank account number (SGD)（银行账号-新币）{requiredKeys.has('pay_bank_account_number') ? ' *' : ''}
+                                </div>
+                                <input
+                                  value={fields.pay_bank_account_number ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_account_number: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <div className="text-xs font-medium text-black/60">Bank address（银行地址）{requiredKeys.has('pay_bank_address') ? ' *' : ''}</div>
+                                <input
+                                  value={fields.pay_bank_address ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_address: e.target.value }))}
                                   className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                                 />
                               </div>
                             </div>
-                          ))}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {(() => {
+                    const enabled = String((fields as any).section_refund_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_refund_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_refund_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_refund_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_refund_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
                         </div>
-                      );
-                    })()}
 
-                    <div className="mt-3">
-                      <div className="text-xs font-medium text-black/60">Note</div>
-                      <textarea
-                        value={(fields as any).fee_note ?? ''}
-                        onChange={(e) => setFields((prev) => ({ ...prev, fee_note: e.target.value }))}
-                        rows={2}
-                        className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                      />
-                    </div>
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            {[1, 2].map((n) => (
+                              <div key={n} className="mt-3">
+                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`refund_${n}`) ? ' *' : ''}</div>
+                                <textarea
+                                  value={(fields as any)[`refund_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`refund_${n}`]: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                    <div className="mt-3 grid grid-cols-1 gap-3">
-                      <div>
-                        <div className="text-xs font-medium text-black/60">2.{requiredKeys.has('fee_2') ? ' *' : ''}</div>
-                        <textarea
-                          value={fields.fee_2 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_2: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-black/60">3.{requiredKeys.has('fee_3') ? ' *' : ''}</div>
-                        <textarea
-                          value={fields.fee_3 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_3: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-black/60">4.{requiredKeys.has('fee_4') ? ' *' : ''}</div>
-                        <textarea
-                          value={fields.fee_4 ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, fee_4: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">
-                          Beneficiary Name（收款人名称）{requiredKeys.has('pay_beneficiary_name') ? ' *' : ''}
+                  {(() => {
+                    const enabled = String((fields as any).section_force_majeure_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_force_majeure_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_force_majeure_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_force_majeure_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_force_majeure_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
                         </div>
-                        <input
-                          value={fields.pay_beneficiary_name ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_name: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            {[1, 2, 3].map((n) => (
+                              <div key={n} className="mt-3">
+                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`force_majeure_${n}`) ? ' *' : ''}</div>
+                                <textarea
+                                  value={(fields as any)[`force_majeure_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`force_majeure_${n}`]: e.target.value }))}
+                                  rows={3}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
                       </div>
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Bank Name（银行名称）{requiredKeys.has('pay_bank_name') ? ' *' : ''}</div>
-                        <input
-                          value={fields.pay_bank_name ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_name: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <div className="text-xs font-medium text-black/60">
-                          Beneficiary address（收款人地址）{requiredKeys.has('pay_beneficiary_address') ? ' *' : ''}
+                    );
+                  })()}
+
+                  {(() => {
+                    const enabled = String((fields as any).section_breach_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_breach_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_breach_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_breach_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_breach_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
                         </div>
-                        <input
-                          value={fields.pay_beneficiary_address ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_beneficiary_address: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            {[1, 2].map((n) => (
+                              <div key={n} className="mt-3">
+                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`breach_${n}`) ? ' *' : ''}</div>
+                                <textarea
+                                  value={(fields as any)[`breach_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`breach_${n}`]: e.target.value }))}
+                                  rows={3}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
                       </div>
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">Swift Code（国际汇款银行码）{requiredKeys.has('pay_swift_code') ? ' *' : ''}</div>
-                        <input
-                          value={fields.pay_swift_code ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_swift_code: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div className="md:col-span-1">
-                        <div className="text-xs font-medium text-black/60">
-                          Bank account number (SGD)（银行账号-新币）{requiredKeys.has('pay_bank_account_number') ? ' *' : ''}
+                    );
+                  })()}
+
+                  {(() => {
+                    const enabled = String((fields as any).section_effective_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_effective_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_effective_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_effective_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_effective_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
                         </div>
-                        <input
-                          value={fields.pay_bank_account_number ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_account_number: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <div className="text-xs font-medium text-black/60">Bank address（银行地址）{requiredKeys.has('pay_bank_address') ? ' *' : ''}</div>
-                        <input
-                          value={fields.pay_bank_address ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, pay_bank_address: e.target.value }))}
-                          className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">V. Refund policy（退费规定）</div>
-                    {[1, 2].map((n) => (
-                      <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`refund_${n}`) ? ' *' : ''}</div>
-                        <textarea
-                          value={(fields as any)[`refund_${n}`] ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, [`refund_${n}`]: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            {[1, 2, 3].map((n) => (
+                              <div key={n} className="mt-3">
+                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`effective_${n}`) ? ' *' : ''}</div>
+                                <textarea
+                                  value={(fields as any)[`effective_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`effective_${n}`]: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
 
+                  {(() => {
+                    const enabled = String((fields as any).section_law_enabled ?? '1').trim() !== '0';
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            value={(fields as any).section_law_title ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, section_law_title: e.target.value }))}
+                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_law_enabled: '1' }))}
+                              disabled={enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFields((prev) => ({ ...prev, section_law_enabled: '0' }))}
+                              disabled={!enabled}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
+                        </div>
 
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">VI. Force majeure（不可抗力）</div>
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`force_majeure_${n}`) ? ' *' : ''}</div>
-                        <textarea
-                          value={(fields as any)[`force_majeure_${n}`] ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, [`force_majeure_${n}`]: e.target.value }))}
-                          rows={3}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+                        {!enabled ? (
+                          <div className="mt-2 text-xs text-black/40">Removed</div>
+                        ) : (
+                          <>
+                            {[1, 2].map((n) => (
+                              <div key={n} className="mt-3">
+                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`law_${n}`) ? ' *' : ''}</div>
+                                <textarea
+                                  value={(fields as any)[`law_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`law_${n}`]: e.target.value }))}
+                                  rows={2}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
 
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">VII. Breach（违约责任）</div>
-                    {[1, 2].map((n) => (
-                      <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`breach_${n}`) ? ' *' : ''}</div>
-                        <textarea
-                          value={(fields as any)[`breach_${n}`] ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, [`breach_${n}`]: e.target.value }))}
-                          rows={3}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  {(() => {
+                    const count = Math.max(0, Math.min(5, Number((fields as any).custom_section_count ?? '0') || 0));
+                    return (
+                      <div className="rounded-lg border border-black/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-black/70">X. Additional sections（自定义条款）</div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFields((prev) => {
+                                  const cur = Math.max(0, Math.min(5, Number((prev as any).custom_section_count ?? '0') || 0));
+                                  const nextCount = Math.min(5, cur + 1);
+                                  return { ...prev, custom_section_count: String(nextCount) } as any;
+                                })
+                              }
+                              disabled={count >= 5}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFields((prev) => {
+                                  const cur = Math.max(0, Math.min(5, Number((prev as any).custom_section_count ?? '0') || 0));
+                                  const nextCount = Math.max(0, cur - 1);
+                                  const next = { ...prev, custom_section_count: String(nextCount) } as Record<string, string>;
+                                  for (let i = nextCount + 1; i <= 5; i++) {
+                                    delete (next as any)[`custom_section_title_${i}`];
+                                    delete (next as any)[`custom_section_body_${i}`];
+                                  }
+                                  return next;
+                                })
+                              }
+                              disabled={count <= 0}
+                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                            >
+                              − Remove
+                            </button>
+                          </div>
+                        </div>
 
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">VIII. Effectiveness（生效条款）</div>
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`effective_${n}`) ? ' *' : ''}</div>
-                        <textarea
-                          value={(fields as any)[`effective_${n}`] ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, [`effective_${n}`]: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
+                        {!count ? (
+                          <div className="mt-2 text-xs text-black/40">No additional sections</div>
+                        ) : (
+                          <div className="mt-3 space-y-3">
+                            {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
+                              <div key={n} className="rounded-lg border border-black/10 p-3">
+                                <div className="text-xs font-medium text-black/60">Section {n} title</div>
+                                <input
+                                  value={(fields as any)[`custom_section_title_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`custom_section_title_${n}`]: e.target.value }))}
+                                  className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                                <div className="mt-2 text-xs font-medium text-black/60">Body</div>
+                                <textarea
+                                  value={(fields as any)[`custom_section_body_${n}`] ?? ''}
+                                  onChange={(e) => setFields((prev) => ({ ...prev, [`custom_section_body_${n}`]: e.target.value }))}
+                                  rows={3}
+                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="rounded-lg border border-black/10 p-3">
-                    <div className="text-xs font-semibold text-black/70">IX. Governing law & dispute resolution（法律及争议解决）</div>
-                    {[1, 2].map((n) => (
-                      <div key={n} className="mt-3">
-                        <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`law_${n}`) ? ' *' : ''}</div>
-                        <textarea
-                          value={(fields as any)[`law_${n}`] ?? ''}
-                          onChange={(e) => setFields((prev) => ({ ...prev, [`law_${n}`]: e.target.value }))}
-                          rows={2}
-                          className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               ) : isQuotationTemplate ? (
                 <div className="space-y-4">
@@ -2730,7 +3178,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           </div>
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-6 xl:col-span-7">
           <div className="rounded-xl bg-white border border-black/5 overflow-hidden">
             <div className="px-4 py-3 border-b border-black/5">
               <div className="text-sm font-semibold">Preview</div>
