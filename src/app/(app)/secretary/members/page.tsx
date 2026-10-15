@@ -34,10 +34,9 @@ export default async function SecretaryMembersPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="secretary" />
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         <MembersClient />
       </div>
     </div>
   );
 }
-

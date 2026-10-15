@@ -21,10 +21,10 @@ export default async function AuditLogPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <AppTopNav active="reports" />
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="flex-1 min-h-0">
+        <div className="max-w-6xl mx-auto h-full min-h-0 px-4 py-6 flex flex-col">
           <h1 className="text-xl font-semibold">Audit Log</h1>
-          <div className="mt-4 rounded-xl bg-white border border-black/5 p-4">
+          <div className="mt-4 min-h-0 flex-1 rounded-xl bg-white border border-black/5 p-4 flex flex-col">
             <AuditLogClient />
           </div>
         </div>
@@ -32,4 +32,3 @@ export default async function AuditLogPage() {
     </div>
   );
 }
-

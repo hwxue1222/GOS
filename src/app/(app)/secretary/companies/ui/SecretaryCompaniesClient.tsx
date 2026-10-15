@@ -81,7 +81,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
   const companyHref = (clientId: string) => `/secretary/companies/${encodeURIComponent(clientId)}`;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto h-full min-h-0 px-4 py-6 flex flex-col">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -119,7 +119,8 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
         />
       </div>
 
-      <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
+      <div className="mt-4 min-h-0 flex-1 rounded-xl bg-white border border-black/5 overflow-hidden">
+        <div className="h-full overflow-auto">
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="bg-black/2">
             <tr className="text-left text-black/60">
@@ -180,6 +181,7 @@ export default function SecretaryCompaniesClient({ initialItems, canViewPeople, 
             ) : null}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

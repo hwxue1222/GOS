@@ -152,8 +152,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
   }
 
   return (
-    <div className="flex-1">
-      <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="flex-1 min-h-0">
+      <div className="max-w-6xl mx-auto h-full min-h-0 px-4 py-6 flex flex-col">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Clients</h1>
           <div className="flex items-center gap-2">
@@ -189,7 +189,8 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
           />
         </div>
 
-        <div className="mt-4 rounded-xl bg-white border border-black/5 overflow-x-auto">
+        <div className="mt-4 min-h-0 flex-1 rounded-xl bg-white border border-black/5 overflow-hidden">
+          <div className="h-full overflow-auto">
           <table className="min-w-full text-xs">
             <thead className="text-left text-black/60">
               <tr className="border-b border-black/5">
@@ -265,6 +266,7 @@ export default function ClientsClient({ initialMe, initialClients }: Props) {
               ) : null}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

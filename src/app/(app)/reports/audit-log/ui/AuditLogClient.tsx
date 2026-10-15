@@ -77,7 +77,7 @@ export default function AuditLogClient() {
   const pageEnd = Math.min(total, (currentPage - 1) * safePageSize + items.length);
 
   return (
-    <div>
+    <div className="flex flex-1 min-h-0 flex-col">
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <select
@@ -122,7 +122,8 @@ export default function AuditLogClient() {
 
       {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+        <div className="h-full overflow-auto">
         <table className="min-w-full text-sm">
           <thead className="text-left text-black/60">
             <tr className="border-b border-black/5">
@@ -165,8 +166,8 @@ export default function AuditLogClient() {
             ) : null}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
 }
-

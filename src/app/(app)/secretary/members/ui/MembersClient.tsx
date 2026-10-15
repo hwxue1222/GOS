@@ -470,7 +470,7 @@ export default function MembersClient() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto h-full min-h-0 px-4 py-6 flex flex-col">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>

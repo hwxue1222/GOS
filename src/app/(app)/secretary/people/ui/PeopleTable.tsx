@@ -65,7 +65,8 @@ export default function PeopleTable({ people, loading }: Props) {
   };
 
   return (
-    <div className="mt-6 rounded-xl bg-white border border-black/5 overflow-x-auto">
+    <div className="mt-6 min-h-0 flex-1 rounded-xl bg-white border border-black/5 overflow-hidden">
+      <div className="h-full overflow-auto">
       <table className="min-w-[1650px] w-full text-sm">
         <thead className="bg-black/2">
           <tr className="text-left text-black/60">
@@ -174,6 +175,7 @@ export default function PeopleTable({ people, loading }: Props) {
           ) : null}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

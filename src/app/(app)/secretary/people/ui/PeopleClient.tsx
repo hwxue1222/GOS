@@ -223,7 +223,7 @@ export default function PeopleClient() {
 
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto h-full min-h-0 px-4 py-6 flex flex-col">
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm text-black/60">
