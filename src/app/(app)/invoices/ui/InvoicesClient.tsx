@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDateDMY } from '@/lib/date';
@@ -99,6 +99,7 @@ function toCsvValue(v: string) {
 
 export default function InvoicesClient({ initialMe, initialInvoices, initialClients }: Props) {
   const router = useRouter();
+  const [isRefreshing, startRefreshing] = useTransition();
   const [me] = useState<UserLite>(initialMe);
   const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices);
   const [clients] = useState<ClientLite[]>(initialClients);
@@ -296,24 +297,19 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
     };
   }, [form.billToType, form.clientId, form.companyName, showAdd]);
 
+  useEffect(() => {
+    setInvoices(initialInvoices);
+  }, [initialInvoices]);
+
   const subtotal = computeSubtotal(items);
   const discount = round2(Math.max(0, safeNumber(form.discount)));
   const tax = round2(Math.max(0, safeNumber(form.tax)));
   const totalAmount = round2(Math.max(0, subtotal - discount + tax));
 
-  async function reloadInvoices() {
-    const res = await fetch('/api/invoices').catch(() => null);
-    if (!res?.ok) return;
-    const j = (await res.json().catch(() => null)) as { ok?: boolean; invoices?: Invoice[] } | null;
-    if (!j?.invoices) return;
-    const clientById = new Map(clients.map((c) => [c.id, c]));
-    setInvoices(
-      j.invoices.map((inv) => ({
-        invoice: inv,
-        client: inv.billTo.type === 'CLIENT' ? clientById.get(inv.billTo.clientId) ?? null : null,
-        createdByName: '-',
-      })),
-    );
+  function reloadInvoices() {
+    startRefreshing(() => {
+      router.refresh();
+    });
   }
 
   async function generateStatement() {
@@ -598,9 +594,10 @@ export default function InvoicesClient({ initialMe, initialInvoices, initialClie
           <div className="flex items-center gap-2">
             <button
               onClick={() => void reloadInvoices()}
+              disabled={isRefreshing}
               className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
             >
-              Refresh
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
               onClick={() => exportCsv()}
