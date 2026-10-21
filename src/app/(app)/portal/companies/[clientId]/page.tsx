@@ -199,6 +199,7 @@ export default async function PortalCompanyDetailPage({ params }: { params: Prom
                 <div className="mt-4">
                   <DlRow label="Company registration no." value={client.companyRegistrationNo ?? '-'} />
                   <DlRow label="FYE" value={client.fye ?? '-'} />
+                  <DlRow label="Latest AGM date" value={date10(client.latestAgmDate)} />
                   <DlRow label="Entity status" value={client.entityStatus ?? '-'} />
                   <DlRow label="Incorporation date" value={date10(client.incorporationDate)} />
                   <DlRow label="Registered office address" value={client.registeredOfficeAddress ?? '-'} />

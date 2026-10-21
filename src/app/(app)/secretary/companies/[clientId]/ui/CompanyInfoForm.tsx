@@ -110,6 +110,15 @@ export default function CompanyInfoForm({ client, onChange, canEdit }: Props) {
             />
           </label>
           <label className="text-sm">
+            <div className="text-black/60">Entity status</div>
+            <input
+              value={client.entityStatus ?? ''}
+              onChange={(e) => onChange({ entityStatus: e.target.value || undefined })}
+              disabled={!canEdit}
+              className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/5"
+            />
+          </label>
+          <label className="text-sm">
             <div className="text-black/60">Latest AGM date</div>
             <input
               value={client.latestAgmDate ?? ''}

@@ -161,6 +161,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
 
   const { clientId } = await ctx.params;
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const entityStatusRaw = body?.entityStatus;
+  const hasEntityStatus = typeof entityStatusRaw === 'string';
+  const entityStatus = hasEntityStatus ? entityStatusRaw.trim() || undefined : undefined;
   const currencyRaw = typeof body?.paidUpCapitalCurrency === 'string' ? body.paidUpCapitalCurrency.trim().toUpperCase() : '';
   const paidUpCapitalCurrency =
     currencyRaw === 'SGD' || currencyRaw === 'USD' || currencyRaw === 'CNY' || currencyRaw === 'MYR'
@@ -201,6 +204,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ clientId: str
     incorporationDate: typeof body?.incorporationDate === 'string' ? body.incorporationDate.trim() || undefined : undefined,
     registeredOfficeAddress:
       typeof body?.registeredOfficeAddress === 'string' ? body.registeredOfficeAddress.trim() || undefined : undefined,
+    ...(hasEntityStatus
+      ? {
+          entityStatus,
+          isStruckOff: Boolean(entityStatus && entityStatus.toLowerCase().includes('struck off')),
+        }
+      : {}),
   };
 
   if (typeof patch.totalShares === 'number' && Number.isFinite(patch.totalShares)) {
