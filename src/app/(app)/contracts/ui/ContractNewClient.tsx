@@ -1101,7 +1101,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 pb-8">
+    <div className="max-w-7xl mx-auto px-4 py-6 pb-28">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-lg font-semibold">{contractId ? 'Edit contract' : 'New contract'}</div>
@@ -3084,73 +3084,39 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
         </div>
 
-        <div className="lg:col-span-6 xl:col-span-7">
-          <div className="sticky top-6 space-y-4">
-            <div className="rounded-xl bg-white border border-black/5 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold">Workflow</div>
-                  <div className="mt-1 text-xs text-black/60">Save, export, and continue signing from one place.</div>
-                </div>
-                <div className="text-right text-xs text-black/50">
-                  <div>{contractId ? 'Editing draft' : 'New draft'}</div>
-                  <div className="mt-1">{tpl ? displayTemplateName(tpl.name) : 'No template selected'}</div>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] font-medium text-black/60">
-                  {contractId ? 'Draft mode' : 'Unsaved draft'}
-                </span>
-                <span className="inline-flex items-center rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] font-medium text-black/60">
-                  {missingRequired.length ? `${missingRequired.length} required missing` : 'Ready to save'}
-                </span>
-              </div>
-
-              <div className="mt-3 space-y-2">
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <div className="max-w-6xl mx-auto px-4 pb-[env(safe-area-inset-bottom)]">
+            <div className="rounded-xl bg-white border border-black/5 p-3 flex flex-wrap gap-2 shadow-sm">
+              <button
+                onClick={() => void saveDraft()}
+                disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
+                className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : contractId ? 'Update' : 'Save'}
+              </button>
+              {contractId ? (
                 <button
-                  onClick={() => void saveDraft()}
+                  onClick={() => void saveDraft({ asNew: true })}
                   disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
-                  className="h-11 w-full px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 disabled:opacity-50"
+                  className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
                 >
-                  {saving ? 'Saving…' : contractId ? 'Update draft' : 'Save draft'}
+                  Save as new
                 </button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void openPdf()}
-                    disabled={downloading || !tpl}
-                    className="h-10 px-4 rounded-lg border border-black/10 bg-white text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                  >
-                    Open PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void downloadPdf()}
-                    disabled={downloading || !tpl}
-                    className="h-10 px-4 rounded-lg border border-black/10 bg-white text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                  >
-                    {downloading ? 'Downloading…' : 'Download PDF'}
-                  </button>
-                </div>
-                {contractId ? (
-                  <button
-                    onClick={() => void saveDraft({ asNew: true })}
-                    disabled={saving || rendering || sending || !clientOk || missingRequired.length > 0}
-                    className="h-10 w-full px-4 rounded-lg border border-dashed border-black/15 bg-white text-sm font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                  >
-                    Save as new draft
-                  </button>
-                ) : null}
-              </div>
-
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void downloadPdf()}
+                disabled={downloading || !tpl}
+                className="h-10 px-4 rounded-lg border border-black/10 text-sm font-medium flex items-center hover:bg-black/[0.02] disabled:opacity-50"
+              >
+                {downloading ? 'Downloading…' : 'Download PDF'}
+              </button>
               {showSigningBlock || isNomineeTemplate ? (
-                <div className="mt-4 border-t border-black/5 pt-4">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-black/45">Signing</div>
+                <div className="flex flex-col">
                   <button
                     onClick={() => void sendForSigning()}
                     disabled={sendDisabled}
-                    className="h-10 w-full px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
+                    className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-600/90 disabled:opacity-50"
                   >
                     {sending && rendering
                       ? 'Generating…'
@@ -3160,39 +3126,42 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                           ? 'Resend signing'
                           : 'Send for signing'}
                   </button>
-                  {sendDisabledHint ? (
-                    <div className="mt-2 rounded-lg bg-black/[0.03] px-3 py-2 text-[11px] text-black/60">{sendDisabledHint}</div>
-                  ) : null}
+                  {sendDisabledHint ? <div className="mt-1 text-[11px] text-black/50">{sendDisabledHint}</div> : null}
                 </div>
               ) : null}
             </div>
+          </div>
+        </div>
 
-            <div className="rounded-xl bg-white border border-black/5 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-black/5 bg-black/[0.015]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold">Preview</div>
-                    <div className="text-xs text-black/60 mt-1">
-                      {tpl?.name === 'Quotation（报价）'
-                        ? `Date: ${String((fields as any).date ?? '').trim() || new Date().toISOString().slice(0, 10)}`
-                        : contractNo
-                          ? `Contract No: ${contractNo}`
-                          : 'Contract No: -'}
-                    </div>
-                  </div>
-                  <div className="text-right text-[11px] text-black/45">
-                    <div>{tpl ? displayTemplateName(tpl.name) : 'No template selected'}</div>
-                    {documentSha ? <div className="mt-1">Hash: {documentSha}</div> : null}
-                  </div>
-                </div>
+        <div className="lg:col-span-6 xl:col-span-7">
+          <div className="rounded-xl bg-white border border-black/5 overflow-hidden">
+            <div className="px-4 py-3 border-b border-black/5">
+              <div className="text-sm font-semibold">Preview</div>
+              <div className="text-xs text-black/60 mt-1">
+                {tpl?.name === 'Quotation（报价）'
+                  ? `Date: ${String((fields as any).date ?? '').trim() || new Date().toISOString().slice(0, 10)}`
+                  : contractNo
+                    ? `Contract No: ${contractNo}`
+                    : 'Contract No: -'}
               </div>
-              <div className="h-[78vh] bg-white">
-                {previewHtml ? (
-                  <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" />
-                ) : (
-                  <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
-                )}
-              </div>
+              {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
+            </div>
+            <div className="h-[78vh]">
+              {previewHtml ? (
+                <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" />
+              ) : (
+                <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-black/5">
+              <button
+                type="button"
+                onClick={() => void openPdf()}
+                disabled={downloading || !tpl}
+                className="h-9 px-3 rounded-lg border border-black/10 text-sm font-medium inline-flex items-center hover:bg-black/[0.02] disabled:opacity-50"
+              >
+                Open PDF
+              </button>
             </div>
           </div>
         </div>
