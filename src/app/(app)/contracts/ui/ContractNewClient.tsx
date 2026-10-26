@@ -19,6 +19,7 @@ type TemplateDraft = {
 };
 
 const MAX_SERVICE_ITEMS = 10;
+const MAX_OBLIGATION_ITEMS = 10;
 
 function escHtml(s: string) {
   return s
@@ -127,7 +128,52 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
+    const partyBCount = Math.max(3, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyB_obligation_count ?? '3') || 3));
+    for (let n = partyBCount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyB"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PB_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+    for (let n = 4; n <= partyBCount; n++) {
+      const value = String(map[`partyB_obligation_${n}`] ?? '').trim();
+      if (value) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyB"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PB_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
+    const partyACount = Math.max(3, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyA_obligation_count ?? '3') || 3));
+    for (let n = partyACount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyA"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PA_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+    for (let n = 4; n <= partyACount; n++) {
+      const value = String(map[`partyA_obligation_${n}`] ?? '').trim();
+      if (value) continue;
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="p\\s+obligation"\\s+data-obligation="partyA"\\s+data-obligation-item="${n}">[\\s\\S]*?<!--\\s*END_OBL_PA_${n}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    }
+
     const customSectionCount = Math.max(0, Math.min(5, Number(map.custom_section_count ?? '0') || 0));
+    const customSectionHeading = String(map.custom_section_heading ?? '').trim();
     for (let n = customSectionCount + 1; n <= 5; n++) {
       html = html.replace(
         new RegExp(
@@ -137,15 +183,32 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
         '',
       );
     }
+    let hasVisibleCustomSection = false;
     for (let n = 1; n <= customSectionCount; n++) {
       const title = String(map[`custom_section_title_${n}`] ?? '').trim();
       const body = String(map[`custom_section_body_${n}`] ?? '').trim();
-      if (title || body) continue;
+      if (title || body) {
+        hasVisibleCustomSection = true;
+        continue;
+      }
       html = html.replace(
         new RegExp(
           `<div\\s+class="section\\s+custom-section"\\s+data-custom-section="${n}">[\\s\\S]*?<!--\\s*END_CUSTOM_SECTION_${n}\\s*-->\\s*`,
           'g',
         ),
+        '',
+      );
+    }
+    if (hasVisibleCustomSection && customSectionHeading && !html.includes('data-custom-section-heading="1"') && html.includes('data-custom-section="1"')) {
+      const safeHeading = escHtml(customSectionHeading).replaceAll('\n', '<br />');
+      html = html.replace(
+        /(<div class="section custom-section" data-custom-section="1">)/,
+        `<div class="section custom-section-heading" data-custom-section-heading="1">\n          <div class="section-title">${safeHeading}</div>\n        </div><!-- END_CUSTOM_SECTION_HEADING -->\n        $1`,
+      );
+    }
+    if (!hasVisibleCustomSection || !customSectionHeading) {
+      html = html.replace(
+        /<div\s+class="section\s+custom-section-heading"\s+data-custom-section-heading="1">[\s\S]*?<!--\s*END_CUSTOM_SECTION_HEADING\s*-->\s*/g,
         '',
       );
     }
@@ -741,6 +804,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String((next as any).section_law_title ?? '').trim()) (next as any).section_law_title = 'IX. Governing law & dispute resolution（法律及争议解决）';
 
       if (!String((next as any).custom_section_count ?? '').trim()) (next as any).custom_section_count = '0';
+      if (!String((next as any).custom_section_heading ?? '').trim()) {
+        (next as any).custom_section_heading = 'X. Additional sections（自定义条款）';
+      }
 
 
       if (!String(next.refund_1 ?? '').trim()) {
@@ -2405,7 +2471,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     return (
                       <div className="rounded-lg border border-black/10 p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-semibold text-black/70">X. Additional sections（自定义条款）</div>
+                          <div className="text-xs font-semibold text-black/70">Custom sections（自定义条款）</div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -2441,6 +2507,16 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                               − Remove
                             </button>
                           </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="text-xs font-medium text-black/60">Section heading</div>
+                          <input
+                            value={(fields as any).custom_section_heading ?? ''}
+                            onChange={(e) => setFields((prev) => ({ ...prev, custom_section_heading: e.target.value }))}
+                            className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                            placeholder="X. Additional sections（自定义条款）"
+                          />
                         </div>
 
                         {!count ? (

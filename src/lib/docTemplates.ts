@@ -3128,6 +3128,7 @@ export function renderContractHtml(input: {
     if (isDisabled('section_law_enabled')) removeSection('law', 'END_SECTION_LAW');
 
     const customCount = Math.max(0, Math.min(5, Number((input.fields ?? {}).custom_section_count ?? '0') || 0));
+    const customSectionHeading = String((input.fields ?? {}).custom_section_heading ?? '').trim();
     for (let n = customCount + 1; n <= 5; n++) {
       html = html.replace(
         new RegExp(
@@ -3137,15 +3138,32 @@ export function renderContractHtml(input: {
         '',
       );
     }
+    let hasVisibleCustomSection = false;
     for (let n = 1; n <= customCount; n++) {
       const title = String((input.fields ?? {})[`custom_section_title_${n}`] ?? '').trim();
       const body = String((input.fields ?? {})[`custom_section_body_${n}`] ?? '').trim();
-      if (title || body) continue;
+      if (title || body) {
+        hasVisibleCustomSection = true;
+        continue;
+      }
       html = html.replace(
         new RegExp(
           `<div\\s+class="section\\s+custom-section"\\s+data-custom-section="${n}">[\\s\\S]*?<!--\\s*END_CUSTOM_SECTION_${n}\\s*-->\\s*`,
           'g',
         ),
+        '',
+      );
+    }
+    if (hasVisibleCustomSection && customSectionHeading && !html.includes('data-custom-section-heading="1"') && html.includes('data-custom-section="1"')) {
+      const safeHeading = esc(customSectionHeading).replaceAll('\n', '<br />');
+      html = html.replace(
+        /(<div class="section custom-section" data-custom-section="1">)/,
+        `<div class="section custom-section-heading" data-custom-section-heading="1">\n          <div class="section-title">${safeHeading}</div>\n        </div><!-- END_CUSTOM_SECTION_HEADING -->\n        $1`,
+      );
+    }
+    if (!hasVisibleCustomSection || !customSectionHeading) {
+      html = html.replace(
+        /<div\s+class="section\s+custom-section-heading"\s+data-custom-section-heading="1">[\s\S]*?<!--\s*END_CUSTOM_SECTION_HEADING\s*-->\s*/g,
         '',
       );
     }
