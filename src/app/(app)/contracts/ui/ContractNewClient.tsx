@@ -274,7 +274,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   const [contractId, setContractId] = useState<string>('');
   const [contractNo, setContractNo] = useState<string>('');
-  const [documentId, setDocumentId] = useState<string>('');
   const [documentSha, setDocumentSha] = useState<string>('');
   const [packetId, setPacketId] = useState<string>('');
 
@@ -285,8 +284,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
-  const [buildInfo, setBuildInfo] = useState<string>('');
-
   useEffect(() => {
     if (!success) return;
     const t = window.setTimeout(() => setSuccess(''), 4000);
@@ -390,25 +387,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const res = await fetch('/api/debug/version', { cache: 'no-store' }).catch(() => null);
-      const j = (await res?.json().catch(() => null)) as any;
-      if (cancelled) return;
-      if (!res?.ok || !j?.ok) {
-        setBuildInfo('');
-        return;
-      }
-      const sha = String(j.commitSha ?? '').trim();
-      const dep = String(j.deploymentId ?? '').trim();
-      setBuildInfo(`${sha ? sha.slice(0, 7) : 'local'}${dep ? ` • ${dep}` : ''}`);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
     if (!editContractId) return;
     (async () => {
       const res = await fetch(`/api/contracts/${encodeURIComponent(editContractId)}`, { method: 'GET' }).catch(() => null);
@@ -466,7 +444,9 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const clientEmail = showClientBlock ? String(fields[clientEmailKey] ?? '').trim() : '';
   const signerEmail = String(fields.signer_email ?? '').trim();
 
-  const pdfOpenUrl = '';
+  const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
+  const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
+  const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
 
   const missingRequired = useMemo(() => {
     if (!tpl) return [] as { key: string; label: string }[];
@@ -545,9 +525,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     return `${tplId}:${draftId}:${hashString(previewHtml || '')}`;
   }, [previewHtml, selectedDraftId, tpl?.id]);
 
-  const isNomineeTemplate = tpl?.name === 'Nominee Services Indemnity Agreement';
-  const isProfessionalTemplate = tpl?.name === 'Professional Service Agreement';
-  const isQuotationTemplate = tpl?.name === 'Quotation（报价）';
   const clientOk = !!clientName;
 
   const sendDisabled = saving || rendering || sending || !clientOk || missingRequired.length > 0;
@@ -948,7 +925,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         }
         setContractId(j.contract.id);
         setContractNo(j.contract.contractNo);
-        setDocumentId('');
         setDocumentSha('');
         setPacketId('');
         return j.contract as { id: string };
@@ -971,30 +947,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
     }
   }
 
-  async function generateDocument() {
-    setError(null);
-    setErrorDetail('');
-    const c = await saveDraft();
-    const id = contractId || (c as any)?.id;
-    if (!id) return;
-
-    setRendering(true);
-    try {
-      const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/render`, { method: 'POST' }).catch(() => null);
-      const j = (await res?.json().catch(() => null)) as any;
-      if (!res?.ok || !j?.documentId) {
-        setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-        setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
-        return;
-      }
-      setDocumentId(String(j.documentId));
-      setDocumentSha(String(j.documentSha256 ?? ''));
-      if (j?.contract?.contractNo) setContractNo(String(j.contract.contractNo));
-    } finally {
-      setRendering(false);
-    }
-  }
-
   async function sendForSigning() {
     setSuccess('');
     setError(null);
@@ -1014,7 +966,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           setErrorDetail(jr?.message || (jr ? JSON.stringify(jr) : '') || 'NETWORK_ERROR');
           return;
         }
-        setDocumentId(String(jr.documentId));
         setDocumentSha(String(jr.documentSha256 ?? ''));
         if (jr?.contract?.contractNo) setContractNo(String(jr.contract.contractNo));
       } finally {
@@ -1045,28 +996,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         return;
       }
       setPacketId(String(j.packetId));
-      if (j.contract?.documentId) setDocumentId(String(j.contract.documentId));
       const n = Array.isArray(j?.signLinks) ? j.signLinks.length : 1;
       setSuccess(`发送成功：已向 ${n} 位签署人发送签署链接。`);
       setTimeout(() => router.push('/contracts?sent=1'), 600);
     } finally {
       setSending(false);
     }
-  }
-
-  async function deleteDraft() {
-    if (!contractId) return;
-    if (!confirm('Delete this draft?')) return;
-    setError(null);
-    setErrorDetail('');
-    const res = await fetch(`/api/contracts/${encodeURIComponent(contractId)}`, { method: 'DELETE' }).catch(() => null);
-    const j = (await res?.json().catch(() => null)) as any;
-    if (!res?.ok || !j?.ok) {
-      setError(j?.error || `HTTP_${res?.status ?? 'NETWORK'}`);
-      setErrorDetail(j?.message || (j ? JSON.stringify(j) : '') || 'NETWORK_ERROR');
-      return;
-    }
-    router.push('/contracts');
   }
 
   async function downloadPdf() {
@@ -1136,10 +1071,6 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       setDownloading(false);
     }
   }
-
-  
-
-  const pdfDownloadUrl = '';
 
   const displayTemplateName = (name: string) => {
     if (name === 'Professional Service Agreement') return 'Professional Service Agreement（专业服务协议）';
@@ -3193,7 +3124,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </div>
             <div className="h-[70vh]">
               {previewHtml ? (
-                <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" scrolling="yes" />
+                <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" />
               ) : (
                 <div className="p-4 text-sm text-black/60">Select a template to preview.</div>
               )}
