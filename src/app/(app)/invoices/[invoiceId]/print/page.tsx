@@ -50,7 +50,15 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
         <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
           <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
-          <PrintButtonClient />
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/invoices/${encodeURIComponent(invoiceId)}/pdf`}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+            >
+              Download PDF
+            </a>
+            <PrintButtonClient />
+          </div>
         </div>
 
       <div className="max-w-[860px] mx-auto bg-white">
@@ -255,7 +263,15 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
-        <PrintButtonClient />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/invoices/${encodeURIComponent(invoiceId)}/pdf`}
+            className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+          >
+            Download PDF
+          </a>
+          <PrintButtonClient />
+        </div>
       </div>
 
       <div className="max-w-[860px] mx-auto bg-white">

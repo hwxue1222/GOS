@@ -41,7 +41,15 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
       <div className="min-h-screen bg-white no-autolink text-black" style={{ color: '#111' }}>
         <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
           <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
-          <PrintButtonClient />
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/p/invoice/${encodeURIComponent(token)}/pdf`}
+              className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+            >
+              Download PDF
+            </a>
+            <PrintButtonClient />
+          </div>
         </div>
 
         <div className="px-3 sm:px-4 py-3 sm:py-4 print:p-0">
@@ -247,7 +255,15 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
     <div className="min-h-screen bg-white no-autolink text-black" style={{ color: '#111' }}>
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
-        <PrintButtonClient />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/p/invoice/${encodeURIComponent(token)}/pdf`}
+            className="rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium"
+          >
+            Download PDF
+          </a>
+          <PrintButtonClient />
+        </div>
       </div>
 
       <div className="px-3 sm:px-4 py-3 sm:py-4 print:p-0">
