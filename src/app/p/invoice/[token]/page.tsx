@@ -38,7 +38,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
 
   if (invoice.issuer === 'BYBRIDGE') {
     return (
-      <div className="min-h-screen bg-white no-autolink">
+      <div className="min-h-screen bg-white no-autolink text-black" style={{ color: '#111' }}>
         <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
           <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
           <PrintButtonClient />
@@ -48,8 +48,8 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
           <ScaleToFitClient baseWidth={860}>
             <div
               id="invoice-print-root"
-              className="bg-white"
-              style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}
+              className="bg-white text-black"
+              style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`, color: '#111' }}
             >
               <link rel="preconnect" href="https://fonts.googleapis.com" />
               <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -244,7 +244,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
   }
 
   return (
-    <div className="min-h-screen bg-white no-autolink">
+    <div className="min-h-screen bg-white no-autolink text-black" style={{ color: '#111' }}>
       <div className="max-w-[860px] mx-auto px-4 py-4 print:hidden flex items-center justify-between">
         <div className="text-sm text-black/60">{invoice.invoiceNo}</div>
         <PrintButtonClient />
@@ -252,7 +252,7 @@ export default async function PublicInvoicePrintPage({ params }: { params: Promi
 
       <div className="px-3 sm:px-4 py-3 sm:py-4 print:p-0">
         <ScaleToFitClient baseWidth={860}>
-          <div className="bg-white">
+          <div className="bg-white text-black" id="invoice-print-root" style={{ color: '#111' }}>
             <div className="px-8 py-8 min-h-[297mm] flex flex-col">
             <div className="flex items-start justify-between gap-6">
               <div className="flex items-center gap-3">

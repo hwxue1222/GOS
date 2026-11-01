@@ -42,8 +42,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
     return (
       <div
         id="invoice-print-root"
-        className="min-h-screen bg-white no-autolink"
-        style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}
+        className="min-h-screen bg-white no-autolink text-black"
+        style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`, color: '#111' }}
       >
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -247,8 +247,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   return (
     <div
       id="invoice-print-root"
-      className="min-h-screen bg-white no-autolink"
-      style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial` }}
+      className="min-h-screen bg-white no-autolink text-black"
+      style={{ fontFamily: `'Noto Sans SC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`, color: '#111' }}
     >
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
