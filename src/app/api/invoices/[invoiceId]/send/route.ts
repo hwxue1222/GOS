@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { appendAuditLog, findInvoiceById, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
+import { appendAuditLog, findClientById, findInvoiceById, updateInvoice, upsertInvoiceEmailHistory } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
-import { newPublicToken } from '@/lib/id';
+import { buildInvoicePdfBuffer } from '@/lib/invoicePdfRenderer';
 import { hasPermission } from '@/lib/permissions';
 
 export const runtime = 'nodejs';
@@ -27,19 +27,10 @@ function fillTemplate(template: string, vars: Record<string, string>) {
   return template.replaceAll(/\{\{(\w+)\}\}/g, (_m, k) => vars[k] ?? '');
 }
 
-function resolveBaseUrl(req: Request) {
-  const env = process.env.APP_BASE_URL?.trim();
-  if (env) return env.replace(/\/+$/, '');
-
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) return `https://${vercelUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
-
-  const h = req.headers;
-  const host = h.get('x-forwarded-host') || h.get('host');
-  const proto = (h.get('x-forwarded-proto') || 'https').split(',')[0]!.trim();
-  if (host) return `${proto}://${host}`;
-
-  return new URL(req.url).origin;
+function sanitizeFilenameBase(input: string) {
+  const s = input.trim();
+  if (!s) return 'invoice';
+  return s.replaceAll(/[^a-zA-Z0-9._-]+/g, '_');
 }
 
 const DEFAULT_INVOICE_EMAIL_SUBJECT = 'Invoice 发票 {{invoiceNo}}';
@@ -50,13 +41,13 @@ const DEFAULT_INVOICE_EMAIL_HTML =
     '<div style="margin-top:10px;">欢迎您使用百桥咨询 BBY.SG 的财务/税务/公司秘书等专业服务，请查收发票，并尽快安排付款。</div>' +
     '<div style="margin-top:10px;">如有问题，请联系百桥咨询客服（微信 18851644566 或者 电话 +65 89926681）。</div>' +
     '<div style="margin-top:12px;">发票号 Invoice No: <b>{{invoiceNo}}</b></div>' +
-    '<div style="margin-top:10px;">预览 / 打印 Preview / Print: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
+    '<div style="margin-top:10px;">发票 PDF 已作为附件随邮件发送，请直接查收。</div>' +
     '<hr style="border:0;border-top:1px solid #e5e5e5;margin:18px 0;" />' +
     '<div style="font-size:14px;">{{billToCompany}}</div>' +
     '<div style="margin-top:10px;">Thank you for choosing BBY.SG for professional accounting, tax, and corporate secretarial services. Please find the invoice attached and kindly arrange payment at your earliest convenience.</div>' +
     '<div style="margin-top:10px;">If you have any questions, please contact our customer service (WeChat: 18851644566 or Tel: +65 89926681).</div>' +
     '<div style="margin-top:12px;">Invoice No: <b>{{invoiceNo}}</b></div>' +
-    '<div style="margin-top:10px;">Preview / Print: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
+    '<div style="margin-top:10px;">The invoice PDF is attached to this email.</div>' +
   '</div>';
 
 export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: string }> }) {
@@ -83,16 +74,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   const cc = normalizeEmailList(body?.cc);
   if (!to.length) return NextResponse.json({ ok: false, error: 'MISSING_TO' }, { status: 400 });
 
-  const baseUrl = resolveBaseUrl(req);
-  let publicToken = invoice.publicToken;
-  if (!publicToken) {
-    const token = newPublicToken();
-    const updated = await updateInvoice(invoice.id, { ...invoice, publicToken: token });
-    if (updated) invoice = updated;
-    publicToken = invoice.publicToken ?? token;
-  }
-  const printUrl = `${baseUrl}/p/invoice/${publicToken}`;
-
   const subjectTemplate =
     typeof body?.subject === 'string' && body.subject.trim()
       ? body.subject.trim()
@@ -106,17 +87,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ invoiceId: str
   const vars = {
     invoiceNo: invoice.invoiceNo,
     billToCompany: billToName,
-    printUrl,
+    printUrl: '',
   };
 
   const subject = fillTemplate(subjectTemplate, vars);
   const html = fillTemplate(htmlTemplate, vars);
+  const client =
+    invoice.billTo.type === 'CLIENT'
+      ? await findClientById(invoice.billTo.clientId).catch(() => null)
+      : null;
+  const pdf = await buildInvoicePdfBuffer({ invoice, client });
+  const filenameBase = sanitizeFilenameBase(invoice.invoiceNo || invoice.id);
 
   const sendRes = await sendEmail({
     to,
     cc: cc.length ? cc : undefined,
     subject,
     html,
+    attachments: [
+      {
+        filename: `${filenameBase}.pdf`,
+        contentBase64: pdf.toString('base64'),
+        contentType: 'application/pdf',
+      },
+    ],
   });
 
   if (!sendRes.ok) {
