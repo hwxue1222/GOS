@@ -15893,7 +15893,7 @@ function yyyymmFromYmd(ymd: string) {
 function parseSeqFromInvoiceNo(invoiceNo: string, prefix: string) {
   if (!invoiceNo.startsWith(prefix)) return null;
   const rest = invoiceNo.slice(prefix.length);
-  const m = rest.match(/^(\d{3})/);
+  const m = rest.match(/^(\d{3})\d$/);
   if (!m) return null;
   const n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
@@ -15908,21 +15908,27 @@ async function generateNextInvoiceNo(issuer: Invoice['issuer'], issueDateYmd: st
   const db = await readDb();
   const yyyymm = yyyymmFromYmd(issueDateYmd) || yyyymmFromYmd(nowIso().slice(0, 10));
   const prefix = issuerPrefix(issuer, yyyymm);
-  const existingNos = new Set(db.invoices.map((x) => x.invoiceNo));
+  const existingNos = new Set(
+    db.invoices.filter((x) => !x.deletedAt && x.issuer === issuer).map((x) => x.invoiceNo),
+  );
   let lastSeq = 0;
   for (const inv of db.invoices) {
+    if (inv.deletedAt) continue;
     if (inv.issuer !== issuer) continue;
     const seq = parseSeqFromInvoiceNo(inv.invoiceNo, prefix);
-    if (seq && seq > lastSeq) lastSeq = seq;
+    if (!seq) continue;
+    if (seq > lastSeq) lastSeq = seq;
   }
-  const nextSeq = lastSeq + 1;
-  const seq3 = String(nextSeq).padStart(3, '0');
-  for (let i = 0; i < 20; i++) {
-    const randDigit = String(Math.floor(Math.random() * 10));
-    const candidate = `${prefix}${seq3}${randDigit}`;
-    if (!existingNos.has(candidate)) return candidate;
+  let nextSeq = lastSeq + 1;
+  for (let seqTry = 0; seqTry < 1000; seqTry++) {
+    const seq3 = String(nextSeq).padStart(3, '0');
+    for (let digit = 0; digit <= 9; digit++) {
+      const candidate = `${prefix}${seq3}${digit}`;
+      if (!existingNos.has(candidate)) return candidate;
+    }
+    nextSeq += 1;
   }
-  return `${prefix}${seq3}${randomBytes(1).toString('hex').toUpperCase().slice(0, 1)}`;
+  return `${prefix}${String(nextSeq).padStart(3, '0')}${randomInt(10)}`;
 }
 
 export async function listInvoices() {
@@ -16006,7 +16012,7 @@ export async function createInvoice(input: Omit<Invoice, 'id' | 'createdAt' | 'u
   const createdAt = nowIso();
   const issueDate = input.issueDate || createdAt.slice(0, 10);
   const invoiceNo = input.invoiceNo?.trim() ? input.invoiceNo.trim() : await generateNextInvoiceNo(input.issuer, issueDate);
-  if (db.invoices.some((x) => x.invoiceNo === invoiceNo)) {
+  if (db.invoices.some((x) => !x.deletedAt && x.invoiceNo === invoiceNo)) {
     throw new Error('DUPLICATE_INVOICE_NO');
   }
   const totals = computeInvoiceTotals(input.items, input.discount ?? 0, input.tax ?? 0);
