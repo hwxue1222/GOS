@@ -64,6 +64,14 @@ function requestOrigin(req: Request) {
   return `${p}://${host}`;
 }
 
+function injectBaseHref(html: string, origin: string) {
+  if (!origin) return html;
+  if (/<base\s+/i.test(html)) return html;
+  const baseTag = `<base href="${origin.replace(/\/$/, '')}/" />`;
+  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, (m) => `${m}${baseTag}`);
+  return `${baseTag}${html}`;
+}
+
 function injectInlinePdfFonts(html: string) {
   const g = globalThis as unknown as { __gosInvoiceInlinePdfFontCss?: string };
   if (!g.__gosInvoiceInlinePdfFontCss) {
@@ -189,12 +197,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ invoiceId: stri
       return NextResponse.json({ ok: false, error: 'PRINT_PAGE_FAILED', message: `status ${printRes.status}` }, { status: 500 });
     }
     let html = await printRes.text();
+    html = injectBaseHref(html, origin);
     html = injectInlinePdfFonts(html);
     html = await inlineInvoiceAssets(html);
     if (!html.includes('invoice-print-root')) {
       return NextResponse.json({ ok: false, error: 'PRINT_ROOT_MISSING' }, { status: 500 });
     }
     await page.setContent(html, { waitUntil: ['domcontentloaded'] });
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 15_000 }).catch(() => undefined);
     await page.waitForSelector('#invoice-print-root', { timeout: 20_000 });
     await page.evaluate(async () => {
       if (document.fonts?.ready) await document.fonts.ready;
