@@ -34,14 +34,6 @@ function requestOrigin(req: Request) {
   return `${p}://${host}`;
 }
 
-function injectBaseHref(html: string, origin: string) {
-  if (!origin) return html;
-  if (/<base\s+/i.test(html)) return html;
-  const baseTag = `<base href="${origin.replace(/\/$/, '')}/" />`;
-  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, (m) => `${m}${baseTag}`);
-  return `${baseTag}${html}`;
-}
-
 function injectInlinePdfFonts(html: string) {
   const g = globalThis as unknown as { __gosPublicInvoiceInlinePdfFontCss?: string };
   if (!g.__gosPublicInvoiceInlinePdfFontCss) {
@@ -65,36 +57,38 @@ function injectInlinePdfFonts(html: string) {
       g.__gosPublicInvoiceInlinePdfFontCss = '';
     }
   }
-
-  if (!g.__gosPublicInvoiceInlinePdfFontCss) return html;
-  if (html.includes('</head>')) return html.replace('</head>', `${g.__gosPublicInvoiceInlinePdfFontCss}</head>`);
-  return `${g.__gosPublicInvoiceInlinePdfFontCss}${html}`;
+  const css = g.__gosPublicInvoiceInlinePdfFontCss || '';
+  if (!css) return html;
+  if (html.includes('</head>')) return html.replace('</head>', `${css}</head>`);
+  return `${css}${html}`;
 }
 
-async function inlineInvoiceAssets(html: string, origin: string) {
-  if (!origin) return html;
+function contentTypeFromPath(filePath: string) {
+  const lower = filePath.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'application/octet-stream';
+}
+
+async function inlineInvoiceAssets(html: string) {
   const matches = Array.from(html.matchAll(/<img\b[^>]*\ssrc="(\/[^"?]+\.(?:png|jpg|jpeg|svg|webp|gif))"[^>]*>/gi));
   const unique = Array.from(new Set(matches.map((m) => m[1])));
   if (unique.length === 0) return html;
 
-  const map = new Map<string, string>();
+  let out = html;
   for (const src of unique) {
     try {
-      const res = await fetch(`${origin.replace(/\/$/, '')}${src}`, { cache: 'no-store' });
-      if (!res.ok) continue;
-      const contentType = res.headers.get('content-type') || '';
-      const ab = await res.arrayBuffer();
-      const b64 = Buffer.from(ab).toString('base64');
-      const mime = contentType.includes('/') ? contentType.split(';')[0] : 'image/png';
-      map.set(src, `data:${mime};base64,${b64}`);
+      const filePath = path.join(process.cwd(), 'public', src.replace(/^\/+/, ''));
+      if (!fs.existsSync(filePath)) continue;
+      const b64 = fs.readFileSync(filePath).toString('base64');
+      const mime = contentTypeFromPath(filePath);
+      out = out.replaceAll(`src="${src}"`, `src="data:${mime};base64,${b64}"`);
     } catch {
       continue;
     }
-  }
-
-  let out = html;
-  for (const [src, dataUri] of map.entries()) {
-    out = out.replaceAll(`src="${src}"`, `src="${dataUri}"`);
   }
   return out;
 }
@@ -185,12 +179,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ token: string }
       await page.emulateMediaType('print');
       const printRes = await fetch(printUrl, { cache: 'no-store' });
       if (!printRes.ok) {
-        return NextResponse.json({ ok: false, error: 'PRINT_PAGE_FAILED' }, { status: 500 });
+        return NextResponse.json({ ok: false, error: 'PRINT_PAGE_FAILED', message: `status ${printRes.status}` }, { status: 500 });
       }
       let html = await printRes.text();
-      html = injectBaseHref(html, origin);
       html = injectInlinePdfFonts(html);
-      html = await inlineInvoiceAssets(html, origin);
+      html = await inlineInvoiceAssets(html);
+      if (!html.includes('invoice-print-root')) {
+        return NextResponse.json({ ok: false, error: 'PRINT_ROOT_MISSING' }, { status: 500 });
+      }
       await page.setContent(html, { waitUntil: ['domcontentloaded'] });
       await page.waitForSelector('#invoice-print-root', { timeout: 20_000 });
       await page.evaluate(async () => {
