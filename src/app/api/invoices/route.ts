@@ -77,14 +77,12 @@ const DEFAULT_INVOICE_EMAIL_HTML =
     '<div style="margin-top:10px;">如有问题，请联系百桥咨询客服（微信 18851644566 或者 电话 +65 89926681）。</div>' +
     '<div style="margin-top:12px;">发票号 Invoice No: <b>{{invoiceNo}}</b></div>' +
     '<div style="margin-top:10px;">在线预览 Preview: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
-    '<div style="margin-top:10px;">下载 PDF Download PDF: <a href="{{downloadUrl}}">{{downloadUrl}}</a></div>' +
     '<hr style="border:0;border-top:1px solid #e5e5e5;margin:18px 0;" />' +
     '<div style="font-size:14px;">{{billToCompany}}</div>' +
-    '<div style="margin-top:10px;">Thank you for choosing BBY.SG for professional accounting, tax, and corporate secretarial services. Please review or download the invoice using the links below and kindly arrange payment at your earliest convenience.</div>' +
+    '<div style="margin-top:10px;">Thank you for choosing BBY.SG for professional accounting, tax, and corporate secretarial services. Please review the invoice using the link below and kindly arrange payment at your earliest convenience.</div>' +
     '<div style="margin-top:10px;">If you have any questions, please contact our customer service (WeChat: 18851644566 or Tel: +65 89926681).</div>' +
     '<div style="margin-top:12px;">Invoice No: <b>{{invoiceNo}}</b></div>' +
     '<div style="margin-top:10px;">Preview: <a href="{{printUrl}}">{{printUrl}}</a></div>' +
-    '<div style="margin-top:10px;">Download PDF: <a href="{{downloadUrl}}">{{downloadUrl}}</a></div>' +
   '</div>';
 
 export async function GET() {
@@ -246,8 +244,7 @@ export async function POST(req: Request) {
 
   const baseUrl = process.env.APP_BASE_URL?.trim() || new URL(req.url).origin;
   const printUrl = `${baseUrl}/p/invoice/${invoice.publicToken}`;
-  const downloadUrl = `${baseUrl}/p/invoice/${invoice.publicToken}/pdf`;
-  const vars = { invoiceNo: invoice.invoiceNo, billToCompany: invoice.billTo.companyName || '', printUrl, downloadUrl };
+  const vars = { invoiceNo: invoice.invoiceNo, billToCompany: invoice.billTo.companyName || '', printUrl };
   const subject = fillTemplate(subjectTemplate, vars);
   const html = fillTemplate(htmlTemplate, vars);
 
