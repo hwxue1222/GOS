@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Browser } from 'puppeteer-core';
+import { PDFDocument } from 'pdf-lib';
 import { computeInvoiceFxTotals, formatMoney, getInvoiceIssuerConfig } from '@/lib/invoice';
 import type { Client, Invoice, InvoiceBillTo } from '@/lib/types';
 
@@ -473,6 +474,7 @@ export async function buildInvoicePdfBuffer(params: { invoice: Invoice; client: 
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
+    await page.setViewport({ width: 1200, height: 1700, deviceScaleFactor: 2 });
     await page.emulateMediaType('print');
     await page.setContent(html, { waitUntil: ['domcontentloaded'] });
     await page.waitForSelector('#invoice-pdf-root', { timeout: 20_000 });
@@ -489,14 +491,18 @@ export async function buildInvoicePdfBuffer(params: { invoice: Invoice; client: 
         ),
       );
     });
+    const sections = await page.$$('.page');
+    if (!sections.length) throw new Error('PDF_PAGE_MISSING');
 
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    });
-    return Buffer.from(pdf);
+    const pdfDoc = await PDFDocument.create();
+    for (const section of sections) {
+      const png = await section.screenshot({ type: 'png', omitBackground: false, captureBeyondViewport: true });
+      const image = await pdfDoc.embedPng(png);
+      const pdfPage = pdfDoc.addPage([595.28, 841.89]);
+      pdfPage.drawImage(image, { x: 0, y: 0, width: 595.28, height: 841.89 });
+    }
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
   } finally {
     await page.close();
   }
