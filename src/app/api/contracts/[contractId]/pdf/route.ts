@@ -141,11 +141,6 @@ function canAccess(user: { id: string }, contract: { createdByUserId: string }) 
 
 export async function GET(req: Request, { params }: { params: Promise<{ contractId: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
-  if (!hasPermission(user, 'contracts', 'viewAssigned') && !hasPermission(user, 'contracts', 'viewAll')) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  }
-
   const { contractId } = await params;
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
@@ -159,7 +154,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
     try {
       const c = await findContractById(contractId);
       contractExists = !!c;
-      canReadContract = !!c && canAccess(user, c);
+      canReadContract = !!c && !!user && canAccess(user, c);
     } catch {
       contractExists = false;
       canReadContract = false;
@@ -189,7 +184,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ contract
 
   const contract = await findContractById(contractId);
   if (!contract) return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-  if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  const publicToken = String(url.searchParams.get('publicToken') ?? '').trim();
+  const allowByPublicToken = !!publicToken && publicToken === String(contract.publicToken ?? '').trim();
+
+  if (!user && !allowByPublicToken) return NextResponse.json({ ok: false }, { status: 401 });
+  if (user && !allowByPublicToken) {
+    if (!hasPermission(user, 'contracts', 'viewAssigned') && !hasPermission(user, 'contracts', 'viewAll')) {
+      return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+    }
+    if (!canAccess(user, contract)) return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
+  }
 
   if (!String(contract.contractNo ?? '').trim()) {
     return NextResponse.json({ ok: false, error: 'CONTRACT_NOT_GENERATED' }, { status: 409 });

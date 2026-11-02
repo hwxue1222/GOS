@@ -3,7 +3,8 @@ import path from 'path';
 import { createHash, randomBytes, randomInt } from 'crypto';
 import ssic from '@/data/ssic.json';
 import { hashPassword } from '@/lib/password';
-import { newId } from '@/lib/id';
+import { newId, newPublicToken } from '@/lib/id';
+import { sendEmail } from '@/lib/email';
 import type {
   AnnualGeneralMeetingRequest,
   Client,
@@ -4701,6 +4702,7 @@ function normalizeDb(parsed: Db): Db {
           templateId: String((c as Contract).templateId ?? ''),
           clientName: String((c as Contract).clientName ?? ''),
           clientEmail: String((c as Contract).clientEmail ?? ''),
+          publicToken: typeof (c as Contract).publicToken === 'string' ? (c as Contract).publicToken : undefined,
           fields: typeof (c as Contract).fields === 'object' && (c as Contract).fields ? (c as Contract).fields : {},
           status: (c as Contract).status ?? 'DRAFT',
           createdByUserId: String((c as Contract).createdByUserId ?? ''),
@@ -10929,6 +10931,14 @@ export async function findContractById(contractId: string) {
   return list.find((c) => c.id === contractId) ?? null;
 }
 
+export async function findContractByPublicToken(token: string) {
+  const t = token.trim();
+  if (!t) return null;
+  const db = await readDb();
+  const list = (db.contracts ?? []) as Contract[];
+  return list.find((c) => c.publicToken === t) ?? null;
+}
+
 export async function createContract(input: {
   templateId: string;
   clientName: string;
@@ -10950,6 +10960,7 @@ export async function createContract(input: {
     templateId: template.id,
     clientName: input.clientName,
     clientEmail: input.clientEmail,
+    publicToken: newPublicToken(),
     fields: input.fields ?? {},
     status: 'DRAFT',
     createdByUserId: input.createdByUserId,
@@ -11297,8 +11308,51 @@ async function finalizeContractIfReady(db: Db, packet: SignaturePacket) {
   const c = list[idx];
   if (c.status === 'SIGNED') return;
   const now = nowIso();
-  list[idx] = { ...c, status: 'SIGNED', signedAt: now, updatedAt: now };
+  list[idx] = { ...c, status: 'SIGNED', signedAt: now, updatedAt: now, publicToken: c.publicToken || newPublicToken() };
   (db as unknown as { contracts: Contract[] }).contracts = list;
+}
+
+function escapeEmailHtml(input: string) {
+  return String(input ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+async function sendSignedContractDownloadEmail(contract: Contract) {
+  const to = String(contract.clientEmail ?? '').trim();
+  const publicToken = String(contract.publicToken ?? '').trim();
+  if (!to || !publicToken) return;
+
+  const baseUrl = (process.env.APP_BASE_URL?.trim() || 'https://bby.today').replace(/\/+$/, '');
+  if (!baseUrl) return;
+
+  const contractNo = String(contract.contractNo ?? '').trim();
+  const clientName = String(contract.clientName ?? '').trim();
+  const downloadUrl = `${baseUrl}/api/p/contract/${encodeURIComponent(publicToken)}/pdf`;
+  const subject = contractNo ? `Signed Contract ${contractNo}` : `Signed Contract for ${clientName || 'Client'}`;
+  const html = `
+<div style="font-family: ui-sans-serif, system-ui; line-height: 1.7; color: #111;">
+  <div>${clientName ? `Dear ${escapeEmailHtml(clientName)},` : 'Dear Sir/Madam,'}</div>
+  <div style="margin-top:10px;">
+    Your contract${contractNo ? ` <strong>${escapeEmailHtml(contractNo)}</strong>` : ''} has been signed.
+  </div>
+  <div style="margin-top:10px;">
+    Please use the link below to download the signed PDF.
+  </div>
+  <div style="margin-top:12px;">
+    <a href="${downloadUrl}">${downloadUrl}</a>
+  </div>
+  <div style="margin-top:16px;">If you have any questions, please reply to this email.</div>
+</div>
+`.trim();
+
+  const res = await sendEmail({ to, subject, html });
+  if (!res.ok) {
+    console.error('Failed to send signed contract download email', { contractId: contract.id, error: res.error });
+  }
 }
 
 export async function signByToken(input: {
@@ -11332,6 +11386,7 @@ export async function signByToken(input: {
   const packet = db.signaturePackets[packetIdx];
 
   const now = nowIso();
+  let contractJustSigned = false;
   const nextReq: SignatureRequest = {
     ...req,
     status: 'SIGNED',
@@ -11410,11 +11465,22 @@ export async function signByToken(input: {
     await finalizeRorcDeclarationIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeAgmIfReady(db, db.signaturePackets[packetIdx]);
     await finalizeContractIfReady(db, db.signaturePackets[packetIdx]);
+    contractJustSigned = packet.relatedType === 'CONTRACT' && packet.status !== 'SIGNED';
   } else if (packet.status === 'DRAFT') {
     db.signaturePackets[packetIdx] = { ...packet, status: 'SIGNING', updatedAt: now };
   }
 
   await writeDb(db);
+  if (contractJustSigned && packet.relatedType === 'CONTRACT') {
+    const contract = (db.contracts ?? []).find((c) => c.id === packet.relatedId) ?? null;
+    if (contract) {
+      try {
+        await sendSignedContractDownloadEmail(contract);
+      } catch (err) {
+        console.error('Unexpected signed contract email failure', err);
+      }
+    }
+  }
   const signedItems = db.signatureRequests
     .filter((r) => r.packetId === packet.id && r.status === 'SIGNED' && !!r.signedAt)
     .map((r) => ({

@@ -11,7 +11,6 @@ export default function SignClient(props: {
   requestEmail: string;
   requestStatus: string;
   expiresAt: string;
-  signedAt: string;
   signedItems: Array<{ email: string; name: string; title: string; signedAt: string }>;
   expired: boolean;
   packetKind: string;
@@ -34,7 +33,6 @@ export default function SignClient(props: {
     requestEmail,
     requestStatus,
     expiresAt,
-    signedAt,
     signedItems,
     expired,
     packetKind,
@@ -64,7 +62,6 @@ export default function SignClient(props: {
   const [signerPhone, setSignerPhone] = useState(initialSignerPhone);
 
   const [status, setStatus] = useState(requestStatus);
-  const [signedAtState, setSignedAtState] = useState(signedAt);
   const [signedItemsState, setSignedItemsState] = useState(signedItems);
   const [pdfNonce, setPdfNonce] = useState(0);
 
@@ -77,6 +74,14 @@ export default function SignClient(props: {
     const sep = pdfUrl.includes('?') ? '&' : '?';
     return `${pdfUrl}${sep}nonce=${pdfNonce}`;
   }, [pdfNonce, pdfUrl]);
+
+  const pdfDownloadUrl = useMemo(() => {
+    if (!pdfUrl) return undefined;
+    if (pdfUrl.includes('disposition=inline')) return pdfUrl.replace('disposition=inline', 'disposition=attachment');
+    if (pdfUrl.includes('disposition=attachment')) return pdfUrl;
+    const sep = pdfUrl.includes('?') ? '&' : '?';
+    return `${pdfUrl}${sep}disposition=attachment`;
+  }, [pdfUrl]);
 
   const htmlWithSignature = useMemo(() => {
     if (!isSigned) return html;
@@ -245,10 +250,8 @@ export default function SignClient(props: {
         setError(j?.error ?? `HTTP_${res.status}`);
         return;
       }
-      const nextSignedAt = typeof j?.signedAt === 'string' ? j.signedAt : '';
       const nextSignedItems = Array.isArray(j?.signedItems) ? j.signedItems : [];
       setStatus('SIGNED');
-      setSignedAtState(nextSignedAt);
       setSignedItemsState(
         nextSignedItems
           .map((x: any) => ({
@@ -382,7 +385,18 @@ export default function SignClient(props: {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-lg border border-black/10 overflow-hidden bg-white">
+          {pdfDownloadUrl ? (
+            <div className="mt-6 flex justify-end">
+              <a
+                href={pdfDownloadUrl}
+                className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black"
+              >
+                Download PDF
+              </a>
+            </div>
+          ) : null}
+
+          <div className="mt-4 rounded-lg border border-black/10 overflow-hidden bg-white">
             {pdfUrlWithNonce ? (
               <iframe title="document" src={pdfUrlWithNonce} className="w-full" style={{ height: '70vh' }} />
             ) : (

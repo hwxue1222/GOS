@@ -248,7 +248,9 @@ export async function sendSigningInvite(input: {
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
       <tr>
         <td style="padding:0 16px 0 0; vertical-align:middle;">
-          <img src="${logoUrl}" alt="BBY" style="display:block; width:150px; height:auto; border:0;" />
+          <div style="width:190px; overflow:hidden;">
+            <img src="${logoUrl}" alt="BBY" style="display:block; width:250px; max-width:none; height:auto; border:0;" />
+          </div>
         </td>
         <td style="width:3px; background:#d73a32; font-size:0; line-height:0;">&nbsp;</td>
         <td style="padding:0 0 0 16px; vertical-align:top; color:#444; font-size:12px; line-height:1.55;">

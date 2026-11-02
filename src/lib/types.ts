@@ -351,6 +351,7 @@ export type Contract = {
   templateId: string;
   clientName: string;
   clientEmail: string;
+  publicToken?: string;
   fields: Record<string, string>;
   status: ContractStatus;
   documentId?: string;
