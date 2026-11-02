@@ -217,6 +217,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V80 = 'contracts.templates.v80';
 const SEED_KEY_CONTRACTS_TEMPLATES_V81 = 'contracts.templates.v81';
 const SEED_KEY_CONTRACTS_TEMPLATES_V82 = 'contracts.templates.v82';
 const SEED_KEY_CONTRACTS_TEMPLATES_V83 = 'contracts.templates.v83';
+const SEED_KEY_CONTRACTS_TEMPLATES_V84 = 'contracts.templates.v84';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -741,9 +742,9 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'refund_4', label: 'Refund policy (4)（退费规定4）', required: false },
       { key: 'refund_5', label: 'Refund policy (5)（退费规定5）', required: false },
       { key: 'refund_6', label: 'Refund policy (6)（退费规定6）', required: false },
-      { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
-      { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: true },
-      { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: true },
+      { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: false },
+      { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: false },
+      { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: false },
       { key: 'partyB_obligation_4', label: 'Party B obligations (4)（乙方义务4）', required: false },
       { key: 'partyB_obligation_5', label: 'Party B obligations (5)（乙方义务5）', required: false },
       { key: 'partyB_obligation_6', label: 'Party B obligations (6)（乙方义务6）', required: false },
@@ -751,9 +752,9 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'partyB_obligation_8', label: 'Party B obligations (8)（乙方义务8）', required: false },
       { key: 'partyB_obligation_9', label: 'Party B obligations (9)（乙方义务9）', required: false },
       { key: 'partyB_obligation_10', label: 'Party B obligations (10)（乙方义务10）', required: false },
-      { key: 'partyA_obligation_1', label: 'Party A obligations (1)（甲方义务1）', required: true },
-      { key: 'partyA_obligation_2', label: 'Party A obligations (2)（甲方义务2）', required: true },
-      { key: 'partyA_obligation_3', label: 'Party A obligations (3)（甲方义务3）', required: true },
+      { key: 'partyA_obligation_1', label: 'Party A obligations (1)（甲方义务1）', required: false },
+      { key: 'partyA_obligation_2', label: 'Party A obligations (2)（甲方义务2）', required: false },
+      { key: 'partyA_obligation_3', label: 'Party A obligations (3)（甲方义务3）', required: false },
       { key: 'partyA_obligation_4', label: 'Party A obligations (4)（甲方义务4）', required: false },
       { key: 'partyA_obligation_5', label: 'Party A obligations (5)（甲方义务5）', required: false },
       { key: 'partyA_obligation_6', label: 'Party A obligations (6)（甲方义务6）', required: false },
@@ -3617,6 +3618,39 @@ function seedContractsTemplatesV83(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V83] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV84(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V84]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    if (!String(tpl.templateHtml ?? '').includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) continue;
+    const placeholders = (tpl.placeholders ?? []) as Array<{ key: string; label: string; required?: boolean }>;
+    const nextPlaceholders = placeholders.map((p) => {
+      const key = String(p.key ?? '').trim();
+      if (key.startsWith('partyB_obligation_') || key.startsWith('partyA_obligation_')) return { ...p, required: false };
+      return p;
+    });
+    if (JSON.stringify(placeholders) === JSON.stringify(nextPlaceholders)) continue;
+    templates[i] = { ...tpl, placeholders: nextPlaceholders as any, updatedAt: now };
+    mutated = true;
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V84] = true;
   return changed;
 }
 
@@ -8992,6 +9026,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV81(db)) changed = true;
   if (seedContractsTemplatesV82(db)) changed = true;
   if (seedContractsTemplatesV83(db)) changed = true;
+  if (seedContractsTemplatesV84(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

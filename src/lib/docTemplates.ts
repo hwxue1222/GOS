@@ -3161,8 +3161,8 @@ export function renderContractHtml(input: {
     }
 
     const partyBCount = Math.max(
-      3,
-      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyB_obligation_count ?? '3') || 3),
+      0,
+      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyB_obligation_count ?? '3') || 0),
     );
     for (let n = partyBCount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
       html = html.replace(
@@ -3173,7 +3173,7 @@ export function renderContractHtml(input: {
         '',
       );
     }
-    for (let n = 4; n <= partyBCount; n++) {
+    for (let n = 1; n <= partyBCount; n++) {
       const v = String((input.fields ?? {})[`partyB_obligation_${n}`] ?? '').trim();
       if (v) continue;
       html = html.replace(
@@ -3186,8 +3186,8 @@ export function renderContractHtml(input: {
     }
 
     const partyACount = Math.max(
-      3,
-      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyA_obligation_count ?? '3') || 3),
+      0,
+      Math.min(MAX_OBLIGATION_ITEMS, Number((input.fields ?? {}).partyA_obligation_count ?? '3') || 0),
     );
     for (let n = partyACount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
       html = html.replace(
@@ -3198,7 +3198,7 @@ export function renderContractHtml(input: {
         '',
       );
     }
-    for (let n = 4; n <= partyACount; n++) {
+    for (let n = 1; n <= partyACount; n++) {
       const v = String((input.fields ?? {})[`partyA_obligation_${n}`] ?? '').trim();
       if (v) continue;
       html = html.replace(

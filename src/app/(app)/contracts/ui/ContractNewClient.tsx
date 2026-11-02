@@ -282,7 +282,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const partyBCount = Math.max(3, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyB_obligation_count ?? '3') || 3));
+    const partyBCount = Math.max(0, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyB_obligation_count ?? '3') || 0));
     for (let n = partyBCount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
       html = html.replace(
         new RegExp(
@@ -292,7 +292,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
         '',
       );
     }
-    for (let n = 4; n <= partyBCount; n++) {
+    for (let n = 1; n <= partyBCount; n++) {
       const value = String(map[`partyB_obligation_${n}`] ?? '').trim();
       if (value) continue;
       html = html.replace(
@@ -304,7 +304,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
-    const partyACount = Math.max(3, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyA_obligation_count ?? '3') || 3));
+    const partyACount = Math.max(0, Math.min(MAX_OBLIGATION_ITEMS, Number(map.partyA_obligation_count ?? '3') || 0));
     for (let n = partyACount + 1; n <= MAX_OBLIGATION_ITEMS; n++) {
       html = html.replace(
         new RegExp(
@@ -314,7 +314,7 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
         '',
       );
     }
-    for (let n = 4; n <= partyACount; n++) {
+    for (let n = 1; n <= partyACount; n++) {
       const value = String(map[`partyA_obligation_${n}`] ?? '').trim();
       if (value) continue;
       html = html.replace(
@@ -833,7 +833,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   const NOTE_TOKEN = '__NOTE__';
 
   const MAX_OBLIGATION_ITEMS = 10;
-  const MIN_OBLIGATION_ITEMS = 3;
+  const MIN_OBLIGATION_ITEMS = 0;
 
   const parseBulletBody = (rawInput: string) => {
     const raw = String(rawInput ?? '').replaceAll('\r', '');
