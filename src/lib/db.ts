@@ -372,7 +372,7 @@ function seedContractsTemplatesV48(db: Db) {
     engine: 'HTML',
     placeholders: [
       { key: 'partyA_name', label: 'Party A (Company Name)（甲方公司名称）', required: true },
-      { key: 'partyA_uen', label: 'UEN / Registration No.（UEN公司注册号）', required: true },
+      { key: 'partyA_uen', label: 'UEN / Registration No.（UEN公司注册号）', required: false },
       { key: 'partyA_address', label: 'Address（联系地址）', required: false },
       { key: 'partyA_contact', label: 'Contact Number（联系电话）', required: false },
       { key: 'partyA_email', label: 'Email（电邮地址）', required: true },
@@ -686,7 +686,7 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'section_effective_title', label: 'Section title: Effectiveness（生效条款标题）', required: false },
       { key: 'section_law_title', label: 'Section title: Governing law（法律及争议解决标题）', required: false },
       { key: 'partyA_name', label: 'Party A (Company name)（甲方公司名称）', required: true },
-      { key: 'partyA_uen', label: 'Party A UEN / Registration number（甲方注册号）', required: true },
+      { key: 'partyA_uen', label: 'Party A UEN / Registration number（甲方注册号）', required: false },
       { key: 'partyA_address', label: 'Party A address（甲方地址）', required: false },
       { key: 'partyA_contact', label: 'Party A contact number（甲方电话）', required: false },
       { key: 'partyA_email', label: 'Party A email（甲方邮箱）', required: true },
