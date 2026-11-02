@@ -157,7 +157,10 @@ function applyAutoSectionTitles(map: Record<string, string>) {
   const next = { ...map };
   let sectionNumber = 4;
   for (const section of AUTO_NUMBERED_SECTIONS) {
-    if (String(next[section.enabledKey] ?? '1').trim() === '0') continue;
+    if (String(next[section.enabledKey] ?? '1').trim() === '0') {
+      next[section.titleKey] = '';
+      continue;
+    }
     const base = stripAutoSectionPrefix(next[section.titleKey] ?? '') || section.fallbackTitle;
     next[section.titleKey] = `${toRoman(sectionNumber)}. ${base}`;
     sectionNumber += 1;
@@ -166,6 +169,8 @@ function applyAutoSectionTitles(map: Record<string, string>) {
   if (customCount > 0) {
     const base = stripAutoSectionPrefix(next.custom_section_heading ?? '') || 'Additional sections（自定义条款）';
     next.custom_section_heading = `${toRoman(sectionNumber)}. ${base}`;
+  } else {
+    next.custom_section_heading = '';
   }
   return next;
 }
@@ -923,7 +928,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setFields((prev) => ({ ...prev, [cfg.enabledKey]: '0' }))}
+              onClick={() => setFields((prev) => ({ ...prev, [cfg.enabledKey]: '0', [cfg.titleKey]: '' }))}
               disabled={!enabled}
               className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
             >
@@ -1100,7 +1105,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
 
       if (!String(next.pay_beneficiary_name ?? '').trim()) next.pay_beneficiary_name = 'BBY.SG PTE LTD';
       if (!String(next.pay_beneficiary_address ?? '').trim()) {
-        next.pay_beneficiary_address = '10 Anson Road #10-13A International Plaza, Singapore 079903';
+        next.pay_beneficiary_address = '8 Burn Road#15-03 Trivex Singapore 369977';
       }
       if (!String(next.pay_bank_name ?? '').trim()) next.pay_bank_name = 'Maybank Singapore';
       if (!String(next.pay_swift_code ?? '').trim()) next.pay_swift_code = 'MBBESGS2';
@@ -2311,7 +2316,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_fees_enabled: '0' }))}
+              onClick={() => setFields((prev) => ({ ...prev, section_fees_enabled: '0', section_fees_title: '' }))}
                               disabled={!enabled}
                               className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
                             >
