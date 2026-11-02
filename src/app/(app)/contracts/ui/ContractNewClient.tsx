@@ -1521,7 +1521,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       ) : null}
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-6 xl:col-span-5">
+        <div className="lg:col-span-6 xl:col-span-5 pb-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2">
           <div className="rounded-xl bg-white border border-black/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="text-sm font-semibold">Template</div>
@@ -3302,7 +3302,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </div>
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
-            <div className="h-[1100px] lg:h-[calc(100vh-8rem)] lg:min-h-[1200px] xl:min-h-[1400px]">
+            <div className="h-[1100px] lg:h-[calc(100vh-8rem)]">
               {previewHtml ? (
                 <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" />
               ) : (
