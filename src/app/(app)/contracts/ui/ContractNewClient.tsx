@@ -1526,7 +1526,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       ) : null}
 
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-6 xl:col-span-5 pb-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2">
+        <div className="lg:order-2 lg:col-span-7 xl:col-span-7 pb-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2">
           <div className="rounded-xl bg-white border border-black/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="text-sm font-semibold">Template</div>
@@ -3294,7 +3294,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           </div>
         </div>
 
-        <div className="lg:col-span-6 xl:col-span-7">
+        <div className="lg:order-1 lg:col-span-5 xl:col-span-5">
           <div className="rounded-xl bg-white border border-black/5 overflow-hidden lg:sticky lg:top-4">
             <div className="px-4 py-3 border-b border-black/5">
               <div className="text-sm font-semibold">Preview</div>
