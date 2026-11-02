@@ -213,6 +213,8 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V77 = 'contracts.templates.v77';
 const SEED_KEY_CONTRACTS_TEMPLATES_V78 = 'contracts.templates.v78';
 const SEED_KEY_CONTRACTS_TEMPLATES_V79 = 'contracts.templates.v79';
 const SEED_KEY_CONTRACTS_TEMPLATES_V80 = 'contracts.templates.v80';
+const SEED_KEY_CONTRACTS_TEMPLATES_V81 = 'contracts.templates.v81';
+const SEED_KEY_CONTRACTS_TEMPLATES_V82 = 'contracts.templates.v82';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -874,7 +876,7 @@ function seedContractsTemplatesV48(db: Db) {
         <div class="p">To protect the lawful rights and interests of the parties, and in accordance with the relevant laws and regulations of Singapore, Party A and Party B agree to the following terms for the services provided by Party B to Party A.<br />为维护合同当事的合法权益，并依据新加坡共和国相关法律法规，甲乙双方就乙方向甲方提供专业服务事项达成如下协议条款。</div>
 
         <div class="section">
-          <div class="section-title">I. SERVICES PROVIDED（服务内容）</div>
+          <div class="section-title">I. Services provided（服务内容）</div>
           <div class="p">Party B agrees to provide the following professional services to Party A:</div>
 
           <div class="svc-item" data-svc-item="1">
@@ -920,7 +922,7 @@ function seedContractsTemplatesV48(db: Db) {
         </div>
 
         <div class="section">
-          <div class="section-title">II. PARTY B OBLIGATIONS（乙方义务）</div>
+          <div class="section-title">II. Obligations of Party B（乙方义务）</div>
           <div class="p obligation" data-obligation="partyB" data-obligation-item="1"><b>1.</b> {{partyB_obligation_1}}</div><!-- END_OBL_PB_1 -->
           <div class="p obligation" data-obligation="partyB" data-obligation-item="2"><b>2.</b> {{partyB_obligation_2}}</div><!-- END_OBL_PB_2 -->
           <div class="p obligation" data-obligation="partyB" data-obligation-item="3"><b>3.</b> {{partyB_obligation_3}}</div><!-- END_OBL_PB_3 -->
@@ -934,7 +936,7 @@ function seedContractsTemplatesV48(db: Db) {
         </div>
 
         <div class="section">
-          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>
+          <div class="section-title">III. Obligations of Party A（甲方义务）</div>
           <div class="p obligation" data-obligation="partyA" data-obligation-item="1"><b>1.</b> {{partyA_obligation_1}}</div><!-- END_OBL_PA_1 -->
           <div class="p obligation" data-obligation="partyA" data-obligation-item="2"><b>2.</b> {{partyA_obligation_2}}</div><!-- END_OBL_PA_2 -->
           <div class="p obligation" data-obligation="partyA" data-obligation-item="3"><b>3.</b> {{partyA_obligation_3}}</div><!-- END_OBL_PA_3 -->
@@ -3331,11 +3333,11 @@ function seedContractsTemplatesV79(db: Db) {
       nextHtml = nextHtml
         .replace(
           /<div class="section">\s*\n\s*<div class="section-title">II\. PARTY B OBLIGATIONS（乙方义务）<\/div>[\s\S]*?<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">III\. PARTY A OBLIGATIONS（甲方义务）<\/div>/,
-          `<div class="section">\n          <div class="section-title">II. PARTY B OBLIGATIONS（乙方义务）</div>\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="1"><b>1.</b> {{partyB_obligation_1}}</div><!-- END_OBL_PB_1 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="2"><b>2.</b> {{partyB_obligation_2}}</div><!-- END_OBL_PB_2 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="3"><b>3.</b> {{partyB_obligation_3}}</div><!-- END_OBL_PB_3 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="4"><b>4.</b> {{partyB_obligation_4}}</div><!-- END_OBL_PB_4 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="5"><b>5.</b> {{partyB_obligation_5}}</div><!-- END_OBL_PB_5 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="6"><b>6.</b> {{partyB_obligation_6}}</div><!-- END_OBL_PB_6 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="7"><b>7.</b> {{partyB_obligation_7}}</div><!-- END_OBL_PB_7 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="8"><b>8.</b> {{partyB_obligation_8}}</div><!-- END_OBL_PB_8 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="9"><b>9.</b> {{partyB_obligation_9}}</div><!-- END_OBL_PB_9 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="10"><b>10.</b> {{partyB_obligation_10}}</div><!-- END_OBL_PB_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>`,
+          `<div class="section">\n          <div class="section-title">II. Obligations of Party B（乙方义务）</div>\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="1"><b>1.</b> {{partyB_obligation_1}}</div><!-- END_OBL_PB_1 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="2"><b>2.</b> {{partyB_obligation_2}}</div><!-- END_OBL_PB_2 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="3"><b>3.</b> {{partyB_obligation_3}}</div><!-- END_OBL_PB_3 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="4"><b>4.</b> {{partyB_obligation_4}}</div><!-- END_OBL_PB_4 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="5"><b>5.</b> {{partyB_obligation_5}}</div><!-- END_OBL_PB_5 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="6"><b>6.</b> {{partyB_obligation_6}}</div><!-- END_OBL_PB_6 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="7"><b>7.</b> {{partyB_obligation_7}}</div><!-- END_OBL_PB_7 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="8"><b>8.</b> {{partyB_obligation_8}}</div><!-- END_OBL_PB_8 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="9"><b>9.</b> {{partyB_obligation_9}}</div><!-- END_OBL_PB_9 -->\n          <div class="p obligation" data-obligation="partyB" data-obligation-item="10"><b>10.</b> {{partyB_obligation_10}}</div><!-- END_OBL_PB_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">III. Obligations of Party A（甲方义务）</div>`,
         )
         .replace(
           /<div class="section">\s*\n\s*<div class="section-title">III\. PARTY A OBLIGATIONS（甲方义务）<\/div>[\s\S]*?<\/div>\s*\n\s*<div class="section">\s*\n\s*<div class="section-title">IV\. FEES（收费标准）<\/div>/,
-          `<div class="section">\n          <div class="section-title">III. PARTY A OBLIGATIONS（甲方义务）</div>\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="1"><b>1.</b> {{partyA_obligation_1}}</div><!-- END_OBL_PA_1 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="2"><b>2.</b> {{partyA_obligation_2}}</div><!-- END_OBL_PA_2 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="3"><b>3.</b> {{partyA_obligation_3}}</div><!-- END_OBL_PA_3 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="4"><b>4.</b> {{partyA_obligation_4}}</div><!-- END_OBL_PA_4 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="5"><b>5.</b> {{partyA_obligation_5}}</div><!-- END_OBL_PA_5 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="6"><b>6.</b> {{partyA_obligation_6}}</div><!-- END_OBL_PA_6 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="7"><b>7.</b> {{partyA_obligation_7}}</div><!-- END_OBL_PA_7 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="8"><b>8.</b> {{partyA_obligation_8}}</div><!-- END_OBL_PA_8 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="9"><b>9.</b> {{partyA_obligation_9}}</div><!-- END_OBL_PA_9 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="10"><b>10.</b> {{partyA_obligation_10}}</div><!-- END_OBL_PA_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">IV. FEES（收费标准）</div>`,
+          `<div class="section">\n          <div class="section-title">III. Obligations of Party A（甲方义务）</div>\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="1"><b>1.</b> {{partyA_obligation_1}}</div><!-- END_OBL_PA_1 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="2"><b>2.</b> {{partyA_obligation_2}}</div><!-- END_OBL_PA_2 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="3"><b>3.</b> {{partyA_obligation_3}}</div><!-- END_OBL_PA_3 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="4"><b>4.</b> {{partyA_obligation_4}}</div><!-- END_OBL_PA_4 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="5"><b>5.</b> {{partyA_obligation_5}}</div><!-- END_OBL_PA_5 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="6"><b>6.</b> {{partyA_obligation_6}}</div><!-- END_OBL_PA_6 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="7"><b>7.</b> {{partyA_obligation_7}}</div><!-- END_OBL_PA_7 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="8"><b>8.</b> {{partyA_obligation_8}}</div><!-- END_OBL_PA_8 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="9"><b>9.</b> {{partyA_obligation_9}}</div><!-- END_OBL_PA_9 -->\n          <div class="p obligation" data-obligation="partyA" data-obligation-item="10"><b>10.</b> {{partyA_obligation_10}}</div><!-- END_OBL_PA_10 -->\n        </div>\n\n        <div class="section">\n          <div class="section-title">IV. Fees（收费标准）</div>`,
         );
     }
 
@@ -3416,6 +3418,84 @@ function seedContractsTemplatesV80(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V80] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV81(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V81]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    const html = String(tpl.templateHtml ?? '');
+    const nextHtmlB = html.replaceAll(
+      'II. PARTY B OBLIGATIONS（乙方义务）',
+      'II. OBLIGATIONS OF PARTY B（乙方义务）',
+    );
+    const nextHtml = nextHtmlB.replaceAll(
+      'III. PARTY A OBLIGATIONS（甲方义务）',
+      'III. OBLIGATIONS OF PARTY A（甲方义务）',
+    );
+    if (nextHtml === html) continue;
+    templates[i] = { ...tpl, templateHtml: nextHtml, updatedAt: now };
+    mutated = true;
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V81] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV82(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V82]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  const replacements: Array<[string, string]> = [
+    ['I. SERVICES PROVIDED（服务内容）', 'I. Services provided（服务内容）'],
+    ['II. PARTY B OBLIGATIONS（乙方义务）', 'II. Obligations of Party B（乙方义务）'],
+    ['II. OBLIGATIONS OF PARTY B（乙方义务）', 'II. Obligations of Party B（乙方义务）'],
+    ['III. PARTY A OBLIGATIONS（甲方义务）', 'III. Obligations of Party A（甲方义务）'],
+    ['III. OBLIGATIONS OF PARTY A（甲方义务）', 'III. Obligations of Party A（甲方义务）'],
+    ['IV. FEES（收费标准）', 'IV. Fees（收费标准）'],
+    ['V. REFUND POLICY（退费规定）', 'V. Refund policy（退费规定）'],
+    ['VI. FORCE MAJEURE（不可抗力）', 'VI. Force majeure（不可抗力）'],
+    ['VII. BREACH（违约责任）', 'VII. Breach（违约责任）'],
+    ['VIII. EFFECTIVENESS（生效条款）', 'VIII. Effectiveness（生效条款）'],
+    ['IX. GOVERNING LAW AND DISPUTE RESOLUTION（适用法律及争议解决）', 'IX. Governing law and dispute resolution（适用法律及争议解决）'],
+  ];
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    const html = String(tpl.templateHtml ?? '');
+    let nextHtml = html;
+    for (const [from, to] of replacements) nextHtml = nextHtml.replaceAll(from, to);
+    if (nextHtml === html) continue;
+    templates[i] = { ...tpl, templateHtml: nextHtml, updatedAt: now };
+    mutated = true;
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V82] = true;
   return changed;
 }
 
@@ -8787,6 +8867,8 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV78(db)) changed = true;
   if (seedContractsTemplatesV79(db)) changed = true;
   if (seedContractsTemplatesV80(db)) changed = true;
+  if (seedContractsTemplatesV81(db)) changed = true;
+  if (seedContractsTemplatesV82(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
