@@ -212,6 +212,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V76 = 'contracts.templates.v76';
 const SEED_KEY_CONTRACTS_TEMPLATES_V77 = 'contracts.templates.v77';
 const SEED_KEY_CONTRACTS_TEMPLATES_V78 = 'contracts.templates.v78';
 const SEED_KEY_CONTRACTS_TEMPLATES_V79 = 'contracts.templates.v79';
+const SEED_KEY_CONTRACTS_TEMPLATES_V80 = 'contracts.templates.v80';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -3383,6 +3384,38 @@ function seedContractsTemplatesV79(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V79] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV80(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V80]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    const placeholders = (tpl.placeholders ?? []) as Array<{ key: string; label: string; required?: boolean }>;
+    const nextPlaceholders = placeholders.map((p) => {
+      const key = String(p.key ?? '').trim();
+      if (key === 'partyA_uen') return { ...p, required: false };
+      return p;
+    });
+    if (JSON.stringify(placeholders) === JSON.stringify(nextPlaceholders)) continue;
+    templates[i] = { ...tpl, placeholders: nextPlaceholders as any, updatedAt: now };
+    mutated = true;
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V80] = true;
   return changed;
 }
 
@@ -8753,6 +8786,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV77(db)) changed = true;
   if (seedContractsTemplatesV78(db)) changed = true;
   if (seedContractsTemplatesV79(db)) changed = true;
+  if (seedContractsTemplatesV80(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');
