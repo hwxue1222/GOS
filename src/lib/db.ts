@@ -10931,6 +10931,26 @@ export async function findContractById(contractId: string) {
   return list.find((c) => c.id === contractId) ?? null;
 }
 
+export async function ensureContractPublicToken(contractId: string) {
+  const db = await readDb();
+  const list = (db.contracts ?? []) as Contract[];
+  const idx = list.findIndex((c) => c.id === contractId);
+  if (idx < 0) return null;
+  const contract = list[idx];
+  const existingToken = String(contract.publicToken ?? '').trim();
+  if (existingToken) return contract;
+
+  const next: Contract = {
+    ...contract,
+    publicToken: newPublicToken(),
+    updatedAt: nowIso(),
+  };
+  list[idx] = next;
+  (db as unknown as { contracts: Contract[] }).contracts = list;
+  await writeDb(db);
+  return next;
+}
+
 export async function findContractByPublicToken(token: string) {
   const t = token.trim();
   if (!t) return null;

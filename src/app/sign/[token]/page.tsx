@@ -1,5 +1,5 @@
 import SignClient from '@/app/sign/[token]/ui/SignClient';
-import { findContractById, getSignatureContextByToken, readDb } from '@/lib/db';
+import { ensureContractPublicToken, getSignatureContextByToken, readDb } from '@/lib/db';
 import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
@@ -27,7 +27,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   const pdfDownloadUrl =
     ctx.packet.kind === 'CONTRACT'
       ? await (async () => {
-          const contract = await findContractById(ctx.packet.relatedId);
+          const contract = await ensureContractPublicToken(ctx.packet.relatedId);
           const publicToken = String(contract?.publicToken ?? '').trim();
           if (!contract || !publicToken) return undefined;
           return `/api/contracts/${encodeURIComponent(contract.id)}/pdf?publicToken=${encodeURIComponent(publicToken)}&disposition=attachment`;
