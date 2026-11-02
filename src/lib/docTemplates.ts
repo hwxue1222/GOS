@@ -36,6 +36,40 @@ function replaceAllLiteral(input: string, from: string, to: string) {
   return input.split(from).join(to);
 }
 
+function toRoman(num: number) {
+  const numerals: Array<[number, string]> = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+  let n = Math.max(1, Math.floor(num));
+  let out = '';
+  for (const [value, symbol] of numerals) {
+    while (n >= value) {
+      out += symbol;
+      n -= value;
+    }
+  }
+  return out;
+}
+
+function stripAutoSectionPrefix(raw: string) {
+  return String(raw ?? '')
+    .trim()
+    .replace(/^[IVXLCDM]+\.\s*/i, '')
+    .trim();
+}
+
 function injectHiddenSignerPlaceholders(html: string, emails: string[]) {
   const normalized = emails
     .map((e) => String(e ?? '').trim().toLowerCase())
@@ -2901,6 +2935,28 @@ export function renderContractHtml(input: {
 }) {
   const MAX_SERVICE_ITEMS = 10;
   const MAX_OBLIGATION_ITEMS = 10;
+  const MAX_FIXED_SECTION_ITEMS = 6;
+  const FIXED_SECTION_CONFIGS = [
+    { id: 'refund', prefix: 'refund', enabledKey: 'section_refund_enabled', countKey: 'refund_count', defaultCount: 2 },
+    {
+      id: 'force_majeure',
+      prefix: 'force_majeure',
+      enabledKey: 'section_force_majeure_enabled',
+      countKey: 'force_majeure_count',
+      defaultCount: 3,
+    },
+    { id: 'breach', prefix: 'breach', enabledKey: 'section_breach_enabled', countKey: 'breach_count', defaultCount: 2 },
+    {
+      id: 'effective',
+      prefix: 'effective',
+      enabledKey: 'section_effective_enabled',
+      countKey: 'effective_count',
+      defaultCount: 3,
+    },
+    { id: 'law', prefix: 'law', enabledKey: 'section_law_enabled', countKey: 'law_count', defaultCount: 2 },
+  ] as const;
+  const getFixedSectionCount = (cfg: (typeof FIXED_SECTION_CONFIGS)[number]) =>
+    Math.max(1, Math.min(MAX_FIXED_SECTION_ITEMS, Number((input.fields ?? {})[cfg.countKey] ?? '') || cfg.defaultCount));
   const partyAEntityType = String((input.fields ?? {}).partyA_entity_type ?? '').trim().toLowerCase() === 'individual'
     ? 'individual'
     : 'company';
@@ -2943,6 +2999,51 @@ export function renderContractHtml(input: {
     if (!String(map.section_breach_title ?? '').trim()) map.section_breach_title = 'VII. Breach（违约责任）';
     if (!String(map.section_effective_title ?? '').trim()) map.section_effective_title = 'VIII. Effectiveness（生效条款）';
     if (!String(map.section_law_title ?? '').trim()) map.section_law_title = 'IX. Governing law & dispute resolution（法律及争议解决）';
+
+    const autoNumberedSections = [
+      {
+        titleKey: 'section_fees_title',
+        enabledKey: 'section_fees_enabled',
+        fallbackTitle: 'Fees（收费标准）',
+      },
+      {
+        titleKey: 'section_refund_title',
+        enabledKey: 'section_refund_enabled',
+        fallbackTitle: 'Refund policy（退费规定）',
+      },
+      {
+        titleKey: 'section_force_majeure_title',
+        enabledKey: 'section_force_majeure_enabled',
+        fallbackTitle: 'Force majeure（不可抗力）',
+      },
+      {
+        titleKey: 'section_breach_title',
+        enabledKey: 'section_breach_enabled',
+        fallbackTitle: 'Breach（违约责任）',
+      },
+      {
+        titleKey: 'section_effective_title',
+        enabledKey: 'section_effective_enabled',
+        fallbackTitle: 'Effectiveness（生效条款）',
+      },
+      {
+        titleKey: 'section_law_title',
+        enabledKey: 'section_law_enabled',
+        fallbackTitle: 'Governing law & dispute resolution（法律及争议解决）',
+      },
+    ] as const;
+    let sectionNumber = 4;
+    for (const section of autoNumberedSections) {
+      if (String(map[section.enabledKey] ?? '1').trim() === '0') continue;
+      const base = stripAutoSectionPrefix(map[section.titleKey] ?? '') || section.fallbackTitle;
+      map[section.titleKey] = `${toRoman(sectionNumber)}. ${base}`;
+      sectionNumber += 1;
+    }
+    const customCount = Math.max(0, Math.min(5, Number(map.custom_section_count ?? '0') || 0));
+    if (customCount > 0) {
+      const base = stripAutoSectionPrefix(map.custom_section_heading ?? '') || 'Additional sections（自定义条款）';
+      map.custom_section_heading = `${toRoman(sectionNumber)}. ${base}`;
+    }
   }
 
   let html = String(input.templateHtml ?? '');
@@ -3126,6 +3227,31 @@ export function renderContractHtml(input: {
     if (isDisabled('section_breach_enabled')) removeSection('breach', 'END_SECTION_BREACH');
     if (isDisabled('section_effective_enabled')) removeSection('effective', 'END_SECTION_EFFECTIVE');
     if (isDisabled('section_law_enabled')) removeSection('law', 'END_SECTION_LAW');
+
+    for (const cfg of FIXED_SECTION_CONFIGS) {
+      if (isDisabled(cfg.enabledKey)) continue;
+      const count = getFixedSectionCount(cfg);
+      for (let n = count + 1; n <= MAX_FIXED_SECTION_ITEMS; n++) {
+        html = html.replace(
+          new RegExp(
+            `<div\\s+class="p\\s+section-paragraph"\\s+data-section-paragraph="${cfg.id}"\\s+data-section-item="${n}">[\\s\\S]*?<!--\\s*END_SECTION_ITEM_${cfg.id.toUpperCase()}_${n}\\s*-->\\s*`,
+            'g',
+          ),
+          '',
+        );
+      }
+      for (let n = 1; n <= count; n++) {
+        const v = String((input.fields ?? {})[`${cfg.prefix}_${n}`] ?? '').trim();
+        if (v) continue;
+        html = html.replace(
+          new RegExp(
+            `<div\\s+class="p\\s+section-paragraph"\\s+data-section-paragraph="${cfg.id}"\\s+data-section-item="${n}">[\\s\\S]*?<!--\\s*END_SECTION_ITEM_${cfg.id.toUpperCase()}_${n}\\s*-->\\s*`,
+            'g',
+          ),
+          '',
+        );
+      }
+    }
 
     const customCount = Math.max(0, Math.min(5, Number((input.fields ?? {}).custom_section_count ?? '0') || 0));
     const customSectionHeading = String((input.fields ?? {}).custom_section_heading ?? '').trim();

@@ -268,7 +268,7 @@ export default function SignClient(props: {
     <div className="min-h-screen bg-black/[0.02]">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="rounded-xl bg-white border border-black/5 p-6">
-          <div className="text-lg font-semibold break-words">{title}</div>
+          <div className="text-lg font-semibold text-black break-words">{title}</div>
           <div className="mt-1 text-sm text-black/60 break-words">{requestEmail}</div>
           <div className="mt-1 text-xs text-black/50 break-words">{`Status: ${status}`}</div>
           <div className="mt-1 text-xs text-black/50 break-words">{`Expires: ${new Date(expiresAt).toLocaleString()}`}</div>

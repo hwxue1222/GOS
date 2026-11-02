@@ -216,6 +216,7 @@ const SEED_KEY_CONTRACTS_TEMPLATES_V79 = 'contracts.templates.v79';
 const SEED_KEY_CONTRACTS_TEMPLATES_V80 = 'contracts.templates.v80';
 const SEED_KEY_CONTRACTS_TEMPLATES_V81 = 'contracts.templates.v81';
 const SEED_KEY_CONTRACTS_TEMPLATES_V82 = 'contracts.templates.v82';
+const SEED_KEY_CONTRACTS_TEMPLATES_V83 = 'contracts.templates.v83';
 
 function isSingaporeCompanyRegistrationNo(regNo: string) {
   const v = String(regNo ?? '').trim();
@@ -733,8 +734,13 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'pay_swift_code', label: 'Swift Code（国际汇款银行码）', required: true },
       { key: 'pay_bank_account_number', label: 'Bank account number (SGD)（银行账号-新币）', required: true },
       { key: 'pay_bank_address', label: 'Bank address（银行地址）', required: true },
+      { key: 'refund_count', label: 'Refund policy count（退费规定数量）', required: false },
       { key: 'refund_1', label: 'Refund policy (1)（退费规定1）', required: true },
       { key: 'refund_2', label: 'Refund policy (2)（退费规定2）', required: true },
+      { key: 'refund_3', label: 'Refund policy (3)（退费规定3）', required: false },
+      { key: 'refund_4', label: 'Refund policy (4)（退费规定4）', required: false },
+      { key: 'refund_5', label: 'Refund policy (5)（退费规定5）', required: false },
+      { key: 'refund_6', label: 'Refund policy (6)（退费规定6）', required: false },
       { key: 'partyB_obligation_1', label: 'Party B obligations (1)（乙方义务1）', required: true },
       { key: 'partyB_obligation_2', label: 'Party B obligations (2)（乙方义务2）', required: true },
       { key: 'partyB_obligation_3', label: 'Party B obligations (3)（乙方义务3）', required: true },
@@ -755,16 +761,34 @@ function seedContractsTemplatesV48(db: Db) {
       { key: 'partyA_obligation_8', label: 'Party A obligations (8)（甲方义务8）', required: false },
       { key: 'partyA_obligation_9', label: 'Party A obligations (9)（甲方义务9）', required: false },
       { key: 'partyA_obligation_10', label: 'Party A obligations (10)（甲方义务10）', required: false },
+      { key: 'force_majeure_count', label: 'Force majeure count（不可抗力数量）', required: false },
       { key: 'force_majeure_1', label: 'Force majeure (1)（不可抗力1）', required: true },
       { key: 'force_majeure_2', label: 'Force majeure (2)（不可抗力2）', required: true },
       { key: 'force_majeure_3', label: 'Force majeure (3)（不可抗力3）', required: true },
+      { key: 'force_majeure_4', label: 'Force majeure (4)（不可抗力4）', required: false },
+      { key: 'force_majeure_5', label: 'Force majeure (5)（不可抗力5）', required: false },
+      { key: 'force_majeure_6', label: 'Force majeure (6)（不可抗力6）', required: false },
+      { key: 'breach_count', label: 'Breach count（违约责任数量）', required: false },
       { key: 'breach_1', label: 'Breach (1)（违约责任1）', required: true },
       { key: 'breach_2', label: 'Breach (2)（违约责任2）', required: true },
+      { key: 'breach_3', label: 'Breach (3)（违约责任3）', required: false },
+      { key: 'breach_4', label: 'Breach (4)（违约责任4）', required: false },
+      { key: 'breach_5', label: 'Breach (5)（违约责任5）', required: false },
+      { key: 'breach_6', label: 'Breach (6)（违约责任6）', required: false },
+      { key: 'effective_count', label: 'Effectiveness count（生效条款数量）', required: false },
       { key: 'effective_1', label: 'Effectiveness (1)（生效条款1）', required: true },
       { key: 'effective_2', label: 'Effectiveness (2)（生效条款2）', required: true },
       { key: 'effective_3', label: 'Effectiveness (3)（生效条款3）', required: true },
+      { key: 'effective_4', label: 'Effectiveness (4)（生效条款4）', required: false },
+      { key: 'effective_5', label: 'Effectiveness (5)（生效条款5）', required: false },
+      { key: 'effective_6', label: 'Effectiveness (6)（生效条款6）', required: false },
+      { key: 'law_count', label: 'Governing law count（法律与争议数量）', required: false },
       { key: 'law_1', label: 'Governing law & disputes (1)（法律与争议1）', required: true },
       { key: 'law_2', label: 'Governing law & disputes (2)（法律与争议2）', required: true },
+      { key: 'law_3', label: 'Governing law & disputes (3)（法律与争议3）', required: false },
+      { key: 'law_4', label: 'Governing law & disputes (4)（法律与争议4）', required: false },
+      { key: 'law_5', label: 'Governing law & disputes (5)（法律与争议5）', required: false },
+      { key: 'law_6', label: 'Governing law & disputes (6)（法律与争议6）', required: false },
       { key: 'custom_section_title_1', label: 'Custom section (1) title（自定义条款1标题）', required: false },
       { key: 'custom_section_body_1', label: 'Custom section (1) body（自定义条款1正文）', required: false },
       { key: 'custom_section_title_2', label: 'Custom section (2) title（自定义条款2标题）', required: false },
@@ -975,34 +999,52 @@ function seedContractsTemplatesV48(db: Db) {
 
         <div class="section" data-section="refund">
           <div class="section-title">{{section_refund_title}}</div>
-          <div class="p"><b>1.</b> {{refund_1}}</div>
-          <div class="p"><b>2.</b> {{refund_2}}</div>
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="1"><b>1.</b> {{refund_1}}</div><!-- END_SECTION_ITEM_REFUND_1 -->
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="2"><b>2.</b> {{refund_2}}</div><!-- END_SECTION_ITEM_REFUND_2 -->
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="3"><b>3.</b> {{refund_3}}</div><!-- END_SECTION_ITEM_REFUND_3 -->
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="4"><b>4.</b> {{refund_4}}</div><!-- END_SECTION_ITEM_REFUND_4 -->
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="5"><b>5.</b> {{refund_5}}</div><!-- END_SECTION_ITEM_REFUND_5 -->
+          <div class="p section-paragraph" data-section-paragraph="refund" data-section-item="6"><b>6.</b> {{refund_6}}</div><!-- END_SECTION_ITEM_REFUND_6 -->
         </div><!-- END_SECTION_REFUND -->
 
         <div class="section" data-section="force_majeure">
           <div class="section-title">{{section_force_majeure_title}}</div>
-          <div class="p"><b>1.</b> {{force_majeure_1}}</div>
-          <div class="p"><b>2.</b> {{force_majeure_2}}</div>
-          <div class="p"><b>3.</b> {{force_majeure_3}}</div>
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="1"><b>1.</b> {{force_majeure_1}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_1 -->
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="2"><b>2.</b> {{force_majeure_2}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_2 -->
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="3"><b>3.</b> {{force_majeure_3}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_3 -->
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="4"><b>4.</b> {{force_majeure_4}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_4 -->
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="5"><b>5.</b> {{force_majeure_5}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_5 -->
+          <div class="p section-paragraph" data-section-paragraph="force_majeure" data-section-item="6"><b>6.</b> {{force_majeure_6}}</div><!-- END_SECTION_ITEM_FORCE_MAJEURE_6 -->
         </div><!-- END_SECTION_FORCE_MAJEURE -->
 
         <div class="section" data-section="breach">
           <div class="section-title">{{section_breach_title}}</div>
-          <div class="p"><b>1.</b> {{breach_1}}</div>
-          <div class="p"><b>2.</b> {{breach_2}}</div>
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="1"><b>1.</b> {{breach_1}}</div><!-- END_SECTION_ITEM_BREACH_1 -->
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="2"><b>2.</b> {{breach_2}}</div><!-- END_SECTION_ITEM_BREACH_2 -->
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="3"><b>3.</b> {{breach_3}}</div><!-- END_SECTION_ITEM_BREACH_3 -->
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="4"><b>4.</b> {{breach_4}}</div><!-- END_SECTION_ITEM_BREACH_4 -->
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="5"><b>5.</b> {{breach_5}}</div><!-- END_SECTION_ITEM_BREACH_5 -->
+          <div class="p section-paragraph" data-section-paragraph="breach" data-section-item="6"><b>6.</b> {{breach_6}}</div><!-- END_SECTION_ITEM_BREACH_6 -->
         </div><!-- END_SECTION_BREACH -->
 
         <div class="section" data-section="effective">
           <div class="section-title">{{section_effective_title}}</div>
-          <div class="p"><b>1.</b> {{effective_1}}</div>
-          <div class="p"><b>2.</b> {{effective_2}}</div>
-          <div class="p"><b>3.</b> {{effective_3}}</div>
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="1"><b>1.</b> {{effective_1}}</div><!-- END_SECTION_ITEM_EFFECTIVE_1 -->
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="2"><b>2.</b> {{effective_2}}</div><!-- END_SECTION_ITEM_EFFECTIVE_2 -->
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="3"><b>3.</b> {{effective_3}}</div><!-- END_SECTION_ITEM_EFFECTIVE_3 -->
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="4"><b>4.</b> {{effective_4}}</div><!-- END_SECTION_ITEM_EFFECTIVE_4 -->
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="5"><b>5.</b> {{effective_5}}</div><!-- END_SECTION_ITEM_EFFECTIVE_5 -->
+          <div class="p section-paragraph" data-section-paragraph="effective" data-section-item="6"><b>6.</b> {{effective_6}}</div><!-- END_SECTION_ITEM_EFFECTIVE_6 -->
         </div><!-- END_SECTION_EFFECTIVE -->
 
         <div class="section" data-section="law">
           <div class="section-title">{{section_law_title}}</div>
-          <div class="p"><b>1.</b> {{law_1}}</div>
-          <div class="p"><b>2.</b> {{law_2}}</div>
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="1"><b>1.</b> {{law_1}}</div><!-- END_SECTION_ITEM_LAW_1 -->
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="2"><b>2.</b> {{law_2}}</div><!-- END_SECTION_ITEM_LAW_2 -->
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="3"><b>3.</b> {{law_3}}</div><!-- END_SECTION_ITEM_LAW_3 -->
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="4"><b>4.</b> {{law_4}}</div><!-- END_SECTION_ITEM_LAW_4 -->
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="5"><b>5.</b> {{law_5}}</div><!-- END_SECTION_ITEM_LAW_5 -->
+          <div class="p section-paragraph" data-section-paragraph="law" data-section-item="6"><b>6.</b> {{law_6}}</div><!-- END_SECTION_ITEM_LAW_6 -->
         </div><!-- END_SECTION_LAW -->
 
         <div class="section custom-section" data-custom-section="1">
@@ -3497,6 +3539,84 @@ function seedContractsTemplatesV82(db: Db) {
   }
 
   db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V82] = true;
+  return changed;
+}
+
+function seedContractsTemplatesV83(db: Db) {
+  if (!db.seed) db.seed = {};
+  if (db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V83]) return false;
+  let changed = false;
+  if (ensureContractsCollections(db)) changed = true;
+
+  const templates = (db.contractTemplates ?? []) as ContractTemplate[];
+  const now = nowIso();
+  let mutated = false;
+
+  const sectionConfigs = [
+    { id: 'refund', titleKey: 'section_refund_title', prefix: 'refund', countKey: 'refund_count', label: 'Refund policy（退费规定）' },
+    {
+      id: 'force_majeure',
+      titleKey: 'section_force_majeure_title',
+      prefix: 'force_majeure',
+      countKey: 'force_majeure_count',
+      label: 'Force majeure（不可抗力）',
+    },
+    { id: 'breach', titleKey: 'section_breach_title', prefix: 'breach', countKey: 'breach_count', label: 'Breach（违约责任）' },
+    {
+      id: 'effective',
+      titleKey: 'section_effective_title',
+      prefix: 'effective',
+      countKey: 'effective_count',
+      label: 'Effectiveness（生效条款）',
+    },
+    { id: 'law', titleKey: 'section_law_title', prefix: 'law', countKey: 'law_count', label: 'Governing law & disputes（法律与争议）' },
+  ] as const;
+
+  for (let i = 0; i < templates.length; i += 1) {
+    const tpl = templates[i];
+    const html = String(tpl.templateHtml ?? '');
+    if (!html.includes('TEMPLATE: PROFESSIONAL_SERVICE_AGREEMENT')) continue;
+
+    const placeholders = (tpl.placeholders ?? []) as Array<{ key: string; label: string; required?: boolean }>;
+    const nextPlaceholders = [...placeholders];
+    const keys = new Set(nextPlaceholders.map((p) => String(p.key ?? '').trim()));
+    const ensurePlaceholder = (key: string, label: string, required = false) => {
+      if (keys.has(key)) return;
+      nextPlaceholders.push({ key, label, required });
+      keys.add(key);
+    };
+
+    for (const cfg of sectionConfigs) {
+      ensurePlaceholder(cfg.countKey, `${cfg.label} count`, false);
+      for (let n = 1; n <= 6; n += 1) {
+        ensurePlaceholder(`${cfg.prefix}_${n}`, `${cfg.label} (${n})`, n <= (cfg.id === 'force_majeure' || cfg.id === 'effective' ? 3 : 2));
+      }
+    }
+
+    let nextHtml = html;
+    for (const cfg of sectionConfigs) {
+      const endKey = `END_SECTION_${cfg.id.toUpperCase()}`;
+      const block = Array.from({ length: 6 }, (_, idx) => {
+        const n = idx + 1;
+        return `          <div class="p section-paragraph" data-section-paragraph="${cfg.id}" data-section-item="${n}"><b>${n}.</b> {{${cfg.prefix}_${n}}}</div><!-- END_SECTION_ITEM_${cfg.id.toUpperCase()}_${n} -->`;
+      }).join('\n');
+      nextHtml = nextHtml.replace(
+        new RegExp(`<div class="section" data-section="${cfg.id}">[\\s\\S]*?<\\/div><!-- ${endKey} -->`, 'g'),
+        `<div class="section" data-section="${cfg.id}">\n          <div class="section-title">{{${cfg.titleKey}}}</div>\n${block}\n        </div><!-- ${endKey} -->`,
+      );
+    }
+
+    if (JSON.stringify(placeholders) === JSON.stringify(nextPlaceholders) && nextHtml === html) continue;
+    templates[i] = { ...tpl, placeholders: nextPlaceholders as any, templateHtml: nextHtml, updatedAt: now };
+    mutated = true;
+  }
+
+  if (mutated) {
+    (db as unknown as { contractTemplates: ContractTemplate[] }).contractTemplates = templates;
+    changed = true;
+  }
+
+  db.seed[SEED_KEY_CONTRACTS_TEMPLATES_V83] = true;
   return changed;
 }
 
@@ -8871,6 +8991,7 @@ export async function readDb(): Promise<Db> {
   if (seedContractsTemplatesV80(db)) changed = true;
   if (seedContractsTemplatesV81(db)) changed = true;
   if (seedContractsTemplatesV82(db)) changed = true;
+  if (seedContractsTemplatesV83(db)) changed = true;
 
   if (db.users.length === 0) {
     const lukePasswordHash = await hashPassword('123456');

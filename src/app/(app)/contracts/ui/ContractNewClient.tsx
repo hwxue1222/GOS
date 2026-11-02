@@ -20,6 +20,155 @@ type TemplateDraft = {
 
 const MAX_SERVICE_ITEMS = 10;
 const MAX_OBLIGATION_ITEMS = 10;
+const MAX_FIXED_SECTION_ITEMS = 6;
+
+type FixedSectionConfig = {
+  id: 'refund' | 'force_majeure' | 'breach' | 'effective' | 'law';
+  titleKey: string;
+  enabledKey: string;
+  countKey: string;
+  prefix: string;
+  defaultCount: number;
+  rows: number;
+  fallbackTitle: string;
+};
+
+const FIXED_SECTION_CONFIGS: FixedSectionConfig[] = [
+  {
+    id: 'refund',
+    titleKey: 'section_refund_title',
+    enabledKey: 'section_refund_enabled',
+    countKey: 'refund_count',
+    prefix: 'refund',
+    defaultCount: 2,
+    rows: 2,
+    fallbackTitle: 'Refund policy（退费规定）',
+  },
+  {
+    id: 'force_majeure',
+    titleKey: 'section_force_majeure_title',
+    enabledKey: 'section_force_majeure_enabled',
+    countKey: 'force_majeure_count',
+    prefix: 'force_majeure',
+    defaultCount: 3,
+    rows: 3,
+      fallbackTitle: 'Force majeure（不可抗力）',
+  },
+  {
+    id: 'breach',
+    titleKey: 'section_breach_title',
+    enabledKey: 'section_breach_enabled',
+    countKey: 'breach_count',
+    prefix: 'breach',
+    defaultCount: 2,
+    rows: 3,
+    fallbackTitle: 'Breach（违约责任）',
+  },
+  {
+    id: 'effective',
+    titleKey: 'section_effective_title',
+    enabledKey: 'section_effective_enabled',
+    countKey: 'effective_count',
+    prefix: 'effective',
+    defaultCount: 3,
+    rows: 2,
+    fallbackTitle: 'Effectiveness（生效条款）',
+  },
+  {
+    id: 'law',
+    titleKey: 'section_law_title',
+    enabledKey: 'section_law_enabled',
+    countKey: 'law_count',
+    prefix: 'law',
+    defaultCount: 2,
+    rows: 2,
+    fallbackTitle: 'Governing law & dispute resolution（法律及争议解决）',
+  },
+];
+
+const AUTO_NUMBERED_SECTIONS = [
+  {
+    titleKey: 'section_fees_title',
+    enabledKey: 'section_fees_enabled',
+    fallbackTitle: 'Fees（收费标准）',
+  },
+  ...FIXED_SECTION_CONFIGS.map((cfg) => ({
+    titleKey: cfg.titleKey,
+    enabledKey: cfg.enabledKey,
+    fallbackTitle: cfg.fallbackTitle,
+  })),
+] as const;
+
+function fixedSectionParagraphKey(prefix: string, n: number) {
+  return `${prefix}_${n}`;
+}
+
+function clampFixedSectionCount(raw: string | number | undefined, fallback: number) {
+  return Math.max(1, Math.min(MAX_FIXED_SECTION_ITEMS, Number(raw ?? '') || fallback));
+}
+
+function getFixedSectionCount(map: Record<string, string>, cfg: FixedSectionConfig) {
+  return clampFixedSectionCount(map[cfg.countKey], cfg.defaultCount);
+}
+
+function getHighestFixedSectionParagraph(map: Record<string, string>, cfg: FixedSectionConfig) {
+  let last = 0;
+  for (let n = 1; n <= MAX_FIXED_SECTION_ITEMS; n += 1) {
+    if (String(map[fixedSectionParagraphKey(cfg.prefix, n)] ?? '').trim()) last = n;
+  }
+  return last;
+}
+
+function toRoman(num: number) {
+  const numerals: Array<[number, string]> = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+  let n = Math.max(1, Math.floor(num));
+  let out = '';
+  for (const [value, symbol] of numerals) {
+    while (n >= value) {
+      out += symbol;
+      n -= value;
+    }
+  }
+  return out;
+}
+
+function stripAutoSectionPrefix(raw: string) {
+  return String(raw ?? '')
+    .trim()
+    .replace(/^[IVXLCDM]+\.\s*/i, '')
+    .trim();
+}
+
+function applyAutoSectionTitles(map: Record<string, string>) {
+  const next = { ...map };
+  let sectionNumber = 4;
+  for (const section of AUTO_NUMBERED_SECTIONS) {
+    if (String(next[section.enabledKey] ?? '1').trim() === '0') continue;
+    const base = stripAutoSectionPrefix(next[section.titleKey] ?? '') || section.fallbackTitle;
+    next[section.titleKey] = `${toRoman(sectionNumber)}. ${base}`;
+    sectionNumber += 1;
+  }
+  const customCount = Math.max(0, Math.min(5, Number(next.custom_section_count ?? '0') || 0));
+  if (customCount > 0) {
+    const base = stripAutoSectionPrefix(next.custom_section_heading ?? '') || 'Additional sections（自定义条款）';
+    next.custom_section_heading = `${toRoman(sectionNumber)}. ${base}`;
+  }
+  return next;
+}
 
 function escHtml(s: string) {
   return s
@@ -189,6 +338,31 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
     if (isDisabled('section_breach_enabled')) removeSection('breach', 'END_SECTION_BREACH');
     if (isDisabled('section_effective_enabled')) removeSection('effective', 'END_SECTION_EFFECTIVE');
     if (isDisabled('section_law_enabled')) removeSection('law', 'END_SECTION_LAW');
+
+    for (const cfg of FIXED_SECTION_CONFIGS) {
+      if (isDisabled(cfg.enabledKey)) continue;
+      const count = getFixedSectionCount(map, cfg);
+      for (let n = count + 1; n <= MAX_FIXED_SECTION_ITEMS; n += 1) {
+        html = html.replace(
+          new RegExp(
+            `<div\\s+class="p\\s+section-paragraph"\\s+data-section-paragraph="${cfg.id}"\\s+data-section-item="${n}">[\\s\\S]*?<!--\\s*END_SECTION_ITEM_${cfg.id.toUpperCase()}_${n}\\s*-->\\s*`,
+            'g',
+          ),
+          '',
+        );
+      }
+      for (let n = 1; n <= count; n += 1) {
+        const value = String(map[fixedSectionParagraphKey(cfg.prefix, n)] ?? '').trim();
+        if (value) continue;
+        html = html.replace(
+          new RegExp(
+            `<div\\s+class="p\\s+section-paragraph"\\s+data-section-paragraph="${cfg.id}"\\s+data-section-item="${n}">[\\s\\S]*?<!--\\s*END_SECTION_ITEM_${cfg.id.toUpperCase()}_${n}\\s*-->\\s*`,
+            'g',
+          ),
+          '',
+        );
+      }
+    }
 
     const customSectionCount = Math.max(0, Math.min(5, Number(map.custom_section_count ?? '0') || 0));
     const customSectionHeading = String(map.custom_section_heading ?? '').trim();
@@ -585,11 +759,15 @@ export default function ContractNewClient({ initialTemplates }: Props) {
           'pay_bank_address',
         ]);
       }
-      if (isDisabled('section_refund_enabled')) addMany(['refund_1', 'refund_2']);
-      if (isDisabled('section_force_majeure_enabled')) addMany(['force_majeure_1', 'force_majeure_2', 'force_majeure_3']);
-      if (isDisabled('section_breach_enabled')) addMany(['breach_1', 'breach_2']);
-      if (isDisabled('section_effective_enabled')) addMany(['effective_1', 'effective_2', 'effective_3']);
-      if (isDisabled('section_law_enabled')) addMany(['law_1', 'law_2']);
+      for (const cfg of FIXED_SECTION_CONFIGS) {
+        const keys = Array.from({ length: MAX_FIXED_SECTION_ITEMS }, (_, idx) => fixedSectionParagraphKey(cfg.prefix, idx + 1));
+        if (isDisabled(cfg.enabledKey)) {
+          addMany([cfg.countKey, ...keys]);
+          continue;
+        }
+        const count = getFixedSectionCount(fields, cfg);
+        addMany(keys.slice(count));
+      }
     }
     const required = (tpl.placeholders ?? []).filter((p) => p.required && !ignoreKeys.has(p.key));
     const missing = required.filter((p) => !String((fields as any)?.[p.key] ?? '').trim());
@@ -610,7 +788,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       templateHtml = templateHtml.replaceAll('<div class="subtitle">(报价)</div>', '');
     }
 
-    return renderPreview(templateHtml, {
+    return renderPreview(templateHtml, applyAutoSectionTitles({
       contract_no: isQuotation ? '' : contractNo || 'BBYYYYMM001X',
       client_name: clientName,
       client_email: clientEmail,
@@ -620,8 +798,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       partyA_name: clientName,
       partyA_email: clientEmail,
       ...fields,
-    });
+    }));
   }, [clientEmail, clientName, contractNo, fields, tpl]);
+
+  const autoSectionTitles = useMemo(() => applyAutoSectionTitles(fields), [fields]);
 
   const previewIframeKey = useMemo(() => {
     const tplId = String(tpl?.id ?? '');
@@ -712,6 +892,131 @@ export default function ContractNewClient({ initialTemplates }: Props) {
   };
 
   const itemInputId = (key: string, idx: number) => `${key}__item__${idx}`;
+
+  const renderFixedSectionEditor = (cfg: FixedSectionConfig) => {
+    const enabled = String((fields as any)[cfg.enabledKey] ?? '1').trim() !== '0';
+    const count = getFixedSectionCount(fields, cfg);
+    return (
+      <div key={cfg.id} className="rounded-lg border border-black/10 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <input
+            value={(autoSectionTitles as any)[cfg.titleKey] ?? ''}
+            onChange={(e) => setFields((prev) => ({ ...prev, [cfg.titleKey]: stripAutoSectionPrefix(e.target.value) }))}
+            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setFields((prev) => ({
+                  ...prev,
+                  [cfg.enabledKey]: '1',
+                  [cfg.countKey]: String(
+                    Math.max(getFixedSectionCount(prev, cfg), getHighestFixedSectionParagraph(prev, cfg), cfg.defaultCount),
+                  ),
+                }))
+              }
+              disabled={enabled}
+              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+            >
+              + Add
+            </button>
+            <button
+              type="button"
+              onClick={() => setFields((prev) => ({ ...prev, [cfg.enabledKey]: '0' }))}
+              disabled={!enabled}
+              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+            >
+              − Remove
+            </button>
+          </div>
+        </div>
+
+        {!enabled ? (
+          <div className="mt-2 text-xs text-black/40">Removed</div>
+        ) : (
+          <>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="text-xs font-medium text-black/60">Paragraphs: {count}</div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFields((prev) => ({
+                      ...prev,
+                      [cfg.countKey]: String(Math.min(MAX_FIXED_SECTION_ITEMS, getFixedSectionCount(prev, cfg) + 1)),
+                    }))
+                  }
+                  disabled={count >= MAX_FIXED_SECTION_ITEMS}
+                  className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                >
+                  + Paragraph
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFields((prev) => {
+                      const cur = getFixedSectionCount(prev, cfg);
+                      if (cur <= 1) return prev;
+                      const next = { ...prev, [cfg.countKey]: String(cur - 1) } as Record<string, string>;
+                      delete (next as any)[fixedSectionParagraphKey(cfg.prefix, cur)];
+                      return next;
+                    })
+                  }
+                  disabled={count <= 1}
+                  className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
+                >
+                  − Paragraph
+                </button>
+              </div>
+            </div>
+
+            {Array.from({ length: count }, (_, idx) => idx + 1).map((n) => (
+              <div key={n} className="mt-3 rounded-lg border border-black/10 p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-medium text-black/60">
+                    ({n})
+                    {requiredKeys.has(fixedSectionParagraphKey(cfg.prefix, n)) ? ' *' : ''}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFields((prev) => {
+                        const cur = getFixedSectionCount(prev, cfg);
+                        if (cur <= 1) return prev;
+                        const next = { ...prev } as Record<string, string>;
+                        for (let i = n; i < cur; i += 1) {
+                          next[fixedSectionParagraphKey(cfg.prefix, i)] = String(
+                            prev[fixedSectionParagraphKey(cfg.prefix, i + 1)] ?? '',
+                          );
+                        }
+                        delete (next as any)[fixedSectionParagraphKey(cfg.prefix, cur)];
+                        next[cfg.countKey] = String(cur - 1);
+                        return next;
+                      })
+                    }
+                    className="h-6 w-6 rounded-md border border-black/10 text-xs text-black/60 hover:bg-black/[0.04]"
+                    aria-label={`Delete paragraph ${n}`}
+                    title="Delete paragraph"
+                  >
+                    ×
+                  </button>
+                </div>
+                <textarea
+                  value={(fields as any)[fixedSectionParagraphKey(cfg.prefix, n)] ?? ''}
+                  onChange={(e) =>
+                    setFields((prev) => ({ ...prev, [fixedSectionParagraphKey(cfg.prefix, n)]: e.target.value }))
+                  }
+                  rows={cfg.rows}
+                  className="mt-2 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                />
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (!isNomineeTemplate) return;
@@ -820,6 +1125,12 @@ export default function ContractNewClient({ initialTemplates }: Props) {
       if (!String((next as any).section_breach_title ?? '').trim()) (next as any).section_breach_title = 'VII. Breach（违约责任）';
       if (!String((next as any).section_effective_title ?? '').trim()) (next as any).section_effective_title = 'VIII. Effectiveness（生效条款）';
       if (!String((next as any).section_law_title ?? '').trim()) (next as any).section_law_title = 'IX. Governing law & dispute resolution（法律及争议解决）';
+
+      for (const cfg of FIXED_SECTION_CONFIGS) {
+        if (!String((next as any)[cfg.countKey] ?? '').trim()) {
+          (next as any)[cfg.countKey] = String(Math.max(cfg.defaultCount, getHighestFixedSectionParagraph(next, cfg)));
+        }
+      }
 
       if (!String((next as any).custom_section_count ?? '').trim()) (next as any).custom_section_count = '0';
       if (!String((next as any).custom_section_heading ?? '').trim()) {
@@ -1983,8 +2294,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                       <div className="rounded-lg border border-black/10 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <input
-                            value={(fields as any).section_fees_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_fees_title: e.target.value }))}
+                            value={(autoSectionTitles as any).section_fees_title ?? ''}
+                            onChange={(e) =>
+                              setFields((prev) => ({ ...prev, section_fees_title: stripAutoSectionPrefix(e.target.value) }))
+                            }
                             className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
                           />
                           <div className="flex items-center gap-2">
@@ -2229,260 +2542,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                     );
                   })()}
 
-                  {(() => {
-                    const enabled = String((fields as any).section_refund_enabled ?? '1').trim() !== '0';
-                    return (
-                      <div className="rounded-lg border border-black/10 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            value={(fields as any).section_refund_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_refund_title: e.target.value }))}
-                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_refund_enabled: '1' }))}
-                              disabled={enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_refund_enabled: '0' }))}
-                              disabled={!enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              − Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        {!enabled ? (
-                          <div className="mt-2 text-xs text-black/40">Removed</div>
-                        ) : (
-                          <>
-                            {[1, 2].map((n) => (
-                              <div key={n} className="mt-3">
-                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`refund_${n}`) ? ' *' : ''}</div>
-                                <textarea
-                                  value={(fields as any)[`refund_${n}`] ?? ''}
-                                  onChange={(e) => setFields((prev) => ({ ...prev, [`refund_${n}`]: e.target.value }))}
-                                  rows={2}
-                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                                />
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const enabled = String((fields as any).section_force_majeure_enabled ?? '1').trim() !== '0';
-                    return (
-                      <div className="rounded-lg border border-black/10 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            value={(fields as any).section_force_majeure_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_force_majeure_title: e.target.value }))}
-                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_force_majeure_enabled: '1' }))}
-                              disabled={enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_force_majeure_enabled: '0' }))}
-                              disabled={!enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              − Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        {!enabled ? (
-                          <div className="mt-2 text-xs text-black/40">Removed</div>
-                        ) : (
-                          <>
-                            {[1, 2, 3].map((n) => (
-                              <div key={n} className="mt-3">
-                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`force_majeure_${n}`) ? ' *' : ''}</div>
-                                <textarea
-                                  value={(fields as any)[`force_majeure_${n}`] ?? ''}
-                                  onChange={(e) => setFields((prev) => ({ ...prev, [`force_majeure_${n}`]: e.target.value }))}
-                                  rows={3}
-                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                                />
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const enabled = String((fields as any).section_breach_enabled ?? '1').trim() !== '0';
-                    return (
-                      <div className="rounded-lg border border-black/10 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            value={(fields as any).section_breach_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_breach_title: e.target.value }))}
-                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_breach_enabled: '1' }))}
-                              disabled={enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_breach_enabled: '0' }))}
-                              disabled={!enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              − Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        {!enabled ? (
-                          <div className="mt-2 text-xs text-black/40">Removed</div>
-                        ) : (
-                          <>
-                            {[1, 2].map((n) => (
-                              <div key={n} className="mt-3">
-                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`breach_${n}`) ? ' *' : ''}</div>
-                                <textarea
-                                  value={(fields as any)[`breach_${n}`] ?? ''}
-                                  onChange={(e) => setFields((prev) => ({ ...prev, [`breach_${n}`]: e.target.value }))}
-                                  rows={3}
-                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                                />
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const enabled = String((fields as any).section_effective_enabled ?? '1').trim() !== '0';
-                    return (
-                      <div className="rounded-lg border border-black/10 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            value={(fields as any).section_effective_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_effective_title: e.target.value }))}
-                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_effective_enabled: '1' }))}
-                              disabled={enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_effective_enabled: '0' }))}
-                              disabled={!enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              − Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        {!enabled ? (
-                          <div className="mt-2 text-xs text-black/40">Removed</div>
-                        ) : (
-                          <>
-                            {[1, 2, 3].map((n) => (
-                              <div key={n} className="mt-3">
-                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`effective_${n}`) ? ' *' : ''}</div>
-                                <textarea
-                                  value={(fields as any)[`effective_${n}`] ?? ''}
-                                  onChange={(e) => setFields((prev) => ({ ...prev, [`effective_${n}`]: e.target.value }))}
-                                  rows={2}
-                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                                />
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const enabled = String((fields as any).section_law_enabled ?? '1').trim() !== '0';
-                    return (
-                      <div className="rounded-lg border border-black/10 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            value={(fields as any).section_law_title ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, section_law_title: e.target.value }))}
-                            className="h-8 flex-1 px-2 rounded-md border border-black/10 text-xs font-semibold text-black/70 outline-none focus:ring-2 focus:ring-black/10"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_law_enabled: '1' }))}
-                              disabled={enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFields((prev) => ({ ...prev, section_law_enabled: '0' }))}
-                              disabled={!enabled}
-                              className="h-8 px-3 rounded-md border border-black/10 text-xs font-medium hover:bg-black/[0.02] disabled:opacity-50"
-                            >
-                              − Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        {!enabled ? (
-                          <div className="mt-2 text-xs text-black/40">Removed</div>
-                        ) : (
-                          <>
-                            {[1, 2].map((n) => (
-                              <div key={n} className="mt-3">
-                                <div className="text-xs font-medium text-black/60">({n}){requiredKeys.has(`law_${n}`) ? ' *' : ''}</div>
-                                <textarea
-                                  value={(fields as any)[`law_${n}`] ?? ''}
-                                  onChange={(e) => setFields((prev) => ({ ...prev, [`law_${n}`]: e.target.value }))}
-                                  rows={2}
-                                  className="mt-1 w-full px-3 py-2 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
-                                />
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  {FIXED_SECTION_CONFIGS.map((cfg) => renderFixedSectionEditor(cfg))}
 
                   {(() => {
                     const count = Math.max(0, Math.min(5, Number((fields as any).custom_section_count ?? '0') || 0));
@@ -2530,8 +2590,10 @@ export default function ContractNewClient({ initialTemplates }: Props) {
                         <div className="mt-3">
                           <div className="text-xs font-medium text-black/60">Section heading</div>
                           <input
-                            value={(fields as any).custom_section_heading ?? ''}
-                            onChange={(e) => setFields((prev) => ({ ...prev, custom_section_heading: e.target.value }))}
+                            value={(autoSectionTitles as any).custom_section_heading ?? ''}
+                            onChange={(e) =>
+                              setFields((prev) => ({ ...prev, custom_section_heading: stripAutoSectionPrefix(e.target.value) }))
+                            }
                             className="mt-1 h-10 w-full px-3 rounded-lg border border-black/10 text-sm outline-none focus:ring-2 focus:ring-black/10"
                             placeholder="X. Additional sections（自定义条款）"
                           />
@@ -3228,7 +3290,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
         </div>
 
         <div className="lg:col-span-6 xl:col-span-7">
-          <div className="rounded-xl bg-white border border-black/5 overflow-hidden">
+          <div className="rounded-xl bg-white border border-black/5 overflow-hidden lg:sticky lg:top-4">
             <div className="px-4 py-3 border-b border-black/5">
               <div className="text-sm font-semibold">Preview</div>
               <div className="text-xs text-black/60 mt-1">
@@ -3240,7 +3302,7 @@ export default function ContractNewClient({ initialTemplates }: Props) {
               </div>
               {documentSha ? <div className="text-xs text-black/60 mt-1">Document hash: {documentSha}</div> : null}
             </div>
-            <div className="h-[78vh]">
+            <div className="h-[1100px] lg:h-[calc(100vh-8rem)] lg:min-h-[1200px] xl:min-h-[1400px]">
               {previewHtml ? (
                 <iframe key={previewIframeKey} title="preview" srcDoc={previewHtml} className="w-full h-full" />
               ) : (
