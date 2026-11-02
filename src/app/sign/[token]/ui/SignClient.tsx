@@ -7,6 +7,7 @@ export default function SignClient(props: {
   title: string;
   html: string;
   pdfUrl?: string;
+  pdfDownloadUrl?: string;
   sha256: string;
   requestEmail: string;
   requestStatus: string;
@@ -29,6 +30,7 @@ export default function SignClient(props: {
     title,
     html,
     pdfUrl,
+    pdfDownloadUrl,
     sha256,
     requestEmail,
     requestStatus,
@@ -74,14 +76,6 @@ export default function SignClient(props: {
     const sep = pdfUrl.includes('?') ? '&' : '?';
     return `${pdfUrl}${sep}nonce=${pdfNonce}`;
   }, [pdfNonce, pdfUrl]);
-
-  const pdfDownloadUrl = useMemo(() => {
-    if (!pdfUrl) return undefined;
-    if (pdfUrl.includes('disposition=inline')) return pdfUrl.replace('disposition=inline', 'disposition=attachment');
-    if (pdfUrl.includes('disposition=attachment')) return pdfUrl;
-    const sep = pdfUrl.includes('?') ? '&' : '?';
-    return `${pdfUrl}${sep}disposition=attachment`;
-  }, [pdfUrl]);
 
   const htmlWithSignature = useMemo(() => {
     if (!isSigned) return html;

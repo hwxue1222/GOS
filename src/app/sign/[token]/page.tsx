@@ -1,5 +1,5 @@
 import SignClient from '@/app/sign/[token]/ui/SignClient';
-import { getSignatureContextByToken, readDb } from '@/lib/db';
+import { findContractById, getSignatureContextByToken, readDb } from '@/lib/db';
 import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
@@ -24,6 +24,15 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
     (ctx.packet.relatedType === 'CONTRACT' && (!ctx.request.signerFullName || !ctx.request.signerTitle));
   const expired = ctx.request.status === 'EXPIRED';
   const pdfUrl = ctx.packet.kind === 'CONTRACT' ? `/api/sign/${encodeURIComponent(token)}/pdf?disposition=inline` : undefined;
+  const pdfDownloadUrl =
+    ctx.packet.kind === 'CONTRACT'
+      ? await (async () => {
+          const contract = await findContractById(ctx.packet.relatedId);
+          const publicToken = String(contract?.publicToken ?? '').trim();
+          if (!contract || !publicToken) return undefined;
+          return `/api/contracts/${encodeURIComponent(contract.id)}/pdf?publicToken=${encodeURIComponent(publicToken)}&disposition=attachment`;
+        })()
+      : undefined;
   const html = normalizeDocumentHtml(ctx.document.html);
 
   const signedItemsResolved =
@@ -48,6 +57,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
       title={ctx.document.title}
       html={html}
       pdfUrl={pdfUrl}
+      pdfDownloadUrl={pdfDownloadUrl}
       sha256={ctx.document.sha256}
       requestEmail={ctx.request.email}
       requestStatus={ctx.request.status}
