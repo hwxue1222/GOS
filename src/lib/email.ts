@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { getInvoiceIssuerConfig } from '@/lib/invoice';
 
 export type EmailAttachment = { filename: string; contentBase64: string; contentType?: string };
 
@@ -197,17 +196,12 @@ export async function sendSigningInvite(input: {
   subject?: string;
   message?: string;
 }) {
-  const issuer = getInvoiceIssuerConfig('BBY_SG');
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const yyyy = String(today.getFullYear());
-  const dated = `${dd}/${mm}/${yyyy}`;
-
   const applicationName = String(input.applicationName ?? '').trim();
   const companyName = String(input.companyName ?? '').trim();
   const documentTitle = String(input.documentTitle ?? '').trim();
   const signerRole = String(input.signerRole ?? '').trim();
+  const assetBaseUrl = (process.env.APP_BASE_URL?.trim() || 'https://bby.today').replace(/\/+$/, '');
+  const logoUrl = `${assetBaseUrl}/contracts/image2.png`;
 
   const escHtml = (s: string) =>
     s
@@ -217,9 +211,7 @@ export async function sendSigningInvite(input: {
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
 
-  const salutation = 'Dear Sir/Madam,';
   const subject = `${companyName || 'Company'}_${applicationName || 'Signing'}`;
-
   const roleDisplay = (() => {
     const role = String(signerRole ?? '').trim();
     if (!role) return '';
@@ -252,14 +244,25 @@ export async function sendSigningInvite(input: {
   </div>
   <div style="margin-top:10px; color:#555; font-size:12px;">This link is valid for 10 days.</div>
   <div style="margin-top:14px; color:#555; font-size:12px;">You can reply to this email if any query.</div>
-  <div style="margin-top:18px; padding-top:12px; border-top:1px solid #e5e7eb; text-align:left;">
-    <div style="display:inline-block; padding:6px 12px; border:1px solid #e5e7eb; border-radius:999px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#111; background:#fafafa;">
-      Your 24-hour reliable corporate secretary service provider
-    </div>
-  </div>
-  <div style="margin-top:16px; color:#111; font-size:12px;">
-    ${issuer.displayName} (${issuer.uen})<br />
-    ${dated}
+  <div style="margin-top:18px; padding-top:14px; border-top:1px solid #e5e7eb;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="padding:0 16px 0 0; vertical-align:middle;">
+          <img src="${logoUrl}" alt="BBY" style="display:block; width:150px; height:auto; border:0;" />
+        </td>
+        <td style="width:3px; background:#d73a32; font-size:0; line-height:0;">&nbsp;</td>
+        <td style="padding:0 0 0 16px; vertical-align:top; color:#444; font-size:12px; line-height:1.55;">
+          <div style="font-size:14px; font-weight:700; color:#333;">BBY.SG Pte Ltd <span style="font-weight:400; color:#888;">(UEN: 201608450W)</span></div>
+          <div style="margin-top:2px;">Bybridge Consultancy Pte Ltd (EA License No. 15C7627)</div>
+          <div style="margin-top:8px;">Accounting, Tax &amp; Corporate Secretarial Services</div>
+          <div style="margin-top:2px;">新加坡一站式ACRA和MOM持牌财税、法定公司秘书、劳务服务中介</div>
+          <div style="margin-top:8px;">8 Burn Road #15-03 Trivex, Singapore 369977</div>
+          <div style="margin-top:6px;">Tel <span style="color:#d73a32;">+65 89926681</span> · Wechat微信 <span style="color:#d73a32;">18851644566</span></div>
+          <div style="margin-top:6px;"><a href="https://www.bybridge.com.sg" style="color:#666; text-decoration:none;">www.bybridge.com.sg</a> | <a href="https://www.bby.sg" style="color:#666; text-decoration:none;">www.bby.sg</a></div>
+          <div style="margin-top:8px; color:#d73a32; font-weight:600;">Singapore · Malaysia · Hong Kong · China</div>
+        </td>
+      </tr>
+    </table>
   </div>
 </div>
 `.trim();
