@@ -397,7 +397,7 @@ export default function SignClient(props: {
           ) : null}
 
           <div className="mt-4 rounded-lg border border-black/10 overflow-hidden bg-white">
-            {pdfUrlWithNonce ? (
+            {pdfUrlWithNonce && !isSigned ? (
               <iframe title="document" src={pdfUrlWithNonce} className="w-full" style={{ height: '70vh' }} />
             ) : (
               <iframe title="document" srcDoc={htmlWithSignature} className="w-full" style={{ height: '70vh' }} />

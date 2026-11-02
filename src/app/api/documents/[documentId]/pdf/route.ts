@@ -202,6 +202,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ documentId: str
 
     const status = String(sigCtx.request.status ?? '').trim().toUpperCase();
     if (status === 'REVOKED') return false;
+    if (status === 'SIGNED') return true;
     if (new Date(String(sigCtx.request.expiresAt ?? '')).getTime() < Date.now()) return false;
     return true;
   })();
