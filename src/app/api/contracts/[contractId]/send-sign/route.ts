@@ -14,6 +14,21 @@ import { hasPermission } from '@/lib/permissions';
 import { renderContractHtml } from '@/lib/docTemplates';
 import { sendSigningInvite } from '@/lib/email';
 
+function resolveBaseUrl(req: Request) {
+  const env = process.env.APP_BASE_URL?.trim();
+  if (env) return env.replace(/\/+$/, '');
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
+
+  const h = req.headers;
+  const host = h.get('x-forwarded-host') || h.get('host');
+  const proto = (h.get('x-forwarded-proto') || 'https').split(',')[0]!.trim();
+  if (host) return `${proto}://${host}`;
+
+  return new URL(req.url).origin;
+}
+
 function canAccess(user: { id: string }, contract: { createdByUserId: string }) {
   if (hasPermission(user as any, 'contracts', 'viewAll')) return true;
   if (hasPermission(user as any, 'contracts', 'viewAssigned')) return contract.createdByUserId === user.id;
@@ -144,10 +159,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ contrac
     });
   }
 
-  const origin = req.headers.get('origin')?.trim();
-  const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host'))?.trim();
-  const proto = req.headers.get('x-forwarded-proto')?.trim() || 'https';
-  const baseUrl = origin || (host ? `${proto}://${host}` : '');
+  const baseUrl = resolveBaseUrl(req);
   await Promise.all(
     links.map((l) =>
       baseUrl

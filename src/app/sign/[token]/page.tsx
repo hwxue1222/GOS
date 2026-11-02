@@ -1,9 +1,30 @@
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import SignClient from '@/app/sign/[token]/ui/SignClient';
 import { ensureContractPublicToken, getSignatureContextByToken, readDb } from '@/lib/db';
 import { normalizeDocumentHtml } from '@/lib/htmlNormalize';
 
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const appBaseUrl = process.env.APP_BASE_URL?.trim().replace(/\/+$/, '') || 'https://bby.today';
+  const canonical = (() => {
+    try {
+      return new URL(appBaseUrl);
+    } catch {
+      return null;
+    }
+  })();
+  if (canonical) {
+    const h = await headers();
+    const rawHost = String(h.get('x-forwarded-host') ?? h.get('host') ?? '').toLowerCase();
+    const firstHost = rawHost.split(',')[0]?.trim() ?? '';
+    const hostNoPort = firstHost.replace(/^https?:\/\//, '').split('/')[0]?.split(':')[0]?.trim() ?? '';
+    const canonicalHost = canonical.host.toLowerCase();
+    if (hostNoPort && canonicalHost && hostNoPort !== canonicalHost) {
+      redirect(`${canonical.origin}/sign/${encodeURIComponent(token)}`);
+    }
+  }
+
   const ctx = await getSignatureContextByToken(token);
   if (!ctx) {
     return (
