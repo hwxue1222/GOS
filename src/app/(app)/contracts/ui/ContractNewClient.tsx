@@ -172,6 +172,24 @@ function renderPreview(templateHtml: string, map: Record<string, string>) {
       );
     }
 
+    const isDisabled = (k: string) => String(map[k] ?? '').trim() === '0';
+    const removeSection = (id: string, endKey: string) => {
+      html = html.replace(
+        new RegExp(
+          `<div\\s+class="section"\\s+data-section="${id}">[\\s\\S]*?<!--\\s*${endKey}\\s*-->\\s*`,
+          'g',
+        ),
+        '',
+      );
+    };
+
+    if (isDisabled('section_fees_enabled')) removeSection('fees', 'END_SECTION_FEES');
+    if (isDisabled('section_refund_enabled')) removeSection('refund', 'END_SECTION_REFUND');
+    if (isDisabled('section_force_majeure_enabled')) removeSection('force_majeure', 'END_SECTION_FORCE_MAJEURE');
+    if (isDisabled('section_breach_enabled')) removeSection('breach', 'END_SECTION_BREACH');
+    if (isDisabled('section_effective_enabled')) removeSection('effective', 'END_SECTION_EFFECTIVE');
+    if (isDisabled('section_law_enabled')) removeSection('law', 'END_SECTION_LAW');
+
     const customSectionCount = Math.max(0, Math.min(5, Number(map.custom_section_count ?? '0') || 0));
     const customSectionHeading = String(map.custom_section_heading ?? '').trim();
     for (let n = customSectionCount + 1; n <= 5; n++) {
